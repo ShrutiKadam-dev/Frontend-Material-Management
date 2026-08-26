@@ -1,0 +1,56 @@
+<div class="app-shell">
+  <header class="topbar">
+    <a class="brand" routerLink="/dashboard" aria-label="Stantech Inventory Control dashboard">
+      <span class="brand-mark" aria-hidden="true">ST</span>
+      <span class="brand-copy">
+        <span class="brand-name">Stantech</span>
+        <span class="brand-subtitle">Inventory Control</span>
+      </span>
+    </a>
+
+    <nav class="nav-tabs" aria-label="Material management sections">
+      <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        <span class="pi pi-th-large" aria-hidden="true"></span>
+        <span>Dashboard</span>
+      </a>
+      <a routerLink="/projects" routerLinkActive="active">
+        <span class="pi pi-briefcase" aria-hidden="true"></span>
+        <span>Projects</span>
+      </a>
+      <a routerLink="/suppliers" routerLinkActive="active">
+        <span class="pi pi-truck" aria-hidden="true"></span>
+        <span>Supplier</span>
+      </a>
+      <a routerLink="/customers" routerLinkActive="active">
+        <span class="pi pi-users" aria-hidden="true"></span>
+        <span>Customer</span>
+      </a>
+    </nav>
+
+    <div class="topbar-actions">
+      <button
+        class="new-project-button"
+        pButton
+        type="button"
+        icon="pi pi-plus"
+        label="New Project"
+        routerLink="/projects"
+      ></button>
+
+      <button
+        class="profile-button"
+        pButton
+        type="button"
+        rounded
+        aria-label="Sign out {{ user()?.name ?? 'Admin' }}"
+        (click)="logout()"
+      >
+        <span>{{ userInitials() }}</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="content-shell">
+    <router-outlet />
+  </main>
+</div>

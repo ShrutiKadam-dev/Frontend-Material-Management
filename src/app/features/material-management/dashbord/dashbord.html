@@ -1,0 +1,60 @@
+<section class="dashboard-page" aria-labelledby="dashboard-title">
+  <header class="dashboard-hero">
+    <p class="eyebrow">Overview</p>
+    <h1 id="dashboard-title" class="page-title">Good morning, Admin</h1>
+    <p class="page-summary">
+      Here's where every material request stands right now - from requirement to final payment.
+    </p>
+  </header>
+
+  <div class="metric-grid" aria-label="Inventory control metrics">
+    @for (metric of metrics; track metric.label) {
+      <article class="metric-card app-panel">
+        <p>{{ metric.label }}</p>
+        <strong>{{ metric.value }}</strong>
+        <span [class.warning]="metric.tone === 'warning'">{{ metric.trend }}</span>
+      </article>
+    }
+  </div>
+
+  <section class="recent-section" aria-labelledby="recent-projects-title">
+    <div class="recent-heading">
+      <h2 id="recent-projects-title">Recent projects</h2>
+      <a routerLink="/projects">View all -></a>
+    </div>
+
+    <div class="project-grid">
+      @for (project of recentProjects; track project.title) {
+        <article class="project-card app-panel">
+          <span class="project-stripe" aria-hidden="true"></span>
+          <div class="project-card-header">
+            <h3>{{ project.title }}</h3>
+            <span class="status-pill" [class.completed]="project.status === 'Completed'">
+              {{ project.status }}
+            </span>
+          </div>
+
+          <dl class="project-parties">
+            <div>
+              <dt>Supplier</dt>
+              <dd>{{ project.supplier }}</dd>
+            </div>
+            <div>
+              <dt>Customer</dt>
+              <dd>{{ project.customer }}</dd>
+            </div>
+          </dl>
+
+          <div class="progress-track" aria-hidden="true">
+            <span [style.width.%]="project.progress"></span>
+          </div>
+
+          <div class="project-progress">
+            <span>{{ project.step }}</span>
+            <span>{{ project.milestone }}</span>
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+</section>

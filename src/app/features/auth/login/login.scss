@@ -1,0 +1,257 @@
+@import "../../../../styles/theme";
+
+.login-page {
+  @include decorative-fixed-background-circles;
+  align-items: center;
+  display: flex;
+  isolation: isolate;
+  justify-content: center;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 48px;
+  position: relative;
+  @include premium-scrollbar;
+}
+
+.shape {
+  border-radius: var(--radius-pill);
+  pointer-events: none;
+  position: fixed;
+  z-index: -1;
+}
+
+.shape-top {
+  background: rgba(225, 77, 63, 0.12);
+  height: 340px;
+  left: -64px;
+  top: -96px;
+  width: 340px;
+}
+
+.shape-bottom {
+  background: rgba(183, 57, 44, 0.1);
+  bottom: -88px;
+  height: 240px;
+  right: -52px;
+  width: 240px;
+}
+
+.login-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-modal);
+  display: grid;
+  grid-template-columns: minmax(320px, 0.92fr) minmax(360px, 1.08fr);
+  max-width: 1120px;
+  min-height: 620px;
+  overflow: hidden;
+  width: min(100%, 1120px);
+}
+
+.form-panel {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px 56px;
+}
+
+.brand {
+  align-items: center;
+  color: var(--color-primary);
+  display: flex;
+  margin-bottom: 14px;
+}
+
+.brand-logo {
+  display: block;
+  height: 96px;
+  max-width: 390px;
+  object-fit: contain;
+  width: 100%;
+}
+
+.intro {
+  margin-bottom: 28px;
+  max-width: 350px;
+  text-align: center;
+}
+
+.eyebrow {
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+}
+
+h1 {
+  color: var(--color-heading);
+  font-family: var(--app-display-font);
+  font-weight: 600;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  line-height: 1.15;
+  margin: 0;
+}
+
+.intro p:not(.eyebrow) {
+  color: var(--color-muted);
+  line-height: 1.55;
+  margin: 14px 0 0;
+}
+
+.login-form {
+  display: grid;
+  gap: 16px;
+  max-width: 350px;
+  width: 100%;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+label {
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 44px;
+}
+
+.password-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-control);
+  color: var(--color-muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+  width: 36px;
+}
+
+.password-toggle:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.password-toggle:focus-visible {
+  box-shadow: var(--focus-ring);
+  color: var(--color-primary);
+  outline: none;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+.visual-panel {
+  align-items: center;
+  background:
+    linear-gradient(0deg, rgba(183, 57, 44, 0.82), rgba(225, 77, 63, 0.78)),
+    var(--auth-hero-image) center / cover;
+  color: var(--color-on-primary);
+  display: flex;
+  justify-content: center;
+  padding: 48px;
+  position: relative;
+  text-align: center;
+}
+
+.visual-panel::after {
+  background:
+    linear-gradient(115deg, transparent 0 42%, rgba(255, 255, 255, 0.18) 42% 43%, transparent 43%),
+    linear-gradient(150deg, transparent 0 66%, rgba(255, 255, 255, 0.14) 66% 67%, transparent 67%);
+  content: "";
+  inset: 0;
+  position: absolute;
+}
+
+.visual-content {
+  max-width: 440px;
+  position: relative;
+  z-index: 1;
+}
+
+h2 {
+  font-family: var(--app-display-font);
+  font-weight: 700;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.05;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.visual-content p {
+  font-size: 1rem;
+  line-height: 1.65;
+  margin: 18px auto 0;
+  max-width: 460px;
+}
+
+@media (max-width: 900px) {
+  .login-page {
+    padding: 28px;
+  }
+
+  .login-card {
+    grid-template-columns: 1fr;
+  }
+
+  .visual-panel {
+    min-height: 320px;
+    order: -1;
+  }
+
+}
+
+@media (max-width: 560px) {
+  .login-page {
+    padding: 16px;
+  }
+
+  .login-card {
+    border-radius: var(--radius-card);
+  }
+
+  .form-panel,
+  .visual-panel {
+    padding: 32px 22px;
+  }
+
+  .brand {
+    align-items: center;
+    flex-direction: column;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  .brand-logo {
+    height: 78px;
+    max-width: 320px;
+  }
+
+}

@@ -1,0 +1,40 @@
+<section class="base-page" aria-labelledby="suppliers-title">
+  <div class="page-header">
+    <div>
+      <p class="eyebrow">Partners</p>
+      <h1 id="suppliers-title">Suppliers</h1>
+      <p>Monitor supplier contact details, linked projects, and active procurement milestones.</p>
+    </div>
+    <div class="header-actions">
+      <button pButton type="button" icon="pi pi-plus" label="Add Supplier"></button>
+    </div>
+  </div>
+
+  <div class="entity-grid">
+    @for (supplier of suppliers; track supplier.name) {
+      <article class="entity-card app-panel">
+        <div class="entity-head">
+          <span class="entity-avatar" aria-hidden="true">{{ initials(supplier.name) }}</span>
+          <div>
+            <h2 class="entity-name">{{ supplier.name }}</h2>
+            <p class="entity-tag">{{ supplier.address }}</p>
+          </div>
+        </div>
+
+        <div class="entity-contact" aria-label="Contact details">
+          <span>{{ supplier.email }}</span>
+          <span>{{ supplier.contact }}</span>
+        </div>
+
+        <div class="entity-projects" aria-label="Supplier projects">
+          @for (project of supplier.projects; track project.title) {
+            <a class="entity-project-row" routerLink="/projects">
+              <span class="entity-project-name">{{ project.title }}</span>
+              <span class="entity-project-step">Step {{ project.step }}</span>
+            </a>
+          }
+        </div>
+      </article>
+    }
+  </div>
+</section>

@@ -1,1 +1,281 @@
-/* You can add global styles to this file, and also import other style files */
+@import "./styles/theme";
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  overflow-x: hidden;
+}
+
+html,
+body {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  margin: 0;
+  overflow: hidden;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+app-root {
+  display: block;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+.base-page,
+.dashboard-page {
+  display: grid;
+  gap: 24px;
+}
+
+.page-header,
+.section-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.eyebrow {
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+
+.page-title,
+.base-page h1,
+.dashboard-page h1 {
+  color: var(--color-heading);
+  font-family: var(--font-display);
+  font-size: clamp(1.88rem, 2.2vw, 2.15rem);
+  font-weight: 600;
+  line-height: 1.12;
+}
+
+.page-summary,
+.page-header p:not(.eyebrow),
+.empty-state p {
+  color: var(--color-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-top: 6px;
+}
+
+.header-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.app-panel,
+.empty-state {
+  background: var(--color-surface-panel);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.empty-state {
+  display: grid;
+  justify-items: start;
+  min-height: 340px;
+  padding: 32px;
+}
+
+.empty-state > .pi {
+  align-items: center;
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-card);
+  color: var(--color-primary);
+  display: inline-flex;
+  font-size: 1.5rem;
+  height: 58px;
+  justify-content: center;
+  margin-bottom: 18px;
+  width: 58px;
+}
+
+.empty-state h2,
+.section-heading h2 {
+  color: var(--color-heading);
+  font-size: 1.24rem;
+  font-weight: 750;
+}
+
+.p-button {
+  border-radius: var(--radius-control);
+  font-weight: 700;
+  min-height: 42px;
+}
+
+.p-button:not(.p-button-text) {
+  box-shadow: var(--shadow-control);
+}
+
+.p-button:focus-visible,
+.p-inputtext:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+.p-inputtext {
+  background: var(--color-surface-muted);
+  border-color: var(--color-border);
+  border-radius: var(--radius-control);
+  min-height: 42px;
+}
+
+.entity-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.entity-card {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+
+.entity-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+
+.entity-avatar {
+  align-items: center;
+  background: var(--color-primary-soft);
+  border-radius: 12px;
+  color: var(--color-primary-hover);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.entity-name {
+  color: var(--color-heading);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.entity-tag {
+  color: var(--color-muted-light);
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.entity-contact {
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-control);
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+}
+
+.entity-contact span {
+  color: var(--color-text);
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.entity-projects {
+  border-top: 1px dashed var(--color-border);
+  display: grid;
+  padding-top: 12px;
+}
+
+.entity-project-row {
+  align-items: center;
+  border-radius: var(--radius-control);
+  color: inherit;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 7px 0;
+  text-decoration: none;
+}
+
+.entity-project-row:hover .entity-project-name,
+.entity-project-row:focus-visible .entity-project-name {
+  color: var(--color-primary);
+}
+
+.entity-project-row:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+.entity-project-name {
+  color: var(--color-text);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.entity-project-step {
+  color: var(--color-muted-light);
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 900px) {
+  .entity-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .page-header,
+  .section-heading,
+  .header-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

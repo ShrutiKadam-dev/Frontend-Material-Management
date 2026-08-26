@@ -1,0 +1,46 @@
+<section class="base-page projects-page" aria-labelledby="projects-title">
+  <div class="page-header">
+    <div>
+      <p class="eyebrow">Projects</p>
+      <h1 id="projects-title">All projects</h1>
+      <p>Every project links one supplier to one customer and tracks the 15-step fulfilment flow.</p>
+    </div>
+    <div class="header-actions">
+      <button pButton type="button" icon="pi pi-plus" label="New Project"></button>
+    </div>
+  </div>
+
+  <div class="project-grid">
+    @for (project of projects; track project.title) {
+      <article class="project-card app-panel">
+        <span class="project-stripe" aria-hidden="true"></span>
+        <div class="project-card-header">
+          <h2>{{ project.title }}</h2>
+          <span class="status-pill" [class.completed]="project.step >= 15">
+            {{ project.step >= 15 ? 'Completed' : 'In progress' }}
+          </span>
+        </div>
+
+        <dl class="project-parties">
+          <div>
+            <dt>Supplier</dt>
+            <dd>{{ project.supplier }}</dd>
+          </div>
+          <div>
+            <dt>Customer</dt>
+            <dd>{{ project.customer }}</dd>
+          </div>
+        </dl>
+
+        <div class="progress-track" aria-hidden="true">
+          <span [style.width.%]="progressPercent(project.step)"></span>
+        </div>
+
+        <div class="project-progress">
+          <span>Step {{ project.step }} of 15</span>
+          <span>{{ project.milestone }}</span>
+        </div>
+      </article>
+    }
+  </div>
+</section>

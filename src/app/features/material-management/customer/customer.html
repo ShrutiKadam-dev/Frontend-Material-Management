@@ -1,0 +1,44 @@
+<section class="base-page" aria-labelledby="customers-title">
+  <div class="page-header">
+    <div>
+      <p class="eyebrow">Accounts</p>
+      <h1 id="customers-title">Customers</h1>
+      <p>Track customer queries, quotations, delivery milestones, and receivables.</p>
+    </div>
+    <div class="header-actions">
+      <p-iconfield>
+        <p-inputicon class="pi pi-search" />
+        <input pInputText type="search" placeholder="Search customers" aria-label="Search customers" />
+      </p-iconfield>
+      <button pButton type="button" icon="pi pi-plus" label="Add Customer"></button>
+    </div>
+  </div>
+
+  <div class="entity-grid">
+    @for (customer of customers; track customer.name) {
+      <article class="entity-card app-panel">
+        <div class="entity-head">
+          <span class="entity-avatar" aria-hidden="true">{{ initials(customer.name) }}</span>
+          <div>
+            <h2 class="entity-name">{{ customer.name }}</h2>
+            <p class="entity-tag">{{ customer.address }}</p>
+          </div>
+        </div>
+
+        <div class="entity-contact" aria-label="Contact details">
+          <span>{{ customer.email }}</span>
+          <span>{{ customer.contact }}</span>
+        </div>
+
+        <div class="entity-projects" aria-label="Customer projects">
+          @for (project of customer.projects; track project.title) {
+            <a class="entity-project-row" routerLink="/projects">
+              <span class="entity-project-name">{{ project.title }}</span>
+              <span class="entity-project-step">Step {{ project.step }}</span>
+            </a>
+          }
+        </div>
+      </article>
+    }
+  </div>
+</section>

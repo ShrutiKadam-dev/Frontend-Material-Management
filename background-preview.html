@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard Background Preview</title>
+    <style>
+      :root {
+        --color-primary: #ef2f2f;
+        --color-primary-dark: #cf1725;
+        --color-text: #343946;
+        --color-heading: #252a34;
+        --color-muted: #717783;
+        --color-border: #e2e4e8;
+        --shadow-panel: 0 16px 36px rgba(34, 38, 48, 0.07);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        color: var(--color-text);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        margin: 0;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        min-height: 100vh;
+      }
+
+      .preview {
+        min-height: 520px;
+        padding: 42px;
+      }
+
+      .industrial {
+        background:
+          linear-gradient(rgba(37, 42, 52, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(37, 42, 52, 0.045) 1px, transparent 1px),
+          linear-gradient(135deg, #ffffff 0%, #f4f6f8 55%, #fff3f1 100%);
+        background-size: 42px 42px, 42px 42px, cover;
+      }
+
+      .red-wash {
+        background:
+          radial-gradient(circle at 12% 8%, rgba(239, 47, 47, 0.14), transparent 28%),
+          radial-gradient(circle at 88% 18%, rgba(52, 57, 70, 0.08), transparent 30%),
+          linear-gradient(135deg, #ffffff 0%, #f7f7f5 60%, #fff6f4 100%);
+      }
+
+      .paper {
+        background:
+          linear-gradient(135deg, rgba(239, 47, 47, 0.065), transparent 34%),
+          linear-gradient(180deg, #ffffff 0%, #f6f6f2 100%);
+      }
+
+      .enterprise {
+        background: linear-gradient(120deg, #ffffff 0%, #f5f7fa 48%, #f2f3f5 100%);
+      }
+
+      .label {
+        color: var(--color-primary);
+        font-size: 0.78rem;
+        font-weight: 900;
+        letter-spacing: 0;
+        margin: 0 0 8px;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        color: var(--color-heading);
+        font-size: clamp(1.7rem, 2vw, 2.35rem);
+        line-height: 1.12;
+        margin: 0;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      .summary {
+        color: var(--color-muted);
+        line-height: 1.6;
+        margin-top: 10px;
+        max-width: 520px;
+      }
+
+      .dashboard {
+        display: grid;
+        gap: 20px;
+        margin-top: 28px;
+      }
+
+      .metric-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .panel {
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        box-shadow: var(--shadow-panel);
+      }
+
+      .metric {
+        padding: 18px;
+      }
+
+      .metric span {
+        color: var(--color-muted);
+        display: block;
+        font-size: 0.84rem;
+      }
+
+      .metric strong {
+        color: var(--color-heading);
+        display: block;
+        font-size: 1.55rem;
+        margin-top: 8px;
+      }
+
+      .wide-panel {
+        padding: 22px;
+      }
+
+      .pipeline {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-top: 18px;
+      }
+
+      .step {
+        border: 1px solid #eceef1;
+        border-radius: 8px;
+        padding: 14px;
+      }
+
+      .step.active {
+        background: #fff1f0;
+        border-color: rgba(239, 47, 47, 0.26);
+      }
+
+      .step span {
+        color: var(--color-primary-dark);
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 800;
+      }
+
+      .step strong {
+        color: var(--color-heading);
+        display: block;
+        font-size: 0.95rem;
+        margin-top: 8px;
+      }
+
+      .step small {
+        color: var(--color-muted);
+        display: block;
+        margin-top: 6px;
+      }
+
+      @media (max-width: 980px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 620px) {
+        .preview {
+          padding: 24px;
+        }
+
+        .metric-grid,
+        .pipeline {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="preview industrial">
+        <p class="label">Option 1</p>
+        <h1>Soft Industrial Grid</h1>
+        <p class="summary">Structured, modern, and very suitable for an operations dashboard.</p>
+        <div class="dashboard">
+          <div class="metric-grid">
+            <article class="metric panel"><span>Open POs</span><strong>128</strong></article>
+            <article class="metric panel"><span>Imports</span><strong>42</strong></article>
+            <article class="metric panel"><span>Payments</span><strong>18</strong></article>
+          </div>
+          <div class="wide-panel panel">
+            <p class="label">Workflow</p>
+            <h1>Project Pipeline</h1>
+            <div class="pipeline">
+              <div class="step active"><span>01</span><strong>Query</strong><small>6 active</small></div>
+              <div class="step active"><span>04</span><strong>Cost Sheet</strong><small>9 drafts</small></div>
+              <div class="step"><span>08</span><strong>PO</strong><small>14 open</small></div>
+              <div class="step"><span>13</span><strong>Delivery</strong><small>5 scheduled</small></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="preview red-wash">
+        <p class="label">Option 2</p>
+        <h1>Modern Red Accent Wash</h1>
+        <p class="summary">Warmer and more branded, with soft red emphasis behind the content.</p>
+        <div class="dashboard">
+          <div class="metric-grid">
+            <article class="metric panel"><span>Open POs</span><strong>128</strong></article>
+            <article class="metric panel"><span>Imports</span><strong>42</strong></article>
+            <article class="metric panel"><span>Payments</span><strong>18</strong></article>
+          </div>
+          <div class="wide-panel panel">
+            <p class="label">Workflow</p>
+            <h1>Project Pipeline</h1>
+            <div class="pipeline">
+              <div class="step active"><span>01</span><strong>Query</strong><small>6 active</small></div>
+              <div class="step active"><span>04</span><strong>Cost Sheet</strong><small>9 drafts</small></div>
+              <div class="step"><span>08</span><strong>PO</strong><small>14 open</small></div>
+              <div class="step"><span>13</span><strong>Delivery</strong><small>5 scheduled</small></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="preview paper">
+        <p class="label">Option 3</p>
+        <h1>Subtle Paper Texture</h1>
+        <p class="summary">Quiet and premium, with less visual structure around the dashboard.</p>
+        <div class="dashboard">
+          <div class="metric-grid">
+            <article class="metric panel"><span>Open POs</span><strong>128</strong></article>
+            <article class="metric panel"><span>Imports</span><strong>42</strong></article>
+            <article class="metric panel"><span>Payments</span><strong>18</strong></article>
+          </div>
+          <div class="wide-panel panel">
+            <p class="label">Workflow</p>
+            <h1>Project Pipeline</h1>
+            <div class="pipeline">
+              <div class="step active"><span>01</span><strong>Query</strong><small>6 active</small></div>
+              <div class="step active"><span>04</span><strong>Cost Sheet</strong><small>9 drafts</small></div>
+              <div class="step"><span>08</span><strong>PO</strong><small>14 open</small></div>
+              <div class="step"><span>13</span><strong>Delivery</strong><small>5 scheduled</small></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="preview enterprise">
+        <p class="label">Option 4</p>
+        <h1>Enterprise Clean</h1>
+        <p class="summary">Very neutral and minimal, best when the content should do all the work.</p>
+        <div class="dashboard">
+          <div class="metric-grid">
+            <article class="metric panel"><span>Open POs</span><strong>128</strong></article>
+            <article class="metric panel"><span>Imports</span><strong>42</strong></article>
+            <article class="metric panel"><span>Payments</span><strong>18</strong></article>
+          </div>
+          <div class="wide-panel panel">
+            <p class="label">Workflow</p>
+            <h1>Project Pipeline</h1>
+            <div class="pipeline">
+              <div class="step active"><span>01</span><strong>Query</strong><small>6 active</small></div>
+              <div class="step active"><span>04</span><strong>Cost Sheet</strong><small>9 drafts</small></div>
+              <div class="step"><span>08</span><strong>PO</strong><small>14 open</small></div>
+              <div class="step"><span>13</span><strong>Delivery</strong><small>5 scheduled</small></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

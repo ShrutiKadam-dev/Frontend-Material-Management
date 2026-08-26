@@ -1,0 +1,236 @@
+.dashboard-page {
+  gap: 30px;
+  position: relative;
+}
+
+.dashboard-hero {
+  max-width: 650px;
+  padding-top: 2px;
+}
+
+.metric-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metric-card {
+  display: grid;
+  min-height: 126px;
+  padding: 18px 20px;
+}
+
+.metric-card p {
+  color: var(--color-muted-light);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.metric-card strong {
+  align-self: center;
+  color: var(--color-heading);
+  display: block;
+  font-family: var(--app-display-font);
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1;
+  margin-top: 8px;
+}
+
+.metric-card span {
+  align-self: end;
+  color: var(--color-success);
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.metric-card span.warning {
+  color: var(--color-warning);
+}
+
+.recent-section {
+  display: grid;
+  gap: 18px;
+}
+
+.recent-heading {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.recent-heading h2 {
+  color: var(--color-heading);
+  font-family: var(--app-display-font);
+  font-size: 1.13rem;
+  line-height: 1.15;
+}
+
+.recent-heading a {
+  color: var(--color-primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.recent-heading a:hover,
+.recent-heading a:focus-visible {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.project-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.project-card {
+  display: grid;
+  gap: 16px;
+  min-height: 190px;
+  overflow: hidden;
+  padding: 20px;
+  position: relative;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.project-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+.project-stripe {
+  background: var(--color-primary);
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 5px;
+}
+
+.project-card-header {
+  align-items: start;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.project-card h3 {
+  color: var(--color-heading);
+  font-family: var(--app-display-font);
+  font-size: 1.06rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.status-pill {
+  background: var(--color-warning-soft);
+  border-radius: var(--radius-pill);
+  color: var(--color-warning);
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  padding: 7px 12px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status-pill.completed {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.project-parties {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1fr);
+  margin: 0;
+}
+
+.project-parties div {
+  min-width: 0;
+}
+
+.project-parties dt {
+  color: var(--color-muted-light);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.project-parties dd {
+  color: var(--color-text);
+  font-size: 0.96rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.progress-track {
+  background: var(--color-border);
+  border-radius: var(--radius-pill);
+  height: 6px;
+  overflow: hidden;
+}
+
+.progress-track span {
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-strong));
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+
+.project-progress {
+  color: var(--color-muted);
+  display: grid;
+  font-size: 0.8rem;
+  font-weight: 500;
+  gap: 16px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.project-progress span:last-child {
+  text-align: right;
+}
+
+@media (max-width: 1120px) {
+  .metric-grid,
+  .project-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-page {
+    gap: 24px;
+  }
+
+  .metric-grid,
+  .project-grid,
+  .project-parties,
+  .project-progress {
+    grid-template-columns: 1fr;
+  }
+
+  .project-card-header {
+    grid-template-columns: 1fr;
+  }
+
+  .project-progress span:last-child {
+    text-align: left;
+  }
+}

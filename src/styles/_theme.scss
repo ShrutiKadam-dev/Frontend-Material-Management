@@ -1,0 +1,153 @@
+/* ---------------------------------------------------------
+   StanTech Materials Design System & Theme Layer
+   --------------------------------------------------------- */
+
+:root {
+  /* Typography Scale */
+  --font-body: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-body);
+  --app-font-family: var(--font-body);
+  --app-display-font: var(--font-display);
+
+  /* Primary Brand Palette (Warm Red / Coral) */
+  --color-primary: #e14d3f;
+  --color-primary-hover: #b7392c;
+  --color-primary-strong: #7a2419;
+  --color-primary-soft: #fbeae6;
+  --color-primary-muted: #f7d9d3;
+
+  /* Neutrals & Page Surfaces */
+  --color-background: #fbf6f2;
+  --color-surface: #ffffff;
+  --color-surface-glass: rgba(255, 255, 255, 0.72);
+  --color-surface-panel: rgba(255, 255, 255, 0.94);
+  --color-surface-muted: #fdfbf9;
+  --color-on-primary: #ffffff;
+  --color-text: #4a3e38;
+  --color-heading: #241b18;
+  --color-muted: #6e6259;
+  --color-muted-light: #9c9088;
+  --color-border: #ece0d8;
+  --color-border-soft: #f3eae4;
+
+  /* Semantic Alerts */
+  --color-danger: #b42318;
+  --color-success: #2f8f5b;
+  --color-success-soft: #e4f3ea;
+  --color-warning: #c97f1e;
+  --color-warning-soft: #faeedc;
+
+  /* Layout Spacing Constants */
+  --layout-max-width: 1180px;
+  --layout-x-padding: clamp(24px, 6vw, 80px);
+  --topbar-height: 68px;
+
+  /* Borders & Corner Radii */
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --radius-panel: 16px;
+  --radius-pill: 999px;
+
+  /* Elevation & Shadows */
+  --shadow-card: 0 1px 2px rgba(36, 27, 24, 0.06);
+  --shadow-card-hover: 0 8px 24px rgba(36, 27, 24, 0.08);
+  --shadow-control: 0 10px 20px rgba(183, 57, 44, 0.13);
+  --shadow-modal: 0 20px 60px rgba(36, 27, 24, 0.18);
+  --focus-ring: 0 0 0 3px rgba(225, 77, 63, 0.18);
+
+  /* Assets */
+  --auth-hero-image: url("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80");
+}
+
+/* ---------------------------------------------------------
+   Reusable Mixins
+   --------------------------------------------------------- */
+
+/**
+ * Mixin to apply the fixed decorative radial gradient background.
+ * Uses a pseudo-element to render behind all content on the viewport.
+ */
+@mixin decorative-fixed-background-circles {
+  background: var(--color-background);
+  position: relative;
+
+  &::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      /* Ultra-subtle concentric precision rings */
+      radial-gradient(circle at -140px -140px, transparent 0, transparent 338px, rgba(225, 77, 63, 0.04) 339px, rgba(225, 77, 63, 0.04) 340px, transparent 341px),
+      radial-gradient(circle at -140px -140px, transparent 0, transparent 458px, rgba(225, 77, 63, 0.03) 459px, rgba(225, 77, 63, 0.03) 460px, transparent 461px),
+      radial-gradient(circle at 120px -40px, transparent 0, transparent 258px, rgba(247, 217, 211, 0.25) 259px, rgba(247, 217, 211, 0.25) 260px, transparent 261px),
+      radial-gradient(circle at calc(100% + 60px) calc(100% + 100px), transparent 0, transparent 218px, rgba(251, 234, 230, 0.3) 219px, rgba(251, 234, 230, 0.3) 220px, transparent 221px),
+      
+      /* Soft ambient glows */
+      radial-gradient(circle at -140px -140px, rgba(225, 77, 63, 0.05) 0%, transparent 65%),
+      radial-gradient(circle at 120px -40px, rgba(247, 217, 211, 0.15) 0%, transparent 55%),
+      radial-gradient(circle at calc(100% + 60px) calc(100% + 100px), rgba(251, 234, 230, 0.2) 0%, transparent 60%),
+      var(--color-background);
+    pointer-events: none;
+  }
+}
+
+@mixin decorative-fixed-background-grid {
+  background: var(--color-background);
+  position: relative;
+
+  &::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      /* Soft grid lines for industrial design structure */
+      linear-gradient(rgba(36, 27, 24, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(36, 27, 24, 0.025) 1px, transparent 1px),
+      
+      /* Soft ambient glows (clean design) */
+      radial-gradient(circle at -140px -140px, rgba(225, 77, 63, 0.06) 0%, transparent 65%),
+      radial-gradient(circle at 120px -40px, rgba(247, 217, 211, 0.18) 0%, transparent 55%),
+      radial-gradient(circle at calc(100% + 60px) calc(100% + 100px), rgba(251, 234, 230, 0.25) 0%, transparent 60%),
+      var(--color-background);
+    background-size: 44px 44px, 44px 44px, auto, auto, auto, auto;
+    pointer-events: none;
+  }
+}
+
+/**
+ * Mixin to apply a premium, minimalist custom vertical scrollbar.
+ */
+@mixin premium-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: var(--radius-pill);
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-muted-light);
+  }
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/**
+ * Mixin to completely hide scrollbar tracks, while preserving touch scroll usability.
+ * Used for horizontal nav tabs.
+ */
+@mixin hide-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

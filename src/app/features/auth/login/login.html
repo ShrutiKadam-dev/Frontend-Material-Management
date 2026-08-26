@@ -1,0 +1,95 @@
+<main class="login-page">
+  <div class="shape shape-top" aria-hidden="true"></div>
+  <div class="shape shape-bottom" aria-hidden="true"></div>
+
+  <section class="login-card" aria-label="Material management login">
+    <div class="form-panel">
+      <div class="brand">
+        <img
+          class="brand-logo"
+          src="/assets/images/stc-logo-coral.svg"
+          alt="STC Material Management"
+        />
+      </div>
+
+      <div class="intro">
+        <p class="eyebrow">Welcome back</p>
+        <h1>Sign in to manage materials</h1>
+        <p>Track stock, suppliers, requests, and purchase movement from one workspace.</p>
+      </div>
+
+      <form class="login-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="field">
+          <label for="email">Email address</label>
+          <p-iconfield>
+            <p-inputicon class="pi pi-envelope" />
+            <input
+              id="email"
+              pInputText
+              type="email"
+              autocomplete="email"
+              formControlName="email"
+              [fluid]="true"
+              [invalid]="form.controls.email.touched && form.controls.email.invalid"
+            />
+          </p-iconfield>
+
+          @if (form.controls.email.touched && form.controls.email.invalid) {
+            <p class="error">Enter a valid email address.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="password-field">
+            <input
+              id="password"
+              pInputText
+              autocomplete="current-password"
+              formControlName="password"
+              [type]="passwordVisible() ? 'text' : 'password'"
+              [fluid]="true"
+              [invalid]="form.controls.password.touched && form.controls.password.invalid"
+            />
+            <button
+              class="password-toggle"
+              type="button"
+              [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'"
+              [attr.aria-pressed]="passwordVisible()"
+              (click)="togglePasswordVisibility()"
+            >
+              <span
+                class="pi"
+                aria-hidden="true"
+                [class.pi-eye]="!passwordVisible()"
+                [class.pi-eye-slash]="passwordVisible()"
+              ></span>
+            </button>
+          </div>
+
+          @if (form.controls.password.touched && form.controls.password.invalid) {
+            <p class="error">Password must be at least 6 characters.</p>
+          }
+        </div>
+
+        <p-button
+          type="submit"
+          label="Sign in"
+          [disabled]="isSubmitting()"
+          [fluid]="true"
+          [loading]="isSubmitting()"
+        />
+      </form>
+    </div>
+
+    <aside class="visual-panel" aria-label="Material operations overview">
+      <div class="visual-content">
+        <h2>Smart Inventory Control</h2>
+        <p>
+          Keep material availability, supplier activity, and warehouse movement visible for
+          faster decisions.
+        </p>
+      </div>
+    </aside>
+  </section>
+</main>
