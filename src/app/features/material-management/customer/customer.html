@@ -10,35 +10,187 @@
         <p-inputicon class="pi pi-search" />
         <input pInputText type="search" placeholder="Search customers" aria-label="Search customers" />
       </p-iconfield>
-      <button pButton type="button" icon="pi pi-plus" label="Add Customer"></button>
+      <button pButton type="button" icon="pi pi-plus" label="Add Customer" (click)="openAddDialog()"></button>
     </div>
   </div>
 
+  @if (loading() && customers().length === 0) {
+  <div class="loading-state"
+    style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 340px; gap: 12px;">
+    <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: var(--color-primary);" aria-hidden="true"></i>
+    <p style="color: var(--color-muted); font-size: 0.95rem;">Loading customers...</p>
+  </div>
+  } @else if (error()) {
+  <div class="error-state app-panel"
+    style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 340px; padding: 32px; gap: 16px; text-align: center;">
+    <i class="pi pi-exclamation-circle" style="font-size: 3rem; color: var(--color-danger);" aria-hidden="true"></i>
+    <h2 style="color: var(--color-heading); font-size: 1.24rem; font-weight: 750;">Failed to Load Customers</h2>
+    <p style="color: var(--color-muted); max-width: 400px; margin: 0;">{{ error() }}</p>
+    <button pButton type="button" icon="pi pi-refresh" label="Retry" class="p-button-outlined"
+      (click)="loadCustomers()"></button>
+  </div>
+  } @else if (customers().length === 0) {
+  <div class="empty-state">
+    <i class="pi pi-users" aria-hidden="true"></i>
+    <h2>No Customers Found</h2>
+    <p>Get started by adding your first customer.</p>
+    <button pButton type="button" icon="pi pi-plus" label="Add Customer" (click)="openAddDialog()"></button>
+  </div>
+  } @else {
   <div class="entity-grid">
-    @for (customer of customers; track customer.name) {
-      <article class="entity-card app-panel">
-        <div class="entity-head">
-          <span class="entity-avatar" aria-hidden="true">{{ initials(customer.name) }}</span>
-          <div>
-            <h2 class="entity-name">{{ customer.name }}</h2>
-            <p class="entity-tag">{{ customer.address }}</p>
-          </div>
+    @for (customer of customers(); track customer.id) {
+    <article class="entity-card app-panel">
+      <div class="entity-head">
+        <span class="entity-avatar" aria-hidden="true">{{ initials(customer.name) }}</span>
+        <div>
+          <h2 class="entity-name">{{ customer.name }}</h2>
+          <p class="entity-tag">{{ customer.address }}</p>
         </div>
+      </div>
 
-        <div class="entity-contact" aria-label="Contact details">
-          <span>{{ customer.email }}</span>
-          <span>{{ customer.contact }}</span>
-        </div>
+      <div class="entity-contact" aria-label="Contact details">
+        <span>{{ customer.email }}</span>
+        <span>{{ customer.contact_number }}</span>
+      </div>
 
-        <div class="entity-projects" aria-label="Customer projects">
-          @for (project of customer.projects; track project.title) {
-            <a class="entity-project-row" routerLink="/projects">
-              <span class="entity-project-name">{{ project.title }}</span>
-              <span class="entity-project-step">Step {{ project.step }}</span>
-            </a>
-          }
-        </div>
-      </article>
+      @if (customer.website_url) {
+      <div style="font-size: 0.85rem; margin-top: 4px;">
+        <a [href]="customer.website_url" target="_blank" rel="noopener"
+          style="color: var(--color-primary); text-decoration: underline;">
+          {{ customer.website_url }}
+        </a>
+      </div>
+      }
+
+      <div class="entity-actions">
+        <button pButton type="button" icon="pi pi-eye" label="Details" class="p-button-outlined p-button-sm"
+          (click)="openDetailsDialog(customer)" aria-label="View customer details"></button>
+        <button pButton type="button" icon="pi pi-pencil" label="Edit" class="p-button-outlined p-button-sm"
+          (click)="openEditDialog(customer)" aria-label="Edit customer details"></button>
+      </div>
+    </article>
     }
   </div>
+  }
 </section>
+
+<!-- Dialog for Add/Edit Customer -->
+<p-dialog [header]="isEditMode() ? 'Edit Customer' : 'Add Customer'" [visible]="dialogVisible()"
+  (visibleChange)="dialogVisible.set($event)" [modal]="true" [style]="{ width: '450px' }" [draggable]="false"
+  [resizable]="false">
+
+  <form [formGroup]="customerForm" (ngSubmit)="onSubmit()" novalidate>
+    <div class="field" style="margin-top: 8px;">
+      <label for="name">Name *</label>
+      <input pInputText id="name" formControlName="name" style="width: 100%;" placeholder="Enter customer name" />
+      @if (customerForm.get('name')?.invalid && (customerForm.get('name')?.dirty || customerForm.get('name')?.touched))
+      {
+      <p class="error">Name is required.</p>
+      }
+    </div>
+
+    <div class="field">
+      <label for="email">Email *</label>
+      <input pInputText id="email" type="email" formControlName="email" style="width: 100%;"
+        placeholder="Enter email address" />
+      @if (customerForm.get('email')?.invalid && (customerForm.get('email')?.dirty ||
+      customerForm.get('email')?.touched)) {
+      @if (customerForm.get('email')?.errors?.['required']) {
+      <p class="error">Email is required.</p>
+      } @else if (customerForm.get('email')?.errors?.['email']) {
+      <p class="error">Enter a valid email address.</p>
+      }
+      }
+    </div>
+
+    <div class="field">
+      <label for="contact_number">Contact Number *</label>
+      <input pInputText id="contact_number" formControlName="contact_number" style="width: 100%;"
+        placeholder="Enter contact number" />
+      @if (customerForm.get('contact_number')?.invalid && (customerForm.get('contact_number')?.dirty ||
+      customerForm.get('contact_number')?.touched)) {
+      @if (customerForm.get('contact_number')?.errors?.['required']) {
+      <p class="error">Contact number is required.</p>
+      } @else if (customerForm.get('contact_number')?.errors?.['pattern']) {
+      <p class="error">Enter a valid contact number.</p>
+      }
+      }
+    </div>
+
+    <div class="field">
+      <label for="address">Address *</label>
+      <input pInputText id="address" formControlName="address" style="width: 100%;" placeholder="Enter address" />
+      @if (customerForm.get('address')?.invalid && (customerForm.get('address')?.dirty ||
+      customerForm.get('address')?.touched)) {
+      <p class="error">Address is required.</p>
+      }
+    </div>
+
+    <div class="field">
+      <label for="website_url">Website URL (Optional)</label>
+      <input pInputText id="website_url" formControlName="website_url" style="width: 100%;"
+        placeholder="https://example.com" />
+      @if (customerForm.get('website_url')?.invalid && (customerForm.get('website_url')?.dirty ||
+      customerForm.get('website_url')?.touched)) {
+      <p class="error">Enter a valid URL (starting with http:// or https:// or www.).</p>
+      }
+    </div>
+
+    <div class="dialog-footer">
+      <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary"
+        (click)="dialogVisible.set(false)"></button>
+      <button pButton type="submit" [label]="submitting() ? 'Submitting...' : 'Save'"
+        [disabled]="customerForm.invalid || submitting()"></button>
+    </div>
+  </form>
+</p-dialog>
+
+<!-- Dialog for Customer Details -->
+<p-dialog header="Customer Details" [visible]="detailsVisible()" (visibleChange)="detailsVisible.set($event)"
+  [modal]="true" [style]="{ width: '450px' }" [draggable]="false" [resizable]="false">
+
+  @if (selectedCustomer(); as customer) {
+  <div class="detail-header">
+    <h3 class="entity-name" style="margin: 0 0 4px 0;">{{ customer.name }}</h3>
+    <p class="entity-tag" style="margin: 0;">{{ customer.address }}</p>
+  </div>
+
+  <div class="detail-row" style="margin-top: 16px;">
+    <span class="detail-label">Email</span>
+    <span class="detail-value">{{ customer.email }}</span>
+  </div>
+
+  <div class="detail-row">
+    <span class="detail-label">Contact</span>
+    <span class="detail-value">{{ customer.contact_number }}</span>
+  </div>
+
+  <div class="detail-row">
+    <span class="detail-label">Website</span>
+    <span class="detail-value">
+      @if (customer.website_url) {
+      <a [href]="customer.website_url" target="_blank" rel="noopener"
+        style="color: var(--color-primary); text-decoration: underline;">
+        {{ customer.website_url }}
+      </a>
+      } @else {
+      -
+      }
+    </span>
+  </div>
+
+  <div class="detail-row">
+    <span class="detail-label">Created At</span>
+    <span class="detail-value">{{ customer.created_at | date:'medium' }}</span>
+  </div>
+
+  <div class="detail-row">
+    <span class="detail-label">Updated At</span>
+    <span class="detail-value">{{ customer.updated_at | date:'medium' }}</span>
+  </div>
+  }
+
+  <div class="dialog-footer">
+    <button pButton type="button" label="Close" class="p-button-text" (click)="detailsVisible.set(false)"></button>
+  </div>
+</p-dialog>

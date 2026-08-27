@@ -1,1 +1,65 @@
-/* Shared page styles are defined in src/styles.scss. */
+.field {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+label {
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.error {
+  color: var(--color-danger, #b42318);
+  font-size: 0.82rem;
+  margin: 0;
+  margin-top: 4px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.detail-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+
+  .detail-label {
+    font-weight: 700;
+    color: var(--color-muted);
+  }
+
+  .detail-value {
+    color: var(--color-text);
+    word-break: break-all;
+  }
+}
+
+/* Optional header style inside details dialog */
+.detail-header {
+  border-bottom: 1px solid var(--color-border-soft);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.entity-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  border-top: 1px dashed var(--color-border);
+  padding-top: 12px;
+}
+
+.search-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
