@@ -6,6 +6,7 @@ import { API_BASE_URL } from '../tokens/api-base-url.token';
 import {
   QuotationRequest,
   QuotationRequestCreateInput,
+  QuotationRequestUpdateInput,
 } from '../models/quotation-request.model';
 
 @Injectable({
@@ -26,12 +27,24 @@ export class QuotationRequestService {
     files: File[] = [],
   ): Observable<QuotationRequest> {
     const fd = new FormData();
-    // Append JSON payload as string under 'data'
     fd.append('data', JSON.stringify(payload));
-    // Append each file as binary part under 'file'
     files.forEach((file) => fd.append('file', file, file.name));
     return this.http.post<QuotationRequest>(
       `${this.apiBaseUrl}/api/v1/quotation-requests`,
+      fd,
+    );
+  }
+
+  update(
+    id: number,
+    payload: QuotationRequestUpdateInput,
+    files: File[] = [],
+  ): Observable<QuotationRequest> {
+    const fd = new FormData();
+    fd.append('data', JSON.stringify(payload));
+    files.forEach((file) => fd.append('file', file, file.name));
+    return this.http.patch<QuotationRequest>(
+      `${this.apiBaseUrl}/api/v1/quotation-requests/${id}`,
       fd,
     );
   }

@@ -3,7 +3,11 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../tokens/api-base-url.token';
-import { CustomerQuery, CustomerQueryCreateInput } from '../models/customer-query.model';
+import {
+  CustomerQuery,
+  CustomerQueryCreateInput,
+  CustomerQueryUpdateInput,
+} from '../models/customer-query.model';
 
 @Injectable({
   providedIn: 'root',
@@ -20,21 +24,36 @@ export class CustomerQueryService {
 
   /**
    * Single API call — sends JSON payload + files together as multipart/form-data.
-   * - `data` part: JSON blob with application/json content-type (backend deserializes normally)
-   * - `attachments` part: one entry per file (binary stream)
-   * Browser sets the correct Content-Type + boundary automatically.
+   * - `data` part: JSON blob with application/json content-type
+   * - `file` part: one entry per file (binary stream)
    */
   create(
     payload: CustomerQueryCreateInput,
     files: File[] = [],
   ): Observable<CustomerQuery> {
     const fd = new FormData();
-    // Append JSON as a string
     fd.append('data', JSON.stringify(payload));
-    // Append each file as a binary part
     files.forEach((file) => fd.append('file', file, file.name));
     return this.http.post<CustomerQuery>(
       `${this.apiBaseUrl}/api/v1/customer-queries`,
+      fd,
+    );
+  }
+
+  /**
+   * Updates an existing customer query via PATCH /api/v1/customer-queries/{id}.
+   * Sends updated JSON payload and any new attachments.
+   */
+  update(
+    id: number,
+    payload: CustomerQueryUpdateInput,
+    files: File[] = [],
+  ): Observable<CustomerQuery> {
+    const fd = new FormData();
+    fd.append('data', JSON.stringify(payload));
+    files.forEach((file) => fd.append('file', file, file.name));
+    return this.http.patch<CustomerQuery>(
+      `${this.apiBaseUrl}/api/v1/customer-queries/${id}`,
       fd,
     );
   }

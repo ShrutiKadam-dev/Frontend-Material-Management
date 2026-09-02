@@ -1,4 +1,5 @@
 @import "./styles/theme";
+@import "./styles/step-common";
 
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800;900&display=swap");
 
@@ -277,5 +278,49 @@ a {
   .header-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+}
+
+/* Step Dialogs: Single smooth scrollbar on dialog content */
+.cq-dialog .p-dialog-content {
+  max-height: 75vh !important;
+  overflow-y: auto !important;
+  padding: 0 !important;
+}
+
+/* Prevent background container from showing second scrollbar while dialog is open */
+body:has(.p-dialog-mask) .content-shell,
+body:has(.p-dialog-mask) app-root,
+body:has(.p-component-overlay) .content-shell {
+  overflow-y: hidden !important;
+}
+
+/* Global Borderless Icon Action Buttons across Projects, Customers, Suppliers */
+.project-actions,
+.entity-actions {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+
+  .p-button {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    color: var(--color-muted) !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    padding: 0 !important;
+    transition: all 120ms ease !important;
+    width: 32px !important;
+
+    .pi {
+      font-size: 0.95rem !important;
+    }
+
+    &:hover {
+      background: var(--color-primary-soft) !important;
+      color: var(--color-primary) !important;
+    }
   }
 }

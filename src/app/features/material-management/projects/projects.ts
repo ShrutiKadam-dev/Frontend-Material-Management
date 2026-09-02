@@ -6,6 +6,8 @@ import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
 
+import { TooltipModule } from 'primeng/tooltip';
+
 import { Customer } from '../../../core/models/customer.model';
 import { Supplier } from '../../../core/models/supplier.model';
 import { Project } from '../../../core/models/project.model';
@@ -15,7 +17,7 @@ import { ProjectService } from '../../../core/services/project';
 
 @Component({
   selector: 'app-projects',
-  imports: [ButtonModule, DialogModule, SelectModule, InputTextModule, ReactiveFormsModule],
+  imports: [ButtonModule, DialogModule, SelectModule, InputTextModule, ReactiveFormsModule, TooltipModule],
   templateUrl: './projects.html',
   styleUrl: './projects.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

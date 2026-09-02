@@ -7,6 +7,8 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 
+import { TooltipModule } from 'primeng/tooltip';
+
 import { Customer as CustomerModel } from '../../../core/models/customer.model';
 import { CustomerService } from '../../../core/services/customer';
 
@@ -19,6 +21,7 @@ import { CustomerService } from '../../../core/services/customer';
     InputTextModule,
     ReactiveFormsModule,
     DialogModule,
+    TooltipModule,
     DatePipe,
   ],
   templateUrl: './customer.html',

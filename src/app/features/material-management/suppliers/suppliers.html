@@ -15,173 +15,179 @@
   </div>
 
   @if (loading() && suppliers().length === 0) {
-    <div class="loading-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 340px; gap: 12px;">
-      <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: var(--color-primary);" aria-hidden="true"></i>
-      <p style="color: var(--color-muted); font-size: 0.95rem;">Loading suppliers...</p>
-    </div>
+  <div class="loading-state"
+    style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 340px; gap: 12px;">
+    <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: var(--color-primary);" aria-hidden="true"></i>
+    <p style="color: var(--color-muted); font-size: 0.95rem;">Loading suppliers...</p>
+  </div>
   } @else if (error()) {
-    <div class="error-state app-panel" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 340px; padding: 32px; gap: 16px; text-align: center;">
-      <i class="pi pi-exclamation-circle" style="font-size: 3rem; color: var(--color-danger);" aria-hidden="true"></i>
-      <h2 style="color: var(--color-heading); font-size: 1.24rem; font-weight: 750;">Failed to Load Suppliers</h2>
-      <p style="color: var(--color-muted); max-width: 400px; margin: 0;">{{ error() }}</p>
-      <button pButton type="button" icon="pi pi-refresh" label="Retry" class="p-button-outlined" (click)="loadSuppliers()"></button>
-    </div>
+  <div class="error-state app-panel"
+    style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 340px; padding: 32px; gap: 16px; text-align: center;">
+    <i class="pi pi-exclamation-circle" style="font-size: 3rem; color: var(--color-danger);" aria-hidden="true"></i>
+    <h2 style="color: var(--color-heading); font-size: 1.24rem; font-weight: 750;">Failed to Load Suppliers</h2>
+    <p style="color: var(--color-muted); max-width: 400px; margin: 0;">{{ error() }}</p>
+    <button pButton type="button" icon="pi pi-refresh" label="Retry" class="p-button-outlined"
+      (click)="loadSuppliers()"></button>
+  </div>
   } @else if (suppliers().length === 0) {
-    <div class="empty-state">
-      <i class="pi pi-users" aria-hidden="true"></i>
-      <h2>No Suppliers Found</h2>
-      <p>Get started by adding your first supplier.</p>
-      <button pButton type="button" icon="pi pi-plus" label="Add Supplier" (click)="openAddDialog()"></button>
-    </div>
+  <div class="empty-state">
+    <i class="pi pi-users" aria-hidden="true"></i>
+    <h2>No Suppliers Found</h2>
+    <p>Get started by adding your first supplier.</p>
+    <button pButton type="button" icon="pi pi-plus" label="Add Supplier" (click)="openAddDialog()"></button>
+  </div>
   } @else {
-    <div class="entity-grid">
-      @for (supplier of suppliers(); track supplier.id) {
-        <article class="entity-card app-panel">
-          <div class="entity-head">
-            <span class="entity-avatar" aria-hidden="true">{{ initials(supplier.name) }}</span>
-            <div>
-              <h2 class="entity-name">{{ supplier.name }}</h2>
-              <p class="entity-tag">{{ supplier.address }}</p>
-            </div>
-          </div>
+  <div class="entity-grid">
+    @for (supplier of suppliers(); track supplier.id) {
+    <article class="entity-card app-panel">
+      <div class="entity-head">
+        <span class="entity-avatar" aria-hidden="true">{{ initials(supplier.name) }}</span>
+        <div>
+          <h2 class="entity-name">{{ supplier.name }}</h2>
+          <p class="entity-tag">{{ supplier.address }}</p>
+        </div>
+      </div>
 
-          <div class="entity-contact" aria-label="Contact details">
-            <span>{{ supplier.email }}</span>
-            <span>{{ supplier.contact_number }}</span>
-          </div>
+      <div class="entity-contact" aria-label="Contact details">
+        <span>{{ supplier.email }}</span>
+        <span>{{ supplier.contact_number }}</span>
+      </div>
 
-          @if (supplier.website_url) {
-            <div style="font-size: 0.85rem; margin-top: 4px;">
-              <a [href]="supplier.website_url" target="_blank" rel="noopener" style="color: var(--color-primary); text-decoration: underline;">
-                {{ supplier.website_url }}
-              </a>
-            </div>
-          }
-
-          <div class="entity-actions">
-            <button pButton type="button" icon="pi pi-eye" label="Details" class="p-button-outlined p-button-sm" (click)="openDetailsDialog(supplier)" aria-label="View supplier details"></button>
-            <button pButton type="button" icon="pi pi-pencil" label="Edit" class="p-button-outlined p-button-sm" (click)="openEditDialog(supplier)" aria-label="Edit supplier details"></button>
-          </div>
-        </article>
+      @if (supplier.website_url) {
+      <div style="font-size: 0.85rem; margin-top: 4px;">
+        <a [href]="supplier.website_url" target="_blank" rel="noopener"
+          style="color: var(--color-primary); text-decoration: underline;">
+          {{ supplier.website_url }}
+        </a>
+      </div>
       }
-    </div>
+
+      <div class="entity-actions">
+        <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-sm"
+          (click)="openDetailsDialog(supplier)" aria-label="View supplier details" pTooltip="Details" tooltipPosition="top"></button>
+        <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm"
+          (click)="openEditDialog(supplier)" aria-label="Edit supplier details" pTooltip="Edit" tooltipPosition="top"></button>
+      </div>
+    </article>
+    }
+  </div>
   }
 </section>
 
 <!-- Dialog for Add/Edit Supplier -->
-<p-dialog 
-  [header]="isEditMode() ? 'Edit Supplier' : 'Add Supplier'" 
-  [visible]="dialogVisible()" 
-  (visibleChange)="dialogVisible.set($event)"
-  [modal]="true" 
-  [style]="{ width: '450px' }"
-  [draggable]="false"
+<p-dialog [header]="isEditMode() ? 'Edit Supplier' : 'Add Supplier'" [visible]="dialogVisible()"
+  (visibleChange)="dialogVisible.set($event)" [modal]="true" [style]="{ width: '450px' }" [draggable]="false"
   [resizable]="false">
-  
+
   <form [formGroup]="supplierForm" (ngSubmit)="onSubmit()" novalidate>
     <div class="field" style="margin-top: 8px;">
       <label for="name">Name *</label>
       <input pInputText id="name" formControlName="name" style="width: 100%;" placeholder="Enter supplier name" />
-      @if (supplierForm.get('name')?.invalid && (supplierForm.get('name')?.dirty || supplierForm.get('name')?.touched)) {
-        <p class="error">Name is required.</p>
+      @if (supplierForm.get('name')?.invalid && (supplierForm.get('name')?.dirty || supplierForm.get('name')?.touched))
+      {
+      <p class="error">Name is required.</p>
       }
     </div>
 
     <div class="field">
       <label for="email">Email *</label>
-      <input pInputText id="email" type="email" formControlName="email" style="width: 100%;" placeholder="Enter email address" />
-      @if (supplierForm.get('email')?.invalid && (supplierForm.get('email')?.dirty || supplierForm.get('email')?.touched)) {
-        @if (supplierForm.get('email')?.errors?.['required']) {
-          <p class="error">Email is required.</p>
-        } @else if (supplierForm.get('email')?.errors?.['email']) {
-          <p class="error">Enter a valid email address.</p>
-        }
+      <input pInputText id="email" type="email" formControlName="email" style="width: 100%;"
+        placeholder="Enter email address" />
+      @if (supplierForm.get('email')?.invalid && (supplierForm.get('email')?.dirty ||
+      supplierForm.get('email')?.touched)) {
+      @if (supplierForm.get('email')?.errors?.['required']) {
+      <p class="error">Email is required.</p>
+      } @else if (supplierForm.get('email')?.errors?.['email']) {
+      <p class="error">Enter a valid email address.</p>
+      }
       }
     </div>
 
     <div class="field">
       <label for="contact_number">Contact Number *</label>
-      <input pInputText id="contact_number" formControlName="contact_number" style="width: 100%;" placeholder="Enter contact number" />
-      @if (supplierForm.get('contact_number')?.invalid && (supplierForm.get('contact_number')?.dirty || supplierForm.get('contact_number')?.touched)) {
-        @if (supplierForm.get('contact_number')?.errors?.['required']) {
-          <p class="error">Contact number is required.</p>
-        } @else if (supplierForm.get('contact_number')?.errors?.['pattern']) {
-          <p class="error">Enter a valid contact number.</p>
-        }
+      <input pInputText id="contact_number" formControlName="contact_number" style="width: 100%;"
+        placeholder="Enter contact number" />
+      @if (supplierForm.get('contact_number')?.invalid && (supplierForm.get('contact_number')?.dirty ||
+      supplierForm.get('contact_number')?.touched)) {
+      @if (supplierForm.get('contact_number')?.errors?.['required']) {
+      <p class="error">Contact number is required.</p>
+      } @else if (supplierForm.get('contact_number')?.errors?.['pattern']) {
+      <p class="error">Enter a valid contact number.</p>
+      }
       }
     </div>
 
     <div class="field">
       <label for="address">Address *</label>
       <input pInputText id="address" formControlName="address" style="width: 100%;" placeholder="Enter address" />
-      @if (supplierForm.get('address')?.invalid && (supplierForm.get('address')?.dirty || supplierForm.get('address')?.touched)) {
-        <p class="error">Address is required.</p>
+      @if (supplierForm.get('address')?.invalid && (supplierForm.get('address')?.dirty ||
+      supplierForm.get('address')?.touched)) {
+      <p class="error">Address is required.</p>
       }
     </div>
 
     <div class="field">
       <label for="website_url">Website URL (Optional)</label>
-      <input pInputText id="website_url" formControlName="website_url" style="width: 100%;" placeholder="https://example.com" />
-      @if (supplierForm.get('website_url')?.invalid && (supplierForm.get('website_url')?.dirty || supplierForm.get('website_url')?.touched)) {
-        <p class="error">Enter a valid URL (starting with http:// or https:// or www.).</p>
+      <input pInputText id="website_url" formControlName="website_url" style="width: 100%;"
+        placeholder="https://example.com" />
+      @if (supplierForm.get('website_url')?.invalid && (supplierForm.get('website_url')?.dirty ||
+      supplierForm.get('website_url')?.touched)) {
+      <p class="error">Enter a valid URL (starting with http:// or https:// or www.).</p>
       }
     </div>
 
     <div class="dialog-footer">
-      <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary" (click)="dialogVisible.set(false)"></button>
-      <button pButton type="submit" [label]="submitting() ? 'Submitting...' : 'Save'" [disabled]="supplierForm.invalid || submitting()"></button>
+      <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary"
+        (click)="dialogVisible.set(false)"></button>
+      <button pButton type="submit" [label]="submitting() ? 'Submitting...' : 'Save'"
+        [disabled]="supplierForm.invalid || submitting()"></button>
     </div>
   </form>
 </p-dialog>
 
 <!-- Dialog for Supplier Details -->
-<p-dialog 
-  header="Supplier Details" 
-  [visible]="detailsVisible()" 
-  (visibleChange)="detailsVisible.set($event)"
-  [modal]="true" 
-  [style]="{ width: '450px' }"
-  [draggable]="false"
-  [resizable]="false">
-  
+<p-dialog header="Supplier Details" [visible]="detailsVisible()" (visibleChange)="detailsVisible.set($event)"
+  [modal]="true" [style]="{ width: '450px' }" [draggable]="false" [resizable]="false">
+
   @if (selectedSupplier(); as supplier) {
-    <div class="detail-header">
-      <h3 class="entity-name" style="margin: 0 0 4px 0;">{{ supplier.name }}</h3>
-      <p class="entity-tag" style="margin: 0;">{{ supplier.address }}</p>
-    </div>
+  <div class="detail-header">
+    <h3 class="entity-name" style="margin: 0 0 4px 0;">{{ supplier.name }}</h3>
+    <p class="entity-tag" style="margin: 0;">{{ supplier.address }}</p>
+  </div>
 
-    <div class="detail-row" style="margin-top: 16px;">
-      <span class="detail-label">Email</span>
-      <span class="detail-value">{{ supplier.email }}</span>
-    </div>
+  <div class="detail-row" style="margin-top: 16px;">
+    <span class="detail-label">Email</span>
+    <span class="detail-value">{{ supplier.email }}</span>
+  </div>
 
-    <div class="detail-row">
-      <span class="detail-label">Contact</span>
-      <span class="detail-value">{{ supplier.contact_number }}</span>
-    </div>
+  <div class="detail-row">
+    <span class="detail-label">Contact</span>
+    <span class="detail-value">{{ supplier.contact_number }}</span>
+  </div>
 
-    <div class="detail-row">
-      <span class="detail-label">Website</span>
-      <span class="detail-value">
-        @if (supplier.website_url) {
-          <a [href]="supplier.website_url" target="_blank" rel="noopener" style="color: var(--color-primary); text-decoration: underline;">
-            {{ supplier.website_url }}
-          </a>
-        } @else {
-          -
-        }
-      </span>
-    </div>
+  <div class="detail-row">
+    <span class="detail-label">Website</span>
+    <span class="detail-value">
+      @if (supplier.website_url) {
+      <a [href]="supplier.website_url" target="_blank" rel="noopener"
+        style="color: var(--color-primary); text-decoration: underline;">
+        {{ supplier.website_url }}
+      </a>
+      } @else {
+      -
+      }
+    </span>
+  </div>
 
-    <div class="detail-row">
-      <span class="detail-label">Created At</span>
-      <span class="detail-value">{{ supplier.created_at | date:'medium' }}</span>
-    </div>
+  <div class="detail-row">
+    <span class="detail-label">Created At</span>
+    <span class="detail-value">{{ supplier.created_at | date:'medium' }}</span>
+  </div>
 
-    <div class="detail-row">
-      <span class="detail-label">Updated At</span>
-      <span class="detail-value">{{ supplier.updated_at | date:'medium' }}</span>
-    </div>
+  <div class="detail-row">
+    <span class="detail-label">Updated At</span>
+    <span class="detail-value">{{ supplier.updated_at | date:'medium' }}</span>
+  </div>
   }
 
   <div class="dialog-footer">

@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { MessageService } from 'primeng/api';
 
 import { Step02RequestQuotation } from './step-02-request-quotation';
 
@@ -16,6 +17,7 @@ describe('Step02RequestQuotation', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        MessageService,
       ],
     }).compileComponents();
 

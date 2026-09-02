@@ -10,6 +10,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { finalize } from 'rxjs';
+import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -17,6 +18,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
 import { CheckboxModule } from 'primeng/checkbox';
 import { TooltipModule } from 'primeng/tooltip';
+import { TableModule } from 'primeng/table';
 
 import { QuotationRequestService } from '../../../../core/services/quotation-request';
 import { CustomerQueryService } from '../../../../core/services/customer-query';
@@ -27,6 +29,7 @@ import {
   QuotationRequest,
   QuotationRequestCreateInput,
   QuotationRequestItem,
+  QuotationRequestUpdateInput,
 } from '../../../../core/models/quotation-request.model';
 import { Attachment } from '../../../../core/models/attachment.model';
 import { Supplier } from '../../../../core/models/supplier.model';
@@ -43,6 +46,7 @@ import { Project } from '../../../../core/models/project.model';
     DatePickerModule,
     CheckboxModule,
     TooltipModule,
+    TableModule,
     DatePipe,
   ],
   templateUrl: './step-02-request-quotation.html',
@@ -58,6 +62,7 @@ export class Step02RequestQuotation implements OnInit {
   private readonly supplierService = inject(SupplierService);
   private readonly projectService = inject(ProjectService);
   private readonly attachmentService = inject(AttachmentService);
+  private readonly messageService = inject(MessageService);
 
   protected readonly projectId = signal(0);
   protected readonly project = signal<Project | null>(null);
@@ -67,7 +72,12 @@ export class Step02RequestQuotation implements OnInit {
   protected readonly submitting = signal(false);
   protected readonly downloadingAttachmentId = signal<number | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
-  protected readonly successMessage = signal<string | null>(null);
+
+  /** Active quotation request being edited, or null for create mode */
+  protected readonly editingRequest = signal<QuotationRequest | null>(null);
+
+  /** Existing attachments when editing */
+  protected readonly existingAttachments = signal<Attachment[]>([]);
 
   /** Multiple file attachments — stored as raw File objects for FormData upload */
   protected readonly attachments = signal<File[]>([]);
@@ -128,20 +138,21 @@ export class Step02RequestQuotation implements OnInit {
     });
   }
 
-  /* ── Dialog ──────────────────────────────────────────── */
+  /* ── Dialog (Shared for Add and Edit) ─────────────────── */
 
   protected openDialog(): void {
+    this.editingRequest.set(null);
     this.headerForm.reset({
       quotation_requested_date: null,
       supplier_contacted: true,
       remarks: '',
     });
     this.items.set([]);
+    this.existingAttachments.set([]);
     this.attachments.set([]);
     this.addRowVisible.set(false);
     this.editingIndex.set(null);
     this.errorMessage.set(null);
-    this.successMessage.set(null);
     this.dialogVisible.set(true);
 
     // Auto-fetch material items from Step 1 (Customer Queries)
@@ -164,53 +175,80 @@ export class Step02RequestQuotation implements OnInit {
     });
   }
 
+  protected openEditDialog(request: QuotationRequest): void {
+    this.editingRequest.set(request);
+    this.headerForm.setValue({
+      quotation_requested_date: this.parseDate(request.quotation_requested_date),
+      supplier_contacted: request.supplier_contacted ?? true,
+      remarks: request.remarks ?? '',
+    });
+    this.items.set(request.items ? request.items.map((it) => ({ ...it })) : []);
+    this.existingAttachments.set(request.attachments ?? []);
+    this.attachments.set([]);
+    this.addRowVisible.set(false);
+    this.editingIndex.set(null);
+    this.errorMessage.set(null);
+    this.dialogVisible.set(true);
+  }
+
   protected closeDialog(): void {
     this.dialogVisible.set(false);
+    this.editingRequest.set(null);
   }
 
   /* ── Item table actions ──────────────────────────────── */
 
-  protected openAddRow(): void {
-    this.rowForm.reset();
-    this.editingIndex.set(null);
-    this.addRowVisible.set(true);
-  }
-
-  protected openEditRow(index: number): void {
+  protected openEditRow(index: number, focusTarget?: HTMLInputElement): void {
     const item = this.items()[index];
     this.rowForm.setValue({ material_name: item.material_name, quantity: item.quantity });
     this.editingIndex.set(index);
-    this.addRowVisible.set(true);
+    if (focusTarget) {
+      focusTarget.focus();
+    }
   }
 
-  protected saveRow(): void {
+  protected saveRow(focusTarget?: HTMLInputElement): void {
     if (this.rowForm.invalid) {
       this.rowForm.markAllAsTouched();
       return;
     }
+    const val = this.rowForm.getRawValue();
+    const name = val.material_name?.trim();
+    const qty = val.quantity?.trim();
+
+    if (!name || !qty) return;
+
     const row: QuotationRequestItem = {
-      material_name: this.rowForm.getRawValue().material_name,
-      quantity: this.rowForm.getRawValue().quantity,
+      material_name: name,
+      quantity: qty,
     };
+
     const idx = this.editingIndex();
     if (idx !== null) {
       const updated = [...this.items()];
       updated[idx] = row;
       this.items.set(updated);
+      this.editingIndex.set(null);
     } else {
       this.items.update((list) => [...list, row]);
     }
-    this.addRowVisible.set(false);
-    this.editingIndex.set(null);
+
+    this.rowForm.reset();
+    if (focusTarget) {
+      setTimeout(() => focusTarget.focus(), 0);
+    }
   }
 
   protected deleteRow(index: number): void {
     this.items.update((list) => list.filter((_, i) => i !== index));
+    if (this.editingIndex() === index) {
+      this.cancelRow();
+    }
   }
 
   protected cancelRow(): void {
-    this.addRowVisible.set(false);
     this.editingIndex.set(null);
+    this.rowForm.reset();
   }
 
   /* ── Attachments (FormData) ─────────────────────────── */
@@ -227,7 +265,7 @@ export class Step02RequestQuotation implements OnInit {
     this.attachments.update((list) => list.filter((_, i) => i !== index));
   }
 
-  /* ── Submit ──────────────────────────────────────────── */
+  /* ── Submit (Handles both Create and Update) ──────────── */
 
   protected submit(): void {
     if (this.headerForm.invalid) {
@@ -246,39 +284,99 @@ export class Step02RequestQuotation implements OnInit {
     const raw = this.headerForm.getRawValue();
     const reqDate = raw.quotation_requested_date as Date;
     const files = this.attachments();
-
-    const payload: QuotationRequestCreateInput = {
-      project_id: projectId,
-      supplier_id: supplierId,
-      quotation_requested_date: this.formatDate(reqDate),
-      supplier_contacted: Boolean(raw.supplier_contacted),
-      remarks: raw.remarks ?? '',
-      items: this.items(),
-    };
+    const current = this.editingRequest();
 
     this.submitting.set(true);
     this.errorMessage.set(null);
 
-    this.quotationRequestService
-      .create(payload, files)
-      .pipe(finalize(() => this.submitting.set(false)))
-      .subscribe({
-        next: () => {
-          this.dialogVisible.set(false);
-          this.successMessage.set('Quotation request submitted successfully.');
-          this.attachments.set([]);
-          this.loadRequests(projectId);
-        },
-        error: () => {
-          this.errorMessage.set('Failed to submit quotation request. Please try again.');
-        },
-      });
+    if (current) {
+      const updatePayload: QuotationRequestUpdateInput = {
+        project_id: projectId,
+        supplier_id: supplierId,
+        quotation_requested_date: this.formatDate(reqDate),
+        supplier_contacted: Boolean(raw.supplier_contacted),
+        remarks: raw.remarks ?? '',
+        items: this.items(),
+      };
+
+      this.quotationRequestService
+        .update(current.id, updatePayload, files)
+        .pipe(finalize(() => this.submitting.set(false)))
+        .subscribe({
+          next: () => {
+            this.dialogVisible.set(false);
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Updated',
+              detail: 'Quotation request updated successfully.',
+              life: 3500,
+            });
+            this.attachments.set([]);
+            this.editingRequest.set(null);
+            this.loadRequests(projectId);
+          },
+          error: () => {
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error',
+              detail: 'Failed to update quotation request. Please try again.',
+            });
+          },
+        });
+    } else {
+      const createPayload: QuotationRequestCreateInput = {
+        project_id: projectId,
+        supplier_id: supplierId,
+        quotation_requested_date: this.formatDate(reqDate),
+        supplier_contacted: Boolean(raw.supplier_contacted),
+        remarks: raw.remarks ?? '',
+        items: this.items(),
+      };
+
+      this.quotationRequestService
+        .create(createPayload, files)
+        .pipe(finalize(() => this.submitting.set(false)))
+        .subscribe({
+          next: () => {
+            this.dialogVisible.set(false);
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Success',
+              detail: 'Quotation request submitted successfully.',
+              life: 3500,
+            });
+            this.attachments.set([]);
+            this.loadRequests(projectId);
+          },
+          error: () => {
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error',
+              detail: 'Failed to submit quotation request. Please try again.',
+            });
+          },
+        });
+    }
   }
 
   protected deleteRequest(id: number): void {
     this.quotationRequestService.delete(id).subscribe({
-      next: () => this.loadRequests(this.projectId()),
-      error: () => this.errorMessage.set('Failed to delete quotation request.'),
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Deleted',
+          detail: 'Quotation request removed successfully.',
+          life: 3000,
+        });
+        this.loadRequests(this.projectId());
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete quotation request.',
+        });
+      },
     });
   }
 
@@ -299,7 +397,11 @@ export class Step02RequestQuotation implements OnInit {
           window.URL.revokeObjectURL(url);
         },
         error: () => {
-          this.errorMessage.set(`Failed to download ${attachment.file_name}.`);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Download Failed',
+            detail: `Failed to download ${attachment.file_name}.`,
+          });
         },
       });
   }
@@ -340,5 +442,18 @@ export class Step02RequestQuotation implements OnInit {
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
+  }
+
+  private parseDate(dateStr: string): Date | null {
+    if (!dateStr) return null;
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      return new Date(year, month, day);
+    }
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? null : d;
   }
 }

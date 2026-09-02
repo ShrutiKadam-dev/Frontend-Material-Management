@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { ToastModule } from 'primeng/toast';
 
 import { AuthService } from '../../services/auth';
 
 @Component({
   selector: 'app-main-layout',
-  imports: [ButtonModule, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [ButtonModule, ToastModule, RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './main-layout.html',
   styleUrl: './main-layout.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -63,10 +63,10 @@
       }
 
       <div class="entity-actions">
-        <button pButton type="button" icon="pi pi-eye" label="Details" class="p-button-outlined p-button-sm"
-          (click)="openDetailsDialog(customer)" aria-label="View customer details"></button>
-        <button pButton type="button" icon="pi pi-pencil" label="Edit" class="p-button-outlined p-button-sm"
-          (click)="openEditDialog(customer)" aria-label="Edit customer details"></button>
+        <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-sm"
+          (click)="openDetailsDialog(customer)" aria-label="View customer details" pTooltip="Details" tooltipPosition="top"></button>
+        <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm"
+          (click)="openEditDialog(customer)" aria-label="Edit customer details" pTooltip="Edit" tooltipPosition="top"></button>
       </div>
     </article>
     }

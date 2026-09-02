@@ -53,10 +53,10 @@
       </dl>
 
       <div class="project-actions">
-        <button pButton type="button" icon="pi pi-eye" label="Details" class="p-button-outlined p-button-sm"
-          (click)="openDetailsDialog(project)" aria-label="View project details"></button>
-        <button pButton type="button" icon="pi pi-pencil" label="Edit" class="p-button-outlined p-button-sm"
-          (click)="openEditDialog(project)" aria-label="Edit project"></button>
+        <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-sm"
+          (click)="openDetailsDialog(project)" aria-label="View project details" pTooltip="Details" tooltipPosition="top"></button>
+        <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm"
+          (click)="openEditDialog(project)" aria-label="Edit project" pTooltip="Edit" tooltipPosition="top"></button>
       </div>
     </article>
     }

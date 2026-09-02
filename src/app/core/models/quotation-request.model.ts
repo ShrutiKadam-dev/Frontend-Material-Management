@@ -28,3 +28,12 @@ export interface QuotationRequestCreateInput {
   remarks: string;
   items: QuotationRequestItem[];
 }
+
+export interface QuotationRequestUpdateInput {
+  project_id?: number;
+  supplier_id?: number;
+  quotation_requested_date?: string;
+  supplier_contacted?: boolean;
+  remarks?: string;
+  items?: QuotationRequestItem[];
+}

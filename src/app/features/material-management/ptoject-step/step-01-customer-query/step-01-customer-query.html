@@ -5,168 +5,230 @@
     <div class="header-left">
       <button pButton type="button" icon="pi pi-arrow-left" class="p-button-text p-button-secondary back-btn"
         aria-label="Back to project pipeline" (click)="goBack()"></button>
-      <div>
-        <p class="eyebrow">Step 1 · Customer Query to ST</p>
+      <div class="header-title-group">
+        <span class="eyebrow">Step 01 · Customer Query to ST</span>
         <h1 id="step-page-title">
           @if (project(); as p) { {{ p.project_title }} }
           @else { Customer Query }
         </h1>
-        @if (customer(); as c) {
-        <p>Customer: <strong>{{ c.name }}</strong></p>
-        }
       </div>
     </div>
     <div class="header-actions">
-      <div class="step-badge" aria-hidden="true">
-        <span class="step-no">01</span>
-        <span>of 15</span>
+      <div class="header-step-pill" aria-hidden="true">
+        Step <strong>01</strong> of 15
       </div>
-      <button pButton type="button" icon="pi pi-plus" label="New Query" (click)="openDialog()"
-        aria-haspopup="dialog"></button>
     </div>
   </div>
 
-  <!-- ── Page-level alerts ─────────────────────────────── -->
-  @if (successMessage()) {
-  <div class="alert alert-success" role="status" aria-live="polite">
-    <i class="pi pi-check-circle" aria-hidden="true"></i>
-    {{ successMessage() }}
-  </div>
-  }
-  @if (!dialogVisible() && errorMessage()) {
-  <div class="alert alert-error" role="alert" aria-live="assertive">
-    <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-    {{ errorMessage() }}
-  </div>
-  }
+  <!-- ── 2-Column Split Layout (Main Left, Sidebar Right) ── -->
+  <div class="step-layout">
 
-  <!-- ── Submitted queries list ────────────────────────── -->
-  <div class="app-panel existing-card" aria-label="Submitted queries">
-    <div class="card-title-row">
-      <span class="card-icon" aria-hidden="true"><i class="pi pi-list"></i></span>
-      <h2>Submitted Queries</h2>
-    </div>
+    <!-- ── Left Main Panel (Submitted Queries Stream & Table) ── -->
+    <div class="step-main">
+      <div class="existing-card" aria-label="Submitted queries">
+        <div class="card-title-row">
+          <span class="card-icon" aria-hidden="true"><i class="pi pi-list"></i></span>
+          <h2>Submitted Queries</h2>
+          @if (queries().length > 0) {
+          <span class="card-count-badge">{{ queries().length }} {{ queries().length === 1 ? 'record' : 'records'
+            }}</span>
+          }
+        </div>
 
-    @if (loadingQueries()) {
-    <div class="center-state">
-      <div class="loading-ring" aria-hidden="true">
-        <i class="pi pi-spin pi-spinner"></i>
-      </div>
-      <p>Loading queries…</p>
-    </div>
-    } @else if (queries().length === 0) {
-    <div class="center-state empty-cta">
-      <span class="empty-icon" aria-hidden="true">
-        <i class="pi pi-file-edit"></i>
-      </span>
-      <h3>No queries yet</h3>
-      <p>Submit the first customer query to kick off this project step.</p>
-      <button pButton type="button" icon="pi pi-plus" label="New Query" (click)="openDialog()"></button>
-    </div>
-    } @else {
-    <div class="query-list">
-      @for (q of queries(); track q.id) {
-      <div class="query-entry">
-        <div class="query-entry-header">
-          <span class="qe-date">
-            <i class="pi pi-calendar" aria-hidden="true"></i>
-            {{ q.qo_date | date: 'dd MMM yyyy' }}
+        @if (loadingQueries()) {
+        <div class="center-state">
+          <div class="loading-ring" aria-hidden="true">
+            <i class="pi pi-spin pi-spinner"></i>
+          </div>
+          <p>Loading queries…</p>
+        </div>
+        } @else if (queries().length === 0) {
+        <div class="center-state empty-cta">
+          <span class="empty-icon" aria-hidden="true">
+            <i class="pi pi-file-edit"></i>
           </span>
-          <div class="qe-badges">
-            @if (q.attachments && q.attachments.length) {
-            <span class="qe-badge">
-              <i class="pi pi-paperclip" aria-hidden="true"></i>
-              {{ q.attachments.length }} file{{ q.attachments.length === 1 ? '' : 's' }}
-            </span>
-            }
-            @if (q.items && q.items.length) {
-            <span class="qe-badge">
-              <i class="pi pi-box" aria-hidden="true"></i>
-              {{ q.items.length }} item{{ q.items.length === 1 ? '' : 's' }}
-            </span>
-            }
-          </div>
-          <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm qe-delete"
-            [attr.aria-label]="'Delete query from ' + (q.qo_date | date: 'dd MMM yyyy')" pTooltip="Delete query"
-            tooltipPosition="top" (click)="deleteQuery(q.id)"></button>
+          <h3>No queries yet</h3>
+          <p>Submit the first customer query to kick off this project step.</p>
+          <button pButton type="button" icon="pi pi-plus" label="New Query" (click)="openDialog()"></button>
         </div>
+        } @else {
+        <div class="query-list">
+          @for (q of queries(); track q.id) {
+          <div class="query-entry">
 
-        @if (q.remark) {
-        <p class="qe-remark">
-          <i class="pi pi-comment" aria-hidden="true"></i>
-          {{ q.remark }}
-        </p>
-        }
-
-        @if (q.attachments && q.attachments.length) {
-        <div class="qe-attachments" aria-label="Query attachments">
-          <p class="qe-attachments-label">
-            <i class="pi pi-paperclip" aria-hidden="true"></i>
-            Attachments ({{ q.attachments.length }})
-          </p>
-          <div class="qe-attachment-list">
-            @for (att of q.attachments; track att.id) {
-            <div class="qe-attachment-chip">
-              <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
-              <div class="qe-att-meta">
-                <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
-                <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
-              </div>
-              <button
-                type="button"
-                class="qe-att-download"
-                [attr.aria-label]="'Download ' + att.file_name"
-                pTooltip="Download file"
-                tooltipPosition="top"
-                [disabled]="downloadingAttachmentId() === att.id"
-                (click)="downloadAttachment(att)"
-              >
-                @if (downloadingAttachmentId() === att.id) {
-                <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
-                } @else {
-                <i class="pi pi-download" aria-hidden="true"></i>
+            <!-- Card Header Bar -->
+            <div class="query-entry-header">
+              <span class="qe-date">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                {{ q.qo_date | date: 'dd MMM yyyy' }}
+              </span>
+              <div class="qe-badges">
+                @if (q.attachments && q.attachments.length) {
+                <span class="qe-badge">
+                  <i class="pi pi-paperclip" aria-hidden="true"></i>
+                  {{ q.attachments.length }} file{{ q.attachments.length === 1 ? '' : 's' }}
+                </span>
                 }
-              </button>
+                @if (q.items && q.items.length) {
+                <span class="qe-badge">
+                  <i class="pi pi-box" aria-hidden="true"></i>
+                  {{ q.items.length }} item{{ q.items.length === 1 ? '' : 's' }}
+                </span>
+                }
+              </div>
+              <div class="qe-actions">
+                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                  [attr.aria-label]="'Edit query from ' + (q.qo_date | date: 'dd MMM yyyy')" pTooltip="Edit query"
+                  tooltipPosition="top" (click)="openEditDialog(q)"></button>
+                <button pButton type="button" icon="pi pi-trash"
+                  class="p-button-text p-button-danger p-button-sm qe-delete"
+                  [attr.aria-label]="'Delete query from ' + (q.qo_date | date: 'dd MMM yyyy')" pTooltip="Delete query"
+                  tooltipPosition="top" (click)="deleteQuery(q.id)"></button>
+              </div>
             </div>
-            }
-          </div>
-        </div>
-        }
 
-        @if (q.items && q.items.length) {
-        <table class="items-table" aria-label="Materials for query">
-          <thead>
-            <tr>
-              <th scope="col">#</th>
-              <th scope="col">Material Name</th>
-              <th scope="col">Qty</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (item of q.items; track $index) {
-            <tr>
-              <td class="row-num">{{ $index + 1 }}</td>
-              <td>{{ item.material_name }}</td>
-              <td class="qty-cell">{{ item.quantity }}</td>
-            </tr>
-            }
-          </tbody>
-        </table>
+            <!-- Card Body Grid (Left: Materials Table, Right: Notes & Files) -->
+            <div class="qe-body" [class.qe-body--full-table]="!q.remark && (!q.attachments || !q.attachments.length)">
+
+              <!-- Left: Materials Table (Main Content) -->
+              @if (q.items && q.items.length) {
+              <div class="qe-col-materials">
+                <p class="qe-section-title">
+                  <i class="pi pi-box" aria-hidden="true"></i>
+                  Requested Items ({{ q.items.length }})
+                </p>
+                <p-table [value]="q.items" [paginator]="q.items.length > 5" [rows]="5"
+                  [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
+                  aria-label="Materials for query">
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th scope="col" style="width: 40px; text-align: center;">#</th>
+                      <th scope="col" pSortableColumn="material_name">
+                        Material Name <p-sortIcon field="material_name" />
+                      </th>
+                      <th scope="col" pSortableColumn="quantity" style="width: 100px; text-align: right;">
+                        Quantity <p-sortIcon field="quantity" />
+                      </th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-item let-i="rowIndex">
+                    <tr>
+                      <td style="text-align: center; color: #64748b; font-weight: 700;">{{ i + 1 }}</td>
+                      <td><strong>{{ item.material_name }}</strong></td>
+                      <td style="text-align: right; font-weight: 700;">
+                        <span class="qty-badge">{{ item.quantity }}</span>
+                      </td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+              </div>
+              }
+
+              <!-- Right: Remarks & Attachments -->
+              @if (q.remark || (q.attachments && q.attachments.length)) {
+              <div class="qe-col-details">
+                @if (q.remark) {
+                <div class="qe-remark">
+                  <i class="pi pi-comment" aria-hidden="true"></i>
+                  <span>{{ q.remark }}</span>
+                </div>
+                }
+
+                @if (q.attachments && q.attachments.length) {
+                <div class="qe-attachments" aria-label="Query attachments">
+                  <p class="qe-section-title">
+                    <i class="pi pi-paperclip" aria-hidden="true"></i>
+                    Attachments ({{ q.attachments.length }})
+                  </p>
+                  <div class="qe-attachment-list">
+                    @for (att of q.attachments; track att.id) {
+                    <div class="qe-attachment-chip">
+                      <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                      <div class="qe-att-meta">
+                        <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                        <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                      </div>
+                      <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                        pTooltip="Download file" tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                        (click)="downloadAttachment(att)">
+                        @if (downloadingAttachmentId() === att.id) {
+                        <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                        } @else {
+                        <i class="pi pi-download" aria-hidden="true"></i>
+                        }
+                      </button>
+                    </div>
+                    }
+                  </div>
+                </div>
+                }
+              </div>
+              }
+
+            </div>
+
+          </div>
+          }
+        </div>
         }
       </div>
-      }
     </div>
-    }
+
+    <!-- ── Right Sidebar (Client Info & Actions) ────────── -->
+    <aside class="step-sidebar" aria-label="Step summary and actions">
+      <div class="sidebar-panel">
+
+        <!-- Action Button -->
+        <div class="sidebar-actions">
+          <button pButton type="button" icon="pi pi-plus" label="New Customer Query" (click)="openDialog()"
+            aria-haspopup="dialog"></button>
+        </div>
+
+        <!-- Customer Tile -->
+        @if (customer(); as c) {
+        <div class="sidebar-section">
+          <p class="sidebar-label">Client</p>
+          <div class="sidebar-entity-box">
+            <div class="entity-icon-box" aria-hidden="true">
+              <i class="pi pi-user"></i>
+            </div>
+            <div class="entity-details">
+              <span class="entity-type">Customer</span>
+              <strong class="entity-title" [title]="c.name">{{ c.name }}</strong>
+            </div>
+          </div>
+        </div>
+        }
+
+        <!-- Quick Summary Stats -->
+        <div class="sidebar-section">
+          <p class="sidebar-label">Overview</p>
+          <div class="sidebar-stats-grid">
+            <div class="sidebar-stat-card">
+              <span class="stat-num">{{ queries().length }}</span>
+              <span class="stat-desc">{{ queries().length === 1 ? 'Query Logged' : 'Queries Logged' }}</span>
+            </div>
+            <div class="sidebar-stat-card">
+              <span class="stat-num">{{ totalItems() }}</span>
+              <span class="stat-desc">{{ totalItems() === 1 ? 'Total Item' : 'Total Items' }}</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
   </div>
 
 </section>
 
 <!-- ═══════════════════════════════════════════════════════
-     NEW CUSTOMER QUERY DIALOG
+     CUSTOMER QUERY DIALOG (Add & Edit)
      ═══════════════════════════════════════════════════════ -->
-<p-dialog header="New Customer Query" [visible]="dialogVisible()" (visibleChange)="dialogVisible.set($event)"
-  [modal]="true" [draggable]="false" [resizable]="false" [style]="{ width: '780px', maxWidth: '96vw' }"
-  [contentStyle]="{ padding: '0' }" styleClass="cq-dialog" appendTo="body" aria-labelledby="cq-dialog-title">
+<p-dialog [header]="editingQuery() ? 'Edit Customer Query' : 'New Customer Query'" [visible]="dialogVisible()"
+  (visibleChange)="dialogVisible.set($event)" [modal]="true" [blockScroll]="true" [draggable]="false"
+  [resizable]="false" [style]="{ width: '780px', maxWidth: '96vw' }" [contentStyle]="{ padding: '0' }"
+  styleClass="cq-dialog" appendTo="body" aria-labelledby="cq-dialog-title">
 
   <form [formGroup]="headerForm" (ngSubmit)="submit()" novalidate id="cq-form">
 
@@ -209,107 +271,114 @@
         </div>
       </div>
 
-      <!-- ── 2. Material Items ───────────────────────────── -->
+      <!-- ── 2. Material Items (Fast Entry + Paginator) ── -->
       <div class="dlg-section">
         <div class="dlg-section-header">
           <p class="dlg-section-label">Material Items</p>
-          @if (!addRowVisible()) {
-          <button pButton type="button" icon="pi pi-plus" label="Add Item" (click)="openAddRow()"></button>
-          }
+          <span class="card-count-badge">{{ items().length }} {{ items().length === 1 ? 'item' : 'items' }}</span>
         </div>
 
-        <!-- Inline add/edit row -->
-        @if (addRowVisible()) {
-        <div class="row-form" [formGroup]="rowForm">
-          <div class="row-form-fields">
-            <div class="field">
-              <label for="dlg-material-name">
-                Material Name <span class="req" aria-hidden="true">*</span>
-              </label>
-              <input id="dlg-material-name" pInputText formControlName="material_name" placeholder="e.g. Steel Pipe"
-                [style]="{ width: '100%' }"
-                [class.ng-invalid]="rowForm.controls.material_name.touched && rowForm.controls.material_name.invalid" />
-              @if (rowForm.controls.material_name.touched && rowForm.controls.material_name.invalid) {
-              <p class="field-error">Material name is required.</p>
-              }
+        <!-- Fast Inline Entry Row -->
+        <div class="quick-add-bar" [class.quick-add-bar--editing]="editingIndex() !== null" [formGroup]="rowForm">
+          <div class="quick-add-grid">
+            <div class="quick-field quick-field--name">
+              <label for="dlg-material-name">Material Name <span class="req">*</span></label>
+              <input #matInput id="dlg-material-name" pInputText formControlName="material_name"
+                placeholder="e.g. Steel Pipe 50mm" (keydown.enter)="$event.preventDefault(); qtyInput.focus()" />
             </div>
-            <div class="field">
-              <label for="dlg-quantity">
-                Quantity <span class="req" aria-hidden="true">*</span>
-              </label>
-              <input id="dlg-quantity" pInputText formControlName="quantity" placeholder="e.g. 10.500"
-                [style]="{ width: '100%' }"
-                [class.ng-invalid]="rowForm.controls.quantity.touched && rowForm.controls.quantity.invalid" />
-              @if (rowForm.controls.quantity.touched && rowForm.controls.quantity.invalid) {
-              <p class="field-error">Enter a valid quantity (e.g. 10 or 10.500).</p>
+
+            <div class="quick-field quick-field--qty">
+              <label for="dlg-quantity">Qty <span class="req">*</span></label>
+              <input #qtyInput id="dlg-quantity" pInputText formControlName="quantity" placeholder="e.g. 10.500"
+                (keydown.enter)="$event.preventDefault(); saveRow(matInput)" />
+            </div>
+
+            <div class="quick-add-actions">
+              <button pButton type="button" [icon]="editingIndex() !== null ? 'pi pi-check' : 'pi pi-plus'"
+                [label]="editingIndex() !== null ? 'Update' : 'Add Item'" class="quick-submit-btn"
+                (click)="saveRow(matInput)"></button>
+              @if (editingIndex() !== null) {
+              <button pButton type="button" icon="pi pi-times" class="p-button-text p-button-secondary cancel-edit-btn"
+                pTooltip="Cancel edit" (click)="cancelRow()"></button>
               }
             </div>
           </div>
-          <div class="row-form-actions">
-            <button pButton type="button" icon="pi pi-check" [label]="editingIndex() !== null ? 'Update' : 'Add'"
-              class="p-button-sm" (click)="saveRow()"></button>
-            <button pButton type="button" icon="pi pi-times" label="Cancel"
-              class="p-button-text p-button-sm p-button-secondary" (click)="cancelRow()"></button>
-          </div>
         </div>
-        }
 
-        <!-- Items table -->
+        <!-- Items Table with Pagination -->
         @if (items().length > 0) {
-        <div class="items-table-wrap">
-          <table class="items-table" aria-label="Material items list">
-            <thead>
-              <tr>
-                <th scope="col">#</th>
-                <th scope="col">Material Name</th>
-                <th scope="col">Quantity</th>
-                <th scope="col" class="actions-col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of items(); track $index) {
-              <tr>
-                <td class="row-num">{{ $index + 1 }}</td>
-                <td>{{ item.material_name }}</td>
-                <td class="qty-cell">{{ item.quantity }}</td>
-                <td class="actions-cell">
-                  <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm"
-                    [attr.aria-label]="'Edit ' + item.material_name" pTooltip="Edit" tooltipPosition="top"
-                    (click)="openEditRow($index)"></button>
-                  <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger"
+        <p-table [value]="items()" [paginator]="items().length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
+          styleClass="p-datatable-sm items-table-wrap" aria-label="Material items list">
+          <ng-template pTemplate="header">
+            <tr>
+              <th scope="col" style="width: 40px; text-align: center;">#</th>
+              <th scope="col" pSortableColumn="material_name">
+                Material Name <p-sortIcon field="material_name" />
+              </th>
+              <th scope="col" pSortableColumn="quantity" style="width: 110px; text-align: right;">
+                Qty <p-sortIcon field="quantity" />
+              </th>
+              <th scope="col" style="width: 90px; text-align: right; white-space: nowrap;">Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-item let-i="rowIndex">
+            <tr>
+              <td style="text-align: center; color: #64748b; font-weight: 700;">{{ i + 1 }}</td>
+              <td><strong>{{ item.material_name }}</strong></td>
+              <td style="text-align: right; font-weight: 700;">
+                <span class="qty-badge">{{ item.quantity }}</span>
+              </td>
+              <td style="text-align: right; width: 90px; white-space: nowrap;">
+                <div class="actions-cell">
+                  <button pButton type="button" icon="pi pi-pencil" [text]="true"
+                    class="p-button-text p-button-sm qe-edit" [attr.aria-label]="'Edit ' + item.material_name"
+                    pTooltip="Edit" tooltipPosition="top" (click)="openEditRow(i, matInput)"></button>
+                  <button pButton type="button" icon="pi pi-trash" [text]="true"
+                    class="p-button-text p-button-sm p-button-danger qe-delete"
                     [attr.aria-label]="'Delete ' + item.material_name" pTooltip="Delete" tooltipPosition="top"
-                    (click)="deleteRow($index)"></button>
-                </td>
-              </tr>
-              }
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="4" class="table-footer">
-                  {{ totalItems() }} item{{ totalItems() === 1 ? '' : 's' }}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        } @else if (!addRowVisible()) {
+                    (click)="deleteRow(i)"></button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+        } @else {
         <div class="empty-items" role="note">
           <i class="pi pi-inbox" aria-hidden="true"></i>
-          <p>No items added yet. Click <strong>Add Item</strong> above.</p>
+          <p>No items added yet. Type a material name and quantity above to quickly add items.</p>
         </div>
         }
       </div>
 
-      <!-- ── 3. Attachment ──────────────────────────────── -->
+      <!-- ── 3. Attachments ──────────────────────────────── -->
       <div class="dlg-section">
         <p class="dlg-section-label">
           Attachments
           @if (attachments().length) {
-          <span class="attach-count">{{ attachments().length }} selected</span>
+          <span class="attach-count">{{ attachments().length }} new file{{ attachments().length === 1 ? '' : 's' }}
+            selected</span>
           }
         </p>
 
-        <!-- Uploaded files list -->
+        <!-- Existing files when editing -->
+        @if (existingAttachments().length) {
+        <div class="existing-att-block">
+          <p class="existing-att-title">
+            <i class="pi pi-paperclip" aria-hidden="true"></i> Current Attachments ({{ existingAttachments().length }})
+          </p>
+          <div class="file-list">
+            @for (file of existingAttachments(); track file.id) {
+            <div class="file-chip existing-file-chip">
+              <i [class]="getFileIcon(file.content_type)" aria-hidden="true"></i>
+              <span class="file-chip-name" [title]="file.file_name">{{ file.file_name }}</span>
+              <span class="file-chip-size">{{ formatFileSize(file.file_size) }}</span>
+            </div>
+            }
+          </div>
+        </div>
+        }
+
+        <!-- Uploaded new files list -->
         @if (attachments().length) {
         <div class="file-list">
           @for (file of attachments(); track $index) {
@@ -325,13 +394,15 @@
         </div>
         }
 
-        <!-- Always-visible drop zone to keep adding files -->
-        <label class="file-drop-zone" [class.file-drop-zone--compact]="attachments().length > 0"
-          for="dlg-attachment-input" tabindex="0" role="button" aria-label="Upload more attachments">
+        <!-- Drop zone -->
+        <label class="file-drop-zone"
+          [class.file-drop-zone--compact]="attachments().length > 0 || existingAttachments().length > 0"
+          for="dlg-attachment-input" tabindex="0" role="button" aria-label="Upload attachments">
           <i class="pi pi-upload" aria-hidden="true"></i>
-          <span>{{ attachments().length ? 'Add more files' : 'Click to upload files' }}</span>
-          @if (!attachments().length) {
-          <span class="file-hint">PDF, Image, Excel — any format, multiple allowed</span>
+          <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload files'
+            }}</span>
+          @if (!attachments().length && !existingAttachments().length) {
+          <span class="file-hint">PDF, Image, Excel — specifications, drawings, etc.</span>
           }
           <input id="dlg-attachment-input" type="file" multiple class="visually-hidden"
             (change)="onFilesSelected($event)" />
@@ -354,7 +425,8 @@
     <div class="dlg-footer">
       <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary" [disabled]="submitting()"
         (click)="closeDialog()"></button>
-      <button pButton type="submit" icon="pi pi-send" label="Submit Query" form="cq-form" [loading]="submitting()"
+      <button pButton type="submit" [icon]="editingQuery() ? 'pi pi-check' : 'pi pi-send'"
+        [label]="editingQuery() ? 'Update Query' : 'Submit Query'" form="cq-form" [loading]="submitting()"
         [disabled]="submitting()"></button>
     </div>
 

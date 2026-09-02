@@ -2,6 +2,7 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { definePreset } from '@primeuix/themes';
 import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeuix/themes/aura';
@@ -100,6 +101,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor, errorInterceptor])),
     provideAnimationsAsync(),
+    MessageService,
     providePrimeNG({
       theme: {
         preset: StcTheme,

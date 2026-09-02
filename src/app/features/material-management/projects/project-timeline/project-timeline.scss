@@ -13,10 +13,7 @@
    ════════════════════════════════════════════════════════ */
 .pipeline-hero {
   align-items: center;
-  background:
-    linear-gradient(135deg, rgba(225, 77, 63, 0.06) 0%, transparent 60%),
-    linear-gradient(to right, rgba(247, 217, 211, 0.3), transparent 70%),
-    var(--color-surface);
+  background: var(--color-surface);
   border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-panel);
   box-shadow: var(--shadow-card);
@@ -24,23 +21,10 @@
   flex-wrap: wrap;
   gap: 24px;
   justify-content: space-between;
-  margin-bottom: 16px;
-  padding: 28px 36px;
+  margin-bottom: 20px;
+  padding: 24px 32px;
   position: relative;
-  overflow: hidden;
-
-  /* Decorative ring */
-  &::before {
-    background: radial-gradient(circle, rgba(225, 77, 63, 0.08) 0%, transparent 70%);
-    border-radius: 50%;
-    content: "";
-    height: 320px;
-    pointer-events: none;
-    position: absolute;
-    right: -80px;
-    top: -100px;
-    width: 320px;
-  }
+  width: 100%;
 }
 
 .hero-left {
