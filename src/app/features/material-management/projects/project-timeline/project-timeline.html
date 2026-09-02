@@ -1,0 +1,180 @@
+<section class="base-page timeline-page" aria-labelledby="timeline-title">
+
+  <!-- ── Hero header banner ─────────────────────────────── -->
+  <div class="pipeline-hero">
+    <div class="hero-left">
+      <button
+        pButton
+        type="button"
+        icon="pi pi-arrow-left"
+        class="p-button-text back-btn"
+        aria-label="Back to projects"
+        (click)="goBack()"
+      ></button>
+      <div class="hero-text">
+        <p class="eyebrow">Project Pipeline</p>
+        <h1 id="timeline-title">
+          @if (project(); as p) { {{ p.project_title }} }
+          @else { Project Steps }
+        </h1>
+      </div>
+    </div>
+
+    @if (!loading() && !error() && steps().length) {
+      <div class="hero-stats" aria-label="Overall progress">
+        <div class="stat-bubble">
+          <span class="stat-value">{{ completedCount() }}</span>
+          <span class="stat-label">Done</span>
+        </div>
+        <div class="stat-divider" aria-hidden="true"></div>
+        <div class="stat-bubble">
+          <span class="stat-value">{{ steps().length - completedCount() }}</span>
+          <span class="stat-label">Remaining</span>
+        </div>
+        <div class="stat-divider" aria-hidden="true"></div>
+        <div class="stat-bubble">
+          <span class="stat-value stat-pct">{{ progressPercent() }}%</span>
+          <span class="stat-label">Complete</span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- ── Progress track ─────────────────────────────────── -->
+  @if (!loading() && !error() && steps().length) {
+    <div class="global-progress-wrap">
+      <div
+        class="global-progress-bar"
+        role="progressbar"
+        [attr.aria-valuenow]="progressPercent()"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        [attr.aria-label]="progressPercent() + '% of project pipeline complete'"
+      >
+        <span class="global-progress-fill" [style.width.%]="progressPercent()">
+          <span class="progress-glow" aria-hidden="true"></span>
+        </span>
+      </div>
+    </div>
+  }
+
+  <!-- ── Loading ────────────────────────────────────────── -->
+  @if (loading()) {
+    <div class="center-state" aria-live="polite">
+      <div class="loading-ring" aria-hidden="true">
+        <i class="pi pi-spin pi-spinner"></i>
+      </div>
+      <p>Loading pipeline steps…</p>
+    </div>
+  }
+
+  <!-- ── Error ──────────────────────────────────────────── -->
+  @if (!loading() && error()) {
+    <div class="center-state error-state app-panel" role="alert">
+      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+      <h2>Failed to Load Steps</h2>
+      <p>{{ error() }}</p>
+    </div>
+  }
+
+  <!-- ── Timeline ───────────────────────────────────────── -->
+  @if (!loading() && !error()) {
+    <ol class="timeline" aria-label="Project pipeline steps">
+      @for (step of steps(); track step.step_number; let last = $last) {
+        <li
+          class="tl-item"
+          [class]="'status-' + step.status"
+        >
+
+          <!-- Left spine: number + connector -->
+          <div class="tl-spine" aria-hidden="true">
+            <div class="tl-node">
+              @if (step.status === 'completed') {
+                <i class="pi pi-check node-icon"></i>
+              } @else if (step.status === 'in_progress') {
+                <i class="pi pi-spin pi-spinner node-icon"></i>
+              } @else {
+                <span class="node-num">{{ step.step_number }}</span>
+              }
+            </div>
+            @if (!last) {
+              <span class="tl-connector"></span>
+            }
+          </div>
+
+          <!-- Card -->
+          <div
+            class="tl-card"
+            [class.tl-card--clickable]="isStepClickable(step.step_number)"
+            [class.tl-card--completed]="step.status === 'completed'"
+            [class.tl-card--active]="step.status === 'in_progress'"
+            [attr.role]="isStepClickable(step.step_number) ? 'button' : null"
+            [attr.tabindex]="isStepClickable(step.step_number) ? 0 : null"
+            [attr.aria-label]="isStepClickable(step.step_number) ? 'Open step: ' + step.step_name : null"
+            (click)="navigateToStep(step.step_number)"
+            (keydown.enter)="navigateToStep(step.step_number)"
+            (keydown.space)="navigateToStep(step.step_number)"
+          >
+            <!-- Card accent strip -->
+            <span class="card-accent" aria-hidden="true"></span>
+
+            <!-- Card body -->
+            <div class="card-body">
+              <div class="card-top">
+                <span class="step-tag" aria-label="Step {{ step.step_number }}">
+                  Step {{ step.step_number }}
+                </span>
+                <span class="status-chip chip-{{ step.status }}">
+                  @if (step.status === 'completed') {
+                    <i class="pi pi-check" aria-hidden="true"></i>
+                  } @else if (step.status === 'in_progress') {
+                    <i class="pi pi-circle-fill" aria-hidden="true"></i>
+                  } @else if (step.status === 'skipped') {
+                    <i class="pi pi-minus" aria-hidden="true"></i>
+                  } @else {
+                    <i class="pi pi-clock" aria-hidden="true"></i>
+                  }
+                  {{ statusLabel(step.status) }}
+                </span>
+              </div>
+
+              <h2 class="card-title">{{ step.step_name }}</h2>
+              <p class="card-desc">{{ step.description }}</p>
+
+              @if (step.progress_percentage > 0 || step.status === 'in_progress') {
+                <div class="card-progress">
+                  <div
+                    class="card-progress-track"
+                    role="progressbar"
+                    [attr.aria-valuenow]="step.progress_percentage"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  >
+                    <span [style.width.%]="step.progress_percentage"></span>
+                  </div>
+                  <span class="card-progress-label">{{ step.progress_percentage }}%</span>
+                </div>
+              }
+
+              @if (step.completed_at) {
+                <p class="card-completed">
+                  <i class="pi pi-calendar-check" aria-hidden="true"></i>
+                  Completed {{ step.completed_at | date: 'dd MMM yyyy' }}
+                </p>
+              }
+            </div>
+
+            <!-- Chevron for clickable steps -->
+            @if (isStepClickable(step.step_number)) {
+              <div class="card-cta" aria-hidden="true">
+                <span class="cta-label">Open</span>
+                <i class="pi pi-arrow-right"></i>
+              </div>
+            }
+          </div>
+        </li>
+      }
+    </ol>
+  }
+
+</section>

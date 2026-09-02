@@ -1,11 +1,305 @@
-import { Component } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { DatePipe } from '@angular/common';
+import { finalize } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
+import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
+import { DatePickerModule } from 'primeng/datepicker';
+import { TooltipModule } from 'primeng/tooltip';
+
+import { CustomerQueryService } from '../../../../core/services/customer-query';
+import { CustomerService } from '../../../../core/services/customer';
+import { ProjectService } from '../../../../core/services/project';
+import { AttachmentService } from '../../../../core/services/attachment';
+import { CustomerQuery, CustomerQueryCreateInput, CustomerQueryItem } from '../../../../core/models/customer-query.model';
+import { Attachment } from '../../../../core/models/attachment.model';
+import { Customer } from '../../../../core/models/customer.model';
+import { Project } from '../../../../core/models/project.model';
 
 @Component({
   selector: 'app-step-01-customer-query',
-  imports: [],
+  imports: [
+    ReactiveFormsModule,
+    ButtonModule,
+    DialogModule,
+    InputTextModule,
+    TextareaModule,
+    DatePickerModule,
+    TooltipModule,
+    DatePipe,
+  ],
   templateUrl: './step-01-customer-query.html',
   styleUrl: './step-01-customer-query.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Step01CustomerQuery {
+export class Step01CustomerQuery implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly fb = inject(NonNullableFormBuilder);
+  private readonly customerQueryService = inject(CustomerQueryService);
+  private readonly customerService = inject(CustomerService);
+  private readonly projectService = inject(ProjectService);
+  private readonly attachmentService = inject(AttachmentService);
 
+  protected readonly projectId = signal(0);
+  protected readonly project = signal<Project | null>(null);
+  protected readonly customer = signal<Customer | null>(null);
+  protected readonly queries = signal<CustomerQuery[]>([]);
+  protected readonly loadingQueries = signal(true);
+  protected readonly submitting = signal(false);
+  protected readonly downloadingAttachmentId = signal<number | null>(null);
+  protected readonly errorMessage = signal<string | null>(null);
+  protected readonly successMessage = signal<string | null>(null);
+  /** Multiple file attachments — stored as raw File objects for FormData upload */
+  protected readonly attachments = signal<File[]>([]);
+
+  /** Dialog visibility */
+  protected readonly dialogVisible = signal(false);
+
+  /** Draft items for the materials table (inside dialog) */
+  protected readonly items = signal<CustomerQueryItem[]>([]);
+
+  /** Inline add-row form */
+  protected readonly addRowVisible = signal(false);
+  protected readonly editingIndex = signal<number | null>(null);
+
+  protected readonly totalItems = computed(() => this.items().length);
+
+  protected readonly headerForm = this.fb.group({
+    qo_date: [null as Date | null, Validators.required],
+    remark: [''],
+  });
+
+  protected readonly rowForm = this.fb.group({
+    material_name: ['', Validators.required],
+    quantity: ['', [Validators.required, Validators.pattern(/^\d+(\.\d{1,3})?$/)]],
+  });
+
+  ngOnInit(): void {
+    const projectId = Number(this.route.snapshot.paramMap.get('projectId'));
+    this.projectId.set(projectId);
+
+    this.projectService.getProjectById(projectId).subscribe({
+      next: (p) => {
+        this.project.set(p);
+        this.customerService.getCustomerById(p.customer_id).subscribe({
+          next: (c) => this.customer.set(c),
+          error: () => {},
+        });
+      },
+      error: () => {},
+    });
+
+    this.loadQueries(projectId);
+  }
+
+  private loadQueries(projectId: number): void {
+    this.loadingQueries.set(true);
+    this.customerQueryService.getByProject(projectId).subscribe({
+      next: (data) => {
+        this.queries.set(data);
+        this.loadingQueries.set(false);
+      },
+      error: () => {
+        this.loadingQueries.set(false);
+      },
+    });
+  }
+
+  /* ── Dialog ──────────────────────────────────────────── */
+
+  protected openDialog(): void {
+    this.headerForm.reset();
+    this.items.set([]);
+    this.attachments.set([]);
+    this.addRowVisible.set(false);
+    this.editingIndex.set(null);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.dialogVisible.set(true);
+  }
+
+  protected closeDialog(): void {
+    this.dialogVisible.set(false);
+  }
+
+  /* ── Item table actions ──────────────────────────────── */
+
+  protected openAddRow(): void {
+    this.rowForm.reset();
+    this.editingIndex.set(null);
+    this.addRowVisible.set(true);
+  }
+
+  protected openEditRow(index: number): void {
+    const item = this.items()[index];
+    this.rowForm.setValue({ material_name: item.material_name, quantity: item.quantity });
+    this.editingIndex.set(index);
+    this.addRowVisible.set(true);
+  }
+
+  protected saveRow(): void {
+    if (this.rowForm.invalid) {
+      this.rowForm.markAllAsTouched();
+      return;
+    }
+    const row: CustomerQueryItem = {
+      material_name: this.rowForm.getRawValue().material_name,
+      quantity: this.rowForm.getRawValue().quantity,
+    };
+    const idx = this.editingIndex();
+    if (idx !== null) {
+      const updated = [...this.items()];
+      updated[idx] = row;
+      this.items.set(updated);
+    } else {
+      this.items.update((list) => [...list, row]);
+    }
+    this.addRowVisible.set(false);
+    this.editingIndex.set(null);
+  }
+
+  protected deleteRow(index: number): void {
+    this.items.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  protected cancelRow(): void {
+    this.addRowVisible.set(false);
+    this.editingIndex.set(null);
+  }
+
+  /* ── Attachments (FormData) ─────────────────────────── */
+
+  protected onFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = input.files;
+    if (!files || files.length === 0) return;
+    // Push each selected File directly — no base64 conversion needed
+    this.attachments.update((list) => [...list, ...Array.from(files)]);
+    // Reset input so same file can be re-selected after removal
+    input.value = '';
+  }
+
+  protected removeAttachment(index: number): void {
+    this.attachments.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  /* ── Submit ──────────────────────────────────────────── */
+
+  protected submit(): void {
+    if (this.headerForm.invalid) {
+      this.headerForm.markAllAsTouched();
+      return;
+    }
+
+    const projectId = this.projectId();
+    const customerId = this.project()?.customer_id;
+
+    if (!customerId) {
+      this.errorMessage.set('Project or customer not loaded yet. Please wait.');
+      return;
+    }
+
+    const raw = this.headerForm.getRawValue();
+    const qoDate = raw.qo_date as Date;
+    const files = this.attachments();
+
+    // Step 1: JSON payload — no files
+    const payload: CustomerQueryCreateInput = {
+      project_id: projectId,
+      customer_id: customerId,
+      qo_date: this.formatDate(qoDate),
+      remark: raw.remark ?? '',
+      items: this.items(),
+    };
+
+    this.submitting.set(true);
+    this.errorMessage.set(null);
+
+    this.customerQueryService
+      .create(payload, files)
+      .pipe(finalize(() => this.submitting.set(false)))
+      .subscribe({
+        next: () => {
+          this.dialogVisible.set(false);
+          this.successMessage.set('Customer query submitted successfully.');
+          this.attachments.set([]);
+          this.loadQueries(projectId);
+        },
+        error: () => {
+          this.errorMessage.set('Failed to submit query. Please try again.');
+        },
+      });
+  }
+
+  protected downloadAttachment(attachment: Attachment): void {
+    this.downloadingAttachmentId.set(attachment.id);
+    this.attachmentService
+      .downloadAttachment(attachment.id)
+      .pipe(finalize(() => this.downloadingAttachmentId.set(null)))
+      .subscribe({
+        next: (blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = attachment.file_name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        },
+        error: () => {
+          this.errorMessage.set(`Failed to download ${attachment.file_name}.`);
+        },
+      });
+  }
+
+  protected formatFileSize(bytes: number): string {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  }
+
+  protected getFileIcon(contentType?: string): string {
+    if (!contentType) return 'pi pi-file';
+    if (contentType.includes('pdf')) return 'pi pi-file-pdf';
+    if (contentType.includes('image')) return 'pi pi-image';
+    if (contentType.includes('sheet') || contentType.includes('excel') || contentType.includes('csv')) {
+      return 'pi pi-file-excel';
+    }
+    if (contentType.includes('word') || contentType.includes('document')) {
+      return 'pi pi-file-word';
+    }
+    return 'pi pi-file';
+  }
+
+  protected deleteQuery(id: number): void {
+    this.customerQueryService.delete(id).subscribe({
+      next: () => this.loadQueries(this.projectId()),
+      error: () => this.errorMessage.set('Failed to delete query.'),
+    });
+  }
+
+  protected goBack(): void {
+    this.router.navigate(['/projects', this.projectId(), 'steps']);
+  }
+
+  private formatDate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
 }

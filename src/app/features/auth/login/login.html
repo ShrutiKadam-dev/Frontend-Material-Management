@@ -72,6 +72,13 @@
           }
         </div>
 
+        @if (errorMessage()) {
+          <div class="error-banner" role="alert" aria-live="assertive">
+            <span class="pi pi-exclamation-circle" aria-hidden="true"></span>
+            {{ errorMessage() }}
+          </div>
+        }
+
         <p-button
           type="submit"
           label="Sign in"

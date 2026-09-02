@@ -1,13 +1,20 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { Project } from './project';
+import { ProjectService } from './project';
 
-describe('Project', () => {
-  let service: Project;
+describe('ProjectService', () => {
+  let service: ProjectService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
-    service = TestBed.inject(Project);
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
+    });
+    service = TestBed.inject(ProjectService);
   });
 
   it('should be created', () => {

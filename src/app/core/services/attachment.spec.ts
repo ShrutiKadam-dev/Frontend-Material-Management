@@ -1,13 +1,17 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { Attachment } from './attachment';
+import { AttachmentService } from './attachment';
 
-describe('Attachment', () => {
-  let service: Attachment;
+describe('AttachmentService', () => {
+  let service: AttachmentService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
-    service = TestBed.inject(Attachment);
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    service = TestBed.inject(AttachmentService);
   });
 
   it('should be created', () => {

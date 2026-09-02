@@ -11,11 +11,21 @@ const AUTH_SESSION_KEY = 'material-management.auth-session';
 interface LoginApiResponse {
   data: {
     access_token: string;
+    refresh_token: string;
     email: string;
     first_name: string;
     last_name: string;
     id: number;
     is_active: boolean;
+  };
+  message: string;
+  success: boolean;
+}
+
+interface RefreshApiResponse {
+  data: {
+    access_token: string;
+    expires_in: number;
   };
   message: string;
   success: boolean;
@@ -37,6 +47,10 @@ export class AuthService {
     return this.sessionState()?.accessToken ?? null;
   }
 
+  refreshTokenValue(): string | null {
+    return this.sessionState()?.refreshToken ?? null;
+  }
+
   currentUser(): User | null {
     return this.sessionState()?.user ?? null;
   }
@@ -52,6 +66,7 @@ export class AuthService {
         const name = [data.first_name, data.last_name].filter(Boolean).join(' ') || 'Admin';
         return {
           accessToken: data.access_token,
+          refreshToken: data.refresh_token,
           user: {
             id: String(data.id),
             name: name,
@@ -62,6 +77,33 @@ export class AuthService {
       }),
       tap((session) => this.setSession(session)),
     );
+  }
+
+  /**
+   * Calls POST /api/v1/auth/refresh using the stored refresh token as Bearer.
+   * Updates only the access token in the session — user info stays the same.
+   */
+  refreshToken(): Observable<string> {
+    const currentRefreshToken = this.refreshTokenValue();
+    return this.http
+      .post<RefreshApiResponse>(
+        `${this.apiBaseUrl}/api/v1/auth/refresh`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${currentRefreshToken}`,
+          },
+        },
+      )
+      .pipe(
+        map((response) => response.data.access_token),
+        tap((newAccessToken) => {
+          const current = this.sessionState();
+          if (current) {
+            this.setSession({ ...current, accessToken: newAccessToken });
+          }
+        }),
+      );
   }
 
   logout(): void {
@@ -98,7 +140,6 @@ export class AuthService {
       return null;
     }
   }
-
 }
 
 export { AuthService as Auth };

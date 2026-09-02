@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/services/auth';
@@ -21,6 +22,7 @@ export class Login {
 
   protected readonly isSubmitting = signal(false);
   protected readonly passwordVisible = signal(false);
+  protected readonly errorMessage = signal<string | null>(null);
 
   protected readonly form = this.formBuilder.group({
     email: ['', [Validators.required, Validators.email]],
@@ -34,8 +36,28 @@ export class Login {
     }
 
     this.isSubmitting.set(true);
-    
-    this.router.navigateByUrl('/dashboard');
+    this.errorMessage.set(null);
+
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') ?? '/dashboard';
+
+    this.authService
+      .login(this.form.getRawValue())
+      .pipe(finalize(() => this.isSubmitting.set(false)))
+      .subscribe({
+        next: () => this.router.navigateByUrl(returnUrl),
+        error: (err: unknown) => {
+          if (err instanceof HttpErrorResponse) {
+            const message: unknown = (err.error as { message?: unknown })?.message;
+            this.errorMessage.set(
+              typeof message === 'string' && message
+                ? message
+                : 'Invalid email or password. Please try again.',
+            );
+          } else {
+            this.errorMessage.set('An unexpected error occurred. Please try again later.');
+          }
+        },
+      });
   }
 
   protected togglePasswordVisibility(): void {

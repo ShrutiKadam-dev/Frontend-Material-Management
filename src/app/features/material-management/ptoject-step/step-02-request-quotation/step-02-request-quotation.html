@@ -1,1 +1,384 @@
-<p>step-02-request-quotation works!</p>
+<section class="base-page step-page" aria-labelledby="step-page-title">
+
+  <!-- ── Page header ──────────────────────────────────── -->
+  <div class="page-header">
+    <div class="header-left">
+      <button pButton type="button" icon="pi pi-arrow-left" class="p-button-text p-button-secondary back-btn"
+        aria-label="Back to project pipeline" (click)="goBack()"></button>
+      <div>
+        <p class="eyebrow">Step 2 · Request Quotation from Supplier</p>
+        <h1 id="step-page-title">
+          @if (project(); as p) { {{ p.project_title }} }
+          @else { Quotation Requests }
+        </h1>
+        @if (project(); as p) {
+        <p>Assigned Supplier: <strong>{{ getSupplierName(p.supplier_id) }}</strong></p>
+        }
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="step-badge" aria-hidden="true">
+        <span class="step-no">02</span>
+        <span>of 15</span>
+      </div>
+      <button pButton type="button" icon="pi pi-plus" label="New Request" (click)="openDialog()"
+        aria-haspopup="dialog"></button>
+    </div>
+  </div>
+
+  <!-- ── Page-level alerts ─────────────────────────────── -->
+  @if (successMessage()) {
+  <div class="alert alert-success" role="status" aria-live="polite">
+    <i class="pi pi-check-circle" aria-hidden="true"></i>
+    {{ successMessage() }}
+  </div>
+  }
+  @if (!dialogVisible() && errorMessage()) {
+  <div class="alert alert-error" role="alert" aria-live="assertive">
+    <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+    {{ errorMessage() }}
+  </div>
+  }
+
+  <!-- ── Submitted quotation requests list ─────────────── -->
+  <div class="app-panel existing-card" aria-label="Submitted quotation requests">
+    <div class="card-title-row">
+      <span class="card-icon" aria-hidden="true"><i class="pi pi-list"></i></span>
+      <h2>Submitted Quotation Requests</h2>
+    </div>
+
+    @if (loadingRequests()) {
+    <div class="center-state">
+      <div class="loading-ring" aria-hidden="true">
+        <i class="pi pi-spin pi-spinner"></i>
+      </div>
+      <p>Loading quotation requests…</p>
+    </div>
+    } @else if (requests().length === 0) {
+    <div class="center-state empty-cta">
+      <span class="empty-icon" aria-hidden="true">
+        <i class="pi pi-send"></i>
+      </span>
+      <h3>No quotation requests yet</h3>
+      <p>Send the first quotation request to suppliers for this project step.</p>
+      <button pButton type="button" icon="pi pi-plus" label="New Request" (click)="openDialog()"></button>
+    </div>
+    } @else {
+    <div class="query-list">
+      @for (req of requests(); track req.id) {
+      <div class="query-entry">
+        <div class="query-entry-header">
+          <span class="qe-date">
+            <i class="pi pi-calendar" aria-hidden="true"></i>
+            {{ req.quotation_requested_date | date: 'dd MMM yyyy' }}
+          </span>
+          <div class="qe-badges">
+            <span class="qe-badge">
+              <i class="pi pi-building" aria-hidden="true"></i>
+              {{ req.supplier_name || getSupplierName(req.supplier_id) }}
+            </span>
+            <span class="qe-badge" [class.qe-badge--contacted]="req.supplier_contacted" [class.qe-badge--not-contacted]="!req.supplier_contacted">
+              <i [class]="req.supplier_contacted ? 'pi pi-check-circle' : 'pi pi-times-circle'" aria-hidden="true"></i>
+              {{ req.supplier_contacted ? 'Supplier Contacted' : 'Not Contacted' }}
+            </span>
+            @if (req.attachments && req.attachments.length) {
+            <span class="qe-badge">
+              <i class="pi pi-paperclip" aria-hidden="true"></i>
+              {{ req.attachments.length }} file{{ req.attachments.length === 1 ? '' : 's' }}
+            </span>
+            }
+            @if (req.items && req.items.length) {
+            <span class="qe-badge">
+              <i class="pi pi-box" aria-hidden="true"></i>
+              {{ req.items.length }} item{{ req.items.length === 1 ? '' : 's' }}
+            </span>
+            }
+          </div>
+          <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm qe-delete"
+            [attr.aria-label]="'Delete quotation request from ' + (req.quotation_requested_date | date: 'dd MMM yyyy')"
+            pTooltip="Delete request" tooltipPosition="top" (click)="deleteRequest(req.id)"></button>
+        </div>
+
+        @if (req.remarks) {
+        <p class="qe-remark">
+          <i class="pi pi-comment" aria-hidden="true"></i>
+          {{ req.remarks }}
+        </p>
+        }
+
+        <!-- Attachments -->
+        @if (req.attachments && req.attachments.length) {
+        <div class="qe-attachments" aria-label="Quotation request attachments">
+          <p class="qe-attachments-label">
+            <i class="pi pi-paperclip" aria-hidden="true"></i>
+            Attachments ({{ req.attachments.length }})
+          </p>
+          <div class="qe-attachment-list">
+            @for (att of req.attachments; track att.id) {
+            <div class="qe-attachment-chip">
+              <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+              <div class="qe-att-meta">
+                <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+              </div>
+              <button
+                type="button"
+                class="qe-att-download"
+                [attr.aria-label]="'Download ' + att.file_name"
+                pTooltip="Download file"
+                tooltipPosition="top"
+                [disabled]="downloadingAttachmentId() === att.id"
+                (click)="downloadAttachment(att)"
+              >
+                @if (downloadingAttachmentId() === att.id) {
+                <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                } @else {
+                <i class="pi pi-download" aria-hidden="true"></i>
+                }
+              </button>
+            </div>
+            }
+          </div>
+        </div>
+        }
+
+        <!-- Material items table -->
+        @if (req.items && req.items.length) {
+        <table class="items-table" aria-label="Materials for quotation request">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Material Name</th>
+              <th scope="col">Qty</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of req.items; track $index) {
+            <tr>
+              <td class="row-num">{{ $index + 1 }}</td>
+              <td>{{ item.material_name }}</td>
+              <td class="qty-cell">{{ item.quantity }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+        }
+      </div>
+      }
+    </div>
+    }
+  </div>
+
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     NEW QUOTATION REQUEST DIALOG
+     ═══════════════════════════════════════════════════════ -->
+<p-dialog header="New Quotation Request" [visible]="dialogVisible()" (visibleChange)="dialogVisible.set($event)"
+  [modal]="true" [draggable]="false" [resizable]="false" [style]="{ width: '780px', maxWidth: '96vw' }"
+  [contentStyle]="{ padding: '0' }" styleClass="cq-dialog" appendTo="body" aria-labelledby="cq-dialog-title">
+
+  <form [formGroup]="headerForm" (ngSubmit)="submit()" novalidate id="qr-form">
+
+    <!-- Dialog error banner -->
+    @if (errorMessage()) {
+    <div class="dlg-error" role="alert" aria-live="assertive">
+      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+      {{ errorMessage() }}
+    </div>
+    }
+
+    <div class="dlg-body">
+
+      <!-- ── 1. Supplier & Date & Contacted ─────────────── -->
+      <div class="dlg-section">
+        <p class="dlg-section-label">Request Details</p>
+        <div class="dlg-grid">
+
+          <!-- Supplier (read-only) -->
+          <div class="field">
+            <label for="dlg-supplier">Supplier</label>
+            <input id="dlg-supplier" pInputText type="text" [value]="getSupplierName()" readonly
+              [attr.aria-readonly]="true" class="readonly-input" />
+          </div>
+
+          <!-- Quotation Requested Date -->
+          <div class="field">
+            <label for="dlg-qr-date">
+              Quotation Requested Date <span class="req" aria-hidden="true">*</span>
+            </label>
+            <p-datepicker inputId="dlg-qr-date" formControlName="quotation_requested_date" dateFormat="yy-mm-dd"
+              [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+              [invalid]="headerForm.controls.quotation_requested_date.touched && headerForm.controls.quotation_requested_date.invalid"
+              aria-required="true" />
+            @if (headerForm.controls.quotation_requested_date.touched && headerForm.controls.quotation_requested_date.invalid) {
+            <p class="field-error">Requested date is required.</p>
+            }
+          </div>
+
+          <!-- Supplier Contacted Checkbox -->
+          <div class="field field-full checkbox-field">
+            <div class="checkbox-wrap">
+              <p-checkbox formControlName="supplier_contacted" [binary]="true" inputId="dlg-supplier-contacted" />
+              <label for="dlg-supplier-contacted" class="checkbox-label">
+                Supplier has been contacted
+              </label>
+            </div>
+            <span class="field-hint">Mark this if you have already notified or communicated with the supplier.</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── 2. Material Items ───────────────────────────── -->
+      <div class="dlg-section">
+        <div class="dlg-section-header">
+          <p class="dlg-section-label">Material Items</p>
+          @if (!addRowVisible()) {
+          <button pButton type="button" icon="pi pi-plus" label="Add Item" (click)="openAddRow()"></button>
+          }
+        </div>
+
+        <!-- Inline add/edit row -->
+        @if (addRowVisible()) {
+        <div class="row-form" [formGroup]="rowForm">
+          <div class="row-form-fields">
+            <div class="field">
+              <label for="dlg-material-name">
+                Material Name <span class="req" aria-hidden="true">*</span>
+              </label>
+              <input id="dlg-material-name" pInputText formControlName="material_name" placeholder="e.g. Steel Pipe"
+                [style]="{ width: '100%' }"
+                [class.ng-invalid]="rowForm.controls.material_name.touched && rowForm.controls.material_name.invalid" />
+              @if (rowForm.controls.material_name.touched && rowForm.controls.material_name.invalid) {
+              <p class="field-error">Material name is required.</p>
+              }
+            </div>
+            <div class="field">
+              <label for="dlg-quantity">
+                Quantity <span class="req" aria-hidden="true">*</span>
+              </label>
+              <input id="dlg-quantity" pInputText formControlName="quantity" placeholder="e.g. 10.500"
+                [style]="{ width: '100%' }"
+                [class.ng-invalid]="rowForm.controls.quantity.touched && rowForm.controls.quantity.invalid" />
+              @if (rowForm.controls.quantity.touched && rowForm.controls.quantity.invalid) {
+              <p class="field-error">Enter a valid quantity (e.g. 10 or 10.500).</p>
+              }
+            </div>
+          </div>
+          <div class="row-form-actions">
+            <button pButton type="button" icon="pi pi-check" [label]="editingIndex() !== null ? 'Update' : 'Add'"
+              class="p-button-sm" (click)="saveRow()"></button>
+            <button pButton type="button" icon="pi pi-times" label="Cancel"
+              class="p-button-text p-button-sm p-button-secondary" (click)="cancelRow()"></button>
+          </div>
+        </div>
+        }
+
+        <!-- Items table -->
+        @if (items().length > 0) {
+        <div class="items-table-wrap">
+          <table class="items-table" aria-label="Material items list">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Material Name</th>
+                <th scope="col">Quantity</th>
+                <th scope="col" class="actions-col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of items(); track $index) {
+              <tr>
+                <td class="row-num">{{ $index + 1 }}</td>
+                <td>{{ item.material_name }}</td>
+                <td class="qty-cell">{{ item.quantity }}</td>
+                <td class="actions-cell">
+                  <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm"
+                    [attr.aria-label]="'Edit ' + item.material_name" pTooltip="Edit" tooltipPosition="top"
+                    (click)="openEditRow($index)"></button>
+                  <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger"
+                    [attr.aria-label]="'Delete ' + item.material_name" pTooltip="Delete" tooltipPosition="top"
+                    (click)="deleteRow($index)"></button>
+                </td>
+              </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4" class="table-footer">
+                  {{ totalItems() }} item{{ totalItems() === 1 ? '' : 's' }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        } @else if (!addRowVisible()) {
+        <div class="empty-items" role="note">
+          <i class="pi pi-inbox" aria-hidden="true"></i>
+          <p>No items added yet. Click <strong>Add Item</strong> above.</p>
+        </div>
+        }
+      </div>
+
+      <!-- ── 3. Attachment ──────────────────────────────── -->
+      <div class="dlg-section">
+        <p class="dlg-section-label">
+          Attachments
+          @if (attachments().length) {
+          <span class="attach-count">{{ attachments().length }} selected</span>
+          }
+        </p>
+
+        <!-- Uploaded files list -->
+        @if (attachments().length) {
+        <div class="file-list">
+          @for (file of attachments(); track $index) {
+          <div class="file-chip">
+            <i class="pi pi-paperclip" aria-hidden="true"></i>
+            <span class="file-chip-name">{{ file.name }}</span>
+            <button type="button" class="remove-file" [attr.aria-label]="'Remove ' + file.name"
+              (click)="removeAttachment($index)">
+              <i class="pi pi-times" aria-hidden="true"></i>
+            </button>
+          </div>
+          }
+        </div>
+        }
+
+        <!-- Always-visible drop zone to keep adding files -->
+        <label class="file-drop-zone" [class.file-drop-zone--compact]="attachments().length > 0"
+          for="dlg-qr-attachment-input" tabindex="0" role="button" aria-label="Upload quotation attachments">
+          <i class="pi pi-upload" aria-hidden="true"></i>
+          <span>{{ attachments().length ? 'Add more files' : 'Click to upload files' }}</span>
+          @if (!attachments().length) {
+          <span class="file-hint">PDF, Image, Excel — any format, multiple allowed</span>
+          }
+          <input id="dlg-qr-attachment-input" type="file" multiple class="visually-hidden"
+            (change)="onFilesSelected($event)" />
+        </label>
+      </div>
+
+      <!-- ── 4. Remarks ─────────────────────────────────── -->
+      <div class="dlg-section">
+        <p class="dlg-section-label">Remarks</p>
+        <div class="field">
+          <label for="dlg-remarks" class="visually-hidden">Remarks</label>
+          <textarea id="dlg-remarks" pTextarea formControlName="remarks" rows="3"
+            placeholder="Any notes or instructions for the supplier…" style="width: 100%; resize: vertical;"></textarea>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Dialog footer ──────────────────────────────── -->
+    <div class="dlg-footer">
+      <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary" [disabled]="submitting()"
+        (click)="closeDialog()"></button>
+      <button pButton type="submit" icon="pi pi-send" label="Submit Request" form="qr-form" [loading]="submitting()"
+        [disabled]="submitting()"></button>
+    </div>
+
+  </form>
+
+</p-dialog>

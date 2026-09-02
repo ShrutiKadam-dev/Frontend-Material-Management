@@ -1,4 +1,7 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { Step02RequestQuotation } from './step-02-request-quotation';
 
@@ -8,9 +11,13 @@ describe('Step02RequestQuotation', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Step02RequestQuotation]
-    })
-    .compileComponents();
+      imports: [Step02RequestQuotation],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(Step02RequestQuotation);
     component = fixture.componentInstance;

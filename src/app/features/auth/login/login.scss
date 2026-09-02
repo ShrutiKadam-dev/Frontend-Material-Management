@@ -168,6 +168,24 @@ label {
   margin: 0;
 }
 
+.error-banner {
+  align-items: flex-start;
+  background: rgba(180, 35, 24, 0.08);
+  border: 1px solid rgba(180, 35, 24, 0.25);
+  border-radius: var(--radius-control);
+  color: var(--color-danger);
+  display: flex;
+  font-size: 0.875rem;
+  gap: 8px;
+  padding: 10px 14px;
+
+  .pi {
+    flex-shrink: 0;
+    font-size: 1rem;
+    margin-top: 1px;
+  }
+}
+
 .visual-panel {
   align-items: center;
   background:
