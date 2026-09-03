@@ -1,1 +1,624 @@
-<p>step-04-cost-sheet works!</p>
+<section class="base-page step-page" aria-labelledby="step-page-title">
+
+    <!-- ── 1. Page Header Bar ───────────────────────────────── -->
+    <div class="page-header">
+        <div class="header-left">
+            <button pButton type="button" icon="pi pi-arrow-left" class="p-button-text p-button-secondary back-btn"
+                (click)="goBack()" aria-label="Back to project pipeline" pTooltip="Back to Project Steps"
+                tooltipPosition="bottom"></button>
+            <div class="header-title-group">
+                <span class="eyebrow">Step 04 · Cost Sheet Calculation</span>
+                <h1 id="step-page-title">
+                    @if (project(); as p) { {{ p.project_title }} }
+                    @else { Cost Sheet Calculation }
+                </h1>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            @if (customer(); as c) {
+            <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+                <i class="pi pi-user" aria-hidden="true"></i>
+                {{ c.name }}
+            </span>
+            } @else if (project()?.customer_name) {
+            <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+                <i class="pi pi-user" aria-hidden="true"></i>
+                {{ project()?.customer_name }}
+            </span>
+            }
+            <div class="header-step-pill" aria-hidden="true">
+                Step <strong>04</strong> of 15
+            </div>
+            <button pButton type="button" icon="pi pi-plus" label="Create Cost Sheet" class="create-cost-sheet-btn"
+                (click)="openCreateDialog()"></button>
+        </div>
+    </div>
+
+    <!-- ── 2. Full-Width Version History Stream ─────────────── -->
+    <div class="step-layout--fullwidth">
+        <div class="step-main step-main--fullwidth">
+
+            <!-- Loading State -->
+            @if (loadingCostSheets()) {
+            <div class="center-state">
+                <div class="loading-ring" aria-hidden="true">
+                    <i class="pi pi-spin pi-spinner"></i>
+                </div>
+                <p>Loading cost sheet history…</p>
+            </div>
+            }
+
+            <!-- Empty State -->
+            @else if (costSheets().length === 0) {
+            <div class="version-sheet-card empty-card">
+                <div class="center-state empty-cta">
+                    <span class="empty-icon" aria-hidden="true">
+                        <i class="pi pi-calculator"></i>
+                    </span>
+                    <h3>No cost sheets created yet</h3>
+                    <p>Calculate customs duty, assessable value, freight, insurance, and profit margins to generate a
+                        landed cost sheet.</p>
+                    <button pButton type="button" icon="pi pi-plus" label="Create Cost Sheet"
+                        (click)="openCreateDialog()"></button>
+                </div>
+            </div>
+            }
+
+            <!-- All Version Cards Stream -->
+            @else {
+            <div class="version-cards-stream" role="feed" aria-label="Cost sheet version history">
+                @for (sheet of costSheets(); track sheet.id; let idx = $index) {
+                <article class="version-sheet-card" [class.version-sheet-card--warning]="sheet.hasRateIncrease">
+
+                    <!-- Card Header Bar -->
+                    <div class="vsc-header">
+                        <div class="vsc-header-left">
+                            <span class="vsc-badge">
+                                <i class="pi pi-bookmark" aria-hidden="true"></i>
+                                v{{ sheet.versionNumber || (costSheets().length - idx) }}.0
+                            </span>
+
+                            @if (idx === 0) {
+                            <span class="vsc-latest-pill">Latest</span>
+                            }
+
+                            <span class="vsc-date">
+                                <i class="pi pi-calendar" aria-hidden="true"></i>
+                                {{ sheet.createdAt | date: 'dd MMM yyyy' }}
+                            </span>
+
+                            <h2 class="vsc-title">{{ sheet.title }}</h2>
+
+                            @if (sheet.hasRateIncrease) {
+                            <span class="vsc-warning-badge">
+                                <i class="pi pi-exclamation-triangle"></i> Rate Increase Alert
+                            </span>
+                            }
+                        </div>
+
+                        <div class="vsc-header-right">
+                            @if (sheet.cumulativeProjectCostInr) {
+                            <span class="vsc-cost-pill">
+                                <i class="pi pi-indian-rupee" aria-hidden="true"></i>
+                                {{ sheet.cumulativeProjectCostInr | number:'1.2-2' }}
+                            </span>
+                            }
+
+                            @if (sheet.items && sheet.items.length) {
+                            <span class="vsc-count-pill">
+                                <i class="pi pi-box" aria-hidden="true"></i>
+                                {{ sheet.items.length }} line item{{ sheet.items.length === 1 ? '' : 's' }}
+                            </span>
+                            }
+
+                            <button pButton type="button" icon="pi pi-download" label="Export"
+                                class="p-button-outlined p-button-sm export-action-btn"
+                                [loading]="exportingId() === sheet.id"
+                                [attr.aria-label]="'Export cost sheet ' + sheet.title"
+                                pTooltip="Download Cost Sheet Report" tooltipPosition="top"
+                                (click)="exportCostSheet(sheet, $event)"></button>
+                        </div>
+                    </div>
+
+                    <!-- Card Body -->
+                    <div class="vsc-body">
+
+                        <!-- Global Costing & Landed Tax Parameters Strip -->
+                        @if (sheet.globalParams; as gp) {
+                        <div class="vsc-params-strip">
+                            <div class="param-chip">
+                                <span class="p-lbl">EUR Rate:</span>
+                                <span class="p-val">₹{{ gp.eurToInr }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <span class="p-lbl">Ins. & Freight:</span>
+                                <span class="p-val">{{ gp.insuranceFreightRate }}%</span>
+                            </div>
+                            <div class="param-chip">
+                                <span class="p-lbl">Duty (BCD):</span>
+                                <span class="p-val">{{ gp.defaultCustomsDutyRate }}%</span>
+                            </div>
+                            <div class="param-chip">
+                                <span class="p-lbl">IGST:</span>
+                                <span class="p-val">{{ gp.igstRate }}%</span>
+                            </div>
+                            <div class="param-chip">
+                                <span class="p-lbl">Transport:</span>
+                                <span class="p-val">{{ gp.transportationRate }}%</span>
+                            </div>
+                            <div class="param-chip">
+                                <span class="p-lbl">Finance:</span>
+                                <span class="p-val">{{ gp.financeChargesRate }}%</span>
+                            </div>
+                            <div class="param-chip param-chip--highlight">
+                                <span class="p-lbl">Margin:</span>
+                                <span class="p-val">{{ gp.marginRate }}%</span>
+                            </div>
+                            <div class="param-chip">
+                                <span class="p-lbl">GST:</span>
+                                <span class="p-val">{{ gp.gstRate }}%</span>
+                            </div>
+                        </div>
+                        }
+
+                        <!-- Recent Price Changes Alert Box -->
+                        @if (sheet.recentPriceChanges && sheet.recentPriceChanges.length) {
+                        <div class="price-change-alert-box">
+                            <div class="alert-head">
+                                <i class="pi pi-info-circle"></i>
+                                <span>Recent Supplier Price Changes Detected</span>
+                            </div>
+                            <div class="alert-items">
+                                @for (change of sheet.recentPriceChanges; track change.id) {
+                                <div class="price-change-row">
+                                    <span class="pc-supplier">{{ change.supplierName || 'Supplier' }}:</span>
+                                    <span class="pc-old">€ {{ change.oldPriceEur | number:'1.2-2' }}</span>
+                                    <i class="pi pi-arrow-right"></i>
+                                    <span class="pc-new" [class.pc-increase]="change.isRateIncrease">€ {{
+                                        change.newPriceEur | number:'1.2-2' }}</span>
+                                    @if (change.changeReason) {
+                                    <span class="pc-reason">({{ change.changeReason }})</span>
+                                    }
+                                </div>
+                                }
+                            </div>
+                        </div>
+                        }
+
+                        <!-- Line Items Breakdown Table -->
+                        @if (sheet.items && sheet.items.length) {
+                        <div class="cost-items-table-container">
+                            <p-table [value]="sheet.items" [paginator]="sheet.items.length > 5" [rows]="5"
+                                [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
+                                aria-label="Cost sheet line items">
+                                <ng-template pTemplate="header">
+                                    <tr>
+                                        <th scope="col" style="width: 45px; text-align: center;">#</th>
+                                        <th scope="col" style="min-width: 110px;">Quotation Number</th>
+                                        <th scope="col" style="min-width: 200px;">Material Description</th>
+                                        <th scope="col" style="min-width: 70px; text-align: right;">Qty</th>
+                                        <th scope="col" style="min-width: 110px; text-align: right;">Unit Price (€)</th>
+                                        <th scope="col" style="min-width: 115px; text-align: right;">Total (€)</th>
+                                        <th scope="col" style="min-width: 130px; text-align: right;">Assessable (₹)</th>
+                                        <th scope="col" style="min-width: 135px; text-align: right;">Landed Cost (₹)
+                                        </th>
+                                        <th scope="col" style="min-width: 130px; text-align: right;">Margin (₹)</th>
+                                        <th scope="col" style="min-width: 160px; text-align: right;">Total Selling (₹)
+                                        </th>
+                                    </tr>
+                                </ng-template>
+
+                                <ng-template pTemplate="body" let-item let-i="rowIndex">
+                                    <tr>
+                                        <td style="text-align: center; color: #64748b; font-weight: 700;">{{ i + 1 }}
+                                        </td>
+                                        <td>
+                                            <span>{{ item.quotationNumber || '—' }}</span>
+                                        </td>
+                                        <td>
+                                            <strong class="item-desc-text">{{ item.itemDescription }}</strong>
+                                            @if (item.itemCode) {
+                                            <span class="item-sub-code">Code: {{ item.itemCode }}</span>
+                                            }
+                                            @if (item.hasRateIncrease) {
+                                            <span class="rate-up-tag" pTooltip="Price increased from last quotation"
+                                                tooltipPosition="top">
+                                                <i class="pi pi-arrow-up"></i> Increased
+                                            </span>
+                                            }
+                                        </td>
+                                        <td class="num-cell" style="font-weight: 700;">
+                                            <span class="qty-badge">{{ item.quantity }}</span>
+                                        </td>
+                                        <td class="num-cell">
+                                            €&nbsp;{{ item.pricePerUnitEur | number:'1.2-2' }}
+                                        </td>
+                                        <td class="num-cell" style="font-weight: 600;">
+                                            €&nbsp;{{ item.totalLineEur | number:'1.2-2' }}
+                                        </td>
+                                        <td class="num-cell">
+                                            ₹&nbsp;{{ item.assessableValueInr | number:'1.2-2' }}
+                                        </td>
+                                        <td class="num-cell" style="font-weight: 600;">
+                                            ₹&nbsp;{{ item.landedCostInr | number:'1.2-2' }}
+                                        </td>
+                                        <td class="num-cell" style="color: #0284c7;">
+                                            ₹&nbsp;{{ item.marginInr | number:'1.2-2' }}
+                                        </td>
+                                        <td class="num-cell" style="font-weight: 700; color: var(--color-heading);">
+                                            ₹&nbsp;{{ item.totalLineInr | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                </ng-template>
+
+                                <ng-template pTemplate="footer">
+                                    <tr class="table-total-row">
+                                        <td colspan="9" class="total-label-cell">
+                                            <div class="total-label-wrapper">
+                                                <span class="total-icon-badge" aria-hidden="true"><i
+                                                        class="pi pi-calculator"></i></span>
+                                                <span class="total-title">Cumulative Project Cost</span>
+                                                <span class="total-items-badge">({{ sheet.items.length }} {{
+                                                    sheet.items.length === 1 ? 'item' : 'items' }})</span>
+                                            </div>
+                                        </td>
+                                        <td class="total-amount-cell"
+                                            style="min-width: 160px; text-align: right; white-space: nowrap;">
+                                            <span class="total-amount-value" style="white-space: nowrap;">₹&nbsp;{{
+                                                sheet.cumulativeProjectCostInr | number:'1.2-2' }}</span>
+                                        </td>
+                                    </tr>
+                                </ng-template>
+                            </p-table>
+                        </div>
+                        }
+
+                    </div>
+
+                </article>
+                }
+            </div>
+            }
+
+        </div>
+    </div>
+
+    <!-- ── 3. Create / Edit Cost Sheet Dialog ────────────────── -->
+    <p-dialog [visible]="dialogVisible()" (visibleChange)="$event ? null : closeDialog()" [modal]="true"
+        [closable]="true" [draggable]="false" [resizable]="false" styleClass="cq-dialog cost-sheet-dialog"
+        appendTo="body" header="Create Project Cost Sheet" [style]="{ width: '94vw', maxWidth: '1280px' }">
+        <div class="dlg-body">
+
+            @if (errorMessage()) {
+            <div class="dlg-error" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                <span>{{ errorMessage() }}</span>
+            </div>
+            }
+
+            <!-- ── A. Basic Information ───────────────────────── -->
+            <div class="dlg-section" [formGroup]="headerForm">
+                <p class="dlg-section-label">1. Cost Sheet Information</p>
+                <div class="dlg-grid">
+                    <div class="field field-full">
+                        <label for="cs-title">Cost Sheet Title <span class="req">*</span></label>
+                        <input id="cs-title" pInputText type="text" formControlName="title"
+                            placeholder="Enter cost sheet title" />
+                        @if (headerForm.controls.title.invalid && headerForm.controls.title.touched) {
+                        <span class="field-error">Title is required (at least 2 characters).</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── B. Global Costing Parameters ───────────────── -->
+            <div class="dlg-section" [formGroup]="globalParamsForm">
+                <div class="dlg-section-header">
+                    <p class="dlg-section-label">2. Global Costing & Landed Tax Parameters</p>
+                    <span class="section-hint">Values apply across all items dynamically</span>
+                </div>
+
+                <div class="dlg-grid dlg-grid--4col">
+                    <div class="field">
+                        <label for="gp-eur">EUR to INR Rate (₹) <span class="req">*</span></label>
+                        <input id="gp-eur" pInputText type="number" step="0.01" formControlName="eurToInr"
+                            placeholder="Enter EUR to INR rate" />
+                    </div>
+
+                    <div class="field">
+                        <label for="gp-if">Insurance & Freight (%) <span class="req">*</span></label>
+                        <input id="gp-if" pInputText type="number" step="0.1" formControlName="insuranceFreightRate"
+                            placeholder="Enter insurance & freight rate" />
+                    </div>
+
+                    <div class="field">
+                        <label for="gp-cd">Default Customs Duty (%) <span class="req">*</span></label>
+                        <input id="gp-cd" pInputText type="number" step="0.1" formControlName="defaultCustomsDutyRate"
+                            placeholder="Enter customs duty rate" />
+                    </div>
+
+                    <div class="field">
+                        <label for="gp-igst">IGST on Import (%) <span class="req">*</span></label>
+                        <input id="gp-igst" pInputText type="number" step="0.1" formControlName="igstRate"
+                            placeholder="Enter IGST rate" />
+                    </div>
+
+                    <div class="field">
+                        <label for="gp-trans">Inland Transport (%) <span class="req">*</span></label>
+                        <input id="gp-trans" pInputText type="number" step="0.1" formControlName="transportationRate"
+                            placeholder="Enter transportation rate" />
+                    </div>
+
+                    <div class="field">
+                        <label for="gp-fin">Finance Charges (%) <span class="req">*</span></label>
+                        <input id="gp-fin" pInputText type="number" step="0.1" formControlName="financeChargesRate"
+                            placeholder="Enter finance charges rate" />
+                    </div>
+
+                    <div class="field">
+                        <label for="gp-margin">Profit Margin (%) <span class="req">*</span></label>
+                        <input id="gp-margin" pInputText type="number" step="0.1" formControlName="marginRate"
+                            placeholder="Enter profit margin" />
+                    </div>
+
+                    <div class="field">
+                        <label for="gp-gst">Selling GST (%) <span class="req">*</span></label>
+                        <input id="gp-gst" pInputText type="number" step="0.1" formControlName="gstRate"
+                            placeholder="Enter GST rate" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── C. Line Items Management ───────────────────── -->
+            <div class="dlg-section">
+                <div class="dlg-section-header">
+                    <p class="dlg-section-label">
+                        3. Cost Sheet Line Items
+                        @if (items().length > 0) {
+                        <span class="attach-count">({{ items().length }} item{{ items().length === 1 ? '' : 's'
+                            }})</span>
+                        }
+                    </p>
+                    <div class="section-actions-group">
+                        @if (supplierQuotations().length > 0) {
+                        <button pButton type="button" icon="pi pi-download" label="Import from Supplier Quotations"
+                            class="p-button-outlined p-button-sm import-trigger-btn"
+                            (click)="openImportDialog()"></button>
+                        }
+                    </div>
+                </div>
+
+                <!-- Fast Inline Item Entry Row -->
+                <div class="quick-add-bar" [class.quick-add-bar--editing]="editingItemIndex() !== null"
+                    [formGroup]="itemForm">
+                    <div class="quick-add-grid">
+                        <div class="quick-field" style="flex: 1 1 120px;">
+                            <label for="cs-item-qno">Quotation Number</label>
+                            <input id="cs-item-qno" pInputText type="text" formControlName="quotationNumber"
+                                placeholder="Enter quotation #" />
+                        </div>
+
+                        <div class="quick-field quick-field--name" style="flex: 2 1 200px;">
+                            <label for="cs-item-desc">Material Description <span class="req">*</span></label>
+                            <input id="cs-item-desc" pInputText type="text" formControlName="itemDescription"
+                                placeholder="Enter material description" />
+                        </div>
+
+                        <div class="quick-field" style="flex: 1 1 110px;">
+                            <label for="cs-item-code">Item Code</label>
+                            <input id="cs-item-code" pInputText type="text" formControlName="itemCode"
+                                placeholder="Enter item code" />
+                        </div>
+
+                        <div class="quick-field quick-field--qty" style="flex: 1 1 80px;">
+                            <label for="cs-item-qty">Quantity <span class="req">*</span></label>
+                            <input id="cs-item-qty" pInputText type="number" step="0.001" min="0.001"
+                                formControlName="quantity" placeholder="Enter qty" />
+                        </div>
+
+                        <div class="quick-field quick-field--price" style="flex: 1 1 110px;">
+                            <label for="cs-item-price">Unit Price (€) <span class="req">*</span></label>
+                            <input id="cs-item-price" pInputText type="number" step="0.01" min="0"
+                                formControlName="pricePerUnitEur" placeholder="Enter price (€)" />
+                        </div>
+
+                        <div class="quick-field" style="flex: 1 1 95px;">
+                            <label for="cs-item-duty">Duty (%)</label>
+                            <input id="cs-item-duty" pInputText type="number" step="0.1" min="0"
+                                formControlName="customsDutyRate" placeholder="Enter duty (%)" />
+                        </div>
+
+                        <div class="quick-add-actions">
+                            <button pButton type="button"
+                                [icon]="editingItemIndex() !== null ? 'pi pi-check' : 'pi pi-plus'"
+                                [label]="editingItemIndex() !== null ? 'Update' : 'Add'"
+                                class="p-button-sm quick-submit-btn" (click)="saveItem()"></button>
+                            @if (editingItemIndex() !== null) {
+                            <button pButton type="button" icon="pi pi-times"
+                                class="p-button-text p-button-sm cancel-edit-btn" pTooltip="Cancel edit"
+                                tooltipPosition="top" (click)="resetItemForm()"></button>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dialog Items Table with Live Calculations -->
+                @if (items().length > 0) {
+                <div class="cost-items-table-container">
+                    <p-table [value]="calculatedItems()" [paginator]="calculatedItems().length > 5" [rows]="5"
+                        [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
+                        aria-label="Cost sheet draft items">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th scope="col" style="width: 40px; text-align: center;">#</th>
+                                <th scope="col" style="min-width: 95px;">Quote #</th>
+                                <th scope="col" style="min-width: 180px;">Material Description</th>
+                                <th scope="col" style="min-width: 65px; text-align: right;">Qty</th>
+                                <th scope="col" style="min-width: 110px; text-align: right;">Price (€)</th>
+                                <th scope="col" style="min-width: 115px; text-align: right;">Total (€)</th>
+                                <th scope="col" style="min-width: 130px; text-align: right;">Assessable (₹)</th>
+                                <th scope="col" style="min-width: 135px; text-align: right;">Landed (₹)</th>
+                                <th scope="col" style="min-width: 130px; text-align: right;">Margin (₹)</th>
+                                <th scope="col" style="min-width: 160px; text-align: right;">Total Selling (₹)</th>
+                                <th scope="col" style="width: 80px; text-align: right;">Actions</th>
+                            </tr>
+                        </ng-template>
+
+                        <ng-template pTemplate="body" let-item let-i="rowIndex">
+                            <tr>
+                                <td style="text-align: center; color: #64748b; font-weight: 700;">{{ i + 1 }}</td>
+                                <td>
+                                    <span class="ref-badge">{{ item.quotationNumber || '—' }}</span>
+                                </td>
+                                <td>
+                                    <strong>{{ item.itemDescription }}</strong>
+                                    @if (item.itemCode) {
+                                    <span class="item-sub-code">Code: {{ item.itemCode }}</span>
+                                    }
+                                </td>
+                                <td class="num-cell" style="font-weight: 700;">
+                                    <span class="qty-badge">{{ item.quantity }}</span>
+                                </td>
+                                <td class="num-cell">
+                                    €&nbsp;{{ item.pricePerUnitEur | number:'1.2-2' }}
+                                </td>
+                                <td class="num-cell" style="font-weight: 600;">
+                                    €&nbsp;{{ item.totalLineEur | number:'1.2-2' }}
+                                </td>
+                                <td class="num-cell">
+                                    ₹&nbsp;{{ item.assessableValueInr | number:'1.2-2' }}
+                                </td>
+                                <td class="num-cell" style="font-weight: 600;">
+                                    ₹&nbsp;{{ item.landedCostInr | number:'1.2-2' }}
+                                </td>
+                                <td class="num-cell" style="color: #0284c7;">
+                                    ₹&nbsp;{{ item.marginInr | number:'1.2-2' }}
+                                </td>
+                                <td class="num-cell" style="font-weight: 700; color: var(--color-heading);">
+                                    ₹&nbsp;{{ item.totalLineInr | number:'1.2-2' }}
+                                </td>
+                                <td style="text-align: right; width: 80px; white-space: nowrap;">
+                                    <div class="actions-cell">
+                                        <button pButton type="button" icon="pi pi-pencil"
+                                            class="p-button-text p-button-sm qe-edit"
+                                            [attr.aria-label]="'Edit ' + item.itemDescription" pTooltip="Edit Item"
+                                            tooltipPosition="top" (click)="editItem(i)"></button>
+                                        <button pButton type="button" icon="pi pi-trash"
+                                            class="p-button-text p-button-sm p-button-danger qe-delete"
+                                            [attr.aria-label]="'Delete ' + item.itemDescription" pTooltip="Delete Item"
+                                            tooltipPosition="top" (click)="deleteItem(i)"></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </ng-template>
+
+                        <ng-template pTemplate="footer">
+                            <tr class="table-total-row">
+                                <td colspan="9" class="total-label-cell">
+                                    <div class="total-label-wrapper">
+                                        <span class="total-icon-badge" aria-hidden="true"><i
+                                                class="pi pi-calculator"></i></span>
+                                        <span class="total-title">Cumulative Project Cost</span>
+                                        <span class="total-items-badge">({{ items().length }} {{ items().length === 1 ?
+                                            'item' : 'items' }})</span>
+                                    </div>
+                                </td>
+                                <td class="total-amount-cell"
+                                    style="min-width: 160px; text-align: right; white-space: nowrap;">
+                                    <span class="total-amount-value" style="white-space: nowrap;">₹&nbsp;{{
+                                        cumulativeProjectCostInr() | number:'1.2-2' }}</span>
+                                </td>
+                                <td class="total-empty-cell" style="width: 80px;"></td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </div>
+                } @else {
+                <div class="empty-items" role="note">
+                    <i class="pi pi-inbox" aria-hidden="true"></i>
+                    <p>No line items added yet. Use the entry bar above or import directly from Step 03 Supplier
+                        Quotations.</p>
+                </div>
+                }
+            </div>
+
+            <!-- ── D. Live Summary Bar ────────────────────────── -->
+            @if (items().length > 0) {
+            <div class="live-summary-bar">
+                <div class="summary-metric">
+                    <span class="sm-label">Total Line Items</span>
+                    <span class="sm-value">{{ totalItemCount() }}</span>
+                </div>
+                <div class="summary-metric">
+                    <span class="sm-label">Total EUR Base</span>
+                    <span class="sm-value">€ {{ totalEurValue() | number:'1.2-2' }}</span>
+                </div>
+                <div class="summary-metric">
+                    <span class="sm-label">Cumulative Landed Cost</span>
+                    <span class="sm-value">₹ {{ totalLandedCostInr() | number:'1.2-2' }}</span>
+                </div>
+                <div class="summary-metric">
+                    <span class="sm-label">Total Margin (INR)</span>
+                    <span class="sm-value sm-value--margin">₹ {{ totalMarginInr() | number:'1.2-2' }}</span>
+                </div>
+                <div class="summary-metric summary-metric--total">
+                    <span class="sm-label">Final Project Cost (INR)</span>
+                    <span class="sm-value sm-value--grand">₹ {{ cumulativeProjectCostInr() | number:'1.2-2' }}</span>
+                </div>
+            </div>
+            }
+
+        </div>
+
+        <!-- Dialog Footer Actions -->
+        <div class="dlg-footer">
+            <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="closeDialog()"
+                [disabled]="submitting()"></button>
+            <button pButton type="button" label="Save Cost Sheet" icon="pi pi-check" class="submit-btn"
+                (click)="submit()" [loading]="submitting()" [disabled]="items().length === 0"></button>
+        </div>
+    </p-dialog>
+
+    <!-- ── 4. Import from Supplier Quotations Sub-Dialog ───── -->
+    <p-dialog [visible]="importDialogVisible()" (visibleChange)="$event ? null : closeImportDialog()" [modal]="true"
+        [closable]="true" styleClass="cq-dialog import-dialog" appendTo="body"
+        header="Import Items from Supplier Quotations (Step 03)" [style]="{ width: '80vw', maxWidth: '900px' }">
+        <div class="dlg-body" style="padding: 20px;">
+            @if (supplierQuotations().length === 0) {
+            <div class="empty-items">
+                <i class="pi pi-info-circle"></i>
+                <p>No supplier quotations found for this project in Step 03.</p>
+            </div>
+            } @else {
+            <p style="margin-bottom: 14px; font-size: 0.88rem; color: var(--color-muted);">
+                Select a supplier quotation below to import all its material line items into your cost sheet:
+            </p>
+
+            <div class="import-quotes-list">
+                @for (sq of supplierQuotations(); track sq.id) {
+                <div class="import-quote-card">
+                    <div class="iqc-info">
+                        <div class="iqc-top">
+                            <span class="iqc-ref">{{ sq.quotation_number || ('Quotation #' + sq.id) }}</span>
+                            <span class="iqc-date">{{ sq.quotation_date | date:'dd MMM yyyy' }}</span>
+                            @if (sq.quotation_value) {
+                            <span class="iqc-val">{{ sq.currency_symbol || '$' }} {{ sq.quotation_value }}</span>
+                            }
+                        </div>
+                        <p class="iqc-details">
+                            {{ (sq.items && sq.items.length) ? sq.items.length : 0 }} item(s) available
+                            @if (sq.incoterms) { · Incoterms: {{ sq.incoterms }} }
+                        </p>
+                    </div>
+                    <button pButton type="button" icon="pi pi-download" label="Import All Items"
+                        class="p-button-sm import-action-btn" (click)="importAllQuotationItems(sq)"
+                        [disabled]="!sq.items || sq.items.length === 0"></button>
+                </div>
+                }
+            </div>
+            }
+        </div>
+    </p-dialog>
+
+</section>

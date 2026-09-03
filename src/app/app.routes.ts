@@ -61,6 +61,13 @@ export const routes: Routes = [
           ).then((m) => m.Step03SupplierQuotation),
       },
       {
+        path: 'projects/:projectId/steps/4',
+        loadComponent: () =>
+          import(
+            './features/material-management/ptoject-step/step-04-cost-sheet/step-04-cost-sheet'
+          ).then((m) => m.Step04CostSheet),
+      },
+      {
         path: 'customers',
         loadComponent: () =>
           import('./features/material-management/customer/customer').then((m) => m.Customer),
