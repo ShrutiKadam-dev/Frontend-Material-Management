@@ -1,1 +1,127 @@
 // Step 03 Supplier Quotation styles are inherited from global step-common design system
+
+:host ::ng-deep {
+  .items-table-wrap {
+    .p-datatable-table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    .p-datatable-tbody > tr > td {
+      font-size: 0.88rem;
+      line-height: 1.5;
+      padding: 11px 14px;
+      vertical-align: middle;
+    }
+
+    .p-datatable-tfoot > tr {
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+      border-bottom: 1.5px solid #cbd5e1 !important;
+      border-top: 2px solid #cbd5e1 !important;
+
+      > td {
+        background: transparent !important;
+        border-bottom: 1.5px solid #cbd5e1 !important;
+        border-top: 2px solid #cbd5e1 !important;
+        font-size: 0.88rem;
+        line-height: 1.5;
+        padding: 13px 16px !important;
+        vertical-align: middle !important;
+      }
+    }
+
+    .p-paginator {
+      border-top: 1px solid #e2e8f0 !important;
+      padding: 10px 14px !important;
+    }
+  }
+
+  .table-total-row {
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+    min-height: 52px;
+
+    td {
+      line-height: 1.5 !important;
+      padding: 13px 16px !important;
+      vertical-align: middle !important;
+    }
+
+    .total-label-cell {
+      padding-right: 16px !important;
+      text-align: right !important;
+    }
+
+    .total-label-wrapper {
+      align-items: center;
+      display: inline-flex;
+      gap: 10px;
+      justify-content: flex-end;
+      width: 100%;
+    }
+
+    .total-icon-badge {
+      align-items: center;
+      background: rgba(2, 132, 199, 0.12);
+      border-radius: 6px;
+      color: #0284c7;
+      display: inline-flex;
+      font-size: 0.8rem;
+      height: 26px;
+      justify-content: center;
+      width: 26px;
+    }
+
+    .total-title {
+      color: #1e293b;
+      font-size: 0.86rem;
+      font-weight: 750;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .total-items-badge {
+      background: #e2e8f0;
+      border-radius: 9999px;
+      color: #475569;
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 2px 8px;
+    }
+
+    .total-amount-cell {
+      padding-left: 0 !important;
+      text-align: right !important;
+      white-space: nowrap !important;
+    }
+
+    .total-pill {
+      align-items: baseline;
+      background: #e0f2fe;
+      border: 1px solid #bae6fd;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(2, 132, 199, 0.1);
+      color: #0369a1;
+      display: inline-flex;
+      font-variant-numeric: tabular-nums;
+      gap: 5px;
+      justify-content: flex-end;
+      padding: 6px 14px;
+    }
+
+    .total-currency {
+      font-size: 0.88rem;
+      font-weight: 700;
+      opacity: 0.95;
+    }
+
+    .total-number {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+
+    .total-empty-cell {
+      width: 80px;
+    }
+  }
+}

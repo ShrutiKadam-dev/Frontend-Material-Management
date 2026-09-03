@@ -4,6 +4,8 @@ export interface SupplierQuotationItem {
   id?: number;
   material_name: string;
   quantity: string | number;
+  unit_price?: string | number;
+  net_amount?: string | number;
 }
 
 export interface SupplierQuotation {
@@ -14,6 +16,9 @@ export interface SupplierQuotation {
   quotation_number: string;
   quotation_date: string;
   quotation_value: string;
+  currency_unit?: string;
+  currency_symbol?: string;
+  total_net_amount?: number;
   validity: string;
   incoterms: string;
   payment_terms: string;
@@ -31,6 +36,9 @@ export interface SupplierQuotationCreateInput {
   quotation_number: string;
   quotation_date: string;
   quotation_value: string;
+  currency_unit?: string;
+  currency_symbol?: string;
+  total_net_amount?: number;
   validity: string;
   incoterms: string;
   payment_terms: string;
@@ -45,6 +53,9 @@ export interface SupplierQuotationUpdateInput {
   quotation_number?: string;
   quotation_date?: string;
   quotation_value?: string;
+  currency_unit?: string;
+  currency_symbol?: string;
+  total_net_amount?: number;
   validity?: string;
   incoterms?: string;
   payment_terms?: string;

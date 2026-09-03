@@ -11,6 +11,8 @@ export interface CustomerQuery {
   project_id: number;
   customer_id: number;
   qo_date: string;
+  qo_amount?: string;
+  qo_validity?: string;
   remark: string;
   attachments: Attachment[];
   items: CustomerQueryItem[];
@@ -22,6 +24,8 @@ export interface CustomerQueryCreateInput {
   project_id: number;
   customer_id: number;
   qo_date: string;
+  qo_amount?: string;
+  qo_validity?: string;
   attachments?: string[];
   remark: string;
   items: CustomerQueryItem[];
@@ -31,6 +35,8 @@ export interface CustomerQueryUpdateInput {
   project_id?: number;
   customer_id?: number;
   qo_date?: string;
+  qo_amount?: string;
+  qo_validity?: string;
   attachments?: string[];
   remark?: string;
   items?: CustomerQueryItem[];

@@ -70,7 +70,7 @@
               @if (q.quotation_value) {
               <span class="qe-value">
                 <i class="pi pi-dollar" aria-hidden="true"></i>
-                {{ q.quotation_value | currency:'USD':'symbol':'1.2-2' }}
+                {{ formatQuotationValue(q.quotation_value, q.currency_unit) }}
               </span>
               }
               <div class="qe-badges">
@@ -133,8 +133,14 @@
                       <th scope="col" pSortableColumn="material_name">
                         Material Name <p-sortIcon field="material_name" />
                       </th>
-                      <th scope="col" pSortableColumn="quantity" style="width: 100px; text-align: right;">
+                      <th scope="col" pSortableColumn="quantity" style="width: 70px; text-align: right;">
                         Qty <p-sortIcon field="quantity" />
+                      </th>
+                      <th scope="col" pSortableColumn="unit_price" style="width: 95px; text-align: right;">
+                        Unit Price <p-sortIcon field="unit_price" />
+                      </th>
+                      <th scope="col" style="width: 105px; text-align: right;">
+                        Net Amount
                       </th>
                     </tr>
                   </ng-template>
@@ -144,6 +150,33 @@
                       <td><strong>{{ item.material_name }}</strong></td>
                       <td style="text-align: right; font-weight: 700;">
                         <span class="qty-badge">{{ item.quantity }}</span>
+                      </td>
+                      <td style="text-align: right; font-variant-numeric: tabular-nums;">
+                        @if (item.unit_price) {
+                        <span>{{ getQuotationCurrencySymbol(q.quotation_value, q) }} {{ item.unit_price | number:'1.2-2' }}</span>
+                        } @else {
+                        <span style="color: var(--color-muted);">—</span>
+                        }
+                      </td>
+                      <td style="text-align: right; font-weight: 700; font-variant-numeric: tabular-nums;">
+                        @if (calculateNet(item.quantity, item.unit_price) !== null) {
+                        <span>{{ getQuotationCurrencySymbol(q.quotation_value, q) }} {{ calculateNet(item.quantity, item.unit_price) | number:'1.2-2' }}</span>
+                        } @else {
+                        <span style="color: var(--color-muted);">—</span>
+                        }
+                      </td>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="footer">
+                    <tr class="table-total-row">
+                      <td colspan="4" class="total-label-cell">
+                        <div class="total-label-wrapper">
+                          <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-calculator"></i></span>
+                          <span class="total-title">Total Net Amount</span>
+                        </div>
+                      </td>
+                      <td class="total-amount-cell" style="width: 105px; text-align: right;">
+                        <span class="total-amount-value">{{ getQuotationCurrencySymbol(q.quotation_value, q) }} {{ calculateQuotationTotalNet(q.items) | number:'1.2-2' }}</span>
                       </td>
                     </tr>
                   </ng-template>
@@ -294,110 +327,126 @@
 
     <div class="dlg-body">
 
-      <!-- ── 1. General & Commercial Info ───────────────── -->
+      <!-- ── 1. Config-Driven Quotation Details ───────────────── -->
       <div class="dlg-section">
         <p class="dlg-section-label">Quotation Details</p>
         <div class="dlg-grid">
+          @for (field of formConfig; track field.key) {
+            <div class="field" [class.span-two]="field.colSpan === 2">
+              <label [for]="'dlg-sq-' + field.key">
+                {{ field.label }}
+                @if (field.required) {
+                  <span class="req" aria-hidden="true">*</span>
+                }
+              </label>
 
-          <!-- Supplier (read-only) -->
-          <div class="field">
-            <label for="dlg-sq-supplier">Supplier</label>
-            <input id="dlg-sq-supplier" pInputText type="text" [value]="getSupplierName(project()?.supplier_id)" readonly
-              [attr.aria-readonly]="true" class="readonly-input" />
-          </div>
+              @switch (field.type) {
+                @case ('readonly') {
+                  <input
+                    [id]="'dlg-sq-' + field.key"
+                    pInputText
+                    type="text"
+                    [value]="field.readonlyValueFn ? field.readonlyValueFn() : ''"
+                    readonly
+                    [attr.aria-readonly]="true"
+                    class="readonly-input"
+                  />
+                }
 
-          <!-- Quotation Number -->
-          <div class="field">
-            <label for="dlg-sq-number">
-              Quotation Number <span class="req" aria-hidden="true">*</span>
-            </label>
-            <input id="dlg-sq-number" pInputText formControlName="quotation_number" placeholder="e.g. SQ-2026-00891"
-              [style]="{ width: '100%' }"
-              [class.ng-invalid]="headerForm.controls.quotation_number.touched && headerForm.controls.quotation_number.invalid" />
-            @if (headerForm.controls.quotation_number.touched && headerForm.controls.quotation_number.invalid) {
-            <p class="field-error">Quotation number is required.</p>
-            }
-          </div>
+                @case ('date') {
+                  <p-datepicker
+                    [inputId]="'dlg-sq-' + field.key"
+                    [formControlName]="field.key"
+                    dateFormat="yy-mm-dd"
+                    [showIcon]="true"
+                    [fluid]="true"
+                    [placeholder]="field.placeholder || 'YYYY-MM-DD'"
+                    [invalid]="isFieldInvalid(field.key)"
+                    aria-required="true"
+                  />
+                }
 
-          <!-- Quotation Date -->
-          <div class="field">
-            <label for="dlg-sq-date">
-              Quotation Date <span class="req" aria-hidden="true">*</span>
-            </label>
-            <p-datepicker inputId="dlg-sq-date" formControlName="quotation_date" dateFormat="yy-mm-dd"
-              [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
-              [invalid]="headerForm.controls.quotation_date.touched && headerForm.controls.quotation_date.invalid"
-              aria-required="true" />
-            @if (headerForm.controls.quotation_date.touched && headerForm.controls.quotation_date.invalid) {
-            <p class="field-error">Quotation date is required.</p>
-            }
-          </div>
+                @case ('currency-amount') {
+                  <div class="input-unit-group">
+                    @if (field.currencyKey) {
+                      <p-select
+                        [id]="'dlg-sq-' + field.currencyKey"
+                        [formControlName]="field.currencyKey"
+                        [options]="field.currencyOptions || currencyOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        [style]="{ width: '110px', flex: '0 0 110px' }"
+                        appendTo="body"
+                        aria-label="Currency"
+                      ></p-select>
+                    }
+                    <input
+                      [id]="'dlg-sq-' + field.key"
+                      pInputText
+                      [formControlName]="field.key"
+                      [placeholder]="field.placeholder || 'e.g. 15000.00'"
+                      style="flex: 1; min-width: 0;"
+                      [class.ng-invalid]="isFieldInvalid(field.key)"
+                    />
+                  </div>
+                }
 
-          <!-- Quotation Value -->
-          <div class="field">
-            <label for="dlg-sq-value">
-              Quotation Value <span class="req" aria-hidden="true">*</span>
-            </label>
-            <input id="dlg-sq-value" pInputText formControlName="quotation_value" placeholder="e.g. 15000.00"
-              [style]="{ width: '100%' }"
-              [class.ng-invalid]="headerForm.controls.quotation_value.touched && headerForm.controls.quotation_value.invalid" />
-            @if (headerForm.controls.quotation_value.touched && headerForm.controls.quotation_value.invalid) {
-            <p class="field-error">Enter a valid quotation value (e.g. 15000.00).</p>
-            }
-          </div>
+                @case ('validity-unit') {
+                  <div class="input-unit-group">
+                    <input
+                      [id]="'dlg-sq-' + field.key"
+                      pInputText
+                      [formControlName]="field.key"
+                      [placeholder]="field.placeholder || 'e.g. 60'"
+                      style="flex: 1; min-width: 0;"
+                      [class.ng-invalid]="isFieldInvalid(field.key)"
+                    />
+                    @if (field.unitKey) {
+                      <p-select
+                        [id]="'dlg-sq-' + field.unitKey"
+                        [formControlName]="field.unitKey"
+                        [options]="field.unitOptions || validityUnitOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        [style]="{ width: '120px', flex: '0 0 120px' }"
+                        appendTo="body"
+                        aria-label="Validity Unit"
+                      ></p-select>
+                    }
+                  </div>
+                }
 
-          <!-- Validity -->
-          <div class="field">
-            <label for="dlg-sq-validity">
-              Validity <span class="req" aria-hidden="true">*</span>
-            </label>
-            <input id="dlg-sq-validity" pInputText formControlName="validity" placeholder="e.g. 60 Days"
-              [style]="{ width: '100%' }"
-              [class.ng-invalid]="headerForm.controls.validity.touched && headerForm.controls.validity.invalid" />
-            @if (headerForm.controls.validity.touched && headerForm.controls.validity.invalid) {
-            <p class="field-error">Validity is required.</p>
-            }
-          </div>
+                @case ('select') {
+                  <p-select
+                    [id]="'dlg-sq-' + field.key"
+                    [formControlName]="field.key"
+                    [options]="field.options || []"
+                    optionLabel="label"
+                    optionValue="value"
+                    [placeholder]="field.placeholder || 'Select'"
+                    [fluid]="true"
+                    [style]="{ width: '100%', height: '40px' }"
+                    appendTo="body"
+                  ></p-select>
+                }
 
-          <!-- Incoterms -->
-          <div class="field">
-            <label for="dlg-sq-incoterms">
-              Incoterms <span class="req" aria-hidden="true">*</span>
-            </label>
-            <input id="dlg-sq-incoterms" pInputText formControlName="incoterms" placeholder="e.g. FOB, CIF, EXW"
-              [style]="{ width: '100%' }"
-              [class.ng-invalid]="headerForm.controls.incoterms.touched && headerForm.controls.incoterms.invalid" />
-            @if (headerForm.controls.incoterms.touched && headerForm.controls.incoterms.invalid) {
-            <p class="field-error">Incoterms is required.</p>
-            }
-          </div>
+                @default {
+                  <input
+                    [id]="'dlg-sq-' + field.key"
+                    pInputText
+                    [formControlName]="field.key"
+                    [placeholder]="field.placeholder || ''"
+                    style="width: 100%;"
+                    [class.ng-invalid]="isFieldInvalid(field.key)"
+                  />
+                }
+              }
 
-          <!-- Payment Terms -->
-          <div class="field span-two">
-            <label for="dlg-sq-payment">
-              Payment Terms <span class="req" aria-hidden="true">*</span>
-            </label>
-            <input id="dlg-sq-payment" pInputText formControlName="payment_terms"
-              placeholder="e.g. 50% Advance, 50% against Delivery" [style]="{ width: '100%' }"
-              [class.ng-invalid]="headerForm.controls.payment_terms.touched && headerForm.controls.payment_terms.invalid" />
-            @if (headerForm.controls.payment_terms.touched && headerForm.controls.payment_terms.invalid) {
-            <p class="field-error">Payment terms are required.</p>
-            }
-          </div>
-
-          <!-- Delivery Period -->
-          <div class="field span-two">
-            <label for="dlg-sq-delivery">
-              Delivery Period <span class="req" aria-hidden="true">*</span>
-            </label>
-            <input id="dlg-sq-delivery" pInputText formControlName="delivery_period" placeholder="e.g. 5 Weeks"
-              [style]="{ width: '100%' }"
-              [class.ng-invalid]="headerForm.controls.delivery_period.touched && headerForm.controls.delivery_period.invalid" />
-            @if (headerForm.controls.delivery_period.touched && headerForm.controls.delivery_period.invalid) {
-            <p class="field-error">Delivery period is required.</p>
-            }
-          </div>
-
+              @if (isFieldInvalid(field.key)) {
+                <p class="field-error">{{ field.label }} is required.</p>
+              }
+            </div>
+          }
         </div>
       </div>
 
@@ -430,7 +479,19 @@
                 id="dlg-sq-quantity"
                 pInputText
                 formControlName="quantity"
-                placeholder="e.g. 10.500"
+                placeholder="e.g. 10"
+                (keydown.enter)="$event.preventDefault(); priceInput.focus()"
+              />
+            </div>
+
+            <div class="quick-field quick-field--price">
+              <label for="dlg-sq-unit-price">Unit Price ({{ selectedCurrencySymbol() }})</label>
+              <input
+                #priceInput
+                id="dlg-sq-unit-price"
+                pInputText
+                formControlName="unit_price"
+                placeholder="e.g. 150.00"
                 (keydown.enter)="$event.preventDefault(); saveRow(matInput)"
               />
             </div>
@@ -474,10 +535,16 @@
               <th scope="col" pSortableColumn="material_name">
                 Material Name <p-sortIcon field="material_name" />
               </th>
-              <th scope="col" pSortableColumn="quantity" style="width: 110px; text-align: right;">
+              <th scope="col" pSortableColumn="quantity" style="width: 80px; text-align: right;">
                 Qty <p-sortIcon field="quantity" />
               </th>
-              <th scope="col" style="width: 90px; text-align: right; white-space: nowrap;">Actions</th>
+              <th scope="col" pSortableColumn="unit_price" style="width: 110px; text-align: right;">
+                Unit Price ({{ selectedCurrencySymbol() }}) <p-sortIcon field="unit_price" />
+              </th>
+              <th scope="col" style="width: 120px; text-align: right;">
+                Net Amount ({{ selectedCurrencySymbol() }})
+              </th>
+              <th scope="col" style="width: 80px; text-align: right; white-space: nowrap;">Actions</th>
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-item let-i="rowIndex">
@@ -487,7 +554,21 @@
               <td style="text-align: right; font-weight: 700;">
                 <span class="qty-badge">{{ item.quantity }}</span>
               </td>
-              <td style="text-align: right; width: 90px; white-space: nowrap;">
+              <td style="text-align: right; font-variant-numeric: tabular-nums;">
+                @if (item.unit_price) {
+                <span>{{ selectedCurrencySymbol() }} {{ item.unit_price | number:'1.2-2' }}</span>
+                } @else {
+                <span style="color: var(--color-muted);">—</span>
+                }
+              </td>
+              <td style="text-align: right; font-weight: 700; font-variant-numeric: tabular-nums;">
+                @if (calculateNet(item.quantity, item.unit_price) !== null) {
+                <span>{{ selectedCurrencySymbol() }} {{ calculateNet(item.quantity, item.unit_price) | number:'1.2-2' }}</span>
+                } @else {
+                <span style="color: var(--color-muted);">—</span>
+                }
+              </td>
+              <td style="text-align: right; width: 80px; white-space: nowrap;">
                 <div class="actions-cell">
                   <button
                     pButton
@@ -513,6 +594,23 @@
                   ></button>
                 </div>
               </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="footer">
+            <tr class="table-total-row">
+              <td colspan="4" class="total-label-cell">
+                <div class="total-label-wrapper">
+                  <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-calculator"></i></span>
+                  <span class="total-title">Total Net Amount</span>
+                  @if (items().length > 0) {
+                  <span class="total-items-badge">{{ items().length }} {{ items().length === 1 ? 'item' : 'items' }}</span>
+                  }
+                </div>
+              </td>
+              <td class="total-amount-cell" style="width: 120px; text-align: right;">
+                <span class="total-amount-value">{{ selectedCurrencySymbol() }} {{ totalNetAmount() | number:'1.2-2' }}</span>
+              </td>
+              <td class="total-empty-cell" style="width: 80px;"></td>
             </tr>
           </ng-template>
         </p-table>

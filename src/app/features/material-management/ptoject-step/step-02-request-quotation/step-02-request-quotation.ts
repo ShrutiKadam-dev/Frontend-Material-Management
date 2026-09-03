@@ -67,6 +67,7 @@ export class Step02RequestQuotation implements OnInit {
   protected readonly projectId = signal(0);
   protected readonly project = signal<Project | null>(null);
   protected readonly supplier = signal<Supplier | null>(null);
+  protected readonly suppliers = signal<Supplier[]>([]);
   protected readonly requests = signal<QuotationRequest[]>([]);
   protected readonly loadingRequests = signal(true);
   protected readonly submitting = signal(false);
@@ -79,7 +80,7 @@ export class Step02RequestQuotation implements OnInit {
   /** Existing attachments when editing */
   protected readonly existingAttachments = signal<Attachment[]>([]);
 
-  /** Multiple file attachments — stored as raw File objects for FormData upload */
+  /** Multiple new file attachments — stored as raw File objects for FormData upload */
   protected readonly attachments = signal<File[]>([]);
 
   /** Dialog visibility */
@@ -88,15 +89,15 @@ export class Step02RequestQuotation implements OnInit {
   /** Draft items for the materials table (inside dialog) */
   protected readonly items = signal<QuotationRequestItem[]>([]);
 
-  /** Inline add-row form */
+  /** Inline add/edit row form inside dialog */
   protected readonly addRowVisible = signal(false);
   protected readonly editingIndex = signal<number | null>(null);
 
   protected readonly totalItems = computed(() => this.items().length);
 
   protected readonly headerForm = this.fb.group({
-    quotation_requested_date: [null as Date | null, Validators.required],
-    supplier_contacted: [true],
+    quotation_requested_date: [null as Date | null, [Validators.required]],
+    supplier_contacted: [true, [Validators.required]],
     remarks: [''],
   });
 
@@ -117,6 +118,18 @@ export class Step02RequestQuotation implements OnInit {
             next: (s) => this.supplier.set(s),
             error: () => {},
           });
+        }
+      },
+      error: () => {},
+    });
+
+    this.supplierService.getSuppliers().subscribe({
+      next: (list) => {
+        this.suppliers.set(list);
+        const p = this.project();
+        if (p?.supplier_id && !this.supplier()) {
+          const s = list.find((item) => item.id === p.supplier_id);
+          if (s) this.supplier.set(s);
         }
       },
       error: () => {},
@@ -430,7 +443,12 @@ export class Step02RequestQuotation implements OnInit {
   protected getSupplierName(supplierId?: number): string {
     if (this.supplier()?.name) return this.supplier()!.name;
     if (this.project()?.supplier_name) return this.project()!.supplier_name!;
-    return supplierId ? `Supplier #${supplierId}` : '—';
+    const id = supplierId || this.project()?.supplier_id;
+    if (id) {
+      const found = this.suppliers().find((s) => s.id === id);
+      if (found) return found.name;
+    }
+    return id ? `Supplier #${id}` : '—';
   }
 
   protected goBack(): void {
