@@ -489,6 +489,24 @@ export class Step03SupplierQuotation implements OnInit {
     input.value = '';
   }
 
+  protected isRowFieldInvalid(key: string): boolean {
+    const c = this.rowForm.get(key);
+    return !!(c && c.invalid && (c.touched || c.dirty));
+  }
+
+  protected getRowFieldError(key: string): string | null {
+    const c = this.rowForm.get(key);
+    if (!c || !c.invalid || !(c.touched || c.dirty)) return null;
+    if (c.hasError('required')) {
+      if (key === 'material_name') return 'Material name is required.';
+      if (key === 'quantity') return 'Quantity is required.';
+    }
+    if (c.hasError('pattern') || c.hasError('min')) {
+      if (key === 'quantity') return 'Quantity must be a valid positive number.';
+    }
+    return 'Invalid value.';
+  }
+
   protected removeAttachment(index: number): void {
     this.attachments.update((list) => list.filter((_, i) => i !== index));
   }
@@ -498,6 +516,22 @@ export class Step03SupplierQuotation implements OnInit {
   protected submit(): void {
     if (this.headerForm.invalid) {
       this.headerForm.markAllAsTouched();
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Validation Required',
+        detail: 'Please complete all required fields.',
+        life: 4000,
+      });
+      return;
+    }
+
+    if (this.items().length === 0) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Materials Required',
+        detail: 'Please add at least one material item to the supplier quotation.',
+        life: 4000,
+      });
       return;
     }
 

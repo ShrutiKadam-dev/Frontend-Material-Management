@@ -14,17 +14,36 @@
       </div>
     </div>
     <div class="header-actions">
+      @if (customer(); as c) {
+      <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+        <i class="pi pi-user" aria-hidden="true"></i>
+        {{ c.name }}
+      </span>
+      } @else if (project()?.customer_name) {
+      <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+        <i class="pi pi-user" aria-hidden="true"></i>
+        {{ project()?.customer_name }}
+      </span>
+      }
       <div class="header-step-pill" aria-hidden="true">
         Step <strong>01</strong> of 15
       </div>
+      <button
+        pButton
+        type="button"
+        icon="pi pi-plus"
+        label="New Customer Query"
+        class="header-primary-btn"
+        (click)="openDialog()"
+      ></button>
     </div>
   </div>
 
-  <!-- ── 2-Column Split Layout (Main Left, Sidebar Right) ── -->
-  <div class="step-layout">
+  <!-- ── Full-Width Layout ────────────────────────────────── -->
+  <div class="step-layout--fullwidth">
 
-    <!-- ── Left Main Panel (Submitted Queries Stream & Table) ── -->
-    <div class="step-main">
+    <!-- ── Main Panel (Submitted Queries Stream & Table) ───── -->
+    <div class="step-main step-main--fullwidth">
       <div class="existing-card" aria-label="Submitted queries">
         <div class="card-title-row">
           <span class="card-icon" aria-hidden="true"><i class="pi pi-list"></i></span>
@@ -87,6 +106,40 @@
               </div>
             </div>
 
+            <!-- Refined Metadata Parameter Chips Strip -->
+            <div class="vsc-params-strip">
+              <div class="param-chip">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                <span class="p-lbl">Query Date:</span>
+                <span class="p-val">{{ q.qo_date | date: 'dd MMM yyyy' }}</span>
+              </div>
+              @if (customer(); as c) {
+              <div class="param-chip">
+                <i class="pi pi-user" aria-hidden="true"></i>
+                <span class="p-lbl">Customer:</span>
+                <span class="p-val">{{ c.name }}</span>
+              </div>
+              } @else if (project()?.customer_name) {
+              <div class="param-chip">
+                <i class="pi pi-user" aria-hidden="true"></i>
+                <span class="p-lbl">Customer:</span>
+                <span class="p-val">{{ project()?.customer_name }}</span>
+              </div>
+              }
+              <div class="param-chip">
+                <i class="pi pi-box" aria-hidden="true"></i>
+                <span class="p-lbl">Items:</span>
+                <span class="p-val">{{ q.items.length }} line item{{ (q.items.length === 1) ? '' : 's' }}</span>
+              </div>
+              @if (q.attachments && q.attachments.length) {
+              <div class="param-chip">
+                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                <span class="p-lbl">Documents:</span>
+                <span class="p-val">{{ q.attachments.length }} file{{ (q.attachments.length === 1) ? '' : 's' }}</span>
+              </div>
+              }
+            </div>
+
             <!-- Card Body Grid (Left: Materials Table, Right: Notes & Files) -->
             <div class="qe-body" [class.qe-body--full-table]="!q.remark && (!q.attachments || !q.attachments.length)">
 
@@ -128,9 +181,12 @@
               @if (q.remark || (q.attachments && q.attachments.length)) {
               <div class="qe-col-details">
                 @if (q.remark) {
-                <div class="qe-remark">
-                  <i class="pi pi-comment" aria-hidden="true"></i>
-                  <span>{{ q.remark }}</span>
+                <div class="vsc-remark-box" style="margin-bottom: 8px;">
+                  <i class="pi pi-info-circle" aria-hidden="true"></i>
+                  <div class="vsc-remark-content">
+                    <span class="vsc-remark-label">Remarks:</span>
+                    <span class="vsc-remark-text">{{ q.remark }}</span>
+                  </div>
                 </div>
                 }
 
@@ -174,50 +230,6 @@
       </div>
     </div>
 
-    <!-- ── Right Sidebar (Client Info & Actions) ────────── -->
-    <aside class="step-sidebar" aria-label="Step summary and actions">
-      <div class="sidebar-panel">
-
-        <!-- Action Button -->
-        <div class="sidebar-actions">
-          <button pButton type="button" icon="pi pi-plus" label="New Customer Query" (click)="openDialog()"
-            aria-haspopup="dialog"></button>
-        </div>
-
-        <!-- Customer Tile -->
-        @if (customer(); as c) {
-        <div class="sidebar-section">
-          <p class="sidebar-label">Client</p>
-          <div class="sidebar-entity-box">
-            <div class="entity-icon-box" aria-hidden="true">
-              <i class="pi pi-user"></i>
-            </div>
-            <div class="entity-details">
-              <span class="entity-type">Customer</span>
-              <strong class="entity-title" [title]="c.name">{{ c.name }}</strong>
-            </div>
-          </div>
-        </div>
-        }
-
-        <!-- Quick Summary Stats -->
-        <div class="sidebar-section">
-          <p class="sidebar-label">Overview</p>
-          <div class="sidebar-stats-grid">
-            <div class="sidebar-stat-card">
-              <span class="stat-num">{{ queries().length }}</span>
-              <span class="stat-desc">{{ queries().length === 1 ? 'Query Logged' : 'Queries Logged' }}</span>
-            </div>
-            <div class="sidebar-stat-card">
-              <span class="stat-num">{{ totalItems() }}</span>
-              <span class="stat-desc">{{ totalItems() === 1 ? 'Total Item' : 'Total Items' }}</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </aside>
-
   </div>
 
 </section>
@@ -244,7 +256,7 @@
 
       <!-- ── 1. Customer + Date ──────────────────────────── -->
       <div class="dlg-section">
-        <p class="dlg-section-label">Query Details</p>
+        <p class="dlg-section-label"><i class="pi pi-calendar"></i> 1. Query Details & Date</p>
         <div class="dlg-grid">
 
           <!-- Customer (read-only) -->
@@ -261,9 +273,9 @@
             </label>
             <p-datepicker inputId="dlg-qo-date" formControlName="qo_date" dateFormat="yy-mm-dd" [showIcon]="true"
               [fluid]="true" placeholder="YYYY-MM-DD"
-              [invalid]="headerForm.controls.qo_date.touched && headerForm.controls.qo_date.invalid"
+              [invalid]="isFieldInvalid('qo_date')"
               aria-required="true" />
-            @if (headerForm.controls.qo_date.touched && headerForm.controls.qo_date.invalid) {
+            @if (isFieldInvalid('qo_date')) {
             <p class="field-error">QO date is required.</p>
             }
           </div>
@@ -274,7 +286,7 @@
       <!-- ── 2. Material Items (Fast Entry + Paginator) ── -->
       <div class="dlg-section">
         <div class="dlg-section-header">
-          <p class="dlg-section-label">Material Items</p>
+          <p class="dlg-section-label"><i class="pi pi-box"></i> 2. Material Items</p>
           <span class="card-count-badge">{{ items().length }} {{ items().length === 1 ? 'item' : 'items' }}</span>
         </div>
 
@@ -284,13 +296,21 @@
             <div class="quick-field quick-field--name">
               <label for="dlg-material-name">Material Name <span class="req">*</span></label>
               <input #matInput id="dlg-material-name" pInputText formControlName="material_name"
-                placeholder="e.g. Steel Pipe 50mm" (keydown.enter)="$event.preventDefault(); qtyInput.focus()" />
+                placeholder="e.g. Steel Pipe 50mm" [class.ng-invalid]="isRowFieldInvalid('material_name')"
+                (keydown.enter)="$event.preventDefault(); qtyInput.focus()" />
+              @if (isRowFieldInvalid('material_name')) {
+              <p class="field-error">{{ getRowFieldError('material_name') }}</p>
+              }
             </div>
 
             <div class="quick-field quick-field--qty">
               <label for="dlg-quantity">Qty <span class="req">*</span></label>
               <input #qtyInput id="dlg-quantity" pInputText formControlName="quantity" placeholder="e.g. 10.500"
+                [class.ng-invalid]="isRowFieldInvalid('quantity')"
                 (keydown.enter)="$event.preventDefault(); saveRow(matInput)" />
+              @if (isRowFieldInvalid('quantity')) {
+              <p class="field-error">{{ getRowFieldError('quantity') }}</p>
+              }
             </div>
 
             <div class="quick-add-actions">
@@ -353,10 +373,11 @@
       <!-- ── 3. Attachments ──────────────────────────────── -->
       <div class="dlg-section">
         <p class="dlg-section-label">
-          Attachments
+          <i class="pi pi-paperclip"></i>
+          3. Attachments & Drawings
           @if (attachments().length) {
-          <span class="attach-count">{{ attachments().length }} new file{{ attachments().length === 1 ? '' : 's' }}
-            selected</span>
+          <span class="attach-count">({{ attachments().length }} new file{{ attachments().length === 1 ? '' : 's' }}
+            selected)</span>
           }
         </p>
 
@@ -411,7 +432,7 @@
 
       <!-- ── 4. Remark ──────────────────────────────────── -->
       <div class="dlg-section">
-        <p class="dlg-section-label">Remark</p>
+        <p class="dlg-section-label"><i class="pi pi-comment"></i> 4. Notes & Remarks</p>
         <div class="field">
           <label for="dlg-remark" class="visually-hidden">Remark</label>
           <textarea id="dlg-remark" pTextarea formControlName="remark" rows="3"

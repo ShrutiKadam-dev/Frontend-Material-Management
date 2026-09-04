@@ -68,6 +68,27 @@ export const routes: Routes = [
           ).then((m) => m.Step04CostSheet),
       },
       {
+        path: 'projects/:projectId/steps/5',
+        loadComponent: () =>
+          import(
+            './features/material-management/ptoject-step/step-05-customer-quotation/step-05-customer-quotation'
+          ).then((m) => m.Step05CustomerQuotation),
+      },
+      {
+        path: 'projects/:projectId/steps/6',
+        loadComponent: () =>
+          import(
+            './features/material-management/ptoject-step/step-06-tender/step-06-tender'
+          ).then((m) => m.Step06Tender),
+      },
+      {
+        path: 'projects/:projectId/steps/7',
+        loadComponent: () =>
+          import(
+            './features/material-management/ptoject-step/step-07-bid-documents/step-07-bid-documents'
+          ).then((m) => m.Step07BidDocuments),
+      },
+      {
         path: 'customers',
         loadComponent: () =>
           import('./features/material-management/customer/customer').then((m) => m.Customer),

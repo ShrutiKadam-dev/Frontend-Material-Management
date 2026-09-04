@@ -14,17 +14,36 @@
       </div>
     </div>
     <div class="header-actions">
+      @if (supplier(); as s) {
+      <span class="header-partner-pill" pTooltip="Supplier Partner" tooltipPosition="bottom">
+        <i class="pi pi-building" aria-hidden="true"></i>
+        {{ s.name }}
+      </span>
+      } @else if (project()?.supplier_id) {
+      <span class="header-partner-pill" pTooltip="Supplier Partner" tooltipPosition="bottom">
+        <i class="pi pi-building" aria-hidden="true"></i>
+        {{ getSupplierName(project()?.supplier_id) }}
+      </span>
+      }
       <div class="header-step-pill" aria-hidden="true">
         Step <strong>02</strong> of 15
       </div>
+      <button
+        pButton
+        type="button"
+        icon="pi pi-plus"
+        label="New Quotation Request"
+        class="header-primary-btn"
+        (click)="openDialog()"
+      ></button>
     </div>
   </div>
 
-  <!-- ── 2-Column Split Layout (Main Left, Sidebar Right) ── -->
-  <div class="step-layout">
+  <!-- ── Full-Width Layout ────────────────────────────────── -->
+  <div class="step-layout--fullwidth">
 
-    <!-- ── Left Main Panel (Quotation Requests Stream & Table) ── -->
-    <div class="step-main">
+    <!-- ── Main Panel (Quotation Requests Stream & Table) ─── -->
+    <div class="step-main step-main--fullwidth">
       <div class="existing-card" aria-label="Submitted quotation requests">
         <div class="card-title-row">
           <span class="card-icon" aria-hidden="true"><i class="pi pi-send"></i></span>
@@ -93,6 +112,37 @@
               </div>
             </div>
 
+            <!-- Refined Metadata Parameter Chips Strip -->
+            <div class="vsc-params-strip">
+              <div class="param-chip">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                <span class="p-lbl">Requested:</span>
+                <span class="p-val">{{ req.quotation_requested_date | date: 'dd MMM yyyy' }}</span>
+              </div>
+              <div class="param-chip">
+                <i class="pi pi-building" aria-hidden="true"></i>
+                <span class="p-lbl">Supplier:</span>
+                <span class="p-val">{{ req.supplier_name || getSupplierName(req.supplier_id) }}</span>
+              </div>
+              <div class="param-chip" [class.param-chip--contacted]="req.supplier_contacted" [class.param-chip--pending]="!req.supplier_contacted">
+                <i [class]="req.supplier_contacted ? 'pi pi-check-circle' : 'pi pi-clock'" aria-hidden="true"></i>
+                <span class="p-lbl">Status:</span>
+                <span class="p-val">{{ req.supplier_contacted ? 'Contacted' : 'Pending' }}</span>
+              </div>
+              <div class="param-chip">
+                <i class="pi pi-box" aria-hidden="true"></i>
+                <span class="p-lbl">Items:</span>
+                <span class="p-val">{{ req.items.length }} line item{{ (req.items.length === 1) ? '' : 's' }}</span>
+              </div>
+              @if (req.attachments && req.attachments.length) {
+              <div class="param-chip">
+                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                <span class="p-lbl">Documents:</span>
+                <span class="p-val">{{ req.attachments.length }} file{{ (req.attachments.length === 1) ? '' : 's' }}</span>
+              </div>
+              }
+            </div>
+
             <!-- Card Body Grid (Left: Materials Table, Right: Remarks & Files) -->
             <div class="qe-body" [class.qe-body--full-table]="!req.remarks && (!req.attachments || !req.attachments.length)">
 
@@ -139,9 +189,12 @@
               @if (req.remarks || (req.attachments && req.attachments.length)) {
               <div class="qe-col-details">
                 @if (req.remarks) {
-                <div class="qe-remark">
-                  <i class="pi pi-comment" aria-hidden="true"></i>
-                  <span>{{ req.remarks }}</span>
+                <div class="vsc-remark-box" style="margin-bottom: 8px;">
+                  <i class="pi pi-info-circle" aria-hidden="true"></i>
+                  <div class="vsc-remark-content">
+                    <span class="vsc-remark-label">Remarks:</span>
+                    <span class="vsc-remark-text">{{ req.remarks }}</span>
+                  </div>
                 </div>
                 }
 
@@ -191,50 +244,6 @@
       </div>
     </div>
 
-    <!-- ── Right Sidebar (Partner Info & Actions) ────────── -->
-    <aside class="step-sidebar" aria-label="Step summary and actions">
-      <div class="sidebar-panel">
-
-        <!-- Action Button -->
-        <div class="sidebar-actions">
-          <button pButton type="button" icon="pi pi-plus" label="New Quotation Request" (click)="openDialog()"
-            aria-haspopup="dialog"></button>
-        </div>
-
-        <!-- Supplier Tile -->
-        @if (supplier(); as s) {
-        <div class="sidebar-section">
-          <p class="sidebar-label">Partner</p>
-          <div class="sidebar-entity-box">
-            <div class="entity-icon-box" aria-hidden="true">
-              <i class="pi pi-building"></i>
-            </div>
-            <div class="entity-details">
-              <span class="entity-type">Supplier</span>
-              <strong class="entity-title" [title]="s.name">{{ s.name }}</strong>
-            </div>
-          </div>
-        </div>
-        }
-
-        <!-- Quick Summary Stats -->
-        <div class="sidebar-section">
-          <p class="sidebar-label">Overview</p>
-          <div class="sidebar-stats-grid">
-            <div class="sidebar-stat-card">
-              <span class="stat-num">{{ requests().length }}</span>
-              <span class="stat-desc">{{ requests().length === 1 ? 'Request Sent' : 'Requests Sent' }}</span>
-            </div>
-            <div class="sidebar-stat-card">
-              <span class="stat-num">{{ totalItems() }}</span>
-              <span class="stat-desc">{{ totalItems() === 1 ? 'Total Item' : 'Total Items' }}</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </aside>
-
   </div>
 
 </section>
@@ -260,7 +269,7 @@
 
       <!-- ── 1. Supplier + Date + Contacted ──────────────── -->
       <div class="dlg-section">
-        <p class="dlg-section-label">Request Details</p>
+        <p class="dlg-section-label"><i class="pi pi-calendar"></i> 1. Request Details & Supplier</p>
         <div class="dlg-grid">
 
           <!-- Supplier (read-only) -->
@@ -277,9 +286,9 @@
             </label>
             <p-datepicker inputId="dlg-req-date" formControlName="quotation_requested_date" dateFormat="yy-mm-dd" [showIcon]="true"
               [fluid]="true" placeholder="YYYY-MM-DD"
-              [invalid]="headerForm.controls.quotation_requested_date.touched && headerForm.controls.quotation_requested_date.invalid"
+              [invalid]="isFieldInvalid('quotation_requested_date')"
               aria-required="true" />
-            @if (headerForm.controls.quotation_requested_date.touched && headerForm.controls.quotation_requested_date.invalid) {
+            @if (isFieldInvalid('quotation_requested_date')) {
             <p class="field-error">Request date is required.</p>
             }
           </div>
@@ -301,7 +310,7 @@
       <!-- ── 2. Material Items (Fast Entry + Paginator) ── -->
       <div class="dlg-section">
         <div class="dlg-section-header">
-          <p class="dlg-section-label">Material Items</p>
+          <p class="dlg-section-label"><i class="pi pi-box"></i> 2. Requested Materials</p>
           <span class="card-count-badge">{{ items().length }} {{ items().length === 1 ? 'item' : 'items' }}</span>
         </div>
 
@@ -316,8 +325,12 @@
                 pInputText
                 formControlName="material_name"
                 placeholder="e.g. Steel Pipe 50mm"
+                [class.ng-invalid]="isRowFieldInvalid('material_name')"
                 (keydown.enter)="$event.preventDefault(); qtyInput.focus()"
               />
+              @if (isRowFieldInvalid('material_name')) {
+              <p class="field-error">{{ getRowFieldError('material_name') }}</p>
+              }
             </div>
 
             <div class="quick-field quick-field--qty">
@@ -328,8 +341,12 @@
                 pInputText
                 formControlName="quantity"
                 placeholder="e.g. 10.500"
+                [class.ng-invalid]="isRowFieldInvalid('quantity')"
                 (keydown.enter)="$event.preventDefault(); saveRow(matInput)"
               />
+              @if (isRowFieldInvalid('quantity')) {
+              <p class="field-error">{{ getRowFieldError('quantity') }}</p>
+              }
             </div>
 
             <div class="quick-add-actions">
@@ -424,9 +441,10 @@
       <!-- ── 3. Attachments ──────────────────────────────── -->
       <div class="dlg-section">
         <p class="dlg-section-label">
-          Attachments
+          <i class="pi pi-paperclip"></i>
+          3. Attachments & Specifications
           @if (attachments().length) {
-          <span class="attach-count">{{ attachments().length }} new file{{ attachments().length === 1 ? '' : 's' }} selected</span>
+          <span class="attach-count">({{ attachments().length }} new file{{ attachments().length === 1 ? '' : 's' }} selected)</span>
           }
         </p>
 
@@ -479,7 +497,7 @@
 
       <!-- ── 4. Remarks ─────────────────────────────────── -->
       <div class="dlg-section">
-        <p class="dlg-section-label">Remarks</p>
+        <p class="dlg-section-label"><i class="pi pi-comment"></i> 4. Notes & Remarks</p>
         <div class="field">
           <label for="dlg-remarks" class="visually-hidden">Remarks</label>
           <textarea id="dlg-remarks" pTextarea formControlName="remarks" rows="3"

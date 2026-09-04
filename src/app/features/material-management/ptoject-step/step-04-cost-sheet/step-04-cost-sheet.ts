@@ -357,6 +357,45 @@ export class Step04CostSheet implements OnInit {
     }));
   }
 
+  /* ── Validation Helpers ──────────────────────────────── */
+  protected isHeaderInvalid(key: string): boolean {
+    const c = this.headerForm.get(key);
+    return !!(c && c.invalid && (c.touched || c.dirty));
+  }
+
+  protected isGlobalParamInvalid(key: string): boolean {
+    const c = this.globalParamsForm.get(key);
+    return !!(c && c.invalid && (c.touched || c.dirty));
+  }
+
+  protected getGlobalParamError(key: string): string | null {
+    const c = this.globalParamsForm.get(key);
+    if (!c || !c.invalid || !(c.touched || c.dirty)) return null;
+    if (c.hasError('required')) return 'Required field';
+    if (c.hasError('min')) return 'Must be >= 0';
+    return 'Invalid value';
+  }
+
+  protected isRowFieldInvalid(key: string): boolean {
+    const c = this.itemForm.get(key);
+    return !!(c && c.invalid && (c.touched || c.dirty));
+  }
+
+  protected getRowFieldError(key: string): string | null {
+    const c = this.itemForm.get(key);
+    if (!c || !c.invalid || !(c.touched || c.dirty)) return null;
+    if (c.hasError('required')) {
+      if (key === 'itemDescription') return 'Material description is required.';
+      if (key === 'quantity') return 'Quantity is required.';
+      if (key === 'pricePerUnitEur') return 'Unit price is required.';
+    }
+    if (c.hasError('min')) {
+      if (key === 'quantity') return 'Quantity must be > 0.';
+      if (key === 'pricePerUnitEur') return 'Price must be >= 0.';
+    }
+    return 'Invalid value.';
+  }
+
   /* ── Item Management (Inside Create/Edit Dialog) ─────── */
   protected resetItemForm(): void {
     this.itemForm.reset({
@@ -374,6 +413,12 @@ export class Step04CostSheet implements OnInit {
   protected saveItem(): void {
     if (this.itemForm.invalid) {
       this.itemForm.markAllAsTouched();
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Item Incomplete',
+        detail: 'Please fill in required item fields (Description, Quantity, Unit Price).',
+        life: 3500,
+      });
       return;
     }
 
@@ -465,11 +510,23 @@ export class Step04CostSheet implements OnInit {
     if (this.headerForm.invalid || this.globalParamsForm.invalid) {
       this.headerForm.markAllAsTouched();
       this.globalParamsForm.markAllAsTouched();
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Validation Required',
+        detail: 'Please fill in all required cost sheet fields and global parameters.',
+        life: 4000,
+      });
       return;
     }
 
     if (this.items().length === 0) {
       this.errorMessage.set('Please add at least one line item to create the cost sheet.');
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Items Required',
+        detail: 'Please add at least one line item to the cost sheet.',
+        life: 4000,
+      });
       return;
     }
 

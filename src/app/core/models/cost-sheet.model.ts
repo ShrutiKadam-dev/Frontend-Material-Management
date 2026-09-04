@@ -49,6 +49,8 @@ export interface CostSheetItem extends CostSheetItemInput {
   totalCostPerUnitInr?: number;
   marginInr?: number;
   sellingPricePerUnitInr?: number;
+  pricePerUnitInr?: number;
+  totalPriceInr?: number;
   totalLineEur?: number;
   totalLineInr?: number;
 }
@@ -73,14 +75,15 @@ export interface CostSheet {
   product_id?: number;
   versionNumber?: number;
   title: string;
-  globalParams: CostSheetGlobalParams;
+  globalParams?: CostSheetGlobalParams;
   output?: Record<string, unknown>;
   status?: string;
   createdBy?: number;
-  createdAt: string;
+  createdAt?: string;
   updatedAt?: string;
   totalItemCount?: number;
   cumulativeProjectCostInr?: number;
+  totalPriceInr?: number;
   hasRateIncrease?: boolean;
   latestPriceChange?: CostSheetPriceChange | Record<string, unknown>;
   recentPriceChanges?: CostSheetPriceChange[];

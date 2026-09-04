@@ -1,1 +1,687 @@
-<p>step-06-tender works!</p>
+<section class="base-page step-page" aria-labelledby="step-page-title">
+
+  <!-- ── 1. Page Header Bar ───────────────────────────────── -->
+  <div class="page-header">
+    <div class="header-left">
+      <button pButton type="button" icon="pi pi-arrow-left" class="p-button-text p-button-secondary back-btn"
+        (click)="goBack()" aria-label="Back to project pipeline" pTooltip="Back to Project Steps"
+        tooltipPosition="bottom"></button>
+      <div class="header-title-group">
+        <span class="eyebrow">Step 06 · Customer Tender</span>
+        <h1 id="step-page-title">
+          @if (project(); as p) { {{ p.project_title }} }
+          @else { Customer Tender }
+        </h1>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      @if (customer(); as c) {
+      <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+        <i class="pi pi-user" aria-hidden="true"></i>
+        {{ c.name }}
+      </span>
+      } @else if (project()?.customer_name) {
+      <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+        <i class="pi pi-user" aria-hidden="true"></i>
+        {{ project()?.customer_name }}
+      </span>
+      }
+      <div class="header-step-pill" aria-hidden="true">
+        Step <strong>06</strong> of 15
+      </div>
+      <button pButton type="button" icon="pi pi-plus" label="Create Customer Tender" class="create-cost-sheet-btn"
+        (click)="openCreateDialog()"></button>
+    </div>
+  </div>
+
+  <!-- ── 2. Full-Width Customer Tenders History Stream ─────── -->
+  <div class="step-layout--fullwidth">
+    <div class="step-main step-main--fullwidth">
+
+      <!-- Loading State -->
+      @if (loading()) {
+      <div class="center-state">
+        <div class="loading-ring" aria-hidden="true">
+          <i class="pi pi-spin pi-spinner"></i>
+        </div>
+        <p>Loading customer tenders…</p>
+      </div>
+      }
+
+      <!-- Empty State -->
+      @else if (tenders().length === 0) {
+      <div class="version-sheet-card empty-card">
+        <div class="center-state empty-cta">
+          <span class="empty-icon" aria-hidden="true">
+            <i class="pi pi-briefcase"></i>
+          </span>
+          <h3>No customer tenders recorded yet</h3>
+          <p>Record and track customer tender documents, critical submission deadlines, fee structures, officer
+            contacts, and material specifications.</p>
+          <button pButton type="button" icon="pi pi-plus" label="Create Customer Tender"
+            (click)="openCreateDialog()"></button>
+        </div>
+      </div>
+      }
+
+      <!-- Tenders Stream -->
+      @else {
+      <div class="version-cards-stream" role="feed" aria-label="Customer tenders history">
+        @for (t of tenders(); track t.id; let idx = $index) {
+        <article class="version-sheet-card">
+
+          <!-- Card Header Bar -->
+          <div class="vsc-header">
+            <div class="vsc-header-left">
+              <span class="vsc-badge">
+                <i class="pi pi-bookmark" aria-hidden="true"></i>
+                {{ t.tender_number || ('TND #' + t.id) }}
+              </span>
+
+              @if (idx === 0) {
+              <span class="vsc-latest-pill">Latest</span>
+              }
+
+              <span class="vsc-date">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                {{ t.tender_date | date: 'dd MMM yyyy' }}
+              </span>
+
+              <h2 class="vsc-title">{{ t.tender_title }}</h2>
+            </div>
+
+            <div class="vsc-header-right">
+              @if (t.tender_fee !== undefined && t.tender_fee !== null) {
+              <span class="vsc-cost-pill" pTooltip="Tender Document Fee" tooltipPosition="top">
+                <i class="pi pi-tag" aria-hidden="true"></i>
+                Fee: ₹&nbsp;{{ t.tender_fee | number:'1.2-2' }}
+              </span>
+              }
+
+              @if (t.items && t.items.length) {
+              <span class="vsc-count-pill">
+                <i class="pi pi-box" aria-hidden="true"></i>
+                {{ t.items.length }} material item{{ t.items.length === 1 ? '' : 's' }}
+              </span>
+              }
+
+              @if (t.validity) {
+              <div class="qe-badges">
+                <span class="qe-badge">
+                  <i class="pi pi-clock" aria-hidden="true"></i>
+                  Validity: {{ t.validity }}
+                </span>
+              </div>
+              }
+
+              <div class="actions-cell">
+                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                  [attr.aria-label]="'Edit tender ' + t.tender_number" pTooltip="Edit tender" tooltipPosition="top"
+                  (click)="openEditDialog(t)"></button>
+                <button pButton type="button" icon="pi pi-trash"
+                  class="p-button-text p-button-sm p-button-danger qe-delete"
+                  [attr.aria-label]="'Delete tender ' + t.tender_number" pTooltip="Delete tender" tooltipPosition="top"
+                  (click)="deleteTender(t.id)"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Body -->
+          <div class="vsc-body">
+
+            <!-- Authority & Officer Contacts Strip -->
+            @if (t.officer_name || t.email || t.contact_number || t.website || t.address) {
+            <div class="vsc-params-strip">
+              @if (t.officer_name) {
+              <div class="param-chip">
+                <i class="pi pi-user" aria-hidden="true"></i>
+                <span class="p-lbl">Officer:</span>
+                <span class="p-val">{{ t.officer_name }}</span>
+              </div>
+              }
+              @if (t.email) {
+              <div class="param-chip">
+                <i class="pi pi-envelope" aria-hidden="true"></i>
+                <span class="p-lbl">Email:</span>
+                <a [href]="'mailto:' + t.email" class="p-val p-link">{{ t.email }}</a>
+              </div>
+              }
+              @if (t.contact_number) {
+              <div class="param-chip">
+                <i class="pi pi-phone" aria-hidden="true"></i>
+                <span class="p-lbl">Phone:</span>
+                <span class="p-val">{{ t.contact_number }}</span>
+              </div>
+              }
+              @if (t.website) {
+              <div class="param-chip">
+                <i class="pi pi-globe" aria-hidden="true"></i>
+                <span class="p-lbl">Portal:</span>
+                <a [href]="t.website" target="_blank" rel="noopener noreferrer" class="p-val p-link">{{ t.website }}</a>
+              </div>
+              }
+              @if (t.address) {
+              <div class="param-chip param-chip--address">
+                <i class="pi pi-map-marker" aria-hidden="true"></i>
+                <span class="p-lbl">Address:</span>
+                <span class="p-val">{{ t.address }}</span>
+              </div>
+              }
+            </div>
+            }
+
+            <!-- Commercial Terms & Key Deadlines Strip -->
+            <div class="vsc-params-strip">
+              @if (t.opening_date_time) {
+              <div class="param-chip">
+                <i class="pi pi-calendar-plus" aria-hidden="true"></i>
+                <span class="p-lbl">Opening:</span>
+                <span class="p-val">{{ t.opening_date_time | date: 'dd MMM yyyy, HH:mm' }}</span>
+              </div>
+              }
+              @if (t.closing_date_time) {
+              <div class="param-chip param-chip--deadline">
+                <i class="pi pi-calendar-times" aria-hidden="true"></i>
+                <span class="p-lbl">Closing Deadline:</span>
+                <span class="p-val">{{ t.closing_date_time | date: 'dd MMM yyyy, HH:mm' }}</span>
+              </div>
+              }
+              @if (t.delivery_terms) {
+              <div class="param-chip">
+                <i class="pi pi-truck" aria-hidden="true"></i>
+                <span class="p-lbl">Delivery Terms:</span>
+                <span class="p-val">{{ getDeliveryTermLabel(t.delivery_terms) }}</span>
+              </div>
+              }
+              @if (t.delivery_period) {
+              <div class="param-chip">
+                <i class="pi pi-clock" aria-hidden="true"></i>
+                <span class="p-lbl">Delivery Period:</span>
+                <span class="p-val">{{ t.delivery_period }}</span>
+              </div>
+              }
+              @if (t.payment_terms) {
+              <div class="param-chip">
+                <i class="pi pi-credit-card" aria-hidden="true"></i>
+                <span class="p-lbl">Payment:</span>
+                <span class="p-val">{{ t.payment_terms }}</span>
+              </div>
+              }
+              @if (t.warranty_period) {
+              <div class="param-chip">
+                <i class="pi pi-shield" aria-hidden="true"></i>
+                <span class="p-lbl">Warranty:</span>
+                <span class="p-val">{{ t.warranty_period }}</span>
+              </div>
+              }
+            </div>
+
+            <!-- Material Requirements Table -->
+            @if (t.items && t.items.length) {
+            <div class="cost-items-table-container">
+              <p-table [value]="t.items" [paginator]="t.items.length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
+                styleClass="p-datatable-sm items-table-wrap" aria-label="Tender required materials">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th scope="col" style="width: 45px; text-align: center;">#</th>
+                    <th scope="col" style="min-width: 140px;">Item Code</th>
+                    <th scope="col" style="min-width: 260px;">Material Description</th>
+                    <th scope="col" style="min-width: 120px; text-align: right;">Required Quantity</th>
+                  </tr>
+                </ng-template>
+
+                <ng-template pTemplate="body" let-item let-i="rowIndex">
+                  <tr>
+                    <td style="text-align: center; color: #64748b; font-weight: 700;">{{ i + 1 }}</td>
+                    <td>
+                      <span class="ref-badge">{{ item.item_code || '—' }}</span>
+                    </td>
+                    <td>
+                      <strong class="item-desc-text">{{ item.material_name }}</strong>
+                    </td>
+                    <td class="num-cell" style="font-weight: 750;">
+                      <span class="qty-badge">{{ item.quantity }}</span>
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
+            }
+
+            <!-- Remarks / Notes -->
+            @if (t.remark) {
+            <div class="vsc-remark-box">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <div class="vsc-remark-content">
+                <span class="vsc-remark-label">Remarks:</span>
+                <span class="vsc-remark-text">{{ t.remark }}</span>
+              </div>
+            </div>
+            }
+
+            <!-- Attachments List -->
+            @if (t.attachments && t.attachments.length) {
+            <div class="qe-attachments">
+              <span class="qe-section-label">
+                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                Tender Documents ({{ t.attachments.length }})
+              </span>
+              <div class="qe-attachment-list">
+                @for (att of t.attachments; track att.id) {
+                <div class="qe-attachment-chip">
+                  <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                  <div class="qe-att-meta">
+                    <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                    @if (att.file_size) {
+                    <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                    }
+                  </div>
+                  <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                    pTooltip="Download file" tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                    (click)="downloadAttachment(att)">
+                    @if (downloadingAttachmentId() === att.id) {
+                    <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                    } @else {
+                    <i class="pi pi-download" aria-hidden="true"></i>
+                    }
+                  </button>
+                </div>
+                }
+              </div>
+            </div>
+            }
+
+          </div>
+
+        </article>
+        }
+      </div>
+      }
+
+    </div>
+  </div>
+
+  <!-- ── 3. Create / Edit Customer Tender Dialog ───────────── -->
+  <p-dialog [header]="editingTender() ? 'Edit Customer Tender' : 'New Customer Tender'" [visible]="dialogVisible()"
+    (visibleChange)="dialogVisible.set($event)" [modal]="true" [blockScroll]="true" [draggable]="false"
+    [resizable]="false" [style]="{ width: '92vw', maxWidth: '1100px' }" styleClass="cq-dialog cost-sheet-dialog"
+    appendTo="body">
+    <form [formGroup]="headerForm" (ngSubmit)="submit()" novalidate>
+      <div class="dlg-body">
+
+        @if (errorMessage()) {
+        <div class="dlg-error" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          <span>{{ errorMessage() }}</span>
+        </div>
+        }
+
+        <!-- ── A. Tender Key Details & Dates ──────────────── -->
+        <div class="dlg-section">
+          <p class="dlg-section-label"><i class="pi pi-calendar"></i> 1. Tender Details & Dates</p>
+          <div class="dlg-grid">
+
+            <!-- Customer (Readonly) -->
+            <div class="field span-two">
+              <label for="dlg-tnd-customer">Customer</label>
+              <input id="dlg-tnd-customer" pInputText type="text"
+                [value]="customer()?.name || project()?.customer_name || '—'" readonly class="readonly-input" />
+            </div>
+
+            <!-- Tender Title -->
+            <div class="field span-two">
+              <label for="dlg-tnd-title">
+                Tender Title <span class="req" aria-hidden="true">*</span>
+              </label>
+              <input id="dlg-tnd-title" pInputText formControlName="tender_title" placeholder="Enter tender title"
+                [class.ng-invalid]="isFieldInvalid('tender_title')" />
+              @if (isFieldInvalid('tender_title')) {
+              <p class="field-error">{{ getFieldError('tender_title') }}</p>
+              }
+            </div>
+
+            <!-- Tender Number -->
+            <div class="field">
+              <label for="dlg-tnd-number">
+                Tender Number / Reference <span class="req" aria-hidden="true">*</span>
+              </label>
+              <input id="dlg-tnd-number" pInputText formControlName="tender_number"
+                placeholder="Enter tender number / reference" [class.ng-invalid]="isFieldInvalid('tender_number')" />
+              @if (isFieldInvalid('tender_number')) {
+              <p class="field-error">{{ getFieldError('tender_number') }}</p>
+              }
+            </div>
+
+            <!-- Tender Date -->
+            <div class="field">
+              <label for="dlg-tnd-date">
+                Tender Date <span class="req" aria-hidden="true">*</span>
+              </label>
+              <p-datepicker inputId="dlg-tnd-date" formControlName="tender_date" dateFormat="yy-mm-dd" [showIcon]="true"
+                [fluid]="true" placeholder="YYYY-MM-DD" [invalid]="isFieldInvalid('tender_date')" />
+              @if (isFieldInvalid('tender_date')) {
+              <p class="field-error">{{ getFieldError('tender_date') }}</p>
+              }
+            </div>
+
+            <!-- Closing Date & Time (PrimeNG Date & Time picker) -->
+            <div class="field">
+              <label for="dlg-tnd-closing">
+                Closing Date & Time
+              </label>
+              <p-datepicker inputId="dlg-tnd-closing" formControlName="closing_date_time" dateFormat="yy-mm-dd"
+                [showTime]="true" [hourFormat]="'24'" [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD HH:mm" />
+            </div>
+
+            <!-- Opening Date & Time (PrimeNG Date & Time picker) -->
+            <div class="field">
+              <label for="dlg-tnd-opening">
+                Opening Date & Time
+              </label>
+              <p-datepicker inputId="dlg-tnd-opening" formControlName="opening_date_time" dateFormat="yy-mm-dd"
+                [showTime]="true" [hourFormat]="'24'" [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD HH:mm" />
+            </div>
+
+            <!-- Tender Fee (₹) -->
+            <div class="field">
+              <label for="dlg-tnd-fee">
+                Tender Fee (₹)
+              </label>
+              <input id="dlg-tnd-fee" pInputText type="number" step="0.01" min="0" formControlName="tender_fee"
+                placeholder="Enter tender fee" [class.ng-invalid]="isFieldInvalid('tender_fee')" />
+              @if (isFieldInvalid('tender_fee')) {
+              <p class="field-error">{{ getFieldError('tender_fee') }}</p>
+              }
+            </div>
+
+            <!-- Tender Validity -->
+            <div class="field">
+              <label for="dlg-tnd-validity">Validity</label>
+              <div class="input-unit-group">
+                <input id="dlg-tnd-validity" pInputText formControlName="validity_amount" placeholder="Enter validity"
+                  style="flex: 1; min-width: 0;" />
+                <p-select id="dlg-tnd-validity-unit" formControlName="validity_unit" [options]="validityUnitOptions"
+                  optionLabel="label" optionValue="value" [style]="{ width: '120px', flex: '0 0 120px' }"
+                  appendTo="body" aria-label="Validity Unit"></p-select>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── B. Authority & Officer Contact Info ────────── -->
+        <div class="dlg-section">
+          <p class="dlg-section-label"><i class="pi pi-user"></i> 2. Tender Authority & Officer Contacts</p>
+          <div class="dlg-grid">
+
+            <!-- Officer Name -->
+            <div class="field">
+              <label for="dlg-tnd-officer">Officer / Contact Person Name</label>
+              <input id="dlg-tnd-officer" pInputText formControlName="officer_name"
+                placeholder="Enter officer / contact person name" />
+            </div>
+
+            <!-- Email -->
+            <div class="field">
+              <label for="dlg-tnd-email">Email Address</label>
+              <input id="dlg-tnd-email" pInputText type="email" formControlName="email"
+                placeholder="Enter email address" [class.ng-invalid]="isFieldInvalid('email')" />
+              @if (isFieldInvalid('email')) {
+              <p class="field-error">{{ getFieldError('email') }}</p>
+              }
+            </div>
+
+            <!-- Contact Number -->
+            <div class="field">
+              <label for="dlg-tnd-phone">Contact Number</label>
+              <input id="dlg-tnd-phone" pInputText formControlName="contact_number"
+                placeholder="Enter contact number" [class.ng-invalid]="isFieldInvalid('contact_number')" />
+              @if (isFieldInvalid('contact_number')) {
+              <p class="field-error">{{ getFieldError('contact_number') }}</p>
+              }
+            </div>
+
+            <!-- Website / Portal -->
+            <div class="field">
+              <label for="dlg-tnd-website">E-Procurement Portal / Website</label>
+              <input id="dlg-tnd-website" pInputText formControlName="website"
+                placeholder="Enter website or portal URL" [class.ng-invalid]="isFieldInvalid('website')" />
+              @if (isFieldInvalid('website')) {
+              <p class="field-error">{{ getFieldError('website') }}</p>
+              }
+            </div>
+
+            <!-- Address -->
+            <div class="field span-two">
+              <label for="dlg-tnd-address">Procurement Department Address</label>
+              <input id="dlg-tnd-address" pInputText formControlName="address"
+                placeholder="Enter procurement department address" />
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── C. Commercial Terms & Delivery ─────────────── -->
+        <div class="dlg-section">
+          <p class="dlg-section-label"><i class="pi pi-file-check"></i> 3. Commercial Terms & Delivery Conditions</p>
+          <div class="dlg-grid">
+
+            <!-- Delivery Terms (Incoterms Dropdown) -->
+            <div class="field">
+              <label for="dlg-tnd-delivery-terms">Delivery Terms</label>
+              <p-select id="dlg-tnd-delivery-terms" formControlName="delivery_terms" [options]="incotermsOptions"
+                optionLabel="label" optionValue="value" placeholder="Select delivery terms" [fluid]="true"
+                [style]="{ width: '100%', height: '38px' }" appendTo="body" [showClear]="true"></p-select>
+            </div>
+
+            <!-- Delivery Period -->
+            <div class="field">
+              <label for="dlg-tnd-delivery-period">Delivery Period</label>
+              <input id="dlg-tnd-delivery-period" pInputText formControlName="delivery_period"
+                placeholder="Enter delivery period" />
+            </div>
+
+            <!-- Payment Terms -->
+            <div class="field">
+              <label for="dlg-tnd-payment-terms">Payment Terms</label>
+              <input id="dlg-tnd-payment-terms" pInputText formControlName="payment_terms"
+                placeholder="Enter payment terms" />
+            </div>
+
+            <!-- Warranty Period -->
+            <div class="field">
+              <label for="dlg-tnd-warranty">Warranty Period</label>
+              <input id="dlg-tnd-warranty" pInputText formControlName="warranty_period"
+                placeholder="Enter warranty period" />
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── D. Required Materials Line Items ───────────── -->
+        <div class="dlg-section">
+          <div class="dlg-section-header">
+            <p class="dlg-section-label">
+              <i class="pi pi-box"></i> 4. Tender Required Materials
+              @if (items().length > 0) {
+              <span class="attach-count">({{ items().length }} item{{ items().length === 1 ? '' : 's' }})</span>
+              }
+            </p>
+          </div>
+
+          <!-- Fast Inline Item Entry Row -->
+          <div class="quick-add-bar" [class.quick-add-bar--editing]="editingItemIndex() !== null" [formGroup]="rowForm">
+            <div class="quick-add-grid">
+              <div class="quick-field quick-field--name" style="flex: 2 1 200px;">
+                <label for="dlg-tnd-mat-name">Material Description <span class="req">*</span></label>
+                <input #matInput id="dlg-tnd-mat-name" pInputText formControlName="material_name"
+                  placeholder="Enter material description" [class.ng-invalid]="isRowFieldInvalid('material_name')"
+                  (keydown.enter)="$event.preventDefault(); qtyInput.focus()" />
+                @if (isRowFieldInvalid('material_name')) {
+                <p class="field-error">{{ getRowFieldError('material_name') }}</p>
+                }
+              </div>
+
+              <div class="quick-field" style="flex: 1 1 120px;">
+                <label for="dlg-tnd-item-code">Item Code</label>
+                <input id="dlg-tnd-item-code" pInputText formControlName="item_code" placeholder="Enter item code" />
+              </div>
+
+              <div class="quick-field quick-field--qty" style="flex: 1 1 90px;">
+                <label for="dlg-tnd-qty">Quantity <span class="req">*</span></label>
+                <input #qtyInput id="dlg-tnd-qty" pInputText formControlName="quantity" placeholder="Enter quantity"
+                  [class.ng-invalid]="isRowFieldInvalid('quantity')"
+                  (keydown.enter)="$event.preventDefault(); saveRow(matInput)" />
+                @if (isRowFieldInvalid('quantity')) {
+                <p class="field-error">{{ getRowFieldError('quantity') }}</p>
+                }
+              </div>
+
+              <div class="quick-add-actions">
+                <button pButton type="button" [icon]="editingItemIndex() !== null ? 'pi pi-check' : 'pi pi-plus'"
+                  [label]="editingItemIndex() !== null ? 'Update' : 'Add Item'" class="quick-submit-btn"
+                  (click)="saveRow(matInput)"></button>
+                @if (editingItemIndex() !== null) {
+                <button pButton type="button" icon="pi pi-times"
+                  class="p-button-text p-button-secondary cancel-edit-btn" pTooltip="Cancel edit"
+                  (click)="cancelRow()"></button>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Items Table -->
+          @if (items().length > 0) {
+          <div class="cost-items-table-container">
+            <p-table [value]="items()" [paginator]="items().length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
+              styleClass="p-datatable-sm items-table-wrap" aria-label="Tender materials list">
+              <ng-template pTemplate="header">
+                <tr>
+                  <th scope="col" style="width: 45px; text-align: center;">#</th>
+                  <th scope="col" style="min-width: 140px;">Item Code</th>
+                  <th scope="col" style="min-width: 250px;">Material Description</th>
+                  <th scope="col" style="min-width: 100px; text-align: right;">Quantity</th>
+                  <th scope="col" style="width: 80px; text-align: right;">Actions</th>
+                </tr>
+              </ng-template>
+
+              <ng-template pTemplate="body" let-item let-i="rowIndex">
+                <tr>
+                  <td style="text-align: center; color: #64748b; font-weight: 700;">{{ i + 1 }}</td>
+                  <td>
+                    <span class="ref-badge">{{ item.item_code || '—' }}</span>
+                  </td>
+                  <td>
+                    <strong class="item-desc-text">{{ item.material_name }}</strong>
+                  </td>
+                  <td class="num-cell" style="font-weight: 700;">
+                    <span class="qty-badge">{{ item.quantity }}</span>
+                  </td>
+                  <td style="text-align: right; width: 80px; white-space: nowrap;">
+                    <div class="actions-cell">
+                      <button pButton type="button" icon="pi pi-pencil" [text]="true"
+                        class="p-button-text p-button-sm qe-edit" [attr.aria-label]="'Edit ' + item.material_name"
+                        pTooltip="Edit" tooltipPosition="top" (click)="openEditRow(i, matInput)"></button>
+                      <button pButton type="button" icon="pi pi-trash" [text]="true"
+                        class="p-button-text p-button-sm p-button-danger qe-delete"
+                        [attr.aria-label]="'Delete ' + item.material_name" pTooltip="Delete" tooltipPosition="top"
+                        (click)="deleteRow(i)"></button>
+                    </div>
+                  </td>
+                </tr>
+              </ng-template>
+            </p-table>
+          </div>
+          } @else {
+          <div class="empty-items" role="note">
+            <i class="pi pi-inbox" aria-hidden="true"></i>
+            <p>No materials added to this tender yet. Use the quick entry bar above to add tender items.</p>
+          </div>
+          }
+        </div>
+
+        <!-- ── E. Documents & Attachments ──────────────────── -->
+        <div class="dlg-section">
+          <p class="dlg-section-label">
+            <i class="pi pi-paperclip"></i> 5. Tender Documents & Attachments
+            @if (attachments().length) {
+            <span class="attach-count">{{ attachments().length }} new file{{ attachments().length === 1 ? '' : 's' }}
+              selected</span>
+            }
+          </p>
+
+          <!-- Existing files when editing -->
+          @if (existingAttachments().length) {
+          <div class="existing-att-block">
+            <p class="existing-att-title">
+              <i class="pi pi-paperclip" aria-hidden="true"></i> Current Attachments ({{ existingAttachments().length
+              }})
+            </p>
+            <div class="file-list">
+              @for (file of existingAttachments(); track file.id) {
+              <div class="file-chip existing-file-chip">
+                <i [class]="getFileIcon(file.content_type)" aria-hidden="true"></i>
+                <span class="file-chip-name" [title]="file.file_name">{{ file.file_name }}</span>
+                <span class="file-chip-size">{{ formatFileSize(file.file_size) }}</span>
+              </div>
+              }
+            </div>
+          </div>
+          }
+
+          <!-- Uploaded new files list -->
+          @if (attachments().length) {
+          <div class="file-list">
+            @for (file of attachments(); track $index) {
+            <div class="file-chip">
+              <i class="pi pi-paperclip" aria-hidden="true"></i>
+              <span class="file-chip-name" [title]="file.name">{{ file.name }}</span>
+              <span class="file-chip-size">{{ formatFileSize(file.size) }}</span>
+              <button type="button" class="remove-file" (click)="removeAttachment($index)"
+                [attr.aria-label]="'Remove ' + file.name">
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            }
+          </div>
+          }
+
+          <!-- Drop zone -->
+          <div class="file-drop-zone"
+            [class.file-drop-zone--compact]="attachments().length > 0 || existingAttachments().length > 0"
+            (click)="tndFileInput.click()" (keydown.enter)="tndFileInput.click()" tabindex="0" role="button"
+            aria-label="Upload tender documents">
+            <i class="pi pi-upload" aria-hidden="true"></i>
+            <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload tender documents' }}</span>
+            @if (!attachments().length && !existingAttachments().length) {
+            <span class="file-hint">PDF, Excel, Word — NIT, technical specifications, drawing sheets</span>
+            }
+          </div>
+          <input #tndFileInput id="dlg-tnd-attachment-input" type="file" multiple style="display: none;"
+            (change)="onFileSelected($event)" />
+        </div>
+
+        <!-- ── F. Remarks Section ─────────────────────────── -->
+        <div class="dlg-section">
+          <p class="dlg-section-label"><i class="pi pi-comment"></i> 6. Remarks / Special Notes</p>
+          <div class="field">
+            <textarea id="dlg-tnd-remark" pTextarea formControlName="remark" rows="3"
+              placeholder="Enter special requirements, compliance conditions, or notes…"
+              style="width: 100%; resize: vertical;"></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Dialog Footer Actions -->
+      <div class="dlg-footer">
+        <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="closeDialog()"
+          [disabled]="submitting()"></button>
+        <button pButton type="submit" label="Save Customer Tender" icon="pi pi-check" class="submit-btn"
+          [loading]="submitting()"></button>
+      </div>
+    </form>
+  </p-dialog>
+
+</section>

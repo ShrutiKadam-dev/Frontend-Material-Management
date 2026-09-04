@@ -1,1 +1,634 @@
-<p>step-07-bid-documents works!</p>
+<section class="base-page step-page" aria-labelledby="step-page-title">
+
+  <!-- ── 1. Page Header Bar ───────────────────────────────── -->
+  <div class="page-header">
+    <div class="header-left">
+      <button pButton type="button" icon="pi pi-arrow-left" class="p-button-text p-button-secondary back-btn"
+        (click)="goBack()" aria-label="Back to project pipeline" pTooltip="Back to Project Steps"
+        tooltipPosition="bottom"></button>
+      <div class="header-title-group">
+        <span class="eyebrow">Step 07 · Bid Documents & Submission</span>
+        <h1 id="step-page-title">
+          @if (project(); as p) { {{ p.project_title }} }
+          @else { Bid Documents & Submission }
+        </h1>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      @if (customer(); as c) {
+      <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+        <i class="pi pi-user" aria-hidden="true"></i>
+        {{ c.name }}
+      </span>
+      } @else if (project()?.customer_name) {
+      <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+        <i class="pi pi-user" aria-hidden="true"></i>
+        {{ project()?.customer_name }}
+      </span>
+      }
+      <div class="header-step-pill" aria-hidden="true">
+        Step <strong>07</strong> of 15
+      </div>
+      <button pButton type="button" icon="pi pi-plus" label="Create Bid Submission" class="create-cost-sheet-btn"
+        (click)="openCreateDialog()"></button>
+    </div>
+  </div>
+
+  <!-- ── 2. Full-Width Bid Submissions History Stream ──────── -->
+  <div class="step-layout--fullwidth">
+    <div class="step-main step-main--fullwidth">
+
+      <!-- Loading State -->
+      @if (loading()) {
+      <div class="center-state">
+        <div class="loading-ring" aria-hidden="true">
+          <i class="pi pi-spin pi-spinner"></i>
+        </div>
+        <p>Loading bid submissions…</p>
+      </div>
+      }
+
+      <!-- Empty State -->
+      @else if (submissions().length === 0) {
+      <div class="version-sheet-card empty-card">
+        <div class="center-state empty-cta">
+          <span class="empty-icon" aria-hidden="true">
+            <i class="pi pi-file-edit"></i>
+          </span>
+          <h3>No bid submissions recorded yet</h3>
+          <p>Prepare and submit your official bid documents and material proposals for this project.
+            @if (latestTender(); as t) {
+            <br /><strong>Customer Tender ({{ t.tender_number }})</strong> is available to automatically pre-fill your bid.
+            }
+          </p>
+          <button pButton type="button" icon="pi pi-plus" label="Create Bid Submission" class="create-cost-sheet-btn"
+            (click)="openCreateDialog()"></button>
+        </div>
+      </div>
+      }
+
+      <!-- Submissions Stream -->
+      @else {
+      <div class="version-cards-stream" role="feed" aria-label="Bid submissions history">
+        @for (s of submissions(); track s.id; let idx = $index) {
+        <article class="version-sheet-card">
+
+          <!-- Card Header Bar -->
+          <div class="vsc-header">
+            <div class="vsc-header-left">
+              <span class="vsc-badge">
+                <i class="pi pi-file-check" aria-hidden="true"></i>
+                {{ s.tender_number || ('BID #' + s.id) }}
+              </span>
+
+              @if (idx === 0) {
+              <span class="vsc-latest-pill">Latest</span>
+              }
+
+              <span class="vsc-date">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                {{ s.submission_date | date: 'dd MMM yyyy' }}
+              </span>
+
+              <h2 class="vsc-title">{{ s.tender_title || 'Bid Submission' }}</h2>
+            </div>
+
+            <div class="vsc-header-right">
+              @if (calculateSubmissionTotal(s) > 0) {
+              <span class="vsc-cost-pill">
+                <i class="pi pi-indian-rupee" aria-hidden="true"></i>
+                ₹&nbsp;{{ calculateSubmissionTotal(s) | number:'1.2-2' }}
+              </span>
+              }
+
+              @if (s.items && s.items.length) {
+              <span class="vsc-count-pill">
+                <i class="pi pi-box" aria-hidden="true"></i>
+                {{ s.items.length }} line item{{ s.items.length === 1 ? '' : 's' }}
+              </span>
+              }
+
+              <div class="actions-cell">
+                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                  [attr.aria-label]="'Edit submission ' + s.tender_title" pTooltip="Edit submission"
+                  tooltipPosition="top" (click)="openEditDialog(s)"></button>
+                <button pButton type="button" icon="pi pi-trash"
+                  class="p-button-text p-button-sm p-button-danger qe-delete"
+                  [attr.aria-label]="'Delete submission ' + s.tender_title" pTooltip="Delete submission"
+                  tooltipPosition="top" (click)="deleteSubmission(s)"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Body -->
+          <div class="vsc-body">
+
+            <!-- Refined Metadata Parameter Chips Strip -->
+            <div class="vsc-params-strip">
+              @if (s.tender_title) {
+              <div class="param-chip">
+                <i class="pi pi-bookmark" aria-hidden="true"></i>
+                <span class="p-lbl">Tender:</span>
+                <span class="p-val">{{ s.tender_title }}</span>
+              </div>
+              }
+              <div class="param-chip">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                <span class="p-lbl">Submission Date:</span>
+                <span class="p-val">{{ s.submission_date | date: 'dd MMM yyyy' }}</span>
+              </div>
+              @if (s.delivery_terms) {
+              <div class="param-chip">
+                <i class="pi pi-truck" aria-hidden="true"></i>
+                <span class="p-lbl">Delivery Terms:</span>
+                <span class="p-val">{{ s.delivery_terms }}</span>
+              </div>
+              }
+              @if (s.delivery_period) {
+              <div class="param-chip">
+                <i class="pi pi-clock" aria-hidden="true"></i>
+                <span class="p-lbl">Delivery Period:</span>
+                <span class="p-val">{{ s.delivery_period }}</span>
+              </div>
+              }
+              @if (s.validity) {
+              <div class="param-chip">
+                <i class="pi pi-hourglass" aria-hidden="true"></i>
+                <span class="p-lbl">Validity:</span>
+                <span class="p-val">{{ s.validity }}</span>
+              </div>
+              }
+              @if (s.payment_terms) {
+              <div class="param-chip">
+                <i class="pi pi-credit-card" aria-hidden="true"></i>
+                <span class="p-lbl">Payment Terms:</span>
+                <span class="p-val">{{ s.payment_terms }}</span>
+              </div>
+              }
+              @if (s.warranty_period) {
+              <div class="param-chip">
+                <i class="pi pi-shield" aria-hidden="true"></i>
+                <span class="p-lbl">Warranty:</span>
+                <span class="p-val">{{ s.warranty_period }}</span>
+              </div>
+              }
+            </div>
+
+            <!-- Materials Table -->
+            @if (s.items && s.items.length) {
+            <div class="cost-items-table-container">
+              <p-table [value]="s.items" [paginator]="s.items.length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
+                styleClass="p-datatable-sm items-table-wrap" aria-label="Bid submission items">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th scope="col" style="width: 45px; text-align: center;">#</th>
+                    <th scope="col" style="min-width: 240px;">Material Description</th>
+                    <th scope="col" style="min-width: 110px;">HSN/SAC</th>
+                    <th scope="col" style="min-width: 70px; text-align: right;">Qty</th>
+                    <th scope="col" style="min-width: 120px; text-align: right;">Unit Price (₹)</th>
+                    <th scope="col" style="min-width: 140px; text-align: right;">Net Amount (₹)</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-item let-i="rowIndex">
+                  <tr>
+                    <td style="text-align: center; color: #64748b; font-weight: 700;">{{ i + 1 }}</td>
+                    <td>
+                      <strong class="item-desc-text">{{ item.material_name }}</strong>
+                    </td>
+                    <td>
+                      <span class="ref-badge">{{ item.hsn_sac || '—' }}</span>
+                    </td>
+                    <td class="num-cell" style="font-weight: 700;">
+                      <span class="qty-badge">{{ item.quantity }}</span>
+                    </td>
+                    <td class="num-cell">
+                      {{ item.unit_price ? ('₹ ' + (item.unit_price | number:'1.2-2')) : '—' }}
+                    </td>
+                    <td class="num-cell" style="font-weight: 700; color: var(--color-heading);">
+                      {{ calculateItemNet(item) ? ('₹ ' + (calculateItemNet(item) | number:'1.2-2')) : '—' }}
+                    </td>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="footer">
+                  <tr class="table-total-row">
+                    <td colspan="5" class="total-label-cell">
+                      <div class="total-label-wrapper">
+                        <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-calculator"></i></span>
+                        <span class="total-title">Total Bid Value</span>
+                        <span class="total-items-badge">({{ s.items.length }} {{ s.items.length === 1 ? 'item' : 'items' }})</span>
+                      </div>
+                    </td>
+                    <td class="total-amount-cell" style="min-width: 140px; text-align: right; white-space: nowrap;">
+                      <span class="total-amount-value" style="white-space: nowrap;">
+                        ₹&nbsp;{{ calculateSubmissionTotal(s) | number:'1.2-2' }}
+                      </span>
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
+            }
+
+            <!-- Remarks / Notes -->
+            @if (s.remark) {
+            <div class="vsc-remark-box">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <div class="vsc-remark-content">
+                <span class="vsc-remark-label">Remarks:</span>
+                <span class="vsc-remark-text">{{ s.remark }}</span>
+              </div>
+            </div>
+            }
+
+            <!-- Attachments List -->
+            @if (s.attachments && s.attachments.length) {
+            <div class="qe-attachments">
+              <span class="qe-section-label">
+                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                Attachments ({{ s.attachments.length }})
+              </span>
+              <div class="qe-attachment-list">
+                @for (att of s.attachments; track att.id) {
+                <div class="qe-attachment-chip">
+                  <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                  <div class="qe-att-meta">
+                    <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                    @if (att.file_size) {
+                    <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                    }
+                  </div>
+                  <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                    pTooltip="Download file" tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                    (click)="downloadAttachment(att)">
+                    @if (downloadingAttachmentId() === att.id) {
+                    <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                    } @else {
+                    <i class="pi pi-download" aria-hidden="true"></i>
+                    }
+                  </button>
+                </div>
+                }
+              </div>
+            </div>
+            }
+
+          </div>
+
+        </article>
+        }
+      </div>
+      }
+
+    </div>
+  </div>
+
+  <!-- ── 3. Create / Edit Bid Submission Dialog ────────────── -->
+  <p-dialog [header]="editingSubmission() ? 'Edit Bid Submission' : 'New Bid Submission'" [visible]="dialogVisible()"
+    (visibleChange)="dialogVisible.set($event)" [modal]="true" [blockScroll]="true" [draggable]="false"
+    [resizable]="false" [style]="{ width: '92vw', maxWidth: '1100px' }" styleClass="cq-dialog cost-sheet-dialog"
+    appendTo="body">
+
+    <form [formGroup]="headerForm" (ngSubmit)="submit()" novalidate id="bid-sub-form">
+      <div class="dlg-body">
+
+        <!-- Dialog Error Alert -->
+        @if (errorMessage()) {
+        <div class="dlg-error" role="alert" aria-live="assertive">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          <span>{{ errorMessage() }}</span>
+        </div>
+        }
+
+        <!-- Auto-Sync Notice from Step 06 Customer Tender -->
+        @if (latestTender(); as t) {
+        <div class="cost-sheet-sync-pill" role="status">
+          <i class="pi pi-check-circle" aria-hidden="true"></i>
+          <span>
+            Auto-imported from <strong>Customer Tender ({{ t.tender_number }})</strong> · {{ items().length }} items with commercial terms pre-filled.
+          </span>
+        </div>
+        }
+
+        <!-- ── 1. Tender Reference & Submission Date ────────── -->
+        <div class="dlg-section">
+          <p class="dlg-section-label"><i class="pi pi-file-check"></i> 1. Tender Reference & Submission Date</p>
+          <div class="dlg-grid">
+
+            <!-- Customer (Readonly) -->
+            <div class="field span-two">
+              <label for="dlg-bid-customer">Customer</label>
+              <input id="dlg-bid-customer" pInputText type="text"
+                [value]="customer()?.name || project()?.customer_name || '—'" readonly class="readonly-input" />
+            </div>
+
+            <!-- Tender Title -->
+            <div class="field span-two">
+              <label for="dlg-bid-title">
+                Tender Title <span class="req" aria-hidden="true">*</span>
+              </label>
+              <input id="dlg-bid-title" pInputText formControlName="tender_title" placeholder="Enter tender title"
+                [class.ng-invalid]="isFieldInvalid('tender_title')" />
+              @if (isFieldInvalid('tender_title')) {
+              <p class="field-error">{{ getFieldError('tender_title') }}</p>
+              }
+            </div>
+
+            <!-- Tender Number -->
+            <div class="field">
+              <label for="dlg-bid-number">
+                Tender Number / Reference <span class="req" aria-hidden="true">*</span>
+              </label>
+              <input id="dlg-bid-number" pInputText formControlName="tender_number"
+                placeholder="Enter tender reference number" [class.ng-invalid]="isFieldInvalid('tender_number')" />
+              @if (isFieldInvalid('tender_number')) {
+              <p class="field-error">{{ getFieldError('tender_number') }}</p>
+              }
+            </div>
+
+            <!-- Submission Date (Date Picker) -->
+            <div class="field">
+              <label for="dlg-bid-sub-date">
+                Bid Submission Date <span class="req" aria-hidden="true">*</span>
+              </label>
+              <p-datepicker inputId="dlg-bid-sub-date" formControlName="submission_date" dateFormat="yy-mm-dd"
+                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                [invalid]="isFieldInvalid('submission_date')" />
+              @if (isFieldInvalid('submission_date')) {
+              <p class="field-error">{{ getFieldError('submission_date') }}</p>
+              }
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── 2. Commercial Terms & Delivery Conditions ────── -->
+        <div class="dlg-section">
+          <p class="dlg-section-label"><i class="pi pi-truck"></i> 2. Commercial Terms & Delivery Conditions</p>
+          <div class="dlg-grid">
+
+            <!-- Delivery Terms (Incoterms Dropdown) -->
+            <div class="field">
+              <label for="dlg-bid-delivery-terms">Delivery Terms</label>
+              <p-select id="dlg-bid-delivery-terms" formControlName="delivery_terms" [options]="incotermsOptions"
+                optionLabel="label" optionValue="value" placeholder="Select delivery terms" [fluid]="true"
+                [style]="{ width: '100%', height: '38px' }" appendTo="body" [showClear]="true"></p-select>
+            </div>
+
+            <!-- Delivery Period -->
+            <div class="field">
+              <label for="dlg-bid-delivery-period">Delivery Period</label>
+              <input id="dlg-bid-delivery-period" pInputText formControlName="delivery_period"
+                placeholder="e.g. 30 Days from PO" />
+            </div>
+
+            <!-- Bid Validity -->
+            <div class="field">
+              <label for="dlg-bid-validity">Bid Validity</label>
+              <div class="input-unit-group">
+                <input id="dlg-bid-validity" pInputText formControlName="validity_amount"
+                  placeholder="Enter validity" style="flex: 1; min-width: 0;" />
+                <p-select id="dlg-bid-validity-unit" formControlName="validity_unit" [options]="validityUnitOptions"
+                  optionLabel="label" optionValue="value" [style]="{ width: '120px', flex: '0 0 120px' }"
+                  appendTo="body" aria-label="Validity Unit"></p-select>
+              </div>
+            </div>
+
+            <!-- Payment Terms -->
+            <div class="field">
+              <label for="dlg-bid-payment-terms">Payment Terms</label>
+              <input id="dlg-bid-payment-terms" pInputText formControlName="payment_terms"
+                placeholder="e.g. 100% against delivery" />
+            </div>
+
+            <!-- Warranty Period -->
+            <div class="field">
+              <label for="dlg-bid-warranty">Warranty Period</label>
+              <input id="dlg-bid-warranty" pInputText formControlName="warranty_period"
+                placeholder="e.g. 1 Year Comprehensive" />
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── 3. Bid Material Line Items ───────────────────── -->
+        <div class="dlg-section">
+          <div class="dlg-section-header">
+            <p class="dlg-section-label">
+              <i class="pi pi-box"></i> 3. Bid Material Line Items
+              @if (items().length > 0) {
+              <span class="attach-count">({{ items().length }} item{{ items().length === 1 ? '' : 's' }})</span>
+              }
+            </p>
+            @if (dialogTotalValue() > 0) {
+            <span class="vsc-cost-pill">
+              <i class="pi pi-indian-rupee" aria-hidden="true"></i>
+              Total Quoted: ₹&nbsp;{{ dialogTotalValue() | number:'1.2-2' }}
+            </span>
+            }
+          </div>
+
+          <!-- Fast Inline Item Entry Row -->
+          <div class="quick-add-bar" [class.quick-add-bar--editing]="editingItemIndex() !== null" [formGroup]="rowForm">
+            <div class="quick-add-grid">
+              <div class="quick-field quick-field--name" style="flex: 2 1 220px;">
+                <label for="dlg-bid-mat-name">Material Description <span class="req">*</span></label>
+                <input #matInput id="dlg-bid-mat-name" pInputText formControlName="material_name"
+                  placeholder="Enter material description" [class.ng-invalid]="isRowFieldInvalid('material_name')"
+                  (keydown.enter)="$event.preventDefault(); hsnInput.focus()" />
+                @if (isRowFieldInvalid('material_name')) {
+                <p class="field-error">{{ getRowFieldError('material_name') }}</p>
+                }
+              </div>
+
+              <div class="quick-field" style="flex: 1 1 120px;">
+                <label for="dlg-bid-hsn">HSN / SAC</label>
+                <input #hsnInput id="dlg-bid-hsn" pInputText formControlName="hsn_sac" placeholder="e.g. 841899"
+                  (keydown.enter)="$event.preventDefault(); qtyInput.focus()" />
+              </div>
+
+              <div class="quick-field quick-field--qty" style="flex: 1 1 90px;">
+                <label for="dlg-bid-qty">Quantity <span class="req">*</span></label>
+                <input #qtyInput id="dlg-bid-qty" pInputText formControlName="quantity" placeholder="Enter qty"
+                  [class.ng-invalid]="isRowFieldInvalid('quantity')"
+                  (keydown.enter)="$event.preventDefault(); priceInput.focus()" />
+                @if (isRowFieldInvalid('quantity')) {
+                <p class="field-error">{{ getRowFieldError('quantity') }}</p>
+                }
+              </div>
+
+              <div class="quick-field quick-field--price" style="flex: 1 1 120px;">
+                <label for="dlg-bid-price">Unit Price (₹)</label>
+                <input #priceInput id="dlg-bid-price" pInputText formControlName="unit_price"
+                  placeholder="Enter unit price" [class.ng-invalid]="isRowFieldInvalid('unit_price')"
+                  (keydown.enter)="$event.preventDefault(); saveRow(matInput)" />
+              </div>
+
+              <div class="quick-add-actions">
+                <button pButton type="button" [icon]="editingItemIndex() !== null ? 'pi pi-check' : 'pi pi-plus'"
+                  [label]="editingItemIndex() !== null ? 'Update' : 'Add Item'" class="quick-submit-btn"
+                  (click)="saveRow(matInput)"></button>
+                @if (editingItemIndex() !== null) {
+                <button pButton type="button" icon="pi pi-times"
+                  class="p-button-text p-button-secondary cancel-edit-btn" pTooltip="Cancel edit"
+                  (click)="cancelRow()"></button>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Items Table -->
+          @if (items().length > 0) {
+          <div class="cost-items-table-container">
+            <p-table [value]="items()" [paginator]="items().length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
+              styleClass="p-datatable-sm items-table-wrap" aria-label="Bid materials list">
+              <ng-template pTemplate="header">
+                <tr>
+                  <th scope="col" style="width: 45px; text-align: center;">#</th>
+                  <th scope="col" style="min-width: 240px;">Material Description</th>
+                  <th scope="col" style="min-width: 110px;">HSN/SAC</th>
+                  <th scope="col" style="min-width: 90px; text-align: right;">Quantity</th>
+                  <th scope="col" style="min-width: 110px; text-align: right;">Unit Price (₹)</th>
+                  <th scope="col" style="min-width: 120px; text-align: right;">Net Total (₹)</th>
+                  <th scope="col" style="width: 80px; text-align: right;">Actions</th>
+                </tr>
+              </ng-template>
+
+              <ng-template pTemplate="body" let-item let-i="rowIndex">
+                <tr>
+                  <td style="text-align: center; color: #64748b; font-weight: 700;">{{ i + 1 }}</td>
+                  <td><strong class="item-desc-text">{{ item.material_name }}</strong></td>
+                  <td><span class="ref-badge">{{ item.hsn_sac || '—' }}</span></td>
+                  <td class="num-cell" style="font-weight: 700;">
+                    <span class="qty-badge">{{ item.quantity }}</span>
+                  </td>
+                  <td style="text-align: right; color: #334155;">
+                    {{ (item.unit_price | number:'1.2-2') || '—' }}
+                  </td>
+                  <td style="text-align: right; font-weight: 700; color: var(--color-heading);">
+                    {{ calculateItemNet(item) ? ('₹ ' + (calculateItemNet(item) | number:'1.2-2')) : '—' }}
+                  </td>
+                  <td style="text-align: right; width: 80px; white-space: nowrap;">
+                    <div class="actions-cell">
+                      <button pButton type="button" icon="pi pi-pencil" [text]="true"
+                        class="p-button-text p-button-sm qe-edit" [attr.aria-label]="'Edit ' + item.material_name"
+                        pTooltip="Edit" tooltipPosition="top" (click)="openEditRow(i, matInput)"></button>
+                      <button pButton type="button" icon="pi pi-trash" [text]="true"
+                        class="p-button-text p-button-sm p-button-danger qe-delete"
+                        [attr.aria-label]="'Delete ' + item.material_name" pTooltip="Delete" tooltipPosition="top"
+                        (click)="deleteRow(i)"></button>
+                    </div>
+                  </td>
+                </tr>
+              </ng-template>
+
+              <ng-template pTemplate="footer">
+                <tr class="table-total-row">
+                  <td colspan="5" class="total-label-cell">
+                    <div class="total-label-wrapper">
+                      <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-calculator"></i></span>
+                      <span class="total-title">Total Quoted Net Amount</span>
+                      <span class="total-items-badge">({{ items().length }} {{ items().length === 1 ? 'item' : 'items' }})</span>
+                    </div>
+                  </td>
+                  <td class="total-amount-cell" style="min-width: 120px; text-align: right; white-space: nowrap;">
+                    <span class="total-amount-value" style="white-space: nowrap;">
+                      ₹&nbsp;{{ dialogTotalValue() | number:'1.2-2' }}
+                    </span>
+                  </td>
+                  <td style="width: 80px;"></td>
+                </tr>
+              </ng-template>
+            </p-table>
+          </div>
+          } @else {
+          <div class="empty-items" role="note">
+            <i class="pi pi-inbox" aria-hidden="true"></i>
+            <p>No materials added to this bid yet. Use the entry bar above to add items.</p>
+          </div>
+          }
+        </div>
+
+        <!-- ── 4. Documents & Attachments ───────────────────── -->
+        <div class="dlg-section">
+          <p class="dlg-section-label">
+            <i class="pi pi-paperclip"></i> 4. Bid Documents & Attachments
+            @if (attachments().length) {
+            <span class="attach-count">{{ attachments().length }} new file{{ attachments().length === 1 ? '' : 's' }}
+              selected</span>
+            }
+          </p>
+
+          <!-- Existing files when editing -->
+          @if (existingAttachments().length) {
+          <div class="existing-att-block">
+            <p class="existing-att-title">
+              <i class="pi pi-paperclip" aria-hidden="true"></i> Current Attachments ({{ existingAttachments().length }})
+            </p>
+            <div class="file-list">
+              @for (file of existingAttachments(); track file.id) {
+              <div class="file-chip existing-file-chip">
+                <i [class]="getFileIcon(file.content_type)" aria-hidden="true"></i>
+                <span class="file-chip-name" [title]="file.file_name">{{ file.file_name }}</span>
+                <span class="file-chip-size">{{ formatFileSize(file.file_size) }}</span>
+              </div>
+              }
+            </div>
+          </div>
+          }
+
+          <!-- Uploaded new files list -->
+          @if (attachments().length) {
+          <div class="file-list">
+            @for (file of attachments(); track $index) {
+            <div class="file-chip">
+              <i class="pi pi-paperclip" aria-hidden="true"></i>
+              <span class="file-chip-name" [title]="file.name">{{ file.name }}</span>
+              <span class="file-chip-size">{{ formatFileSize(file.size) }}</span>
+              <button type="button" class="remove-file" (click)="removeAttachment($index)"
+                [attr.aria-label]="'Remove ' + file.name">
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            }
+          </div>
+          }
+
+          <!-- Drop zone -->
+          <div class="file-drop-zone"
+            [class.file-drop-zone--compact]="attachments().length > 0 || existingAttachments().length > 0"
+            (click)="fileInput.click()" (keydown.enter)="fileInput.click()" tabindex="0" role="button"
+            aria-label="Upload bid documents">
+            <i class="pi pi-upload" aria-hidden="true"></i>
+            <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload bid documents' }}</span>
+            @if (!attachments().length && !existingAttachments().length) {
+            <span class="file-hint">PDF, Excel, Word — Technical bid, price schedule, compliance forms, EMD receipt</span>
+            }
+          </div>
+          <input #fileInput id="dlg-bid-attachment-input" type="file" multiple style="display: none;"
+            (change)="onFileSelected($event)" />
+        </div>
+
+        <!-- ── 5. Remarks Section ──────────────────────────── -->
+        <div class="dlg-section">
+          <p class="dlg-section-label"><i class="pi pi-comment"></i> 5. Submission Remarks & Special Notes</p>
+          <div class="field">
+            <textarea id="dlg-bid-remark" pTextarea formControlName="remark" rows="3"
+              placeholder="Enter special bid conditions, compliance notes, or comments…"
+              style="width: 100%; resize: vertical;"></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Dialog Footer Actions -->
+      <div class="dlg-footer">
+        <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="closeDialog()"
+          [disabled]="submitting()"></button>
+        <button pButton type="submit" label="Submit Bid Documents" icon="pi pi-check" class="submit-btn"
+          [loading]="submitting()"></button>
+      </div>
+    </form>
+  </p-dialog>
+
+</section>

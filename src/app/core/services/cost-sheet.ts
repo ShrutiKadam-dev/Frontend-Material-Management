@@ -22,6 +22,12 @@ export class CostSheetService {
     );
   }
 
+  getLatestByProject(projectId: number): Observable<CostSheet | CostSheet[]> {
+    return this.http.get<CostSheet | CostSheet[]>(
+      `${this.apiBaseUrl}/api/cost-sheet/latest?project_id=${projectId}`,
+    );
+  }
+
   getAll(): Observable<CostSheet[]> {
     return this.http.get<CostSheet[]>(`${this.apiBaseUrl}/api/cost-sheet`);
   }

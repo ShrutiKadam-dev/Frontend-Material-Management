@@ -1,0 +1,306 @@
+// Step 05 Customer Quotation styles inheriting from global step-common design system
+
+/* ── Full Width Step Layout ──────────────────────────────── */
+.step-layout--fullwidth {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.step-main--fullwidth {
+  width: 100%;
+}
+
+.header-partner-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-heading);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill, 20px);
+  padding: 6px 14px;
+
+  .pi {
+    color: var(--color-primary);
+    font-size: 0.82rem;
+  }
+}
+
+.create-cost-sheet-btn {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 0.86rem !important;
+  height: 38px !important;
+  padding: 0 16px !important;
+  box-shadow: 0 2px 4px rgba(225, 77, 63, 0.18) !important;
+
+  &:hover {
+    background: var(--color-primary-hover, #c7382b) !important;
+    border-color: var(--color-primary-hover, #c7382b) !important;
+  }
+}
+
+/* ── Version Cards History Stream ────────────────────────── */
+.version-cards-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.version-sheet-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card, 12px);
+  padding: 18px 22px;
+  box-shadow: 0 1px 4px rgba(36, 27, 24, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  transition: all 150ms ease;
+
+  &.empty-card {
+    padding: 40px 20px;
+  }
+}
+
+/* ── Card Header ────────────────────────────────────────── */
+.vsc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-bottom: 1px solid var(--color-border-soft);
+  padding-bottom: 14px;
+}
+
+.vsc-header-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.vsc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--color-primary-soft, #fbeae6);
+  color: var(--color-primary, #e14d3f);
+  border: 1px solid rgba(225, 77, 63, 0.2);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 3px 8px;
+
+  .pi {
+    font-size: 0.74rem;
+  }
+}
+
+.vsc-latest-pill {
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.vsc-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.vsc-title {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: var(--color-heading);
+  margin: 0;
+}
+
+.vsc-header-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.vsc-cost-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  border-radius: var(--radius-pill, 20px);
+  font-size: 0.92rem;
+  font-weight: 850;
+  padding: 4px 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  .pi {
+    font-size: 0.8rem;
+    color: #059669;
+  }
+}
+
+.vsc-count-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill, 20px);
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.export-action-btn {
+  border-color: var(--color-border) !important;
+  color: var(--color-heading) !important;
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  height: 32px !important;
+  padding: 0 12px !important;
+
+  &:hover {
+    background: var(--color-surface-muted) !important;
+    border-color: var(--color-primary) !important;
+    color: var(--color-primary) !important;
+  }
+}
+
+/* ── Card Body ──────────────────────────────────────────── */
+.vsc-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vsc-params-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: var(--color-surface-muted, #fdfbf9);
+  border: 1px solid var(--color-border-soft, #f2e9e4);
+  border-radius: var(--radius-control, 8px);
+  padding: 8px 12px;
+}
+
+.param-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 3px 8px;
+
+  .p-lbl {
+    color: var(--color-muted);
+    font-weight: 600;
+  }
+
+  .p-val {
+    color: var(--color-heading);
+    font-weight: 750;
+  }
+}
+
+.cost-items-table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+
+  .items-table-wrap {
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .p-datatable-table {
+    min-width: 800px;
+    width: 100%;
+  }
+
+  th,
+  td {
+    white-space: nowrap !important;
+  }
+}
+
+.num-cell {
+  text-align: right !important;
+  white-space: nowrap !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.item-desc-text {
+  color: var(--color-heading);
+  font-weight: 700;
+}
+
+.ref-badge {
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+
+/* ── Cost Sheet Auto-Sync Notice ────────────────────────── */
+.cost-sheet-sync-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-control, 8px);
+  padding: 10px 14px;
+  color: #166534;
+  font-size: 0.84rem;
+  margin-bottom: 14px;
+
+  .pi {
+    color: #16a34a;
+    font-size: 1rem;
+  }
+
+  strong {
+    color: #14532d;
+  }
+}
+
+.readonly-input {
+  background: var(--color-surface-muted) !important;
+  color: var(--color-muted) !important;
+  cursor: default !important;
+  font-weight: 600 !important;
+}

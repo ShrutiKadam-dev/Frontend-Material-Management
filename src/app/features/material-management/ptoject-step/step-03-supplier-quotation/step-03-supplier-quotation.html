@@ -14,23 +14,43 @@
       </div>
     </div>
     <div class="header-actions">
+      @if (supplier(); as s) {
+      <span class="header-partner-pill" pTooltip="Supplier Partner" tooltipPosition="bottom">
+        <i class="pi pi-building" aria-hidden="true"></i>
+        {{ s.name }}
+      </span>
+      } @else if (project()?.supplier_id) {
+      <span class="header-partner-pill" pTooltip="Supplier Partner" tooltipPosition="bottom">
+        <i class="pi pi-building" aria-hidden="true"></i>
+        {{ getSupplierName(project()?.supplier_id) }}
+      </span>
+      }
       <div class="header-step-pill" aria-hidden="true">
         Step <strong>03</strong> of 15
       </div>
+      <button
+        pButton
+        type="button"
+        icon="pi pi-plus"
+        label="New Supplier Quotation"
+        class="header-primary-btn"
+        (click)="openDialog()"
+      ></button>
     </div>
   </div>
 
-  <!-- ── 2-Column Split Layout (Main Left, Sidebar Right) ── -->
-  <div class="step-layout">
+  <!-- ── Full-Width Layout ────────────────────────────────── -->
+  <div class="step-layout--fullwidth">
 
-    <!-- ── Left Main Panel (Supplier Quotations Stream & Table) ── -->
-    <div class="step-main">
+    <!-- ── Main Panel (Supplier Quotations Stream & Table) ─── -->
+    <div class="step-main step-main--fullwidth">
       <div class="existing-card" aria-label="Received supplier quotations">
         <div class="card-title-row">
           <span class="card-icon" aria-hidden="true"><i class="pi pi-receipt"></i></span>
           <h2>Received Supplier Quotations</h2>
           @if (quotations().length > 0) {
-          <span class="card-count-badge">{{ quotations().length }} {{ quotations().length === 1 ? 'quotation' : 'quotations' }}</span>
+          <span class="card-count-badge">{{ quotations().length }} {{ quotations().length === 1 ? 'quotation' :
+            'quotations' }}</span>
           }
         </div>
 
@@ -69,23 +89,10 @@
               }
               @if (q.quotation_value) {
               <span class="qe-value">
-                <i class="pi pi-dollar" aria-hidden="true"></i>
                 {{ formatQuotationValue(q.quotation_value, q.currency_unit) }}
               </span>
               }
               <div class="qe-badges">
-                @if (q.incoterms) {
-                <span class="qe-badge">
-                  <i class="pi pi-globe" aria-hidden="true"></i>
-                  {{ q.incoterms }}
-                </span>
-                }
-                @if (q.validity) {
-                <span class="qe-badge">
-                  <i class="pi pi-clock" aria-hidden="true"></i>
-                  Validity: {{ q.validity }}
-                </span>
-                }
                 @if (q.attachments && q.attachments.length) {
                 <span class="qe-badge">
                   <i class="pi pi-paperclip" aria-hidden="true"></i>
@@ -103,14 +110,73 @@
                 <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
                   [attr.aria-label]="'Edit quotation ' + q.quotation_number" pTooltip="Edit quotation"
                   tooltipPosition="top" (click)="openEditDialog(q)"></button>
-                <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm qe-delete"
+                <button pButton type="button" icon="pi pi-trash"
+                  class="p-button-text p-button-danger p-button-sm qe-delete"
                   [attr.aria-label]="'Delete quotation ' + q.quotation_number" pTooltip="Delete quotation"
                   tooltipPosition="top" (click)="deleteQuotation(q.id)"></button>
               </div>
             </div>
 
+            <!-- Refined Metadata Parameter Chips Strip -->
+            <div class="vsc-params-strip">
+              @if (q.quotation_number) {
+              <div class="param-chip">
+                <i class="pi pi-tag" aria-hidden="true"></i>
+                <span class="p-lbl">Quote #:</span>
+                <span class="p-val">{{ q.quotation_number }}</span>
+              </div>
+              }
+              <div class="param-chip">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                <span class="p-lbl">Date:</span>
+                <span class="p-val">{{ q.quotation_date | date: 'dd MMM yyyy' }}</span>
+              </div>
+              @if (supplier(); as s) {
+              <div class="param-chip">
+                <i class="pi pi-building" aria-hidden="true"></i>
+                <span class="p-lbl">Supplier:</span>
+                <span class="p-val">{{ s.name }}</span>
+              </div>
+              } @else if (project()?.supplier_name) {
+              <div class="param-chip">
+                <i class="pi pi-building" aria-hidden="true"></i>
+                <span class="p-lbl">Supplier:</span>
+                <span class="p-val">{{ project()?.supplier_name }}</span>
+              </div>
+              }
+              @if (q.incoterms) {
+              <div class="param-chip">
+                <i class="pi pi-globe" aria-hidden="true"></i>
+                <span class="p-lbl">Incoterms:</span>
+                <span class="p-val">{{ q.incoterms }}</span>
+              </div>
+              }
+              @if (q.payment_terms) {
+              <div class="param-chip">
+                <i class="pi pi-credit-card" aria-hidden="true"></i>
+                <span class="p-lbl">Payment:</span>
+                <span class="p-val">{{ q.payment_terms }}</span>
+              </div>
+              }
+              @if (q.delivery_period) {
+              <div class="param-chip">
+                <i class="pi pi-truck" aria-hidden="true"></i>
+                <span class="p-lbl">Delivery:</span>
+                <span class="p-val">{{ q.delivery_period }}</span>
+              </div>
+              }
+              @if (q.validity) {
+              <div class="param-chip">
+                <i class="pi pi-clock" aria-hidden="true"></i>
+                <span class="p-lbl">Validity:</span>
+                <span class="p-val">{{ q.validity }}</span>
+              </div>
+              }
+            </div>
+
             <!-- Card Body Grid (Left: Materials Table, Right: Commercial Terms & Notes & Files) -->
-            <div class="qe-body" [class.qe-body--full-table]="!q.payment_terms && !q.delivery_period && !q.remark && (!q.attachments || !q.attachments.length)">
+            <div class="qe-body"
+              [class.qe-body--full-table]="!q.remark && (!q.attachments || !q.attachments.length)">
 
               <!-- Left Column: Materials Table (Main Content) -->
               @if (q.items && q.items.length) {
@@ -119,14 +185,9 @@
                   <i class="pi pi-box" aria-hidden="true"></i>
                   Quoted Materials ({{ q.items.length }})
                 </p>
-                <p-table
-                  [value]="q.items"
-                  [paginator]="q.items.length > 5"
-                  [rows]="5"
-                  [rowsPerPageOptions]="[5, 10, 20]"
-                  styleClass="p-datatable-sm items-table-wrap"
-                  aria-label="Quoted materials"
-                >
+                <p-table [value]="q.items" [paginator]="q.items.length > 5" [rows]="5"
+                  [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
+                  aria-label="Quoted materials">
                   <ng-template pTemplate="header">
                     <tr>
                       <th scope="col" style="width: 40px; text-align: center;">#</th>
@@ -153,14 +214,16 @@
                       </td>
                       <td style="text-align: right; font-variant-numeric: tabular-nums;">
                         @if (item.unit_price) {
-                        <span>{{ getQuotationCurrencySymbol(q.quotation_value, q) }} {{ item.unit_price | number:'1.2-2' }}</span>
+                        <span>{{ getQuotationCurrencySymbol(q.quotation_value, q) }} {{ item.unit_price | number:'1.2-2'
+                          }}</span>
                         } @else {
                         <span style="color: var(--color-muted);">—</span>
                         }
                       </td>
                       <td style="text-align: right; font-weight: 700; font-variant-numeric: tabular-nums;">
                         @if (calculateNet(item.quantity, item.unit_price) !== null) {
-                        <span>{{ getQuotationCurrencySymbol(q.quotation_value, q) }} {{ calculateNet(item.quantity, item.unit_price) | number:'1.2-2' }}</span>
+                        <span>{{ getQuotationCurrencySymbol(q.quotation_value, q) }} {{ calculateNet(item.quantity,
+                          item.unit_price) | number:'1.2-2' }}</span>
                         } @else {
                         <span style="color: var(--color-muted);">—</span>
                         }
@@ -176,7 +239,8 @@
                         </div>
                       </td>
                       <td class="total-amount-cell" style="width: 105px; text-align: right;">
-                        <span class="total-amount-value">{{ getQuotationCurrencySymbol(q.quotation_value, q) }} {{ calculateQuotationTotalNet(q.items) | number:'1.2-2' }}</span>
+                        <span class="total-amount-value">{{ getQuotationCurrencySymbol(q.quotation_value, q) }} {{
+                          calculateQuotationTotalNet(q.items) | number:'1.2-2' }}</span>
                       </td>
                     </tr>
                   </ng-template>
@@ -207,9 +271,12 @@
 
                 <!-- Remark -->
                 @if (q.remark) {
-                <div class="qe-remark">
-                  <i class="pi pi-comment" aria-hidden="true"></i>
-                  <span>{{ q.remark }}</span>
+                <div class="vsc-remark-box" style="margin-bottom: 8px;">
+                  <i class="pi pi-info-circle" aria-hidden="true"></i>
+                  <div class="vsc-remark-content">
+                    <span class="vsc-remark-label">Remarks:</span>
+                    <span class="vsc-remark-text">{{ q.remark }}</span>
+                  </div>
                 </div>
                 }
 
@@ -228,15 +295,9 @@
                         <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
                         <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
                       </div>
-                      <button
-                        type="button"
-                        class="qe-att-download"
-                        [attr.aria-label]="'Download ' + att.file_name"
-                        pTooltip="Download file"
-                        tooltipPosition="top"
-                        [disabled]="downloadingAttachmentId() === att.id"
-                        (click)="downloadAttachment(att)"
-                      >
+                      <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                        pTooltip="Download file" tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                        (click)="downloadAttachment(att)">
                         @if (downloadingAttachmentId() === att.id) {
                         <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
                         } @else {
@@ -260,60 +321,17 @@
       </div>
     </div>
 
-    <!-- ── Right Sidebar (Partner Info & Actions) ────────── -->
-    <aside class="step-sidebar" aria-label="Step summary and actions">
-      <div class="sidebar-panel">
-
-        <!-- Action Button -->
-        <div class="sidebar-actions">
-          <button pButton type="button" icon="pi pi-plus" label="New Supplier Quotation" (click)="openDialog()"
-            aria-haspopup="dialog"></button>
-        </div>
-
-        <!-- Supplier Tile -->
-        @if (supplier(); as s) {
-        <div class="sidebar-section">
-          <p class="sidebar-label">Partner</p>
-          <div class="sidebar-entity-box">
-            <div class="entity-icon-box" aria-hidden="true">
-              <i class="pi pi-building"></i>
-            </div>
-            <div class="entity-details">
-              <span class="entity-type">Supplier</span>
-              <strong class="entity-title" [title]="s.name">{{ s.name }}</strong>
-            </div>
-          </div>
-        </div>
-        }
-
-        <!-- Quick Summary Stats -->
-        <div class="sidebar-section">
-          <p class="sidebar-label">Overview</p>
-          <div class="sidebar-stats-grid">
-            <div class="sidebar-stat-card">
-              <span class="stat-num">{{ quotations().length }}</span>
-              <span class="stat-desc">{{ quotations().length === 1 ? 'Quotation' : 'Quotations' }}</span>
-            </div>
-            <div class="sidebar-stat-card">
-              <span class="stat-num">{{ totalItems() }}</span>
-              <span class="stat-desc">{{ totalItems() === 1 ? 'Total Item' : 'Total Items' }}</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </aside>
-
   </div>
 
 </section>
 
 <!-- ═══════════════════════════════════════════════════════
-     SUPPLIER QUOTATION DIALOG (Shared Add & Edit)
+     SUPPLIER QUOTATION DIALOG (Dynamic Form Config + Inline Rows)
      ═══════════════════════════════════════════════════════ -->
-<p-dialog [header]="editingQuotation() ? 'Edit Supplier Quotation' : 'New Supplier Quotation'" [visible]="dialogVisible()" (visibleChange)="dialogVisible.set($event)"
-  [modal]="true" [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '840px', maxWidth: '96vw' }"
-  [contentStyle]="{ padding: '0' }" styleClass="cq-dialog" appendTo="body" aria-labelledby="sq-dialog-title">
+<p-dialog [header]="editingQuotation() ? 'Edit Supplier Quotation' : 'New Supplier Quotation'"
+  [visible]="dialogVisible()" (visibleChange)="dialogVisible.set($event)" [modal]="true" [blockScroll]="true"
+  [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '1100px' }"
+  styleClass="cq-dialog cost-sheet-dialog" appendTo="body" aria-labelledby="sq-dialog-title">
 
   <form [formGroup]="headerForm" (ngSubmit)="submit()" novalidate id="sq-form">
 
@@ -327,125 +345,73 @@
 
     <div class="dlg-body">
 
-      <!-- ── 1. Config-Driven Quotation Details ───────────────── -->
+      <!-- ── 1. Declarative Header Form Grid ───────────── -->
       <div class="dlg-section">
-        <p class="dlg-section-label">Quotation Details</p>
+        <p class="dlg-section-label"><i class="pi pi-file-check"></i> 1. Quotation Details & Terms</p>
         <div class="dlg-grid">
           @for (field of formConfig; track field.key) {
-            <div class="field" [class.span-two]="field.colSpan === 2">
-              <label [for]="'dlg-sq-' + field.key">
-                {{ field.label }}
-                @if (field.required) {
-                  <span class="req" aria-hidden="true">*</span>
-                }
-              </label>
-
-              @switch (field.type) {
-                @case ('readonly') {
-                  <input
-                    [id]="'dlg-sq-' + field.key"
-                    pInputText
-                    type="text"
-                    [value]="field.readonlyValueFn ? field.readonlyValueFn() : ''"
-                    readonly
-                    [attr.aria-readonly]="true"
-                    class="readonly-input"
-                  />
-                }
-
-                @case ('date') {
-                  <p-datepicker
-                    [inputId]="'dlg-sq-' + field.key"
-                    [formControlName]="field.key"
-                    dateFormat="yy-mm-dd"
-                    [showIcon]="true"
-                    [fluid]="true"
-                    [placeholder]="field.placeholder || 'YYYY-MM-DD'"
-                    [invalid]="isFieldInvalid(field.key)"
-                    aria-required="true"
-                  />
-                }
-
-                @case ('currency-amount') {
-                  <div class="input-unit-group">
-                    @if (field.currencyKey) {
-                      <p-select
-                        [id]="'dlg-sq-' + field.currencyKey"
-                        [formControlName]="field.currencyKey"
-                        [options]="field.currencyOptions || currencyOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        [style]="{ width: '110px', flex: '0 0 110px' }"
-                        appendTo="body"
-                        aria-label="Currency"
-                      ></p-select>
-                    }
-                    <input
-                      [id]="'dlg-sq-' + field.key"
-                      pInputText
-                      [formControlName]="field.key"
-                      [placeholder]="field.placeholder || 'e.g. 15000.00'"
-                      style="flex: 1; min-width: 0;"
-                      [class.ng-invalid]="isFieldInvalid(field.key)"
-                    />
-                  </div>
-                }
-
-                @case ('validity-unit') {
-                  <div class="input-unit-group">
-                    <input
-                      [id]="'dlg-sq-' + field.key"
-                      pInputText
-                      [formControlName]="field.key"
-                      [placeholder]="field.placeholder || 'e.g. 60'"
-                      style="flex: 1; min-width: 0;"
-                      [class.ng-invalid]="isFieldInvalid(field.key)"
-                    />
-                    @if (field.unitKey) {
-                      <p-select
-                        [id]="'dlg-sq-' + field.unitKey"
-                        [formControlName]="field.unitKey"
-                        [options]="field.unitOptions || validityUnitOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        [style]="{ width: '120px', flex: '0 0 120px' }"
-                        appendTo="body"
-                        aria-label="Validity Unit"
-                      ></p-select>
-                    }
-                  </div>
-                }
-
-                @case ('select') {
-                  <p-select
-                    [id]="'dlg-sq-' + field.key"
-                    [formControlName]="field.key"
-                    [options]="field.options || []"
-                    optionLabel="label"
-                    optionValue="value"
-                    [placeholder]="field.placeholder || 'Select'"
-                    [fluid]="true"
-                    [style]="{ width: '100%', height: '40px' }"
-                    appendTo="body"
-                  ></p-select>
-                }
-
-                @default {
-                  <input
-                    [id]="'dlg-sq-' + field.key"
-                    pInputText
-                    [formControlName]="field.key"
-                    [placeholder]="field.placeholder || ''"
-                    style="width: 100%;"
-                    [class.ng-invalid]="isFieldInvalid(field.key)"
-                  />
-                }
+          <div class="field" [class.span-two]="field.colSpan === 2">
+            <label [for]="'dlg-sq-' + field.key">
+              {{ field.label }}
+              @if (field.required) {
+              <span class="req" aria-hidden="true">*</span>
               }
+            </label>
 
-              @if (isFieldInvalid(field.key)) {
-                <p class="field-error">{{ field.label }} is required.</p>
-              }
+            @switch (field.type) {
+            @case ('readonly') {
+            <input [id]="'dlg-sq-' + field.key" pInputText type="text"
+              [value]="field.readonlyValueFn ? field.readonlyValueFn() : (headerForm.get(field.key)?.value ?? '—')"
+              readonly [attr.aria-readonly]="true" class="readonly-input" />
+            }
+
+            @case ('date') {
+            <p-datepicker [inputId]="'dlg-sq-' + field.key" [formControlName]="field.key" dateFormat="yy-mm-dd"
+              [showIcon]="true" [fluid]="true" [placeholder]="field.placeholder || 'YYYY-MM-DD'"
+              [invalid]="isFieldInvalid(field.key)" [attr.aria-required]="field.required ? 'true' : null" />
+            }
+
+            @case ('currency-amount') {
+            <div class="input-unit-group">
+              <p-select [id]="'dlg-sq-' + (field.currencyKey || 'currency_unit')"
+                [formControlName]="field.currencyKey || 'currency_unit'" [options]="field.currencyOptions || []"
+                optionLabel="label" optionValue="value" [style]="{ width: '120px', flex: '0 0 120px' }"
+                appendTo="body" aria-label="Currency"></p-select>
+              <input [id]="'dlg-sq-' + field.key" pInputText [formControlName]="field.key"
+                [placeholder]="field.placeholder || '0.00'" style="flex: 1; min-width: 0;"
+                [class.ng-invalid]="isFieldInvalid(field.key)" />
             </div>
+            }
+
+            @case ('validity-unit') {
+            <div class="input-unit-group">
+              <input [id]="'dlg-sq-' + field.key" pInputText [formControlName]="field.key"
+                [placeholder]="field.placeholder || '30'" style="flex: 1; min-width: 0;"
+                [class.ng-invalid]="isFieldInvalid(field.key)" />
+              <p-select [id]="'dlg-sq-' + (field.unitKey || 'validity_unit')"
+                [formControlName]="field.unitKey || 'validity_unit'" [options]="field.unitOptions || []"
+                optionLabel="label" optionValue="value" [style]="{ width: '110px', flex: '0 0 110px' }"
+                appendTo="body" aria-label="Validity Unit"></p-select>
+            </div>
+            }
+
+            @case ('select') {
+            <p-select [id]="'dlg-sq-' + field.key" [formControlName]="field.key" [options]="field.options || []"
+              optionLabel="label" optionValue="value" [placeholder]="field.placeholder || 'Select'" [fluid]="true"
+              [style]="{ width: '100%', height: '40px' }" appendTo="body"></p-select>
+            }
+
+            @default {
+            <input [id]="'dlg-sq-' + field.key" pInputText [formControlName]="field.key"
+              [placeholder]="field.placeholder || ''" style="width: 100%;"
+              [class.ng-invalid]="isFieldInvalid(field.key)" />
+            }
+            }
+
+            @if (isFieldInvalid(field.key)) {
+            <p class="field-error">{{ field.label }} is required.</p>
+            }
+          </div>
           }
         </div>
       </div>
@@ -453,7 +419,7 @@
       <!-- ── 2. Material Items (Fast Entry + Paginator) ── -->
       <div class="dlg-section">
         <div class="dlg-section-header">
-          <p class="dlg-section-label">Material Items</p>
+          <p class="dlg-section-label"><i class="pi pi-box"></i> 2. Quoted Materials & Pricing</p>
           <span class="card-count-badge">{{ items().length }} {{ items().length === 1 ? 'item' : 'items' }}</span>
         </div>
 
@@ -462,58 +428,37 @@
           <div class="quick-add-grid">
             <div class="quick-field quick-field--name">
               <label for="dlg-sq-material-name">Material Name <span class="req">*</span></label>
-              <input
-                #matInput
-                id="dlg-sq-material-name"
-                pInputText
-                formControlName="material_name"
-                placeholder="e.g. High-Pressure Hydraulic Valve"
-                (keydown.enter)="$event.preventDefault(); qtyInput.focus()"
-              />
+              <input #matInput id="dlg-sq-material-name" pInputText formControlName="material_name"
+                placeholder="e.g. High-Pressure Hydraulic Valve" [class.ng-invalid]="isRowFieldInvalid('material_name')"
+                (keydown.enter)="$event.preventDefault(); qtyInput.focus()" />
+              @if (isRowFieldInvalid('material_name')) {
+              <p class="field-error">{{ getRowFieldError('material_name') }}</p>
+              }
             </div>
 
             <div class="quick-field quick-field--qty">
               <label for="dlg-sq-quantity">Qty <span class="req">*</span></label>
-              <input
-                #qtyInput
-                id="dlg-sq-quantity"
-                pInputText
-                formControlName="quantity"
-                placeholder="e.g. 10"
-                (keydown.enter)="$event.preventDefault(); priceInput.focus()"
-              />
+              <input #qtyInput id="dlg-sq-quantity" pInputText formControlName="quantity" placeholder="e.g. 10"
+                [class.ng-invalid]="isRowFieldInvalid('quantity')"
+                (keydown.enter)="$event.preventDefault(); priceInput.focus()" />
+              @if (isRowFieldInvalid('quantity')) {
+              <p class="field-error">{{ getRowFieldError('quantity') }}</p>
+              }
             </div>
 
             <div class="quick-field quick-field--price">
               <label for="dlg-sq-unit-price">Unit Price ({{ selectedCurrencySymbol() }})</label>
-              <input
-                #priceInput
-                id="dlg-sq-unit-price"
-                pInputText
-                formControlName="unit_price"
-                placeholder="e.g. 150.00"
-                (keydown.enter)="$event.preventDefault(); saveRow(matInput)"
-              />
+              <input #priceInput id="dlg-sq-unit-price" pInputText formControlName="unit_price"
+                placeholder="e.g. 150.00" (keydown.enter)="$event.preventDefault(); saveRow(matInput)" />
             </div>
 
             <div class="quick-add-actions">
-              <button
-                pButton
-                type="button"
-                [icon]="editingIndex() !== null ? 'pi pi-check' : 'pi pi-plus'"
-                [label]="editingIndex() !== null ? 'Update' : 'Add Item'"
-                class="quick-submit-btn"
-                (click)="saveRow(matInput)"
-              ></button>
+              <button pButton type="button" [icon]="editingIndex() !== null ? 'pi pi-check' : 'pi pi-plus'"
+                [label]="editingIndex() !== null ? 'Update' : 'Add Item'" class="quick-submit-btn"
+                (click)="saveRow(matInput)"></button>
               @if (editingIndex() !== null) {
-              <button
-                pButton
-                type="button"
-                icon="pi pi-times"
-                class="p-button-text p-button-secondary cancel-edit-btn"
-                pTooltip="Cancel edit"
-                (click)="cancelRow()"
-              ></button>
+              <button pButton type="button" icon="pi pi-times" class="p-button-text p-button-secondary cancel-edit-btn"
+                pTooltip="Cancel edit" (click)="cancelRow()"></button>
               }
             </div>
           </div>
@@ -521,14 +466,8 @@
 
         <!-- Items Table with Pagination -->
         @if (items().length > 0) {
-        <p-table
-          [value]="items()"
-          [paginator]="items().length > 5"
-          [rows]="5"
-          [rowsPerPageOptions]="[5, 10, 20]"
-          styleClass="p-datatable-sm items-table-wrap"
-          aria-label="Quotation items list"
-        >
+        <p-table [value]="items()" [paginator]="items().length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
+          styleClass="p-datatable-sm items-table-wrap" aria-label="Quotation items list">
           <ng-template pTemplate="header">
             <tr>
               <th scope="col" style="width: 40px; text-align: center;">#</th>
@@ -563,35 +502,21 @@
               </td>
               <td style="text-align: right; font-weight: 700; font-variant-numeric: tabular-nums;">
                 @if (calculateNet(item.quantity, item.unit_price) !== null) {
-                <span>{{ selectedCurrencySymbol() }} {{ calculateNet(item.quantity, item.unit_price) | number:'1.2-2' }}</span>
+                <span>{{ selectedCurrencySymbol() }} {{ calculateNet(item.quantity, item.unit_price) | number:'1.2-2'
+                  }}</span>
                 } @else {
                 <span style="color: var(--color-muted);">—</span>
                 }
               </td>
               <td style="text-align: right; width: 80px; white-space: nowrap;">
                 <div class="actions-cell">
-                  <button
-                    pButton
-                    type="button"
-                    icon="pi pi-pencil"
-                    [text]="true"
-                    class="p-button-text p-button-sm qe-edit"
-                    [attr.aria-label]="'Edit ' + item.material_name"
-                    pTooltip="Edit"
-                    tooltipPosition="top"
-                    (click)="openEditRow(i, matInput)"
-                  ></button>
-                  <button
-                    pButton
-                    type="button"
-                    icon="pi pi-trash"
-                    [text]="true"
+                  <button pButton type="button" icon="pi pi-pencil" [text]="true"
+                    class="p-button-text p-button-sm qe-edit" [attr.aria-label]="'Edit ' + item.material_name"
+                    pTooltip="Edit" tooltipPosition="top" (click)="openEditRow(i, matInput)"></button>
+                  <button pButton type="button" icon="pi pi-trash" [text]="true"
                     class="p-button-text p-button-sm p-button-danger qe-delete"
-                    [attr.aria-label]="'Delete ' + item.material_name"
-                    pTooltip="Delete"
-                    tooltipPosition="top"
-                    (click)="deleteRow(i)"
-                  ></button>
+                    [attr.aria-label]="'Delete ' + item.material_name" pTooltip="Delete" tooltipPosition="top"
+                    (click)="deleteRow(i)"></button>
                 </div>
               </td>
             </tr>
@@ -603,12 +528,14 @@
                   <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-calculator"></i></span>
                   <span class="total-title">Total Net Amount</span>
                   @if (items().length > 0) {
-                  <span class="total-items-badge">{{ items().length }} {{ items().length === 1 ? 'item' : 'items' }}</span>
+                  <span class="total-items-badge">{{ items().length }} {{ items().length === 1 ? 'item' : 'items'
+                    }}</span>
                   }
                 </div>
               </td>
               <td class="total-amount-cell" style="width: 120px; text-align: right;">
-                <span class="total-amount-value">{{ selectedCurrencySymbol() }} {{ totalNetAmount() | number:'1.2-2' }}</span>
+                <span class="total-amount-value">{{ selectedCurrencySymbol() }} {{ totalNetAmount() | number:'1.2-2'
+                  }}</span>
               </td>
               <td class="total-empty-cell" style="width: 80px;"></td>
             </tr>
@@ -625,9 +552,11 @@
       <!-- ── 3. Attachments ──────────────────────────────── -->
       <div class="dlg-section">
         <p class="dlg-section-label">
-          Attachments
+          <i class="pi pi-paperclip"></i>
+          3. Supplier Quotation Documents
           @if (attachments().length) {
-          <span class="attach-count">{{ attachments().length }} new file{{ attachments().length === 1 ? '' : 's' }} selected</span>
+          <span class="attach-count">({{ attachments().length }} new file{{ attachments().length === 1 ? '' : 's' }}
+            selected)</span>
           }
         </p>
 
@@ -666,10 +595,12 @@
         }
 
         <!-- Drop zone -->
-        <label class="file-drop-zone" [class.file-drop-zone--compact]="attachments().length > 0 || existingAttachments().length > 0"
+        <label class="file-drop-zone"
+          [class.file-drop-zone--compact]="attachments().length > 0 || existingAttachments().length > 0"
           for="dlg-sq-attachment-input" tabindex="0" role="button" aria-label="Upload quotation attachments">
           <i class="pi pi-upload" aria-hidden="true"></i>
-          <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload quotation files' }}</span>
+          <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload
+            quotation files' }}</span>
           @if (!attachments().length && !existingAttachments().length) {
           <span class="file-hint">PDF, Excel, Images — official quotation documents</span>
           }
@@ -680,11 +611,12 @@
 
       <!-- ── 4. Remarks ─────────────────────────────────── -->
       <div class="dlg-section">
-        <p class="dlg-section-label">Remark</p>
+        <p class="dlg-section-label"><i class="pi pi-comment"></i> 4. Notes & Remarks</p>
         <div class="field">
           <label for="dlg-sq-remark" class="visually-hidden">Remark</label>
           <textarea id="dlg-sq-remark" pTextarea formControlName="remark" rows="3"
-            placeholder="Prices include standard 1-year operational warranty, etc…" style="width: 100%; resize: vertical;"></textarea>
+            placeholder="Prices include standard 1-year operational warranty, etc…"
+            style="width: 100%; resize: vertical;"></textarea>
         </div>
       </div>
 
