@@ -25,6 +25,10 @@ export interface BidSubmission {
   payment_terms?: string;
   warranty_period?: string;
   submission_date: string;
+  gst_rate?: number;
+  gst_amount?: number;
+  total_net_amount?: number;
+  total_amount?: number;
   status?: string;
   remark?: string;
   attachments?: Attachment[];
@@ -45,6 +49,10 @@ export interface BidSubmissionCreateInput {
   payment_terms?: string;
   warranty_period?: string;
   submission_date: string;
+  gst_rate?: number;
+  gst_amount?: number;
+  total_net_amount?: number;
+  total_amount?: number;
   remark?: string;
   items: BidSubmissionItem[];
 }
@@ -61,6 +69,10 @@ export interface BidSubmissionUpdateInput {
   payment_terms?: string;
   warranty_period?: string;
   submission_date?: string;
+  gst_rate?: number;
+  gst_amount?: number;
+  total_net_amount?: number;
+  total_amount?: number;
   remark?: string;
   items?: BidSubmissionItem[];
 }

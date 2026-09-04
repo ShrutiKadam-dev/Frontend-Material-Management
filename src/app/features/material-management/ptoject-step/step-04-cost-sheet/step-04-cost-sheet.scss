@@ -214,46 +214,7 @@
   gap: 12px;
 }
 
-.vsc-params-strip {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  background: var(--color-surface-muted, #fdfbf9);
-  border: 1px solid var(--color-border-soft, #f2e9e4);
-  border-radius: var(--radius-control, 8px);
-  padding: 8px 12px;
-}
 
-.param-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.76rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 3px 8px;
-
-  .p-lbl {
-    color: var(--color-muted);
-    font-weight: 600;
-  }
-
-  .p-val {
-    color: var(--color-heading);
-    font-weight: 750;
-  }
-
-  &--highlight {
-    background: var(--color-primary-soft);
-    border-color: rgba(225, 77, 63, 0.3);
-
-    .p-val {
-      color: var(--color-primary);
-    }
-  }
-}
 
 .price-change-alert-box {
   background: rgba(225, 77, 63, 0.06);

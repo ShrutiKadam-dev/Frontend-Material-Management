@@ -6,6 +6,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
@@ -109,6 +110,7 @@ export class Step07BidDocuments implements OnInit {
     delivery_period: [''],
     payment_terms: [''],
     warranty_period: [''],
+    gst_rate: [18 as number | null, [Validators.min(0), Validators.max(100)]],
     remark: [''],
   });
 
@@ -118,6 +120,12 @@ export class Step07BidDocuments implements OnInit {
     quantity: ['', [Validators.required, Validators.pattern(/^[0-9]+(\.[0-9]+)?$/)]],
     unit_price: ['', [Validators.pattern(/^[0-9]+(\.[0-9]+)?$/)]],
   });
+
+  /* ── Reactive Parameter Signal ─────────────────────────── */
+  private readonly headerFormSignal = toSignal(
+    this.headerForm.valueChanges,
+    { initialValue: this.headerForm.getRawValue() }
+  );
 
   /* ── Derived Summaries ─────────────────────────────────── */
   protected readonly filteredSubmissions = computed(() => {
@@ -138,23 +146,37 @@ export class Step07BidDocuments implements OnInit {
   });
 
   protected readonly totalBidValue = computed(() => {
-    return this.submissions().reduce((total, s) => {
-      const subTotal = (s.items || []).reduce((sum, item) => {
-        const qty = Number(item.quantity) || 0;
-        const price = Number(item.unit_price) || 0;
-        return sum + qty * price;
-      }, 0);
-      return total + subTotal;
-    }, 0);
+    return this.submissions().reduce((total, s) => total + this.calculateSubmissionGross(s), 0);
   });
 
-  protected readonly dialogTotalValue = computed(() => {
+  /** Total Net Amount of items in Dialog (Excluding GST) */
+  protected readonly dialogTotalNetValue = computed(() => {
     return this.items().reduce((sum, item) => {
       const qty = Number(item.quantity) || 0;
       const price = Number(item.unit_price) || 0;
       return sum + qty * price;
     }, 0);
   });
+
+  /** GST Rate (%) currently set in dialog form */
+  protected readonly dialogGstRate = computed(() => {
+    const formVal = this.headerFormSignal();
+    const val = formVal ? formVal.gst_rate : this.headerForm.get('gst_rate')?.value;
+    return val !== null && val !== undefined && !isNaN(Number(val)) ? Number(val) : 0;
+  });
+
+  /** GST Amount (₹) in Dialog */
+  protected readonly dialogGstAmount = computed(() => {
+    return (this.dialogTotalNetValue() * this.dialogGstRate()) / 100;
+  });
+
+  /** Total Bid Amount (₹) in Dialog (Including GST) */
+  protected readonly dialogTotalGrossValue = computed(() => {
+    return this.dialogTotalNetValue() + this.dialogGstAmount();
+  });
+
+  /** Total Net Amount alias for backward compatibility */
+  protected readonly dialogTotalValue = this.dialogTotalNetValue;
 
   /* ── Lifecycle ─────────────────────────────────────────── */
   ngOnInit(): void {
@@ -252,6 +274,7 @@ export class Step07BidDocuments implements OnInit {
       delivery_period: tender?.delivery_period || '',
       payment_terms: tender?.payment_terms || '',
       warranty_period: tender?.warranty_period || '',
+      gst_rate: 18,
       remark: '',
     });
 
@@ -280,6 +303,7 @@ export class Step07BidDocuments implements OnInit {
       delivery_period: sub.delivery_period || '',
       payment_terms: sub.payment_terms || '',
       warranty_period: sub.warranty_period || '',
+      gst_rate: sub.gst_rate !== undefined && sub.gst_rate !== null ? Number(sub.gst_rate) : 18,
       remark: sub.remark || '',
     });
 
@@ -455,6 +479,16 @@ export class Step07BidDocuments implements OnInit {
       ? `${f.validity_amount.trim()} ${f.validity_unit || 'Days'}`
       : undefined;
 
+    const totalNet = this.dialogTotalNetValue();
+    const gstRate = this.dialogGstRate();
+    const gstAmount = this.dialogGstAmount();
+    const totalGross = this.dialogTotalGrossValue();
+
+    const mappedItems: BidSubmissionItem[] = this.items().map((it) => ({
+      ...it,
+      net_amount: this.calculateItemNet(it),
+    }));
+
     if (currentSub) {
       const payload: BidSubmissionUpdateInput = {
         customer_id: f.customer_id || this.project()?.customer_id || 0,
@@ -467,8 +501,12 @@ export class Step07BidDocuments implements OnInit {
         delivery_period: f.delivery_period || undefined,
         payment_terms: f.payment_terms || undefined,
         warranty_period: f.warranty_period || undefined,
+        gst_rate: gstRate,
+        gst_amount: Number(gstAmount.toFixed(2)),
+        total_net_amount: Number(totalNet.toFixed(2)),
+        total_amount: Number(totalGross.toFixed(2)),
         remark: f.remark?.trim() || undefined,
-        items: this.items(),
+        items: mappedItems,
       };
 
       this.bidSubmissionService
@@ -503,8 +541,12 @@ export class Step07BidDocuments implements OnInit {
         delivery_period: f.delivery_period || undefined,
         payment_terms: f.payment_terms || undefined,
         warranty_period: f.warranty_period || undefined,
+        gst_rate: gstRate,
+        gst_amount: Number(gstAmount.toFixed(2)),
+        total_net_amount: Number(totalNet.toFixed(2)),
+        total_amount: Number(totalGross.toFixed(2)),
         remark: f.remark?.trim() || undefined,
-        items: this.items(),
+        items: mappedItems,
       };
 
       this.bidSubmissionService
@@ -594,8 +636,38 @@ export class Step07BidDocuments implements OnInit {
     return qty * price;
   }
 
+  protected calculateSubmissionNet(s: BidSubmission): number {
+    if (s.total_net_amount !== undefined && s.total_net_amount !== null && !isNaN(Number(s.total_net_amount))) {
+      return Number(s.total_net_amount);
+    }
+    return (s.items || []).reduce((acc, it) => acc + (this.calculateItemNet(it) || 0), 0);
+  }
+
+  protected getSubmissionGstRate(s: BidSubmission): number {
+    if (s.gst_rate !== undefined && s.gst_rate !== null && !isNaN(Number(s.gst_rate))) {
+      return Number(s.gst_rate);
+    }
+    return 18;
+  }
+
+  protected calculateSubmissionGst(s: BidSubmission): number {
+    if (s.gst_amount !== undefined && s.gst_amount !== null && !isNaN(Number(s.gst_amount))) {
+      return Number(s.gst_amount);
+    }
+    const net = this.calculateSubmissionNet(s);
+    const rate = this.getSubmissionGstRate(s);
+    return (net * rate) / 100;
+  }
+
+  protected calculateSubmissionGross(s: BidSubmission): number {
+    if (s.total_amount !== undefined && s.total_amount !== null && !isNaN(Number(s.total_amount))) {
+      return Number(s.total_amount);
+    }
+    return this.calculateSubmissionNet(s) + this.calculateSubmissionGst(s);
+  }
+
   protected calculateSubmissionTotal(sub: BidSubmission): number {
-    return (sub.items || []).reduce((acc, it) => acc + (this.calculateItemNet(it) || 0), 0);
+    return this.calculateSubmissionGross(sub);
   }
 
   protected parseValidityHelper(raw?: string | null): { value: string; unit: string } {
@@ -603,6 +675,6 @@ export class Step07BidDocuments implements OnInit {
   }
 
   protected goBack(): void {
-    this.router.navigate(['/projects', this.projectId(), 'timeline']);
+    this.router.navigate(['/projects', this.projectId(), 'steps']);
   }
 }
