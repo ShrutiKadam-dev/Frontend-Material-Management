@@ -24,16 +24,7 @@ export class PurchaseOrderService {
       )
       .pipe(
         map((res) => (Array.isArray(res) ? res : res?.data || [])),
-        catchError(() =>
-          this.http
-            .get<PurchaseOrder[] | { data: PurchaseOrder[] }>(
-              `${this.apiBaseUrl}/api/v1/purchase-orders?project_id=${projectId}`,
-            )
-            .pipe(
-              map((res) => (Array.isArray(res) ? res : res?.data || [])),
-              catchError(() => of([])),
-            ),
-        ),
+        catchError(() => of([])),
       );
   }
 
@@ -71,7 +62,7 @@ export class PurchaseOrderService {
 
   getById(id: number): Observable<PurchaseOrder> {
     return this.http.get<PurchaseOrder>(
-      `${this.apiBaseUrl}/api/v1/purchase-order/${id}`,
+      `${this.apiBaseUrl}/api/v1/purchase-orders/${id}`,
     );
   }
 
@@ -79,19 +70,12 @@ export class PurchaseOrderService {
     payload: PurchaseOrderCreateInput,
     files: File[] = [],
   ): Observable<PurchaseOrder> {
-    if (files.length > 0) {
-      const fd = new FormData();
-      fd.append('data', JSON.stringify(payload));
-      files.forEach((file) => fd.append('file', file, file.name));
-      return this.http.post<PurchaseOrder>(
-        `${this.apiBaseUrl}/api/v1/purchase-orders`,
-        fd,
-      );
-    }
-
+    const fd = new FormData();
+    fd.append('data', JSON.stringify(payload));
+    files.forEach((file) => fd.append('file', file, file.name));
     return this.http.post<PurchaseOrder>(
-      `${this.apiBaseUrl}/api/v1/purchase-order`,
-      payload,
+      `${this.apiBaseUrl}/api/v1/purchase-orders`,
+      fd,
     );
   }
 
@@ -100,25 +84,18 @@ export class PurchaseOrderService {
     payload: PurchaseOrderUpdateInput,
     files: File[] = [],
   ): Observable<PurchaseOrder> {
-    if (files.length > 0) {
-      const fd = new FormData();
-      fd.append('data', JSON.stringify(payload));
-      files.forEach((file) => fd.append('file', file, file.name));
-      return this.http.patch<PurchaseOrder>(
-        `${this.apiBaseUrl}/api/v1/purchase-order/${id}`,
-        fd,
-      );
-    }
-
+    const fd = new FormData();
+    fd.append('data', JSON.stringify(payload));
+    files.forEach((file) => fd.append('file', file, file.name));
     return this.http.patch<PurchaseOrder>(
-      `${this.apiBaseUrl}/api/v1/purchase-order/${id}`,
-      payload,
+      `${this.apiBaseUrl}/api/v1/purchase-orders/${id}`,
+      fd,
     );
   }
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(
-      `${this.apiBaseUrl}/api/v1/purchase-order/${id}`,
+      `${this.apiBaseUrl}/api/v1/purchase-orders/${id}`,
     );
   }
 }

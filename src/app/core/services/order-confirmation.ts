@@ -24,25 +24,7 @@ export class OrderConfirmationService {
       )
       .pipe(
         map((res) => (Array.isArray(res) ? res : res?.data || [])),
-        catchError(() =>
-          this.http
-            .get<OrderConfirmation[] | { data: OrderConfirmation[] }>(
-              `${this.apiBaseUrl}/api/v1/order-confirmation?project_id=${projectId}`,
-            )
-            .pipe(
-              map((res) => (Array.isArray(res) ? res : res?.data || [])),
-              catchError(() =>
-                this.http
-                  .get<OrderConfirmation[] | { data: OrderConfirmation[] }>(
-                    `${this.apiBaseUrl}/api/v1/purchase-orders?project_id=${projectId}`,
-                  )
-                  .pipe(
-                    map((res) => (Array.isArray(res) ? res : res?.data || [])),
-                    catchError(() => of([])),
-                  ),
-              ),
-            ),
-        ),
+        catchError(() => of([])),
       );
   }
 
@@ -70,7 +52,6 @@ export class OrderConfirmationService {
                 unit_price: it.unit_price || 0,
                 net_amount: it.net_amount || (Number(it.quantity || 0) * Number(it.unit_price || 0)),
                 hsn_code: it.hsn_code || it.hsn_sac || '',
-                hsn_sac: it.hsn_sac || it.hsn_code || '',
               }))
               : [],
           };
@@ -82,12 +63,6 @@ export class OrderConfirmationService {
   getById(id: number): Observable<OrderConfirmation> {
     return this.http.get<OrderConfirmation>(
       `${this.apiBaseUrl}/api/v1/order-confirmations/${id}`,
-    ).pipe(
-      catchError(() =>
-        this.http.get<OrderConfirmation>(
-          `${this.apiBaseUrl}/api/v1/purchase-order/${id}`,
-        ),
-      ),
     );
   }
 
@@ -95,33 +70,12 @@ export class OrderConfirmationService {
     payload: OrderConfirmationCreateInput,
     files: File[] = [],
   ): Observable<OrderConfirmation> {
-    if (files.length > 0) {
-      const fd = new FormData();
-      fd.append('data', JSON.stringify(payload));
-      files.forEach((file) => fd.append('file', file, file.name));
-      return this.http.post<OrderConfirmation>(
-        `${this.apiBaseUrl}/api/v1/order-confirmations`,
-        fd,
-      ).pipe(
-        catchError(() =>
-          this.http.post<OrderConfirmation>(
-            `${this.apiBaseUrl}/api/v1/purchase-orders`,
-            fd,
-          ),
-        ),
-      );
-    }
-
+    const fd = new FormData();
+    fd.append('data', JSON.stringify(payload));
+    files.forEach((file) => fd.append('file', file, file.name));
     return this.http.post<OrderConfirmation>(
       `${this.apiBaseUrl}/api/v1/order-confirmations`,
-      payload,
-    ).pipe(
-      catchError(() =>
-        this.http.post<OrderConfirmation>(
-          `${this.apiBaseUrl}/api/v1/purchase-order`,
-          payload,
-        ),
-      ),
+      fd,
     );
   }
 
@@ -130,45 +84,18 @@ export class OrderConfirmationService {
     payload: OrderConfirmationUpdateInput,
     files: File[] = [],
   ): Observable<OrderConfirmation> {
-    if (files.length > 0) {
-      const fd = new FormData();
-      fd.append('data', JSON.stringify(payload));
-      files.forEach((file) => fd.append('file', file, file.name));
-      return this.http.patch<OrderConfirmation>(
-        `${this.apiBaseUrl}/api/v1/order-confirmations/${id}`,
-        fd,
-      ).pipe(
-        catchError(() =>
-          this.http.patch<OrderConfirmation>(
-            `${this.apiBaseUrl}/api/v1/purchase-order/${id}`,
-            fd,
-          ),
-        ),
-      );
-    }
-
+    const fd = new FormData();
+    fd.append('data', JSON.stringify(payload));
+    files.forEach((file) => fd.append('file', file, file.name));
     return this.http.patch<OrderConfirmation>(
       `${this.apiBaseUrl}/api/v1/order-confirmations/${id}`,
-      payload,
-    ).pipe(
-      catchError(() =>
-        this.http.patch<OrderConfirmation>(
-          `${this.apiBaseUrl}/api/v1/purchase-order/${id}`,
-          payload,
-        ),
-      ),
+      fd,
     );
   }
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(
       `${this.apiBaseUrl}/api/v1/order-confirmations/${id}`,
-    ).pipe(
-      catchError(() =>
-        this.http.delete<void>(
-          `${this.apiBaseUrl}/api/v1/purchase-order/${id}`,
-        ),
-      ),
     );
   }
 }

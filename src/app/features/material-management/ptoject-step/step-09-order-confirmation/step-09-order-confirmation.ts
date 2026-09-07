@@ -178,11 +178,11 @@ export class Step09OrderConfirmation implements OnInit {
         if (proj?.customer_id) {
           this.customerService.getCustomerById(proj.customer_id).subscribe({
             next: (cust) => this.customer.set(cust),
-            error: () => {/* non-fatal */},
+            error: () => {/* non-fatal */ },
           });
         }
       },
-      error: () => {/* non-fatal */},
+      error: () => {/* non-fatal */ },
     });
   }
 
@@ -208,7 +208,7 @@ export class Step09OrderConfirmation implements OnInit {
         next: (data) => {
           this.latestQuotation.set(data);
         },
-        error: () => {/* non-fatal */},
+        error: () => {/* non-fatal */ },
       });
   }
 
@@ -223,12 +223,11 @@ export class Step09OrderConfirmation implements OnInit {
       const name = it.material_name || it.description || 'Material Item';
       const qty = it.quantity || 1;
       const price = it.unit_price || 0;
-      const hsn = it.hsn_code || it.hsn_sac || '';
+      const hsn = it.hsn_code || '';
       return {
         material_name: name,
         description: name,
         hsn_code: hsn,
-        hsn_sac: hsn,
         quantity: qty,
         unit_price: price,
         net_amount: Number(qty) * Number(price),
@@ -277,7 +276,6 @@ export class Step09OrderConfirmation implements OnInit {
       material_name: it.material_name || it.description || '',
       description: it.description || it.material_name || '',
       hsn_code: it.hsn_code || it.hsn_sac || '',
-      hsn_sac: it.hsn_sac || it.hsn_code || '',
       quantity: it.quantity,
       unit_price: it.unit_price || 0,
       net_amount: Number(it.quantity) * Number(it.unit_price || 0),
@@ -331,7 +329,6 @@ export class Step09OrderConfirmation implements OnInit {
       material_name: name,
       description: name,
       hsn_code: hsn,
-      hsn_sac: hsn,
       quantity: qty,
       unit_price: unitPrice,
       net_amount: net,
@@ -436,7 +433,6 @@ export class Step09OrderConfirmation implements OnInit {
       material_name: it.material_name || it.description || '',
       description: it.description || it.material_name || '',
       hsn_code: it.hsn_code || it.hsn_sac || '',
-      hsn_sac: it.hsn_sac || it.hsn_code || '',
       quantity: Number(it.quantity),
       unit_price: Number(it.unit_price || 0),
       net_amount: Number(it.quantity) * Number(it.unit_price || 0),
