@@ -4,6 +4,7 @@ import { catchError, map, Observable, of } from 'rxjs';
 
 import { API_BASE_URL } from '../tokens/api-base-url.token';
 import {
+  LatestOrderConfirmation,
   LatestSupplierQuotation,
   OrderConfirmation,
   OrderConfirmationCreateInput,
@@ -43,6 +44,39 @@ export class OrderConfirmationService {
             shipping_terms: data.shipping_terms || data.incoterms || '',
             payment_terms: data.payment_terms || '',
             warranty_period: data.warranty_period || '',
+            delivery_period: data.delivery_period || '',
+            items: Array.isArray(data.items)
+              ? data.items.map((it: any) => ({
+                material_name: it.material_name || it.description || '',
+                description: it.description || it.material_name || '',
+                quantity: it.quantity || 0,
+                unit_price: it.unit_price || 0,
+                net_amount: it.net_amount || (Number(it.quantity || 0) * Number(it.unit_price || 0)),
+                hsn_code: it.hsn_code || it.hsn_sac || '',
+              }))
+              : [],
+          };
+        }),
+        catchError(() => of(null)),
+      );
+  }
+
+  getLatestOrderConfirmation(projectId?: number): Observable<LatestOrderConfirmation | null> {
+    const query = projectId ? `?project_id=${projectId}` : '';
+    return this.http
+      .get<LatestOrderConfirmation | { data: LatestOrderConfirmation }>(
+        `${this.apiBaseUrl}/api/v1/order-confirmations/latest${query}`,
+      )
+      .pipe(
+        map((res: any) => {
+          if (!res) return null;
+          const data = res.data || res;
+          return {
+            payment_terms: data.payment_terms || '',
+            warranty_period: data.warranty_period || '',
+            shipping_terms: data.shipping_terms || data.delivery_terms || data.incoterms || '',
+            delivery_terms: data.delivery_terms || data.shipping_terms || data.incoterms || '',
+            incoterms: data.incoterms || data.shipping_terms || data.delivery_terms || '',
             delivery_period: data.delivery_period || '',
             items: Array.isArray(data.items)
               ? data.items.map((it: any) => ({

@@ -30,6 +30,24 @@ export interface LatestSupplierQuotation {
   }>;
 }
 
+export interface LatestOrderConfirmation {
+  payment_terms?: string;
+  warranty_period?: string;
+  shipping_terms?: string;
+  incoterms?: string;
+  delivery_period?: string;
+  delivery_terms?: string;
+  items?: Array<{
+    material_name?: string;
+    description?: string;
+    quantity?: number | string;
+    unit_price?: number | string;
+    hsn_code?: string;
+    hsn_sac?: string;
+    net_amount?: number | string;
+  }>;
+}
+
 export interface OrderConfirmation {
   id: number;
   project_id: number;

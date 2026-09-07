@@ -103,6 +103,13 @@ export const routes: Routes = [
           ).then((m) => m.Step09OrderConfirmation),
       },
       {
+        path: 'projects/:projectId/steps/10',
+        loadComponent: () =>
+          import(
+            './features/material-management/ptoject-step/step-10-supplier-invoice/step-10-supplier-invoice'
+          ).then((m) => m.Step10SupplierInvoice),
+      },
+      {
         path: 'customers',
         loadComponent: () =>
           import('./features/material-management/customer/customer').then((m) => m.Customer),
