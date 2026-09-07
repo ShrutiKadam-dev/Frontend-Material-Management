@@ -482,7 +482,8 @@
                             <button pButton type="button"
                                 [icon]="editingItemIndex() !== null ? 'pi pi-check' : 'pi pi-plus'"
                                 [label]="editingItemIndex() !== null ? 'Update' : 'Add'"
-                                class="p-button-sm quick-submit-btn" (click)="saveItem()"></button>
+                                class="p-button-sm quick-submit-btn" (click)="saveItem()"
+                                [disabled]="itemForm.invalid"></button>
                             @if (editingItemIndex() !== null) {
                             <button pButton type="button" icon="pi pi-times"
                                 class="p-button-text p-button-sm cancel-edit-btn" pTooltip="Cancel edit"
@@ -625,7 +626,8 @@
             <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="closeDialog()"
                 [disabled]="submitting()"></button>
             <button pButton type="button" label="Save Cost Sheet" icon="pi pi-check" class="submit-btn"
-                (click)="submit()" [loading]="submitting()" [disabled]="items().length === 0"></button>
+                (click)="submit()" [loading]="submitting()"
+                [disabled]="submitting() || globalParamsForm.invalid || items().length === 0"></button>
         </div>
     </p-dialog>
 

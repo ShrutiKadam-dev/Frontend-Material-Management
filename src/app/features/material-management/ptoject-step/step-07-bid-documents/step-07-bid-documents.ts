@@ -200,11 +200,11 @@ export class Step07BidDocuments implements OnInit {
         if (proj?.customer_id) {
           this.customerService.getCustomerById(proj.customer_id).subscribe({
             next: (cust) => this.customer.set(cust),
-            error: () => {/* non-fatal */},
+            error: () => {/* non-fatal */ },
           });
         }
       },
-      error: () => {/* non-fatal */},
+      error: () => {/* non-fatal */ },
     });
   }
 
@@ -229,18 +229,13 @@ export class Step07BidDocuments implements OnInit {
       .getLatestByProject(projectId)
       .pipe(finalize(() => this.loadingTender.set(false)))
       .subscribe({
-        next: (res) => {
-          const tender = Array.isArray(res) ? res[0] : res;
+        next: (res: any) => {
+          const data = res?.data || res;
+          const tender = Array.isArray(data) ? data[0] : data;
           this.latestTender.set(tender || null);
         },
         error: () => {
-          // Fallback to getByProject
-          this.customerTenderService.getByProject(projectId).subscribe({
-            next: (tenders) => {
-              this.latestTender.set(tenders && tenders.length ? tenders[0] : null);
-            },
-            error: () => {/* non-fatal */},
-          });
+          this.latestTender.set(null);
         },
       });
   }
@@ -274,8 +269,8 @@ export class Step07BidDocuments implements OnInit {
       delivery_period: tender?.delivery_period || '',
       payment_terms: tender?.payment_terms || '',
       warranty_period: tender?.warranty_period || '',
-      gst_rate: 18,
-      remark: '',
+      gst_rate: null,
+      remark: ''
     });
 
     this.items.set(mappedItems);

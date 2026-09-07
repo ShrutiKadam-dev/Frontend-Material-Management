@@ -28,14 +28,8 @@
       <div class="header-step-pill" aria-hidden="true">
         Step <strong>01</strong> of 15
       </div>
-      <button
-        pButton
-        type="button"
-        icon="pi pi-plus"
-        label="New Customer Query"
-        class="header-primary-btn"
-        (click)="openDialog()"
-      ></button>
+      <button pButton type="button" icon="pi pi-plus" label="New Customer Query" class="header-primary-btn"
+        (click)="openDialog()"></button>
     </div>
   </div>
 
@@ -272,9 +266,7 @@
               QO Date <span class="req" aria-hidden="true">*</span>
             </label>
             <p-datepicker inputId="dlg-qo-date" formControlName="qo_date" dateFormat="yy-mm-dd" [showIcon]="true"
-              [fluid]="true" placeholder="YYYY-MM-DD"
-              [invalid]="isFieldInvalid('qo_date')"
-              aria-required="true" />
+              [fluid]="true" placeholder="YYYY-MM-DD" [invalid]="isFieldInvalid('qo_date')" aria-required="true" />
             @if (isFieldInvalid('qo_date')) {
             <p class="field-error">QO date is required.</p>
             }
@@ -316,7 +308,7 @@
             <div class="quick-add-actions">
               <button pButton type="button" [icon]="editingIndex() !== null ? 'pi pi-check' : 'pi pi-plus'"
                 [label]="editingIndex() !== null ? 'Update' : 'Add Item'" class="quick-submit-btn"
-                (click)="saveRow(matInput)"></button>
+                (click)="saveRow(matInput)" [disabled]="rowForm.invalid"></button>
               @if (editingIndex() !== null) {
               <button pButton type="button" icon="pi pi-times" class="p-button-text p-button-secondary cancel-edit-btn"
                 pTooltip="Cancel edit" (click)="cancelRow()"></button>
@@ -448,7 +440,7 @@
         (click)="closeDialog()"></button>
       <button pButton type="submit" [icon]="editingQuery() ? 'pi pi-check' : 'pi pi-send'"
         [label]="editingQuery() ? 'Update Query' : 'Submit Query'" form="cq-form" [loading]="submitting()"
-        [disabled]="submitting()"></button>
+        [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
     </div>
 
   </form>

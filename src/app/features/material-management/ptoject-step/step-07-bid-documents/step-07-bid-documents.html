@@ -511,7 +511,7 @@
               <div class="quick-add-actions">
                 <button pButton type="button" [icon]="editingItemIndex() !== null ? 'pi pi-check' : 'pi pi-plus'"
                   [label]="editingItemIndex() !== null ? 'Update' : 'Add Item'" class="quick-submit-btn"
-                  (click)="saveRow(matInput)"></button>
+                  (click)="saveRow(matInput)" [disabled]="rowForm.invalid"></button>
                 @if (editingItemIndex() !== null) {
                 <button pButton type="button" icon="pi pi-times"
                   class="p-button-text p-button-secondary cancel-edit-btn" pTooltip="Cancel edit"
@@ -696,7 +696,7 @@
         <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="closeDialog()"
           [disabled]="submitting()"></button>
         <button pButton type="submit" label="Submit Bid Documents" icon="pi pi-check" class="submit-btn"
-          [loading]="submitting()"></button>
+          [loading]="submitting()" [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
       </div>
     </form>
   </p-dialog>

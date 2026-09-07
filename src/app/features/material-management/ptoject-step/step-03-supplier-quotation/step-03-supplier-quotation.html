@@ -455,7 +455,7 @@
             <div class="quick-add-actions">
               <button pButton type="button" [icon]="editingIndex() !== null ? 'pi pi-check' : 'pi pi-plus'"
                 [label]="editingIndex() !== null ? 'Update' : 'Add Item'" class="quick-submit-btn"
-                (click)="saveRow(matInput)"></button>
+                (click)="saveRow(matInput)" [disabled]="rowForm.invalid"></button>
               @if (editingIndex() !== null) {
               <button pButton type="button" icon="pi pi-times" class="p-button-text p-button-secondary cancel-edit-btn"
                 pTooltip="Cancel edit" (click)="cancelRow()"></button>
@@ -628,7 +628,7 @@
         (click)="closeDialog()"></button>
       <button pButton type="submit" [icon]="editingQuotation() ? 'pi pi-check' : 'pi pi-send'"
         [label]="editingQuotation() ? 'Update Quotation' : 'Submit Quotation'" form="sq-form" [loading]="submitting()"
-        [disabled]="submitting()"></button>
+        [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
     </div>
 
   </form>

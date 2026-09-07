@@ -357,6 +357,7 @@
                 [label]="editingIndex() !== null ? 'Update' : 'Add Item'"
                 class="quick-submit-btn"
                 (click)="saveRow(matInput)"
+                [disabled]="rowForm.invalid"
               ></button>
               @if (editingIndex() !== null) {
               <button
@@ -513,7 +514,7 @@
         (click)="closeDialog()"></button>
       <button pButton type="submit" [icon]="editingRequest() ? 'pi pi-check' : 'pi pi-send'"
         [label]="editingRequest() ? 'Update Request' : 'Submit Request'" form="rq-form" [loading]="submitting()"
-        [disabled]="submitting()"></button>
+        [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
     </div>
 
   </form>

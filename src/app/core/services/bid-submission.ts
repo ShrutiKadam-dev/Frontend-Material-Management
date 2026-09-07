@@ -22,6 +22,13 @@ export class BidSubmissionService {
     );
   }
 
+  getLatest(projectId?: number): Observable<BidSubmission | any> {
+    const query = projectId ? `?project_id=${projectId}` : '';
+    return this.http.get<BidSubmission | any>(
+      `${this.apiBaseUrl}/api/v1/bid-submissions/latest${query}`,
+    );
+  }
+
   getById(id: number): Observable<BidSubmission> {
     return this.http.get<BidSubmission>(
       `${this.apiBaseUrl}/api/v1/bid-submissions/${id}`,

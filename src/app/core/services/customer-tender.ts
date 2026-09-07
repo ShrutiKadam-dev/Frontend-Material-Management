@@ -25,7 +25,7 @@ export class CustomerTenderService {
   getLatestByProject(projectId?: number): Observable<CustomerTender | CustomerTender[]> {
     const query = projectId ? `?project_id=${projectId}` : '';
     return this.http.get<CustomerTender | CustomerTender[]>(
-      `${this.apiBaseUrl}/api/customer-tender/latest${query}`,
+      `${this.apiBaseUrl}/api/v1/customer-tenders/latest${query}`,
     );
   }
 

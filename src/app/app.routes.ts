@@ -89,6 +89,13 @@ export const routes: Routes = [
           ).then((m) => m.Step07BidDocuments),
       },
       {
+        path: 'projects/:projectId/steps/8',
+        loadComponent: () =>
+          import(
+            './features/material-management/ptoject-step/step-08-purchase-order/step-08-purchase-order'
+          ).then((m) => m.Step08PurchaseOrder),
+      },
+      {
         path: 'customers',
         loadComponent: () =>
           import('./features/material-management/customer/customer').then((m) => m.Customer),
