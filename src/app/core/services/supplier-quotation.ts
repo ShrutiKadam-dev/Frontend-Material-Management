@@ -22,6 +22,13 @@ export class SupplierQuotationService {
     );
   }
 
+  getLatest(projectId?: number): Observable<unknown> {
+    const query = projectId ? `?project_id=${projectId}` : '';
+    return this.http.get(
+      `${this.apiBaseUrl}/api/v1/supplier-quotations/latest${query}`,
+    );
+  }
+
   getById(id: number): Observable<SupplierQuotation> {
     return this.http.get<SupplierQuotation>(
       `${this.apiBaseUrl}/api/v1/supplier-quotations/${id}`,
