@@ -79,15 +79,24 @@ export class DashboardService {
           status: (p['status'] as DashboardProject['status']) || 'In Progress',
           current_step_number: p['current_step_number'] ? Number(p['current_step_number']) : undefined,
           total_steps: p['total_steps'] ? Number(p['total_steps']) : 15,
+          total_value: p['total_value'] ? Number(p['total_value']) : undefined,
+          currency: String(p['currency'] ?? 'INR'),
+          health_status: String(p['health_status'] ?? 'on_track'),
+          next_action: p['next_action'] ? String(p['next_action']) : undefined,
+          target_delivery_date: p['target_delivery_date'] ? String(p['target_delivery_date']) : null,
+          customer_payment_status: p['customer_payment_status'] ? String(p['customer_payment_status']) : undefined,
+          supplier_payment_status: p['supplier_payment_status'] ? String(p['supplier_payment_status']) : undefined,
         }))
       : [];
 
-    return { metrics, recent_projects };
+    const overview_stats = (nestedData['overview_stats'] ?? payload['overview_stats']) as DashboardData['overview_stats'] | undefined;
+
+    return { metrics, recent_projects, overview_stats };
   }
 
   /**
    * Generates dynamic dashboard data from individual resources (projects, customers, suppliers)
-   * as a reliable fallback until the dedicated backend summary endpoint is ready.
+   * by computing portfolio-level summaries and mapping project records.
    */
   private aggregateLiveDataFallback(): Observable<DashboardData> {
     return forkJoin({
@@ -103,52 +112,140 @@ export class DashboardService {
         const customerMap = new Map<number, string>(customers.map((c) => [c.id, c.name]));
         const supplierMap = new Map<number, string>(suppliers.map((s) => [s.id, s.name]));
 
-        // Calculate metrics
+    const totalValue = projects.reduce((sum, p) => sum + (Number(p.total_value) || 0), 0);
+        const onTrackCount = projects.filter((p) => p.health_status === 'on_track').length;
+        const delayedCount = projects.filter((p) => p.health_status === 'delayed' || p.health_status === 'at_risk').length;
+        const completedCount = projects.filter((p) => p.status === 'completed' || p.progress_percentage === 100).length;
+
+        const avgProgress = totalProjects > 0
+          ? Math.round(
+              projects.reduce((sum, p) => {
+                const prog = p.progress_percentage !== undefined && p.progress_percentage !== null
+                  ? p.progress_percentage
+                  : Math.round(((p.current_step_number || 1) / 15) * 100);
+                return sum + prog;
+              }, 0) / totalProjects,
+            )
+          : 0;
+
+        // Stage breakdown
+        const sourcingCount = projects.filter((p) => (p.current_step_number || 1) <= 5).length;
+        const logisticsCount = projects.filter((p) => (p.current_step_number || 1) >= 6 && (p.current_step_number || 1) <= 11).length;
+        const clearanceCount = projects.filter((p) => (p.current_step_number || 1) >= 12).length;
+
+        // Commercial payments
+        const customerPaid = projects.filter((p) => p.customer_payment_status?.toLowerCase() === 'paid').length;
+        const customerPartial = projects.filter((p) => p.customer_payment_status?.toLowerCase() === 'partial').length;
+        const customerPending = totalProjects - customerPaid - customerPartial;
+
+        const supplierPaid = projects.filter((p) => p.supplier_payment_status?.toLowerCase() === 'paid').length;
+        const supplierPartial = projects.filter((p) => p.supplier_payment_status?.toLowerCase() === 'partial').length;
+        const supplierPending = totalProjects - supplierPaid - supplierPartial;
+
+        // Formatted currency value helper
+        const formattedTotalValue = `₹ ${totalValue.toLocaleString('en-IN', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`;
+
+        // Compute overall dashboard metrics
         const metrics: DashboardMetric[] = [
           {
-            label: 'Active Projects',
-            value: totalProjects > 0 ? totalProjects : 0,
-            trend: `Across ${totalSuppliers} supplier${totalSuppliers === 1 ? '' : 's'}`,
+            label: 'Active Pipelines',
+            value: totalProjects,
+            trend: `Across ${totalCustomers} client${totalCustomers === 1 ? '' : 's'}`,
+            tone: 'info',
+          },
+          {
+            label: 'Total Portfolio Value',
+            value: formattedTotalValue,
+            trend: 'Contracted procurement volume',
             tone: 'success',
           },
           {
-            label: 'Completed',
-            value: 0,
-            trend: 'Fully paid & closed',
-            tone: 'success',
+            label: 'Pipeline Health',
+            value: `${onTrackCount} On Track`,
+            trend: delayedCount > 0 ? `${delayedCount} delayed/attention` : '100% on schedule',
+            tone: delayedCount > 0 ? 'warning' : 'success',
           },
           {
-            label: 'Suppliers',
-            value: totalSuppliers,
-            trend: 'Foreign & domestic',
-            tone: 'success',
-          },
-          {
-            label: 'Customers',
-            value: totalCustomers,
-            trend: `${totalCustomers} active accounts`,
-            tone: totalCustomers > 0 ? 'success' : 'warning',
+            label: 'Average Completion',
+            value: `${avgProgress}%`,
+            trend: 'Across 15 milestone stages',
+            tone: 'info',
           },
         ];
 
-        // Format recent projects (take up to 6 latest)
-        const recent_projects: DashboardProject[] = projects.slice(0, 6).map((proj) => {
-          const supplierName = proj.supplier_name || (proj.supplier_id ? supplierMap.get(proj.supplier_id) : '') || `Supplier #${proj.supplier_id}`;
-          const customerName = proj.customer_name || (proj.customer_id ? customerMap.get(proj.customer_id) : '') || `Customer #${proj.customer_id}`;
+        // Overview stats
+        const overview_stats = {
+          total_projects: totalProjects,
+          total_portfolio_value: totalValue,
+          total_customers: totalCustomers,
+          total_suppliers: totalSuppliers,
+          on_track_count: onTrackCount,
+          delayed_count: delayedCount,
+          completed_count: completedCount,
+          avg_progress: avgProgress,
+          customer_payments: {
+            paid: customerPaid,
+            pending: customerPending,
+            partial: customerPartial,
+          },
+          supplier_payments: {
+            paid: supplierPaid,
+            pending: supplierPending,
+            partial: supplierPartial,
+          },
+          stage_breakdown: {
+            sourcing: sourcingCount,
+            logistics: logisticsCount,
+            clearance: clearanceCount,
+          },
+        };
+
+        // Format recent projects
+        const recent_projects: DashboardProject[] = projects.slice(0, 8).map((proj) => {
+          const supplierName =
+            proj.supplier_name ||
+            (proj.supplier_id ? supplierMap.get(proj.supplier_id) : '') ||
+            `Supplier #${proj.supplier_id}`;
+          const customerName =
+            proj.customer_name ||
+            (proj.customer_id ? customerMap.get(proj.customer_id) : '') ||
+            `Customer #${proj.customer_id}`;
+          const stepNum = proj.current_step_number || 1;
+          const stepName = proj.current_step_name || 'Customer Query Initiated';
+          const progress =
+            proj.progress_percentage !== undefined && proj.progress_percentage !== null
+              ? proj.progress_percentage
+              : Math.round((stepNum / 15) * 100);
 
           return {
             id: proj.id,
             title: proj.project_title || `Project #${proj.id}`,
             supplier: supplierName,
             customer: customerName,
-            step: 'In Progress',
-            milestone: 'Project Initiated',
-            progress: 10,
-            status: 'In Progress',
+            step: `Step ${stepNum} of ${proj.total_steps || 15}`,
+            milestone: stepName,
+            progress: progress,
+            status: (proj.status === 'completed'
+              ? 'Completed'
+              : proj.status === 'on_hold'
+                ? 'On Hold'
+                : 'In Progress') as DashboardProject['status'],
+            current_step_number: stepNum,
+            total_steps: proj.total_steps || 15,
+            total_value: proj.total_value ? Number(proj.total_value) : undefined,
+            currency: proj.currency || 'INR',
+            health_status: proj.health_status || 'on_track',
+            next_action: proj.next_action,
+            target_delivery_date: proj.target_delivery_date,
+            customer_payment_status: proj.customer_payment_status,
+            supplier_payment_status: proj.supplier_payment_status,
           };
         });
 
-        return { metrics, recent_projects };
+        return { metrics, recent_projects, overview_stats };
       }),
     );
   }

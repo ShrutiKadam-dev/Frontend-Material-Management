@@ -110,6 +110,20 @@ export const routes: Routes = [
           ).then((m) => m.Step10SupplierInvoice),
       },
       {
+        path: 'projects/:projectId/steps/11',
+        loadComponent: () =>
+          import(
+            './features/material-management/ptoject-step/step-11-import-logistics/step-11-import-logistics'
+          ).then((m) => m.Step11ImportLogistics),
+      },
+      {
+        path: 'projects/:projectId/steps/12',
+        loadComponent: () =>
+          import(
+            './features/material-management/ptoject-step/step-12-customs-clearance/step-12-customs-clearance'
+          ).then((m) => m.Step12CustomsClearance),
+      },
+      {
         path: 'customers',
         loadComponent: () =>
           import('./features/material-management/customer/customer').then((m) => m.Customer),

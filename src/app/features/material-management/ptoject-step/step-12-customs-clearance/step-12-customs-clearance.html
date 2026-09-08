@@ -1,1 +1,570 @@
-<p>step-12-customs-clearance works!</p>
+<section class="base-page step-page" aria-labelledby="step-page-title">
+
+  <!-- ── 1. Page Header Bar ───────────────────────────────────────────── -->
+  <div class="page-header">
+    <div class="header-left">
+      <button pButton type="button" icon="pi pi-arrow-left" class="p-button-text p-button-secondary back-btn"
+        (click)="goBack()" aria-label="Back to project pipeline" pTooltip="Back to Project Steps"
+        tooltipPosition="bottom"></button>
+      <div class="header-title-group">
+        <span class="eyebrow">Step 12 · Customs Clearance & Port Operations</span>
+        <h1 id="step-page-title">
+          @if (project(); as p) {
+          {{ p.project_title }}
+          } @else {
+          Customs Clearance & Duty Assessment
+          }
+        </h1>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      @if (customer(); as c) {
+      <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+        <i class="pi pi-user" aria-hidden="true"></i>
+        {{ c.name }}
+      </span>
+      } @else if (project()?.customer_name) {
+      <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+        <i class="pi pi-user" aria-hidden="true"></i>
+        {{ project()?.customer_name }}
+      </span>
+      }
+      <div class="header-step-pill" aria-hidden="true">
+        Step <strong>12</strong> of 15
+      </div>
+
+      <button pButton type="button" icon="pi pi-plus" label="Record Customs Clearance" class="create-cost-sheet-btn"
+        (click)="openCreateDialog()"></button>
+    </div>
+  </div>
+
+  <!-- ── 2. Full-Width Step Main Layout ───────────────────────────────── -->
+  <div class="step-layout--fullwidth">
+    <div class="step-main step-main--fullwidth">
+
+      <!-- ── Top KPI Metric Cards ────────────────────────────────────── -->
+      <div class="kpi-metrics-grid" aria-label="Customs clearance metrics">
+        <article class="kpi-card app-panel">
+          <div class="kpi-icon-wrap kpi-icon--primary">
+            <i class="pi pi-building" aria-hidden="true"></i>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Clearance Records</span>
+            <strong class="kpi-num">{{ totalRecordsCount() }}</strong>
+            <span class="kpi-hint">Recorded BOE clearances</span>
+          </div>
+        </article>
+
+        <article class="kpi-card app-panel">
+          <div class="kpi-icon-wrap kpi-icon--success">
+            <i class="pi pi-receipt" aria-hidden="true"></i>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Customs Duty Paid</span>
+            <strong class="kpi-num">₹&nbsp;{{ totalDutyRemitted() | number:'1.2-2' }}</strong>
+            <span class="kpi-hint hint-success">Total duty assessed</span>
+          </div>
+        </article>
+
+        <article class="kpi-card app-panel">
+          <div class="kpi-icon-wrap kpi-icon--progress">
+            <i class="pi pi-percentage" aria-hidden="true"></i>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">IGST Amount Paid</span>
+            <strong class="kpi-num">₹&nbsp;{{ totalIgstRemitted() | number:'1.2-2' }}</strong>
+            <span class="kpi-hint">Integrated GST remittance</span>
+          </div>
+        </article>
+
+        <article class="kpi-card app-panel">
+          <div class="kpi-icon-wrap kpi-icon--health">
+            <i class="pi pi-wallet" aria-hidden="true"></i>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Total Customs Remittance</span>
+            <strong class="kpi-num">₹&nbsp;{{ grandTotalCustomsAmount() | number:'1.2-2' }}</strong>
+            <span class="kpi-hint hint-success">Duty + IGST + Port charges</span>
+          </div>
+        </article>
+      </div>
+
+      <!-- ── Loading / Error States ──────────────────────────────────── -->
+      @if (loading()) {
+      <div class="center-state loading-state">
+        <div class="loading-ring" aria-hidden="true">
+          <i class="pi pi-spin pi-spinner"></i>
+        </div>
+        <p>Loading customs clearance & duty records…</p>
+      </div>
+      } @else if (errorMessage()) {
+      <div class="error-banner app-panel" role="alert">
+        <i class="pi pi-exclamation-circle error-icon" aria-hidden="true"></i>
+        <span>{{ errorMessage() }}</span>
+        <button pButton type="button" icon="pi pi-refresh" label="Retry" class="p-button-text p-button-sm"
+          (click)="loadClearanceData()"></button>
+      </div>
+      } @else if (clearances().length === 0) {
+      <!-- Empty State -->
+      <div class="empty-state app-panel">
+        <div class="empty-icon-wrap" aria-hidden="true">
+          <i class="pi pi-id-card"></i>
+        </div>
+        <h3>No Customs Clearance Records Found</h3>
+        <p>Record the Custom House Agent (CHA) details, BOE assessment, Duty challan, and clearance documents.</p>
+        <button pButton type="button" icon="pi pi-plus" label="Record First Customs Clearance"
+          class="create-cost-sheet-btn" (click)="openCreateDialog()"></button>
+      </div>
+      } @else {
+
+      <!-- ── Customs Clearances Table ─────────────────────────────────── -->
+      <div class="table-container app-panel">
+        <div class="table-header-bar">
+          <div class="table-title-group">
+            <h2>Customs Clearance & Duty Remittance Entries</h2>
+            <span class="table-subtitle">All Out-Of-Charge (OOC) and assessment entries for this project</span>
+          </div>
+        </div>
+
+        <p-table [value]="clearances()" [paginator]="clearances().length > 10" [rows]="10"
+          styleClass="p-datatable-sm items-table-wrap" responsiveLayout="scroll">
+          <ng-template pTemplate="header">
+            <tr>
+              <th scope="col" style="width: 50px; text-align: center;">#</th>
+              <th scope="col" style="min-width: 200px;">CHA & BOE Details</th>
+              <th scope="col" style="min-width: 170px;">Port & CFS Facility</th>
+              <th scope="col" style="min-width: 200px;">Duty Payment & Challan</th>
+              <th scope="col" style="min-width: 160px; text-align: right;">Duty & IGST</th>
+              <th scope="col" style="min-width: 150px; text-align: right;">Total Customs Amount</th>
+              <th scope="col" style="min-width: 170px;">Remark</th>
+              <th scope="col" style="min-width: 180px;">Attached Documents</th>
+              <th scope="col" style="width: 100px; text-align: center;">Actions</th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body" let-item let-i="rowIndex">
+            <tr class="table-row-hover">
+              <td style="text-align: center; font-weight: 700; color: #64748b;">
+                {{ i + 1 }}
+              </td>
+
+              <!-- CHA & BOE Details -->
+              <td>
+                <div class="detail-cell-stack">
+                  <span class="cell-main-title">{{ item.cha_name }}</span>
+                  <div class="cell-meta-row">
+                    <span class="meta-tag meta-tag--boe">
+                      <i class="pi pi-file" aria-hidden="true"></i> BOE #{{ item.bill_of_entry_no }}
+                    </span>
+                    <span class="meta-date">{{ item.boe_date | date:'dd MMM yyyy' }}</span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Port & CFS Facility -->
+              <td>
+                <div class="detail-cell-stack">
+                  <span class="cell-highlight-text">
+                    <i class="pi pi-map-marker text-primary" aria-hidden="true"></i> {{ item.customs_location }}
+                  </span>
+                  @if (item.cfs_name) {
+                  <span class="cell-sub-text">
+                    <i class="pi pi-warehouse" aria-hidden="true"></i> CFS: {{ item.cfs_name }}
+                  </span>
+                  }
+                </div>
+              </td>
+
+              <!-- Duty Payment & Challan -->
+              <td>
+                <div class="detail-cell-stack">
+                  @if (item.duty_paid_date) {
+                  <span class="cell-date-badge">
+                    <i class="pi pi-calendar-check" aria-hidden="true"></i> Paid: {{ item.duty_paid_date | date:'dd MMM yyyy' }}
+                  </span>
+                  }
+                  @if (item.challan_no) {
+                  <span class="cell-sub-text">Challan: <strong>{{ item.challan_no }}</strong></span>
+                  }
+                  @if (item.transaction_ref_no) {
+                  <span class="cell-sub-text">Ref / UTR: <strong>{{ item.transaction_ref_no }}</strong></span>
+                  }
+                  @if (!item.duty_paid_date && !item.challan_no && !item.transaction_ref_no) {
+                  <span class="text-muted">—</span>
+                  }
+                </div>
+              </td>
+
+              <!-- Duty & IGST Breakdown -->
+              <td style="text-align: right;">
+                <div class="duty-mini-stack">
+                  <div class="mini-duty-row">
+                    <span class="lbl">Duty:</span>
+                    <strong>₹&nbsp;{{ (item.duty_amount || 0) | number:'1.2-2' }}</strong>
+                  </div>
+                  <div class="mini-duty-row">
+                    <span class="lbl">IGST:</span>
+                    <strong>₹&nbsp;{{ (item.igst_amount || 0) | number:'1.2-2' }}</strong>
+                  </div>
+                  @if (item.other_customs_charges) {
+                  <div class="mini-duty-row">
+                    <span class="lbl">Other:</span>
+                    <span>₹&nbsp;{{ item.other_customs_charges | number:'1.2-2' }}</span>
+                  </div>
+                  }
+                </div>
+              </td>
+
+              <!-- Total Customs Amount -->
+              <td style="text-align: right;">
+                <div class="total-amount-box">
+                  <strong class="total-val-primary">
+                    ₹&nbsp;{{ (item.total_customs_amount || 0) | number:'1.2-2' }}
+                  </strong>
+                </div>
+              </td>
+
+              <!-- Remark -->
+              <td>
+                @if (item.remark) {
+                <span class="tbl-remark-text" [title]="item.remark">
+                  {{ item.remark }}
+                </span>
+                } @else {
+                <span class="text-muted">—</span>
+                }
+              </td>
+
+              <!-- Attached Documents -->
+              <td>
+                <div class="att-chips-wrap">
+                  @if (item.attachments && item.attachments.length > 0) {
+                  @for (att of item.attachments; track att.id) {
+                  <button type="button" class="att-download-pill" (click)="downloadAttachment(att)"
+                    [pTooltip]="att.file_name" tooltipPosition="top"
+                    [disabled]="downloadingAttachmentId() === att.id">
+                    <i class="pi" [class.pi-download]="downloadingAttachmentId() !== att.id"
+                      [class.pi-spin]="downloadingAttachmentId() === att.id"
+                      [class.pi-spinner]="downloadingAttachmentId() === att.id" aria-hidden="true"></i>
+                    <span>{{ att.file_name }}</span>
+                  </button>
+                  }
+                  } @else {
+                  <span class="text-muted">No files</span>
+                  }
+                </div>
+              </td>
+
+              <!-- Actions -->
+              <td style="text-align: center;">
+                <div class="actions-cell" style="justify-content: center;">
+                  <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                    pTooltip="Edit Record" tooltipPosition="top" (click)="openEditDialog(item)"
+                    aria-label="Edit record"></button>
+                  <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger"
+                    pTooltip="Delete Record" tooltipPosition="top" (click)="deleteClearance(item)"
+                    aria-label="Delete record"></button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+      }
+
+    </div>
+  </div>
+
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: RECORD / EDIT CUSTOMS CLEARANCE DIALOG (Standard Design)
+══════════════════════════════════════════════════════════════════════ -->
+<p-dialog [header]="editingClearance() ? 'Edit Customs Clearance Entry' : 'Record Customs Clearance & Duty Remittance'"
+  [visible]="dialogVisible()" (visibleChange)="dialogVisible.set($event)" [modal]="true" [blockScroll]="true"
+  [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '780px' }"
+  styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
+
+  <form [formGroup]="clearanceForm" (ngSubmit)="onSubmit()" novalidate id="clearance-form">
+    <div class="dlg-body">
+
+      <!-- Section 1: CHA, Port & BOE Details -->
+      <div class="dlg-section">
+        <p class="dlg-section-label">
+          <i class="pi pi-id-card"></i> 1. Custom House Agent & Bill of Entry Details
+        </p>
+
+        <div class="dlg-grid">
+          <div class="field span-two">
+            <label for="dlg-cha-name">CHA Name <span class="req" aria-hidden="true">*</span></label>
+            <input id="dlg-cha-name" pInputText formControlName="cha_name"
+              placeholder="e.g. DHL Global Forwarding India Pvt Ltd / Fairmacs Shipping"
+              [class.ng-invalid]="isFieldInvalid('cha_name')" />
+            @if (isFieldInvalid('cha_name')) {
+            <p class="field-error">{{ getFieldError('cha_name') }}</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="dlg-boe-no">Bill of Entry No. <span class="req" aria-hidden="true">*</span></label>
+            <input id="dlg-boe-no" pInputText formControlName="bill_of_entry_no"
+              placeholder="e.g. BOE-8921471 / 2026/INBOM4" [class.ng-invalid]="isFieldInvalid('bill_of_entry_no')" />
+            @if (isFieldInvalid('bill_of_entry_no')) {
+            <p class="field-error">{{ getFieldError('bill_of_entry_no') }}</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="dlg-boe-date">BOE Date <span class="req" aria-hidden="true">*</span></label>
+            <p-datepicker inputId="dlg-boe-date" formControlName="boe_date" dateFormat="yy-mm-dd" [showIcon]="true"
+              [fluid]="true" placeholder="YYYY-MM-DD" [class.ng-invalid]="isFieldInvalid('boe_date')" />
+            @if (isFieldInvalid('boe_date')) {
+            <p class="field-error">{{ getFieldError('boe_date') }}</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="dlg-customs-loc">Customs Location / Port <span class="req" aria-hidden="true">*</span></label>
+            <input id="dlg-customs-loc" pInputText formControlName="customs_location"
+              placeholder="e.g. Nhava Sheva (INNSA1) / Air Cargo Mumbai (INBOM4)"
+              [class.ng-invalid]="isFieldInvalid('customs_location')" />
+            @if (isFieldInvalid('customs_location')) {
+            <p class="field-error">{{ getFieldError('customs_location') }}</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="dlg-cfs-name">CFS Name</label>
+            <input id="dlg-cfs-name" pInputText formControlName="cfs_name"
+              placeholder="e.g. Gateway Distriparks CFS / Allcargo Logistics" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Duty Payment & Challan Details -->
+      <div class="dlg-section">
+        <p class="dlg-section-label">
+          <i class="pi pi-credit-card"></i> 2. Duty Payment & Challan Details
+        </p>
+
+        <div class="dlg-grid">
+          <div class="field">
+            <label for="dlg-duty-paid-date">Duty Paid Date</label>
+            <p-datepicker inputId="dlg-duty-paid-date" formControlName="duty_paid_date" dateFormat="yy-mm-dd"
+              [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD" />
+          </div>
+
+          <div class="field">
+            <label for="dlg-challan-no">Challan No.</label>
+            <input id="dlg-challan-no" pInputText formControlName="challan_no"
+              placeholder="e.g. ICEGATE-CHAL-49201" />
+          </div>
+
+          <div class="field span-two">
+            <label for="dlg-tx-ref">Transaction / Payment Ref No.</label>
+            <input id="dlg-tx-ref" pInputText formControlName="transaction_ref_no"
+              placeholder="e.g. UTR / NEFT Ref: HDFC00921820491" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Duty Assessment Breakdown & Calculation -->
+      <div class="dlg-section">
+        <p class="dlg-section-label">
+          <i class="pi pi-calculator"></i> 3. Duty Assessment & Total Customs Amount
+        </p>
+
+        <div class="dlg-grid">
+          <div class="field">
+            <label for="dlg-duty-amount">Duty Amount (₹)</label>
+            <input id="dlg-duty-amount" type="number" pInputText formControlName="duty_amount" min="0" step="0.01"
+              placeholder="0.00" [class.ng-invalid]="isFieldInvalid('duty_amount')" />
+            @if (isFieldInvalid('duty_amount')) {
+            <p class="field-error">{{ getFieldError('duty_amount') }}</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="dlg-igst-amount">IGST Amount (₹)</label>
+            <input id="dlg-igst-amount" type="number" pInputText formControlName="igst_amount" min="0" step="0.01"
+              placeholder="0.00" [class.ng-invalid]="isFieldInvalid('igst_amount')" />
+            @if (isFieldInvalid('igst_amount')) {
+            <p class="field-error">{{ getFieldError('igst_amount') }}</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="dlg-other-charges">Other Customs Charges (₹)</label>
+            <input id="dlg-other-charges" type="number" pInputText formControlName="other_customs_charges" min="0"
+              step="0.01" placeholder="0.00" [class.ng-invalid]="isFieldInvalid('other_customs_charges')" />
+            @if (isFieldInvalid('other_customs_charges')) {
+            <p class="field-error">{{ getFieldError('other_customs_charges') }}</p>
+            }
+          </div>
+
+          <!-- Total Customs Amount Summary Box -->
+          <div class="field span-two duty-summary-card">
+            <div class="duty-summary-row">
+              <div class="duty-summary-lbl">
+                <span class="title">Total Customs Amount (Duty + IGST + Other Charges)</span>
+                <span class="sub">Auto-computed total customs remittance</span>
+              </div>
+              <strong class="duty-summary-val">₹&nbsp;{{ liveTotalCustomsAmount() | number:'1.2-2' }}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: Remark (Remark first as per project guidelines) -->
+      <div class="dlg-section">
+        <p class="dlg-section-label">
+          <i class="pi pi-comment"></i> 4. Remark & Clearance Notes
+        </p>
+
+        <div class="field full-width">
+          <label for="dlg-remark">Remark</label>
+          <textarea id="dlg-remark" pTextarea formControlName="remark" rows="3"
+            placeholder="Add operational notes, examination status, Out-of-charge remarks, or CFS details…"></textarea>
+        </div>
+      </div>
+
+      <!-- Section 5: Document Uploads (Shown after Remark) -->
+      <div class="dlg-section">
+        <p class="dlg-section-label">
+          <i class="pi pi-paperclip"></i> 5. Document Attachments
+        </p>
+
+        <!-- 5.1 Duty Challan Upload -->
+        <div class="upload-category-block">
+          <div class="upload-category-header">
+            <span class="upload-cat-title">
+              <i class="pi pi-file-check" aria-hidden="true"></i> Duty Challan Upload
+            </span>
+            <span class="upload-cat-sub">ICEGATE duty paid challan / bank payment receipt</span>
+          </div>
+
+          <div class="file-drop-zone">
+            <input type="file" id="dlg-duty-challan-files" (change)="onDutyChallanFilesSelected($event)" multiple
+              class="file-input-hidden" />
+            <label for="dlg-duty-challan-files" class="file-drop-label">
+              <i class="pi pi-cloud-upload"></i>
+              <span>Click to select Duty Challan files</span>
+            </label>
+          </div>
+
+          @if (selectedDutyChallanFiles().length > 0) {
+          <div class="selected-files-list">
+            @for (file of selectedDutyChallanFiles(); track $index) {
+            <div class="selected-file-chip">
+              <i class="pi pi-file" aria-hidden="true"></i>
+              <span class="file-name" [title]="file.name">{{ file.name }}</span>
+              <button type="button" class="remove-file-btn" (click)="removeSelectedDutyChallanFile($index)"
+                aria-label="Remove file">
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            }
+          </div>
+          }
+        </div>
+
+        <!-- 5.2 Bill of Entry Upload -->
+        <div class="upload-category-block">
+          <div class="upload-category-header">
+            <span class="upload-cat-title">
+              <i class="pi pi-file" aria-hidden="true"></i> Bill of Entry Upload
+            </span>
+            <span class="upload-cat-sub">Out of Charge (OOC) / Assessed Bill of Entry copy</span>
+          </div>
+
+          <div class="file-drop-zone">
+            <input type="file" id="dlg-boe-files" (change)="onBoeFilesSelected($event)" multiple
+              class="file-input-hidden" />
+            <label for="dlg-boe-files" class="file-drop-label">
+              <i class="pi pi-cloud-upload"></i>
+              <span>Click to select Bill of Entry files</span>
+            </label>
+          </div>
+
+          @if (selectedBoeFiles().length > 0) {
+          <div class="selected-files-list">
+            @for (file of selectedBoeFiles(); track $index) {
+            <div class="selected-file-chip">
+              <i class="pi pi-file" aria-hidden="true"></i>
+              <span class="file-name" [title]="file.name">{{ file.name }}</span>
+              <button type="button" class="remove-file-btn" (click)="removeSelectedBoeFile($index)"
+                aria-label="Remove file">
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            }
+          </div>
+          }
+        </div>
+
+        <!-- 5.3 Other Supporting Document Upload -->
+        <div class="upload-category-block">
+          <div class="upload-category-header">
+            <span class="upload-cat-title">
+              <i class="pi pi-folder" aria-hidden="true"></i> Other Supporting Document Upload
+            </span>
+            <span class="upload-cat-sub">CFS gate pass, examination report, delivery orders</span>
+          </div>
+
+          <div class="file-drop-zone">
+            <input type="file" id="dlg-other-docs-files" (change)="onOtherDocsFilesSelected($event)" multiple
+              class="file-input-hidden" />
+            <label for="dlg-other-docs-files" class="file-drop-label">
+              <i class="pi pi-cloud-upload"></i>
+              <span>Click to select other supporting documents</span>
+            </label>
+          </div>
+
+          @if (selectedOtherDocsFiles().length > 0) {
+          <div class="selected-files-list">
+            @for (file of selectedOtherDocsFiles(); track $index) {
+            <div class="selected-file-chip">
+              <i class="pi pi-file" aria-hidden="true"></i>
+              <span class="file-name" [title]="file.name">{{ file.name }}</span>
+              <button type="button" class="remove-file-btn" (click)="removeSelectedOtherDocsFile($index)"
+                aria-label="Remove file">
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            }
+          </div>
+          }
+        </div>
+
+        <!-- Existing Attachments in Edit Mode -->
+        @if (existingAttachments().length > 0) {
+        <div class="existing-attachments-wrap">
+          <span class="existing-lbl">Existing Attached Documents:</span>
+          <div class="att-chips-wrap">
+            @for (att of existingAttachments(); track att.id) {
+            <button type="button" class="att-download-pill" (click)="downloadAttachment(att)"
+              [pTooltip]="att.file_name" tooltipPosition="top"
+              [disabled]="downloadingAttachmentId() === att.id">
+              <i class="pi pi-download" aria-hidden="true"></i>
+              <span>{{ att.file_name }}</span>
+            </button>
+            }
+          </div>
+        </div>
+        }
+
+      </div>
+
+    </div>
+
+    <!-- Dialog Footer -->
+    <div class="dlg-footer">
+      <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="closeDialog()"
+        [disabled]="saving()"></button>
+      <button pButton type="submit" [label]="editingClearance() ? 'Update Clearance Entry' : 'Save Clearance Entry'"
+        icon="pi pi-check" class="submit-btn" [loading]="saving()"
+        [disabled]="saving() || clearanceForm.invalid"></button>
+    </div>
+  </form>
+</p-dialog>

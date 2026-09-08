@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 
 import { Project, ProjectCreateInput, ProjectUpdateInput } from '../models/project.model';
 import { API_BASE_URL } from '../tokens/api-base-url.token';
@@ -13,18 +13,30 @@ export class ProjectService {
   private readonly apiBaseUrl = inject(API_BASE_URL);
 
   getProjects(): Observable<Project[]> {
-    return this.http.get<Project[]>(`${this.apiBaseUrl}/api/v1/projects`);
+    return this.http
+      .get<Project[] | { data: Project[]; message?: string; success?: boolean }>(
+        `${this.apiBaseUrl}/api/v1/projects`,
+      )
+      .pipe(map((res) => (Array.isArray(res) ? res : res?.data || [])));
   }
 
   getProjectById(id: number): Observable<Project> {
-    return this.http.get<Project>(`${this.apiBaseUrl}/api/v1/projects/${id}`);
+    return this.http
+      .get<Project | { data: Project; message?: string; success?: boolean }>(
+        `${this.apiBaseUrl}/api/v1/projects/${id}`,
+      )
+      .pipe(map((res) => (res && 'data' in res && res.data ? res.data : (res as Project))));
   }
 
   createProject(project: ProjectCreateInput): Observable<Project> {
-    return this.http.post<Project>(`${this.apiBaseUrl}/api/v1/projects`, project);
+    return this.http
+      .post<Project | { data: Project }>(`${this.apiBaseUrl}/api/v1/projects`, project)
+      .pipe(map((res) => (res && 'data' in res && res.data ? res.data : (res as Project))));
   }
 
   updateProject(id: number, project: ProjectUpdateInput): Observable<Project> {
-    return this.http.put<Project>(`${this.apiBaseUrl}/api/v1/projects/${id}`, project);
+    return this.http
+      .put<Project | { data: Project }>(`${this.apiBaseUrl}/api/v1/projects/${id}`, project)
+      .pipe(map((res) => (res && 'data' in res && res.data ? res.data : (res as Project))));
   }
 }

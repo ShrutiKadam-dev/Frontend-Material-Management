@@ -1,124 +1,373 @@
 <section class="dashboard-page" aria-labelledby="dashboard-title">
-  <header class="dashboard-hero">
-    <p class="eyebrow">Overview</p>
-    <h1 id="dashboard-title" class="page-title">{{ greetingTitle() }}</h1>
-    <p class="page-summary">
-      Here's where every material request stands right now — from requirement to final payment.
-    </p>
+
+  <!-- ── 1. Executive Hero Header ────────────────────────────────────── -->
+  <header class="dashboard-hero app-panel">
+    <div class="hero-left">
+      <span class="eyebrow">Executive Control Center · Operations Overview</span>
+      <h1 id="dashboard-title" class="page-title">{{ greetingTitle() }}</h1>
+      <p class="page-summary">
+        Overall portfolio visibility across all active procurement contracts, client milestones, and 15-step fulfillment stages.
+      </p>
+    </div>
+
+    <div class="hero-actions">
+      <div class="hero-date-pill" pTooltip="Current System Date" tooltipPosition="bottom">
+        <i class="pi pi-calendar" aria-hidden="true"></i>
+        <span>{{ currentDate() | date:'EEEE, dd MMM yyyy' }}</span>
+      </div>
+
+      <a routerLink="/projects" class="hero-cta-btn">
+        <i class="pi pi-folder-open" aria-hidden="true"></i>
+        <span>Manage Projects</span>
+      </a>
+    </div>
   </header>
 
+  <!-- ── 2. Loading / Error States ───────────────────────────────────── -->
   @if (loading()) {
-    <div class="dashboard-loading" aria-live="polite" aria-busy="true">
-      <div class="skeleton-grid metric-grid">
-        @for (i of [1, 2, 3, 4]; track i) {
-          <div class="skeleton-card skeleton-metric"></div>
-        }
-      </div>
-      <div class="skeleton-grid project-grid">
-        @for (i of [1, 2, 3, 4]; track i) {
-          <div class="skeleton-card skeleton-project"></div>
-        }
-      </div>
+  <div class="center-state loading-state">
+    <div class="loading-ring" aria-hidden="true">
+      <i class="pi pi-spin pi-spinner"></i>
     </div>
+    <p>Aggregating live portfolio data & milestone status…</p>
+  </div>
   } @else if (error()) {
-    <div class="dashboard-error app-panel" role="alert">
-      <i class="pi pi-exclamation-circle error-icon" aria-hidden="true"></i>
-      <div>
-        <h3>Unable to load dashboard data</h3>
-        <p>{{ error() }}</p>
-      </div>
-      <button type="button" class="retry-btn" (click)="loadDashboardData()">
-        <i class="pi pi-refresh" aria-hidden="true"></i> Retry
-      </button>
+  <div class="dashboard-error app-panel" role="alert">
+    <i class="pi pi-exclamation-circle error-icon" aria-hidden="true"></i>
+    <div class="error-text-group">
+      <h3>Unable to load dashboard data</h3>
+      <p>{{ error() }}</p>
     </div>
+    <button type="button" class="retry-btn" (click)="loadDashboardData()">
+      <i class="pi pi-refresh" aria-hidden="true"></i> Retry Connection
+    </button>
+  </div>
   } @else {
-    <!-- Metrics Section -->
-    <div class="metric-grid" aria-label="Inventory control metrics">
-      @for (metric of metrics(); track metric.label) {
-        <article class="metric-card app-panel">
-          <p>{{ metric.label }}</p>
-          <strong>{{ metric.value }}</strong>
-          <span
-            [class.warning]="metric.tone === 'warning'"
-            [class.danger]="metric.tone === 'danger'"
-            [class.info]="metric.tone === 'info'"
-          >
-            {{ metric.trend }}
-          </span>
-        </article>
-      }
-    </div>
 
-    <!-- Recent Projects Section -->
-    <section class="recent-section" aria-labelledby="recent-projects-title">
-      <div class="recent-heading">
-        <h2 id="recent-projects-title">Recent projects</h2>
-        <a routerLink="/projects" class="view-all-link">
-          View all
-          <span aria-hidden="true">&rarr;</span>
-        </a>
+  <!-- ── 3. Executive KPI Metrics Grid ───────────────────────────────── -->
+  <div class="kpi-metrics-grid" aria-label="Portfolio executive metrics">
+    @for (metric of metrics(); track metric.label; let idx = $index) {
+    <article class="kpi-card app-panel">
+      <div class="kpi-icon-wrap" [class.kpi-icon--primary]="idx === 0" [class.kpi-icon--success]="idx === 1"
+        [class.kpi-icon--health]="idx === 2" [class.kpi-icon--progress]="idx === 3">
+        @switch (idx) {
+        @case (0) { <i class="pi pi-briefcase" aria-hidden="true"></i> }
+        @case (1) { <i class="pi pi-wallet" aria-hidden="true"></i> }
+        @case (2) { <i class="pi pi-heart" aria-hidden="true"></i> }
+        @default { <i class="pi pi-chart-line" aria-hidden="true"></i> }
+        }
       </div>
 
-      @if (recentProjects().length === 0) {
-        <div class="empty-projects-state app-panel">
-          <i class="pi pi-folder-open empty-icon" aria-hidden="true"></i>
-          <h3>No projects yet</h3>
-          <p>Create your first project to start tracking the 15-step material lifecycle.</p>
-          <a routerLink="/projects" class="create-project-link">Go to Projects</a>
+      <div class="kpi-content">
+        <span class="kpi-label">{{ metric.label }}</span>
+        <strong class="kpi-num">{{ metric.value }}</strong>
+        <span class="kpi-hint" [class.hint-warning]="metric.tone === 'warning'"
+          [class.hint-danger]="metric.tone === 'danger'" [class.hint-success]="metric.tone === 'success'">
+          {{ metric.trend }}
+        </span>
+      </div>
+    </article>
+    }
+  </div>
+
+  <!-- ── 4. Overall Operations & Portfolio Analytics Grid ─────────────── -->
+  <div class="overview-analytics-grid">
+    
+    <!-- Panel 1: 15-Step Pipeline Lifecycle Stages -->
+    <div class="analytics-card app-panel">
+      <div class="analytics-header">
+        <div class="header-icon-badge header-icon--stages">
+          <i class="pi pi-sitemap" aria-hidden="true"></i>
         </div>
-      } @else {
-        <div class="project-grid">
-          @for (project of recentProjects(); track project.id || project.title) {
-            <article
-              class="project-card app-panel clickable-card"
-              (click)="navigateToProject(project.id)"
-              (keydown.enter)="navigateToProject(project.id)"
-              tabindex="0"
-              role="button"
-              [attr.aria-label]="'View project ' + project.title"
-            >
-              <span class="project-stripe" aria-hidden="true"></span>
-              <div class="project-card-header">
-                <h3>{{ project.title }}</h3>
-                <span
-                  class="status-pill"
-                  [class.completed]="project.status === 'Completed'"
-                  [class.on-hold]="project.status === 'On Hold'"
-                  [class.pending]="project.status === 'Pending'"
-                >
-                  {{ project.status }}
-                </span>
-              </div>
+        <div class="header-text">
+          <h3>15-Step Pipeline Lifecycle</h3>
+          <p>Distribution of active projects across operational phases</p>
+        </div>
+      </div>
 
-              <dl class="project-parties">
-                <div>
-                  <dt>Supplier</dt>
-                  <dd>{{ project.supplier }}</dd>
-                </div>
-                <div>
-                  <dt>Customer</dt>
-                  <dd>{{ project.customer }}</dd>
-                </div>
-              </dl>
+      <div class="stages-breakdown-list">
+        <!-- Stage Phase 1 -->
+        <div class="stage-bar-item">
+          <div class="stage-bar-meta">
+            <span class="stage-name">
+              <span class="stage-badge-pill">Steps 1–5</span> Inquiry, Quotation & Sourcing
+            </span>
+            <span class="stage-count">
+              <strong>{{ sourcingStageCount() }}</strong> project{{ sourcingStageCount() === 1 ? '' : 's' }}
+              ({{ getPercentage(sourcingStageCount(), totalProjectsCount()) }}%)
+            </span>
+          </div>
+          <div class="stage-track">
+            <div class="stage-fill stage-fill--sourcing"
+              [style.width.%]="getPercentage(sourcingStageCount(), totalProjectsCount())"></div>
+          </div>
+        </div>
 
-              <div
-                class="progress-track"
-                role="progressbar"
-                [attr.aria-valuenow]="project.progress"
-                aria-valuemin="0"
-                aria-valuemax="100"
-              >
-                <span [style.width.%]="project.progress"></span>
-              </div>
+        <!-- Stage Phase 2 -->
+        <div class="stage-bar-item">
+          <div class="stage-bar-meta">
+            <span class="stage-name">
+              <span class="stage-badge-pill stage-badge--logistics">Steps 6–11</span> PO, Production & Logistics
+            </span>
+            <span class="stage-count">
+              <strong>{{ logisticsStageCount() }}</strong> project{{ logisticsStageCount() === 1 ? '' : 's' }}
+              ({{ getPercentage(logisticsStageCount(), totalProjectsCount()) }}%)
+            </span>
+          </div>
+          <div class="stage-track">
+            <div class="stage-fill stage-fill--logistics"
+              [style.width.%]="getPercentage(logisticsStageCount(), totalProjectsCount())"></div>
+          </div>
+        </div>
 
-              <div class="project-progress">
-                <span>{{ project.step }}</span>
-                <span>{{ project.milestone }}</span>
-              </div>
-            </article>
+        <!-- Stage Phase 3 -->
+        <div class="stage-bar-item">
+          <div class="stage-bar-meta">
+            <span class="stage-name">
+              <span class="stage-badge-pill stage-badge--clearance">Steps 12–15</span> Customs, Delivery & Settlement
+            </span>
+            <span class="stage-count">
+              <strong>{{ clearanceStageCount() }}</strong> project{{ clearanceStageCount() === 1 ? '' : 's' }}
+              ({{ getPercentage(clearanceStageCount(), totalProjectsCount()) }}%)
+            </span>
+          </div>
+          <div class="stage-track">
+            <div class="stage-fill stage-fill--clearance"
+              [style.width.%]="getPercentage(clearanceStageCount(), totalProjectsCount())"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="analytics-card-footer">
+        <div class="summary-chip">
+          <span class="dot dot--success"></span>
+          <span><strong>{{ onTrackCount() }}</strong> On Track</span>
+        </div>
+        <div class="summary-chip">
+          <span class="dot dot--warning"></span>
+          <span><strong>{{ delayedCount() }}</strong> Delayed / Attention</span>
+        </div>
+        <div class="summary-chip">
+          <span class="dot dot--info"></span>
+          <span><strong>{{ completedCount() }}</strong> Completed</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 2: Commercial & Settlement Status -->
+    <div class="analytics-card app-panel">
+      <div class="analytics-header">
+        <div class="header-icon-badge header-icon--finance">
+          <i class="pi pi-credit-card" aria-hidden="true"></i>
+        </div>
+        <div class="header-text">
+          <h3>Commercial & Payment Health</h3>
+          <p>Client invoicing and vendor payment settlement status</p>
+        </div>
+      </div>
+
+      <div class="commercial-grid">
+        <!-- Customer Invoicing Box -->
+        <div class="commercial-sub-card">
+          <div class="sub-card-header">
+            <i class="pi pi-building" aria-hidden="true"></i>
+            <span>Customer Receivables</span>
+          </div>
+          <div class="payment-stats-row">
+            <div class="pstat-item">
+              <span class="pstat-label">Paid</span>
+              <strong class="pstat-val text-success">{{ customerPayments().paid }}</strong>
+            </div>
+            <div class="pstat-item">
+              <span class="pstat-label">Partial</span>
+              <strong class="pstat-val text-info">{{ customerPayments().partial }}</strong>
+            </div>
+            <div class="pstat-item">
+              <span class="pstat-label">Pending</span>
+              <strong class="pstat-val text-warning">{{ customerPayments().pending }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Supplier Invoicing Box -->
+        <div class="commercial-sub-card">
+          <div class="sub-card-header">
+            <i class="pi pi-truck" aria-hidden="true"></i>
+            <span>Supplier Payables</span>
+          </div>
+          <div class="payment-stats-row">
+            <div class="pstat-item">
+              <span class="pstat-label">Paid</span>
+              <strong class="pstat-val text-success">{{ supplierPayments().paid }}</strong>
+            </div>
+            <div class="pstat-item">
+              <span class="pstat-label">Partial</span>
+              <strong class="pstat-val text-info">{{ supplierPayments().partial }}</strong>
+            </div>
+            <div class="pstat-item">
+              <span class="pstat-label">Pending</span>
+              <strong class="pstat-val text-warning">{{ supplierPayments().pending }}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="analytics-card-footer finance-footer">
+        <div class="avg-deal-meta">
+          <span class="avg-label">Avg Pipeline Contract Value</span>
+          <strong class="avg-value">₹&nbsp;{{ averageDealValue() | number:'1.2-2' }}</strong>
+        </div>
+        <div class="avg-deal-meta" style="text-align: right;">
+          <span class="avg-label">Total Portfolio Volume</span>
+          <strong class="avg-value text-primary">₹&nbsp;{{ totalPortfolioValue() | number:'1.2-2' }}</strong>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── 5. Recent Pipelines Spotlight ───────────────────────────────── -->
+  <section class="recent-section" aria-labelledby="recent-projects-title">
+    <div class="recent-heading">
+      <div class="heading-left">
+        <h2 id="recent-projects-title">Recent Pipelines & Operational Spotlights</h2>
+        <span class="section-subtitle">Real-time status across operational fulfillment workflows</span>
+      </div>
+
+      <a routerLink="/projects" class="view-all-link">
+        <span>View all {{ recentProjects().length }} projects</span>
+        <i class="pi pi-arrow-right" aria-hidden="true"></i>
+      </a>
+    </div>
+
+    @if (recentProjects().length === 0) {
+    <div class="empty-projects-state app-panel">
+      <div class="empty-icon-wrap" aria-hidden="true">
+        <i class="pi pi-folder-open"></i>
+      </div>
+      <h3>No Projects Recorded Yet</h3>
+      <p>Create your first procurement pipeline to start tracking the 15-step material lifecycle.</p>
+      <a routerLink="/projects" class="create-project-link">
+        <i class="pi pi-plus" aria-hidden="true"></i> Go to Projects
+      </a>
+    </div>
+    } @else {
+    <div class="dashboard-projects-grid">
+      @for (project of recentProjects(); track project.id) {
+      <article class="modern-project-card" [class.modern-project-card--delayed]="project.health_status === 'delayed'">
+
+        <!-- Card Top Bar -->
+        <div class="mpc-topbar">
+          <div class="mpc-badge-group">
+            <span class="mpc-id-pill">#{{ project.id < 10 ? '0' + project.id : project.id }}</span>
+            <span class="health-pill" [class]="'health-pill ' + getHealthBadgeClass(project.health_status)">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              {{ getHealthLabel(project.health_status) }}
+            </span>
+            <span class="status-badge" [class]="'status-badge ' + getStatusBadgeClass(project.status)">
+              {{ project.status }}
+            </span>
+          </div>
+
+          @if (project.total_value) {
+          <div class="mpc-value-badge" pTooltip="Contract Value" tooltipPosition="left">
+            <span class="curr-symbol">{{ project.currency || 'INR' }}</span>
+            <strong>₹&nbsp;{{ project.total_value | number:'1.2-2' }}</strong>
+          </div>
           }
         </div>
+
+        <!-- Project Title -->
+        <div class="mpc-title-box">
+          <h3 class="mpc-title" (click)="navigateToProject(project.id)" [title]="project.title">
+            {{ project.title }}
+          </h3>
+        </div>
+
+        <!-- Parties Grid (Customer & Supplier) -->
+        <div class="mpc-parties-grid">
+          <div class="party-box party-box--customer">
+            <div class="party-header">
+              <span class="party-label">
+                <i class="pi pi-building" aria-hidden="true"></i> Client
+              </span>
+              @if (project.customer_payment_status) {
+              <span class="payment-chip" [class]="'payment-chip ' + getPaymentBadgeClass(project.customer_payment_status)">
+                {{ project.customer_payment_status }}
+              </span>
+              }
+            </div>
+            <p class="party-name" [title]="project.customer">{{ project.customer }}</p>
+          </div>
+
+          <div class="party-box party-box--supplier">
+            <div class="party-header">
+              <span class="party-label">
+                <i class="pi pi-truck" aria-hidden="true"></i> Vendor
+              </span>
+              @if (project.supplier_payment_status) {
+              <span class="payment-chip" [class]="'payment-chip ' + getPaymentBadgeClass(project.supplier_payment_status)">
+                {{ project.supplier_payment_status }}
+              </span>
+              }
+            </div>
+            <p class="party-name" [title]="project.supplier">{{ project.supplier }}</p>
+          </div>
+        </div>
+
+        <!-- Active Milestone & Progress Bar -->
+        <div class="mpc-progress-box">
+          <div class="progress-info-row">
+            <div class="active-step-meta">
+              <span class="step-num-pill">{{ project.step }}</span>
+              <span class="step-name-text">{{ project.milestone }}</span>
+            </div>
+            <span class="percent-text">{{ getProgressPercent(project) }}%</span>
+          </div>
+
+          <div class="progress-track" role="progressbar" [attr.aria-valuenow]="getProgressPercent(project)" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-fill" [style.width.%]="getProgressPercent(project)"
+              [class.progress-fill--delayed]="project.health_status === 'delayed'"></div>
+          </div>
+        </div>
+
+        <!-- Next Action Spotlight -->
+        @if (project.next_action) {
+        <div class="next-action-spotlight">
+          <div class="action-icon-wrap" aria-hidden="true">
+            <i class="pi pi-bolt"></i>
+          </div>
+          <div class="action-details">
+            <span class="action-caption">Next Operational Step:</span>
+            <p class="action-text" [title]="project.next_action">{{ project.next_action }}</p>
+          </div>
+        </div>
+        }
+
+        <!-- Card Footer -->
+        <div class="mpc-footer">
+          @if (project.target_delivery_date) {
+          <span class="delivery-pill" [class.delivery-pill--overdue]="project.health_status === 'delayed'">
+            <i class="pi pi-calendar" aria-hidden="true"></i>
+            Target: {{ project.target_delivery_date | date:'dd MMM yyyy' }}
+          </span>
+          } @else {
+          <span class="delivery-pill delivery-pill--muted">
+            <i class="pi pi-check-circle" aria-hidden="true"></i>
+            15-Step Pipeline
+          </span>
+          }
+
+          <button pButton type="button" label="Open Pipeline" icon="pi pi-arrow-right" iconPos="right"
+            class="launch-pipeline-btn" (click)="navigateToProject(project.id)"></button>
+        </div>
+      </article>
       }
-    </section>
+    </div>
+    }
+  </section>
+
   }
+
 </section>
+

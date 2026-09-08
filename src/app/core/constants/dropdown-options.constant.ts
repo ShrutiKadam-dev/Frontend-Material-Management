@@ -187,3 +187,11 @@ export function parseValidity(raw?: string | null, fallbackValue = '60', fallbac
     unit: str,
   };
 }
+
+/**
+ * Logistics shipping mode options
+ */
+export const LOGISTIC_TYPE_OPTIONS: SelectOption<string>[] = [
+  { label: 'Air Freight', value: 'air' },
+  { label: 'Sea Freight', value: 'sea' },
+];

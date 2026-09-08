@@ -70,7 +70,7 @@ export class ProjectTimeline implements OnInit {
   }
 
   protected isStepClickable(stepNumber: number): boolean {
-    return stepNumber >= 1 && stepNumber <= 10;
+    return stepNumber >= 1 && stepNumber <= 12;
   }
 
   protected navigateToStep(stepNumber: number): void {

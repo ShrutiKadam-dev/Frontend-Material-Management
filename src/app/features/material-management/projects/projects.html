@@ -1,116 +1,424 @@
 <section class="base-page projects-page" aria-labelledby="projects-title">
-  <div class="page-header">
-    <div>
-      <p class="eyebrow">Projects</p>
-      <h1 id="projects-title">All projects</h1>
-      <p>Every project links one supplier to one customer and tracks the 15-step fulfilment flow.</p>
+
+  <!-- ── 1. Page Header Bar ───────────────────────────────────────────── -->
+  <header class="page-header projects-header">
+    <div class="header-left">
+      <div class="header-icon-box" aria-hidden="true">
+        <i class="pi pi-folder-open"></i>
+      </div>
+      <div class="header-title-group">
+        <span class="eyebrow">Project Management · 15-Step Pipelines</span>
+        <h1 id="projects-title">Projects</h1>
+        <p class="header-desc">
+          Manage and track active procurement pipelines linking customers to suppliers.
+        </p>
+      </div>
     </div>
+
     <div class="header-actions">
-      <button pButton type="button" icon="pi pi-plus" label="New Project" (click)="openAddDialog()"></button>
+      <button pButton type="button" icon="pi pi-refresh" class="p-button-text p-button-secondary refresh-btn"
+        (click)="loadProjects()" pTooltip="Reload projects" tooltipPosition="bottom" aria-label="Reload projects">
+      </button>
+
+      <button pButton type="button" icon="pi pi-plus" label="New Project" class="create-project-btn"
+        (click)="openAddDialog()">
+      </button>
+    </div>
+  </header>
+
+  <!-- ── 2. Filters, Search Bar & View Mode Control ───────────────────── -->
+  <div class="control-panel app-panel">
+    <!-- Search Bar -->
+    <div class="search-input-wrapper">
+      <i class="pi pi-search search-icon" aria-hidden="true"></i>
+      <input type="text" class="search-input" [value]="searchQuery()" (input)="onSearchInput($event)"
+        placeholder="Search projects by title, client, supplier, or next step…" aria-label="Search projects" />
+      @if (searchQuery()) {
+      <button type="button" class="clear-search-btn" (click)="clearSearch()" aria-label="Clear search">
+        <i class="pi pi-times" aria-hidden="true"></i>
+      </button>
+      }
+    </div>
+
+    <!-- Health / Status Filters -->
+    <div class="filter-pills-list" role="tablist" aria-label="Filter projects by health">
+      <button type="button" class="filter-pill" [class.filter-pill--active]="selectedHealthFilter() === 'all'"
+        (click)="setFilter('all')">
+        All ({{ projects().length }})
+      </button>
+      <button type="button" class="filter-pill" [class.filter-pill--active]="selectedHealthFilter() === 'on_track'"
+        (click)="setFilter('on_track')">
+        <span class="status-dot status-dot--track" aria-hidden="true"></span>
+        On Track ({{ onTrackCount() }})
+      </button>
+      <button type="button" class="filter-pill" [class.filter-pill--active]="selectedHealthFilter() === 'delayed'"
+        (click)="setFilter('delayed')">
+        <span class="status-dot status-dot--delayed" aria-hidden="true"></span>
+        Delayed ({{ delayedCount() }})
+      </button>
+      <button type="button" class="filter-pill" [class.filter-pill--active]="selectedHealthFilter() === 'in_progress'"
+        (click)="setFilter('in_progress')">
+        In Progress
+      </button>
+      <button type="button" class="filter-pill" [class.filter-pill--active]="selectedHealthFilter() === 'completed'"
+        (click)="setFilter('completed')">
+        Completed
+      </button>
+    </div>
+
+    <!-- View Mode Switcher -->
+    <div class="view-mode-toggle" role="group" aria-label="View mode toggle">
+      <button type="button" class="view-btn" [class.view-btn--active]="viewMode() === 'grid'"
+        (click)="setViewMode('grid')" pTooltip="Grid View" tooltipPosition="top" aria-label="Switch to grid view">
+        <i class="pi pi-th-large" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="view-btn" [class.view-btn--active]="viewMode() === 'table'"
+        (click)="setViewMode('table')" pTooltip="Table View" tooltipPosition="top" aria-label="Switch to table view">
+        <i class="pi pi-list" aria-hidden="true"></i>
+      </button>
     </div>
   </div>
 
+  <!-- ── 3. Main Projects Content (Grid or Table) ─────────────────────── -->
   @if (loading() && projects().length === 0) {
-  <div class="loading-state"
-    style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 340px; gap: 12px;">
-    <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: var(--color-primary);" aria-hidden="true"></i>
-    <p style="color: var(--color-muted); font-size: 0.95rem;">Loading projects...</p>
+  <div class="center-state loading-state">
+    <div class="loading-ring" aria-hidden="true">
+      <i class="pi pi-spin pi-spinner"></i>
+    </div>
+    <p>Loading projects & pipeline milestones…</p>
   </div>
   } @else if (error()) {
-  <div class="error-state app-panel"
-    style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 340px; padding: 32px; gap: 16px; text-align: center;">
-    <i class="pi pi-exclamation-circle" style="font-size: 3rem; color: var(--color-danger);" aria-hidden="true"></i>
-    <h2 style="color: var(--color-heading); font-size: 1.24rem; font-weight: 750;">Failed to Load Projects</h2>
-    <p style="color: var(--color-muted); max-width: 400px; margin: 0;">{{ error() }}</p>
-    <button pButton type="button" icon="pi pi-refresh" label="Retry" class="p-button-outlined"
+  <div class="error-state app-panel">
+    <i class="pi pi-exclamation-circle error-icon" aria-hidden="true"></i>
+    <h2>Failed to Load Projects</h2>
+    <p>{{ error() }}</p>
+    <button pButton type="button" icon="pi pi-refresh" label="Retry Connection" class="create-project-btn"
       (click)="loadProjects()"></button>
   </div>
-  } @else if (projects().length === 0) {
-  <div class="empty-state">
-    <i class="pi pi-briefcase" aria-hidden="true"></i>
-    <h2>No Projects Found</h2>
-    <p>Get started by creating your first project.</p>
-    <button pButton type="button" icon="pi pi-plus" label="New Project" (click)="openAddDialog()"></button>
+  } @else if (filteredProjects().length === 0) {
+  <div class="empty-state app-panel">
+    <div class="empty-icon-wrap" aria-hidden="true">
+      <i class="pi pi-search"></i>
+    </div>
+    <h2>No Matching Projects Found</h2>
+    <p>
+      @if (searchQuery() || selectedHealthFilter() !== 'all') {
+      No projects match your current filter or search criteria.
+      } @else {
+      Get started by creating your first material management project.
+      }
+    </p>
+    <div class="empty-actions">
+      @if (searchQuery() || selectedHealthFilter() !== 'all') {
+      <button pButton type="button" icon="pi pi-filter-slash" label="Reset Filters" class="p-button-outlined"
+        (click)="clearSearch(); setFilter('all')"></button>
+      }
+      <button pButton type="button" icon="pi pi-plus" label="New Project" class="create-project-btn"
+        (click)="openAddDialog()"></button>
+    </div>
   </div>
   } @else {
-  <div class="project-grid">
-    @for (project of projects(); track project.id) {
-    <article class="project-card app-panel">
-      <span class="project-stripe" aria-hidden="true"></span>
-      <div class="project-card-header">
-        <h2>{{ project.project_title }}</h2>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       VIEW 1: MODERN GRID CARDS
+  ══════════════════════════════════════════════════════════════════ -->
+  @if (viewMode() === 'grid') {
+  <div class="projects-grid" role="feed" aria-label="Projects list">
+    @for (project of filteredProjects(); track project.id) {
+    <article class="modern-project-card" [class.modern-project-card--delayed]="project.health_status === 'delayed'">
+
+      <!-- Card Top Bar -->
+      <div class="mpc-topbar">
+        <div class="mpc-badge-group">
+          <span class="mpc-id-pill">#{{ project.id < 10 ? '0' + project.id : project.id }}</span>
+          <span class="health-pill" [class]="'health-pill ' + getHealthBadgeClass(project.health_status)">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            {{ getHealthLabel(project.health_status) }}
+          </span>
+          <span class="status-badge" [class]="'status-badge ' + getStatusBadgeClass(project.status)">
+            {{ getStatusLabel(project.status) }}
+          </span>
+        </div>
+
+        <div class="mpc-value-badge" pTooltip="Contract Total Value" tooltipPosition="left">
+          <span class="curr-symbol">{{ project.currency || 'INR' }}</span>
+          <strong>₹&nbsp;{{ (project.total_value || 0) | number:'1.2-2' }}</strong>
+        </div>
       </div>
 
-      <dl class="project-parties">
-        <div>
-          <dt>Supplier</dt>
-          <dd>{{ getSupplierName(project.supplier_id) }}</dd>
-        </div>
-        <div>
-          <dt>Customer</dt>
-          <dd>{{ getCustomerName(project.customer_id) }}</dd>
-        </div>
-      </dl>
+      <!-- Card Title & Link -->
+      <div class="mpc-title-box">
+        <h2 class="mpc-title" (click)="openDetailsDialog(project)" [title]="project.project_title">
+          {{ project.project_title }}
+        </h2>
+      </div>
 
-      <div class="project-actions">
-        <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-sm"
-          (click)="openDetailsDialog(project)" aria-label="View project details" pTooltip="Details" tooltipPosition="top"></button>
-        <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm"
-          (click)="openEditDialog(project)" aria-label="Edit project" pTooltip="Edit" tooltipPosition="top"></button>
+      <!-- Parties Strip (Customer & Supplier) -->
+      <div class="mpc-parties-grid">
+        <!-- Customer Box -->
+        <div class="party-box party-box--customer">
+          <div class="party-header">
+            <span class="party-label">
+              <i class="pi pi-building" aria-hidden="true"></i> Client / Customer
+            </span>
+            <span class="payment-chip" [class]="'payment-chip ' + getPaymentBadgeClass(project.customer_payment_status)"
+              [pTooltip]="'Customer Payment: ' + (project.customer_payment_status || 'pending')" tooltipPosition="top">
+              {{ project.customer_payment_status || 'pending' }}
+            </span>
+          </div>
+          <p class="party-name" [title]="project.customer_name || getCustomerName(project.customer_id)">
+            {{ project.customer_name || getCustomerName(project.customer_id) }}
+          </p>
+        </div>
+
+        <!-- Supplier Box -->
+        <div class="party-box party-box--supplier">
+          <div class="party-header">
+            <span class="party-label">
+              <i class="pi pi-truck" aria-hidden="true"></i> Vendor / Supplier
+            </span>
+            <span class="payment-chip" [class]="'payment-chip ' + getPaymentBadgeClass(project.supplier_payment_status)"
+              [pTooltip]="'Supplier Payment: ' + (project.supplier_payment_status || 'pending')" tooltipPosition="top">
+              {{ project.supplier_payment_status || 'pending' }}
+            </span>
+          </div>
+          <p class="party-name" [title]="project.supplier_name || getSupplierName(project.supplier_id)">
+            {{ project.supplier_name || getSupplierName(project.supplier_id) }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Active Milestone & Progress Bar -->
+      <div class="mpc-progress-box">
+        <div class="progress-info-row">
+          <div class="active-step-meta">
+            <span class="step-num-pill">
+              Step {{ project.current_step_number || 1 }} of {{ project.total_steps || 15 }}
+            </span>
+            <span class="step-name-text">
+              {{ project.current_step_name || 'Customer Query Initiated' }}
+            </span>
+          </div>
+          <span class="percent-text">{{ getProgressPercent(project) }}%</span>
+        </div>
+
+        <div class="progress-track" role="progressbar" [attr.aria-valuenow]="getProgressPercent(project)" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-fill" [style.width.%]="getProgressPercent(project)"
+            [class.progress-fill--delayed]="project.health_status === 'delayed'"></div>
+        </div>
+      </div>
+
+      <!-- Next Action Spotlight -->
+      @if (project.next_action) {
+      <div class="next-action-spotlight">
+        <div class="action-icon-wrap" aria-hidden="true">
+          <i class="pi pi-bolt"></i>
+        </div>
+        <div class="action-details">
+          <span class="action-caption">Next Operational Action:</span>
+          <p class="action-text" [title]="project.next_action">{{ project.next_action }}</p>
+        </div>
+      </div>
+      }
+
+      <!-- Target Delivery Date & Meta -->
+      <div class="mpc-meta-row">
+        @if (project.target_delivery_date) {
+        <span class="delivery-pill" [class.delivery-pill--overdue]="project.health_status === 'delayed'">
+          <i class="pi pi-calendar" aria-hidden="true"></i>
+          Target Delivery: {{ project.target_delivery_date | date:'dd MMM yyyy' }}
+        </span>
+        } @else {
+        <span class="delivery-pill delivery-pill--muted">
+          <i class="pi pi-clock" aria-hidden="true"></i>
+          Updated: {{ project.updated_at | date:'dd MMM yyyy' }}
+        </span>
+        }
+      </div>
+
+      <!-- Card Action Footer -->
+      <div class="mpc-footer">
+        <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm edit-card-btn"
+          pTooltip="Edit Project Info" tooltipPosition="top" (click)="openEditDialog(project)"
+          aria-label="Edit project"></button>
+
+        <button pButton type="button" label="Open 15-Step Pipeline" icon="pi pi-arrow-right" iconPos="right"
+          class="launch-pipeline-btn" (click)="openDetailsDialog(project)"></button>
       </div>
     </article>
     }
   </div>
   }
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       VIEW 2: HIGH-DENSITY TABLE VIEW
+  ══════════════════════════════════════════════════════════════════ -->
+  @if (viewMode() === 'table') {
+  <div class="table-container app-panel">
+    <p-table [value]="filteredProjects()" [paginator]="filteredProjects().length > 10" [rows]="10"
+      styleClass="p-datatable-sm items-table-wrap" responsiveLayout="scroll">
+      <ng-template pTemplate="header">
+        <tr>
+          <th scope="col" style="width: 60px; text-align: center;">#</th>
+          <th scope="col" style="min-width: 220px;">Project Title</th>
+          <th scope="col" style="min-width: 180px;">Customer</th>
+          <th scope="col" style="min-width: 180px;">Supplier</th>
+          <th scope="col" style="min-width: 220px;">Pipeline Step & Progress</th>
+          <th scope="col" style="min-width: 130px; text-align: right;">Total Value</th>
+          <th scope="col" style="min-width: 120px; text-align: center;">Health</th>
+          <th scope="col" style="min-width: 200px;">Next Action</th>
+          <th scope="col" style="width: 110px; text-align: center;">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-p let-i="rowIndex">
+        <tr class="table-project-row">
+          <td style="text-align: center; font-weight: 700; color: #64748b;">
+            #{{ p.id < 10 ? '0' + p.id : p.id }}
+          </td>
+          <td>
+            <strong class="tbl-project-title" (click)="openDetailsDialog(p)">{{ p.project_title }}</strong>
+            <span class="tbl-date-sub">{{ p.created_at | date:'dd MMM yyyy' }}</span>
+          </td>
+          <td>
+            <div class="tbl-party-cell">
+              <i class="pi pi-building" aria-hidden="true"></i>
+              <span>{{ p.customer_name || getCustomerName(p.customer_id) }}</span>
+            </div>
+          </td>
+          <td>
+            <div class="tbl-party-cell">
+              <i class="pi pi-truck" aria-hidden="true"></i>
+              <span>{{ p.supplier_name || getSupplierName(p.supplier_id) }}</span>
+            </div>
+          </td>
+          <td>
+            <div class="tbl-progress-cell">
+              <div class="tbl-step-title">
+                <span>Step {{ p.current_step_number || 1 }}: {{ p.current_step_name || 'Active' }}</span>
+                <strong>{{ getProgressPercent(p) }}%</strong>
+              </div>
+              <div class="progress-track" style="height: 5px;">
+                <div class="progress-fill" [style.width.%]="getProgressPercent(p)"></div>
+              </div>
+            </div>
+          </td>
+          <td style="text-align: right; font-weight: 800; color: var(--color-heading);">
+            ₹&nbsp;{{ (p.total_value || 0) | number:'1.2-2' }}
+          </td>
+          <td style="text-align: center;">
+            <span class="health-pill" [class]="'health-pill ' + getHealthBadgeClass(p.health_status)">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              {{ getHealthLabel(p.health_status) }}
+            </span>
+          </td>
+          <td>
+            <span class="tbl-next-action" [title]="p.next_action || 'Pending action'">
+              {{ p.next_action || '—' }}
+            </span>
+          </td>
+          <td style="text-align: center;">
+            <div class="actions-cell" style="justify-content: center;">
+              <button pButton type="button" icon="pi pi-arrow-right" class="p-button-text p-button-sm qe-edit"
+                pTooltip="Open Pipeline Steps" tooltipPosition="top" (click)="openDetailsDialog(p)"
+                aria-label="Open pipeline steps"></button>
+              <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                pTooltip="Edit Project" tooltipPosition="top" (click)="openEditDialog(p)"
+                aria-label="Edit project"></button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+  }
+
+  }
+
 </section>
 
-<!-- Dialog for Add/Edit Project -->
-<p-dialog [header]="isEditMode() ? 'Edit Project' : 'New Project'" [visible]="dialogVisible()"
-  (visibleChange)="dialogVisible.set($event)" [modal]="true" [style]="{ width: '480px' }" [draggable]="false"
-  [resizable]="false">
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: CREATE / EDIT PROJECT DIALOG (Standard Design)
+══════════════════════════════════════════════════════════════════════ -->
+<p-dialog [header]="isEditMode() ? 'Edit Project Details' : 'Initiate New Project'" [visible]="dialogVisible()"
+  (visibleChange)="dialogVisible.set($event)" [modal]="true" [blockScroll]="true" [draggable]="false"
+  [resizable]="false" [style]="{ width: '92vw', maxWidth: '640px' }" styleClass="cq-dialog cost-sheet-dialog"
+  appendTo="body">
 
-  <form [formGroup]="projectForm" (ngSubmit)="onSubmit()" novalidate>
-    <div class="field" style="margin-top: 8px;">
-      <label for="project_title">Project Title *</label>
-      <input pInputText id="project_title" formControlName="project_title" style="width: 100%;"
-        placeholder="Enter project title" />
-      @if (projectForm.get('project_title')?.invalid && (projectForm.get('project_title')?.dirty ||
-      projectForm.get('project_title')?.touched)) {
-      <p class="error">Project title is required.</p>
-      }
+  <form [formGroup]="projectForm" (ngSubmit)="onSubmit()" novalidate id="project-form">
+    <div class="dlg-body">
+
+      <!-- Section 1: Project Information -->
+      <div class="dlg-section">
+        <p class="dlg-section-label">
+          <i class="pi pi-id-card"></i> 1. Project Reference & Contract
+        </p>
+
+        <div class="dlg-grid">
+          <div class="field span-two">
+            <label for="dlg-project-title">Project Title <span class="req" aria-hidden="true">*</span></label>
+            <input id="dlg-project-title" pInputText formControlName="project_title"
+              placeholder="e.g. Cold Storage Refrigeration Units" [class.ng-invalid]="isFieldInvalid('project_title')" />
+            @if (isFieldInvalid('project_title')) {
+            <p class="field-error">{{ getFieldError('project_title') }}</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="dlg-currency">Currency</label>
+            <p-select id="dlg-currency" formControlName="currency" [options]="[
+                { label: 'INR (₹) — Indian Rupee', value: 'INR' },
+                { label: 'USD ($) — US Dollar', value: 'USD' },
+                { label: 'EUR (€) — Euro', value: 'EUR' }
+              ]" optionLabel="label" optionValue="value" placeholder="Select Currency" [fluid]="true" appendTo="body"
+              [style]="{ width: '100%', height: '38px' }" />
+          </div>
+
+          <div class="field">
+            <label for="dlg-target-delivery">Target Delivery Date</label>
+            <p-datepicker inputId="dlg-target-delivery" formControlName="target_delivery_date" dateFormat="yy-mm-dd"
+              [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Parties Involved -->
+      <div class="dlg-section">
+        <p class="dlg-section-label">
+          <i class="pi pi-users"></i> 2. Contract Parties (Customer & Supplier)
+        </p>
+
+        <div class="dlg-grid">
+          <div class="field">
+            <label for="dlg-customer">Customer / Client <span class="req" aria-hidden="true">*</span></label>
+            <p-select id="dlg-customer" formControlName="customer_id" [options]="customers()" optionLabel="name"
+              optionValue="id" placeholder="Select a Customer" [fluid]="true" appendTo="body"
+              [style]="{ width: '100%', height: '38px' }" />
+            @if (isFieldInvalid('customer_id')) {
+            <p class="field-error">{{ getFieldError('customer_id') }}</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="dlg-supplier">Supplier / Vendor <span class="req" aria-hidden="true">*</span></label>
+            <p-select id="dlg-supplier" formControlName="supplier_id" [options]="suppliers()" optionLabel="name"
+              optionValue="id" placeholder="Select a Supplier" [fluid]="true" appendTo="body"
+              [style]="{ width: '100%', height: '38px' }" />
+            @if (isFieldInvalid('supplier_id')) {
+            <p class="field-error">{{ getFieldError('supplier_id') }}</p>
+            }
+          </div>
+        </div>
+      </div>
+
     </div>
 
-    <div class="field">
-      <label for="customer_id">Customer *</label>
-      <p-select id="customer_id" formControlName="customer_id" [options]="customers()" optionLabel="name"
-        optionValue="id" placeholder="Select a customer" [style]="{ width: '100%' }" appendTo="body"
-        aria-label="Select customer">
-      </p-select>
-      @if (projectForm.get('customer_id')?.invalid && (projectForm.get('customer_id')?.dirty ||
-      projectForm.get('customer_id')?.touched)) {
-      <p class="error">Customer is required.</p>
-      }
-    </div>
-
-    <div class="field">
-      <label for="supplier_id">Supplier *</label>
-      <p-select id="supplier_id" formControlName="supplier_id" [options]="suppliers()" optionLabel="name"
-        optionValue="id" placeholder="Select a supplier" [style]="{ width: '100%' }" appendTo="body"
-        aria-label="Select supplier">
-      </p-select>
-      @if (projectForm.get('supplier_id')?.invalid && (projectForm.get('supplier_id')?.dirty ||
-      projectForm.get('supplier_id')?.touched)) {
-      <p class="error">Supplier is required.</p>
-      }
-    </div>
-
-    <div class="dialog-footer">
-      <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary"
-        (click)="dialogVisible.set(false)"></button>
-      <button pButton type="submit" [label]="submitting() ? 'Submitting...' : 'Save'"
-        [disabled]="projectForm.invalid || submitting()"></button>
+    <!-- Dialog Footer -->
+    <div class="dlg-footer">
+      <button pButton type="button" label="Cancel" class="p-button-text cancel-btn"
+        (click)="dialogVisible.set(false)" [disabled]="submitting()"></button>
+      <button pButton type="submit" [label]="isEditMode() ? 'Update Project' : 'Create Project'" icon="pi pi-check"
+        class="submit-btn" [loading]="submitting()" [disabled]="submitting() || projectForm.invalid"></button>
     </div>
   </form>
 </p-dialog>
-
-

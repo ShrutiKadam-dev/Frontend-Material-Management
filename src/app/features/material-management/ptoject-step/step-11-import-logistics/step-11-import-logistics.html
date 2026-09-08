@@ -1,1 +1,859 @@
-<p>step-11-import-logistics works!</p>
+<section class="base-page step-page" aria-labelledby="step-page-title">
+
+  <!-- ── 1. Page Header Bar ───────────────────────────────────────────── -->
+  <div class="page-header">
+    <div class="header-left">
+      <button pButton type="button" icon="pi pi-arrow-left" class="p-button-text p-button-secondary back-btn"
+        (click)="goBack()" aria-label="Back to project pipeline" pTooltip="Back to Project Steps"
+        tooltipPosition="bottom"></button>
+      <div class="header-title-group">
+        <span class="eyebrow">Step 11 · Import Logistics & Customs</span>
+        <h1 id="step-page-title">
+          @if (project(); as p) {
+          {{ p.project_title }}
+          } @else {
+          Import Logistics & Bill of Entry
+          }
+        </h1>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      @if (customer(); as c) {
+      <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+        <i class="pi pi-user" aria-hidden="true"></i>
+        {{ c.name }}
+      </span>
+      } @else if (project()?.customer_name) {
+      <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+        <i class="pi pi-user" aria-hidden="true"></i>
+        {{ project()?.customer_name }}
+      </span>
+      }
+      <div class="header-step-pill" aria-hidden="true">
+        Step <strong>11</strong> of 15
+      </div>
+
+      @switch (activeTab()) {
+      @case ('logistics') {
+      <button pButton type="button" icon="pi pi-plus" label="Record Import Logistics" class="create-cost-sheet-btn"
+        (click)="openCreateLogisticsDialog()"></button>
+      }
+      @case ('bill-of-entry') {
+      <button pButton type="button" icon="pi pi-plus" label="Record Bill of Entry" class="create-cost-sheet-btn"
+        (click)="openCreateBoeDialog()"></button>
+      }
+      }
+    </div>
+  </div>
+
+  <!-- ── 2. Full-Width Step Main Layout ───────────────────────────────── -->
+  <div class="step-layout--fullwidth">
+    <div class="step-main step-main--fullwidth">
+
+      <!-- ── Modern Standard Sub-Step Tabs Navigation (Full Width) ── -->
+      <nav class="substep-tabs-nav" aria-label="Step 11 Sub-steps">
+        <div class="substep-tabs-list" role="tablist">
+          <!-- Tab 1: Import Logistics -->
+          <button type="button" role="tab" class="substep-tab-btn"
+            [class.substep-tab-btn--active]="activeTab() === 'logistics'"
+            [attr.aria-selected]="activeTab() === 'logistics'" (click)="selectTab('logistics')">
+            <div class="tab-icon-wrap">
+              <i class="pi pi-truck tab-icon" aria-hidden="true"></i>
+            </div>
+            <div class="tab-text-group">
+              <div class="tab-title-row">
+                <span class="tab-title">11.1 Import Logistics</span>
+                <span class="tab-badge">{{ importLogistics().length }}</span>
+              </div>
+              <span class="tab-subtitle">Air & Sea freight shipping, AWB / BL</span>
+            </div>
+          </button>
+
+          <!-- Tab 2: Filing of Bill of Entry -->
+          <button type="button" role="tab" class="substep-tab-btn"
+            [class.substep-tab-btn--active]="activeTab() === 'bill-of-entry'"
+            [attr.aria-selected]="activeTab() === 'bill-of-entry'" (click)="selectTab('bill-of-entry')">
+            <div class="tab-icon-wrap">
+              <i class="pi pi-file-check tab-icon" aria-hidden="true"></i>
+            </div>
+            <div class="tab-text-group">
+              <div class="tab-title-row">
+                <span class="tab-title">11.2 Filing of Bill of Entry</span>
+                <span class="tab-badge">{{ billsOfEntry().length }}</span>
+              </div>
+              <span class="tab-subtitle">Customs assessment (BCD, SWS, IGST) & duty</span>
+            </div>
+          </button>
+        </div>
+      </nav>
+
+      <!-- Loading State -->
+      @if (loading()) {
+      <div class="center-state">
+        <div class="loading-ring" aria-hidden="true">
+          <i class="pi pi-spin pi-spinner"></i>
+        </div>
+        <p>Loading Step 11 records…</p>
+      </div>
+      }
+
+      <!-- ════════════════════════════════════════════════════════════════
+           SUB-STEP 1: IMPORT LOGISTICS STREAM
+      ════════════════════════════════════════════════════════════════ -->
+      @else if (activeTab() === 'logistics') {
+      @if (importLogistics().length === 0) {
+      <div class="version-sheet-card empty-card">
+        <div class="center-state empty-cta">
+          <span class="empty-icon" aria-hidden="true">
+            <i class="pi pi-truck"></i>
+          </span>
+          <h3>No Import Logistics records yet</h3>
+          <p>
+            Record Airway Bill (AWB) or Bill of Lading (BL) details with vessel/flight and port information.
+          </p>
+          <button pButton type="button" icon="pi pi-plus" label="Record Import Logistics" class="create-cost-sheet-btn"
+            (click)="openCreateLogisticsDialog()"></button>
+        </div>
+      </div>
+      } @else {
+      <div class="version-cards-stream" role="feed" aria-label="Import logistics history">
+        @for (item of importLogistics(); track item.id; let i = $index) {
+        <article class="version-sheet-card">
+
+          <!-- Card Header Bar -->
+          <div class="vsc-header">
+            <div class="vsc-header-left">
+              <span class="vsc-badge" [class.vsc-badge--air]="item.logistic_type === 'air'" [class.vsc-badge--sea]="item.logistic_type === 'sea'">
+                <i [class]="item.logistic_type === 'air' ? 'pi pi-send' : 'pi pi-compass'" aria-hidden="true"></i>
+                {{ item.logistic_type === 'air' ? 'Air Freight' : 'Sea Freight' }}
+              </span>
+
+              @if (i === 0) {
+              <span class="vsc-latest-pill">Latest</span>
+              }
+
+              <span class="vsc-date">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                {{ item.date | date: 'dd MMM yyyy' }}
+              </span>
+
+              <h2 class="vsc-title">
+                @if (item.logistic_type === 'air') {
+                AWB: {{ item.airway_bill_no || ('#' + item.id) }} — {{ item.flight_name || 'Air Freight' }}
+                } @else {
+                BL: {{ item.bill_of_lading_no || ('#' + item.id) }} — {{ item.vessel_name || 'Sea Vessel' }}
+                }
+              </h2>
+            </div>
+
+            <div class="vsc-header-right">
+              <span class="vsc-count-pill" [pTooltip]="'Port/Airport of Discharge: ' + item.port_of_discharge" tooltipPosition="bottom">
+                <i class="pi pi-map-marker" aria-hidden="true"></i>
+                Discharge: {{ item.port_of_discharge }}
+              </span>
+
+              <div class="actions-cell">
+                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                  [attr.aria-label]="'Edit logistics record ' + item.id" pTooltip="Edit record"
+                  tooltipPosition="top" (click)="openEditLogisticsDialog(item)"></button>
+                <button pButton type="button" icon="pi pi-trash"
+                  class="p-button-text p-button-sm p-button-danger qe-delete"
+                  [attr.aria-label]="'Delete logistics record ' + item.id" pTooltip="Delete record"
+                  tooltipPosition="top" (click)="deleteLogistics(item)"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Body -->
+          <div class="vsc-body">
+
+            <!-- Refined Parameters Strip -->
+            <div class="vsc-params-strip">
+              <!-- Air Freight Specific Chips -->
+              @if (item.logistic_type === 'air') {
+              @if (item.airway_bill_no) {
+              <div class="param-chip param-chip--highlight">
+                <i class="pi pi-tag" aria-hidden="true"></i>
+                <span class="p-lbl">Airway Bill No:</span>
+                <span class="p-val">{{ item.airway_bill_no }}</span>
+              </div>
+              }
+              @if (item.flight_name) {
+              <div class="param-chip">
+                <i class="pi pi-send" aria-hidden="true"></i>
+                <span class="p-lbl">Flight Name:</span>
+                <span class="p-val">{{ item.flight_name }}</span>
+              </div>
+              }
+              @if (item.flight_no) {
+              <div class="param-chip">
+                <i class="pi pi-hashtag" aria-hidden="true"></i>
+                <span class="p-lbl">Flight No:</span>
+                <span class="p-val">{{ item.flight_no }}</span>
+              </div>
+              }
+              @if (item.airport_of_loading) {
+              <div class="param-chip">
+                <i class="pi pi-map-marker" aria-hidden="true"></i>
+                <span class="p-lbl">Airport of Loading:</span>
+                <span class="p-val">{{ item.airport_of_loading }}</span>
+              </div>
+              }
+              }
+
+              <!-- Sea Freight Specific Chips -->
+              @if (item.logistic_type === 'sea') {
+              @if (item.bill_of_lading_no) {
+              <div class="param-chip param-chip--highlight">
+                <i class="pi pi-tag" aria-hidden="true"></i>
+                <span class="p-lbl">Bill of Lading No:</span>
+                <span class="p-val">{{ item.bill_of_lading_no }}</span>
+              </div>
+              }
+              @if (item.vessel_name) {
+              <div class="param-chip">
+                <i class="pi pi-compass" aria-hidden="true"></i>
+                <span class="p-lbl">Ocean Vessel Name:</span>
+                <span class="p-val">{{ item.vessel_name }}</span>
+              </div>
+              }
+              @if (item.voyage_no) {
+              <div class="param-chip">
+                <i class="pi pi-hashtag" aria-hidden="true"></i>
+                <span class="p-lbl">Voyage No:</span>
+                <span class="p-val">{{ item.voyage_no }}</span>
+              </div>
+              }
+              @if (item.port_of_loading) {
+              <div class="param-chip">
+                <i class="pi pi-map-marker" aria-hidden="true"></i>
+                <span class="p-lbl">Port of Loading:</span>
+                <span class="p-val">{{ item.port_of_loading }}</span>
+              </div>
+              }
+              }
+
+              <!-- Common Chips -->
+              @if (item.port_of_discharge) {
+              <div class="param-chip">
+                <i class="pi pi-building" aria-hidden="true"></i>
+                <span class="p-lbl">Port of Discharge:</span>
+                <span class="p-val">{{ item.port_of_discharge }}</span>
+              </div>
+              }
+              @if (item.date) {
+              <div class="param-chip">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                <span class="p-lbl">Date:</span>
+                <span class="p-val">{{ item.date | date: 'dd MMM yyyy' }}</span>
+              </div>
+              }
+            </div>
+
+            <!-- Remarks FIRST -->
+            @if (item.remark) {
+            <div class="vsc-remark-box">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <div class="vsc-remark-content">
+                <span class="vsc-remark-label">Remarks:</span>
+                <span class="vsc-remark-text">{{ item.remark }}</span>
+              </div>
+            </div>
+            }
+
+            <!-- Attachments AFTER Remarks -->
+            @if (item.attachments && item.attachments.length > 0) {
+            <div class="qe-attachments">
+              <span class="qe-section-label">
+                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                Attachments ({{ item.attachments.length }})
+              </span>
+              <div class="qe-attachment-list">
+                @for (att of item.attachments; track att.id) {
+                <div class="qe-attachment-chip">
+                  <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                  <div class="qe-att-meta">
+                    <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                    @if (att.file_size) {
+                    <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                    }
+                  </div>
+                  <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                    pTooltip="Download file" tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                    (click)="downloadAttachment(att)">
+                    @if (downloadingAttachmentId() === att.id) {
+                    <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                    } @else {
+                    <i class="pi pi-download" aria-hidden="true"></i>
+                    }
+                  </button>
+                </div>
+                }
+              </div>
+            </div>
+            }
+
+          </div>
+        </article>
+        }
+      </div>
+      }
+      }
+
+      <!-- ════════════════════════════════════════════════════════════════
+           SUB-STEP 2: FILING OF BILL OF ENTRY STREAM
+      ════════════════════════════════════════════════════════════════ -->
+      @else if (activeTab() === 'bill-of-entry') {
+      @if (billsOfEntry().length === 0) {
+      <div class="version-sheet-card empty-card">
+        <div class="center-state empty-cta">
+          <span class="empty-icon" aria-hidden="true">
+            <i class="pi pi-file-check"></i>
+          </span>
+          <h3>No Bill of Entry records yet</h3>
+          <p>
+            Record customs duty assessment breakdown (BCD, SWS, IGST) and assessable values.
+          </p>
+          <button pButton type="button" icon="pi pi-plus" label="Record Bill of Entry" class="create-cost-sheet-btn"
+            (click)="openCreateBoeDialog()"></button>
+        </div>
+      </div>
+      } @else {
+      <div class="version-cards-stream" role="feed" aria-label="Bills of entry history">
+        @for (item of billsOfEntry(); track item.id; let i = $index) {
+        <article class="version-sheet-card">
+
+          <!-- Card Header Bar -->
+          <div class="vsc-header">
+            <div class="vsc-header-left">
+              <span class="vsc-badge">
+                <i class="pi pi-file-check" aria-hidden="true"></i>
+                BOE #{{ item.bill_of_entry_no || ('#' + item.id) }}
+              </span>
+
+              @if (i === 0) {
+              <span class="vsc-latest-pill">Latest</span>
+              }
+
+              <span class="vsc-date">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                {{ item.date | date: 'dd MMM yyyy' }}
+              </span>
+
+              <h2 class="vsc-title">Bill of Entry ({{ item.bill_of_entry_no }})</h2>
+            </div>
+
+            <div class="vsc-header-right">
+              <span class="vsc-cost-pill" [pTooltip]="'Total Duty (BCD + SWS + IGST): ₹ ' + (calculateBoeTotalDuty(item) | number:'1.2-2')" tooltipPosition="bottom">
+                <i class="pi pi-indian-rupee" aria-hidden="true"></i>
+                Total Duty: ₹&nbsp;{{ calculateBoeTotalDuty(item) | number:'1.2-2' }}
+              </span>
+
+              <span class="vsc-count-pill" [pTooltip]="'Total Assessable Value: ₹ ' + (item.total_assessable_value | number:'1.2-2')" tooltipPosition="bottom">
+                <i class="pi pi-wallet" aria-hidden="true"></i>
+                Assessable: ₹&nbsp;{{ item.total_assessable_value | number:'1.2-2' }}
+              </span>
+
+              <div class="actions-cell">
+                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                  [attr.aria-label]="'Edit bill of entry ' + item.bill_of_entry_no" pTooltip="Edit bill of entry"
+                  tooltipPosition="top" (click)="openEditBoeDialog(item)"></button>
+                <button pButton type="button" icon="pi pi-trash"
+                  class="p-button-text p-button-sm p-button-danger qe-delete"
+                  [attr.aria-label]="'Delete bill of entry ' + item.bill_of_entry_no" pTooltip="Delete bill of entry"
+                  tooltipPosition="top" (click)="deleteBoe(item)"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Body -->
+          <div class="vsc-body">
+
+            <!-- Refined Duty Breakdown Parameters Strip -->
+            <div class="vsc-params-strip">
+              <div class="param-chip param-chip--highlight">
+                <i class="pi pi-tag" aria-hidden="true"></i>
+                <span class="p-lbl">BOE No:</span>
+                <span class="p-val">{{ item.bill_of_entry_no }}</span>
+              </div>
+
+              <div class="param-chip">
+                <i class="pi pi-wallet" aria-hidden="true"></i>
+                <span class="p-lbl">Total Assessable Value:</span>
+                <span class="p-val">₹&nbsp;{{ item.total_assessable_value | number:'1.2-2' }}</span>
+              </div>
+
+              <div class="param-chip">
+                <i class="pi pi-percentage" aria-hidden="true"></i>
+                <span class="p-lbl">BCD:</span>
+                <span class="p-val">₹&nbsp;{{ item.bcd | number:'1.2-2' }}</span>
+              </div>
+
+              <div class="param-chip">
+                <i class="pi pi-percentage" aria-hidden="true"></i>
+                <span class="p-lbl">SWS:</span>
+                <span class="p-val">₹&nbsp;{{ item.sws | number:'1.2-2' }}</span>
+              </div>
+
+              <div class="param-chip">
+                <i class="pi pi-percentage" aria-hidden="true"></i>
+                <span class="p-lbl">IGST:</span>
+                <span class="p-val">₹&nbsp;{{ item.igst | number:'1.2-2' }}</span>
+              </div>
+
+              <div class="param-chip param-chip--highlight">
+                <i class="pi pi-calculator" aria-hidden="true"></i>
+                <span class="p-lbl">Total Duty (BCD + SWS + IGST):</span>
+                <span class="p-val">₹&nbsp;{{ calculateBoeTotalDuty(item) | number:'1.2-2' }}</span>
+              </div>
+            </div>
+
+            <!-- Remarks FIRST -->
+            @if (item.remark) {
+            <div class="vsc-remark-box">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <div class="vsc-remark-content">
+                <span class="vsc-remark-label">Remarks:</span>
+                <span class="vsc-remark-text">{{ item.remark }}</span>
+              </div>
+            </div>
+            }
+
+            <!-- Attachments AFTER Remarks -->
+            @if (item.attachments && item.attachments.length > 0) {
+            <div class="qe-attachments">
+              <span class="qe-section-label">
+                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                Attachments ({{ item.attachments.length }})
+              </span>
+              <div class="qe-attachment-list">
+                @for (att of item.attachments; track att.id) {
+                <div class="qe-attachment-chip">
+                  <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                  <div class="qe-att-meta">
+                    <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                    @if (att.file_size) {
+                    <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                    }
+                  </div>
+                  <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                    pTooltip="Download file" tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                    (click)="downloadAttachment(att)">
+                    @if (downloadingAttachmentId() === att.id) {
+                    <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                    } @else {
+                    <i class="pi pi-download" aria-hidden="true"></i>
+                    }
+                  </button>
+                </div>
+                }
+              </div>
+            </div>
+            }
+
+          </div>
+        </article>
+        }
+      </div>
+      }
+      }
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       MODAL 1: IMPORT LOGISTICS DIALOG (Aligned with Previous Dialog Design)
+  ══════════════════════════════════════════════════════════════════════ -->
+  <p-dialog [header]="editingLogistics() ? 'Edit Import Logistics' : 'New Import Logistics'"
+    [visible]="logisticsDialogVisible()" (visibleChange)="logisticsDialogVisible.set($event)" [modal]="true"
+    [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '1000px' }"
+    styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
+
+    <form [formGroup]="logisticsForm" (ngSubmit)="submitLogistics()" novalidate id="logistics-form">
+      <div class="dlg-body">
+
+        <!-- Error Message -->
+        @if (errorMessage()) {
+        <div class="dlg-error" role="alert" aria-live="assertive">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          <span>{{ errorMessage() }}</span>
+        </div>
+        }
+
+        <!-- Section 1: Freight Mode & Date -->
+        <div class="dlg-section">
+          <p class="dlg-section-label"><i class="pi pi-compass"></i> 1. Freight Mode & Shipping Method</p>
+          <div class="dlg-grid">
+            <div class="field">
+              <label for="dlg-logistic-type">Logistic Type <span class="req" aria-hidden="true">*</span></label>
+              <p-select id="dlg-logistic-type" formControlName="logistic_type" [options]="logisticTypeOptions"
+                optionLabel="label" optionValue="value" placeholder="Select Freight Mode" [fluid]="true" appendTo="body"
+                [style]="{ width: '100%', height: '38px' }" />
+              @if (isFieldInvalid('logistics', 'logistic_type')) {
+              <p class="field-error">{{ getFieldError('logistics', 'logistic_type') }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="dlg-logistics-date">Shipment Date <span class="req" aria-hidden="true">*</span></label>
+              <p-datepicker inputId="dlg-logistics-date" formControlName="date" dateFormat="yy-mm-dd"
+                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                [invalid]="isFieldInvalid('logistics', 'date')" />
+              @if (isFieldInvalid('logistics', 'date')) {
+              <p class="field-error">{{ getFieldError('logistics', 'date') }}</p>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Freight Specific Details (Air vs Sea) -->
+        <div class="dlg-section">
+          @if (currentLogisticType() === 'air') {
+          <p class="dlg-section-label"><i class="pi pi-send"></i> 2. Air Freight Shipping Details</p>
+          <div class="dlg-grid">
+            <div class="field">
+              <label for="dlg-airway-bill">Airway Bill No. (AWB) <span class="req" aria-hidden="true">*</span></label>
+              <input id="dlg-airway-bill" pInputText formControlName="airway_bill_no" placeholder="e.g. AWB-98765432"
+                [class.ng-invalid]="isFieldInvalid('logistics', 'airway_bill_no')" />
+              @if (isFieldInvalid('logistics', 'airway_bill_no')) {
+              <p class="field-error">{{ getFieldError('logistics', 'airway_bill_no') }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="dlg-flight-name">Flight Name / Airline <span class="req" aria-hidden="true">*</span></label>
+              <input id="dlg-flight-name" pInputText formControlName="flight_name" placeholder="e.g. Emirates SkyCargo / Lufthansa"
+                [class.ng-invalid]="isFieldInvalid('logistics', 'flight_name')" />
+              @if (isFieldInvalid('logistics', 'flight_name')) {
+              <p class="field-error">{{ getFieldError('logistics', 'flight_name') }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="dlg-flight-no">Flight No. <span class="req" aria-hidden="true">*</span></label>
+              <input id="dlg-flight-no" pInputText formControlName="flight_no" placeholder="e.g. EK-501"
+                [class.ng-invalid]="isFieldInvalid('logistics', 'flight_no')" />
+              @if (isFieldInvalid('logistics', 'flight_no')) {
+              <p class="field-error">{{ getFieldError('logistics', 'flight_no') }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="dlg-airport-loading">Airport of Loading <span class="req" aria-hidden="true">*</span></label>
+              <input id="dlg-airport-loading" pInputText formControlName="airport_of_loading" placeholder="e.g. Frankfurt Airport (FRA)"
+                [class.ng-invalid]="isFieldInvalid('logistics', 'airport_of_loading')" />
+              @if (isFieldInvalid('logistics', 'airport_of_loading')) {
+              <p class="field-error">{{ getFieldError('logistics', 'airport_of_loading') }}</p>
+              }
+            </div>
+
+            <div class="field span-two">
+              <label for="dlg-air-port-discharge">Port of Discharge <span class="req" aria-hidden="true">*</span></label>
+              <input id="dlg-air-port-discharge" pInputText formControlName="port_of_discharge"
+                placeholder="e.g. Mumbai Air Cargo (BOM)" [class.ng-invalid]="isFieldInvalid('logistics', 'port_of_discharge')" />
+              @if (isFieldInvalid('logistics', 'port_of_discharge')) {
+              <p class="field-error">{{ getFieldError('logistics', 'port_of_discharge') }}</p>
+              }
+            </div>
+          </div>
+          } @else {
+          <p class="dlg-section-label"><i class="pi pi-compass"></i> 2. Sea Freight Shipping Details</p>
+          <div class="dlg-grid">
+            <div class="field">
+              <label for="dlg-bill-lading">Bill of Lading No. (BL) <span class="req" aria-hidden="true">*</span></label>
+              <input id="dlg-bill-lading" pInputText formControlName="bill_of_lading_no" placeholder="e.g. MAEU123456789"
+                [class.ng-invalid]="isFieldInvalid('logistics', 'bill_of_lading_no')" />
+              @if (isFieldInvalid('logistics', 'bill_of_lading_no')) {
+              <p class="field-error">{{ getFieldError('logistics', 'bill_of_lading_no') }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="dlg-vessel-name">Ocean Vessel Name <span class="req" aria-hidden="true">*</span></label>
+              <input id="dlg-vessel-name" pInputText formControlName="vessel_name" placeholder="e.g. MSC Oscar / Maersk Mc-Kinney"
+                [class.ng-invalid]="isFieldInvalid('logistics', 'vessel_name')" />
+              @if (isFieldInvalid('logistics', 'vessel_name')) {
+              <p class="field-error">{{ getFieldError('logistics', 'vessel_name') }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="dlg-voyage-no">Voyage No. <span class="req" aria-hidden="true">*</span></label>
+              <input id="dlg-voyage-no" pInputText formControlName="voyage_no" placeholder="e.g. V-2026-09"
+                [class.ng-invalid]="isFieldInvalid('logistics', 'voyage_no')" />
+              @if (isFieldInvalid('logistics', 'voyage_no')) {
+              <p class="field-error">{{ getFieldError('logistics', 'voyage_no') }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="dlg-port-loading">Port of Loading <span class="req" aria-hidden="true">*</span></label>
+              <input id="dlg-port-loading" pInputText formControlName="port_of_loading" placeholder="e.g. Hamburg Port"
+                [class.ng-invalid]="isFieldInvalid('logistics', 'port_of_loading')" />
+              @if (isFieldInvalid('logistics', 'port_of_loading')) {
+              <p class="field-error">{{ getFieldError('logistics', 'port_of_loading') }}</p>
+              }
+            </div>
+
+            <div class="field span-two">
+              <label for="dlg-sea-port-discharge">Port of Discharge <span class="req" aria-hidden="true">*</span></label>
+              <input id="dlg-sea-port-discharge" pInputText formControlName="port_of_discharge"
+                placeholder="e.g. JNPT / Nhava Sheva, Mumbai" [class.ng-invalid]="isFieldInvalid('logistics', 'port_of_discharge')" />
+              @if (isFieldInvalid('logistics', 'port_of_discharge')) {
+              <p class="field-error">{{ getFieldError('logistics', 'port_of_discharge') }}</p>
+              }
+            </div>
+          </div>
+          }
+        </div>
+
+        <!-- Section 3: Attachments -->
+        <div class="dlg-section">
+          <p class="dlg-section-label">
+            <i class="pi pi-paperclip"></i> 3. Shipping Documents & Attachments
+            @if (selectedLogisticsFiles().length) {
+            <span class="attach-count">{{ selectedLogisticsFiles().length }} new file{{ selectedLogisticsFiles().length === 1 ? '' : 's' }} selected</span>
+            }
+          </p>
+
+          <!-- Existing files -->
+          @if (existingLogisticsAttachments().length) {
+          <div class="existing-att-block">
+            <p class="existing-att-title">
+              <i class="pi pi-paperclip" aria-hidden="true"></i> Current Attachments ({{ existingLogisticsAttachments().length }})
+            </p>
+            <div class="file-list">
+              @for (file of existingLogisticsAttachments(); track file.id) {
+              <div class="file-chip existing-file-chip">
+                <i [class]="getFileIcon(file.content_type)" aria-hidden="true"></i>
+                <span class="file-chip-name" [title]="file.file_name">{{ file.file_name }}</span>
+                <span class="file-chip-size">{{ formatFileSize(file.file_size) }}</span>
+              </div>
+              }
+            </div>
+          </div>
+          }
+
+          <!-- Uploaded files -->
+          @if (selectedLogisticsFiles().length) {
+          <div class="file-list">
+            @for (file of selectedLogisticsFiles(); track $index) {
+            <div class="file-chip">
+              <i class="pi pi-paperclip" aria-hidden="true"></i>
+              <span class="file-chip-name" [title]="file.name">{{ file.name }}</span>
+              <span class="file-chip-size">{{ formatFileSize(file.size) }}</span>
+              <button type="button" class="remove-file" (click)="removeSelectedLogisticsFile($index)"
+                aria-label="Remove file">
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            }
+          </div>
+          }
+
+          <!-- Drop zone -->
+          <div class="file-drop-zone"
+            [class.file-drop-zone--compact]="selectedLogisticsFiles().length > 0 || existingLogisticsAttachments().length > 0"
+            (click)="logisticsFileInput.click()" tabindex="0" role="button">
+            <i class="pi pi-upload" aria-hidden="true"></i>
+            <span>{{ (selectedLogisticsFiles().length || existingLogisticsAttachments().length) ? 'Add more files' : 'Click to upload AWB / BL shipping documents' }}</span>
+            @if (!selectedLogisticsFiles().length && !existingLogisticsAttachments().length) {
+            <span class="file-hint">PDF, Excel, Word, Images (Up to 25MB each)</span>
+            }
+          </div>
+          <input #logisticsFileInput type="file" multiple style="display: none;" (change)="onLogisticsFilesSelected($event)" />
+        </div>
+
+        <!-- Section 4: Remarks -->
+        <div class="dlg-section">
+          <p class="dlg-section-label"><i class="pi pi-comment"></i> 4. Remarks & Special Notes</p>
+          <div class="field">
+            <textarea pTextarea formControlName="remark" rows="3"
+              placeholder="Add logistics remarks, container numbers, transshipment details…"
+              style="width: 100%; resize: vertical;"></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="dlg-footer">
+        <button pButton type="button" label="Cancel" class="p-button-text cancel-btn"
+          (click)="closeLogisticsDialog()" [disabled]="saving()"></button>
+        <button pButton type="submit" [label]="editingLogistics() ? 'Update Record' : 'Submit Record'"
+          icon="pi pi-check" class="submit-btn" [loading]="saving()" [disabled]="saving() || logisticsForm.invalid"></button>
+      </div>
+    </form>
+  </p-dialog>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       MODAL 2: BILL OF ENTRY DIALOG (Aligned with Previous Dialog Design)
+  ══════════════════════════════════════════════════════════════════════ -->
+  <p-dialog [header]="editingBoe() ? 'Edit Bill of Entry' : 'New Bill of Entry'"
+    [visible]="boeDialogVisible()" (visibleChange)="boeDialogVisible.set($event)" [modal]="true"
+    [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '1000px' }"
+    styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
+
+    <form [formGroup]="boeForm" (ngSubmit)="submitBoe()" novalidate id="boe-form">
+      <div class="dlg-body">
+
+        <!-- Error Message -->
+        @if (errorMessage()) {
+        <div class="dlg-error" role="alert" aria-live="assertive">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          <span>{{ errorMessage() }}</span>
+        </div>
+        }
+
+        <!-- Section 1: Bill of Entry Reference -->
+        <div class="dlg-section">
+          <p class="dlg-section-label"><i class="pi pi-id-card"></i> 1. Bill of Entry Information</p>
+          <div class="dlg-grid">
+            <div class="field">
+              <label for="dlg-boe-no">Bill of Entry No. <span class="req" aria-hidden="true">*</span></label>
+              <input id="dlg-boe-no" pInputText formControlName="bill_of_entry_no" placeholder="e.g. BOE-2026-987654"
+                [class.ng-invalid]="isFieldInvalid('boe', 'bill_of_entry_no')" />
+              @if (isFieldInvalid('boe', 'bill_of_entry_no')) {
+              <p class="field-error">{{ getFieldError('boe', 'bill_of_entry_no') }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="dlg-boe-date">Filing Date <span class="req" aria-hidden="true">*</span></label>
+              <p-datepicker inputId="dlg-boe-date" formControlName="date" dateFormat="yy-mm-dd"
+                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                [invalid]="isFieldInvalid('boe', 'date')" />
+              @if (isFieldInvalid('boe', 'date')) {
+              <p class="field-error">{{ getFieldError('boe', 'date') }}</p>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Customs Valuation & Duty Breakdown -->
+        <div class="dlg-section">
+          <p class="dlg-section-label"><i class="pi pi-calculator"></i> 2. Customs Valuation & Duty Breakdown</p>
+          <div class="dlg-grid">
+            <div class="field span-two">
+              <label for="dlg-assessable-val">Total Assessable Value (₹) <span class="req" aria-hidden="true">*</span></label>
+              <input id="dlg-assessable-val" pInputText type="number" formControlName="total_assessable_value"
+                placeholder="0.00" [class.ng-invalid]="isFieldInvalid('boe', 'total_assessable_value')" />
+              @if (isFieldInvalid('boe', 'total_assessable_value')) {
+              <p class="field-error">{{ getFieldError('boe', 'total_assessable_value') }}</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="dlg-bcd">BCD (Basic Customs Duty ₹)</label>
+              <input id="dlg-bcd" pInputText type="number" formControlName="bcd" placeholder="0.00" />
+            </div>
+
+            <div class="field">
+              <label for="dlg-sws">SWS (Social Welfare Surcharge ₹)</label>
+              <input id="dlg-sws" pInputText type="number" formControlName="sws" placeholder="0.00" />
+            </div>
+
+            <div class="field span-two">
+              <label for="dlg-igst">IGST (Integrated GST ₹)</label>
+              <input id="dlg-igst" pInputText type="number" formControlName="igst" placeholder="0.00" />
+            </div>
+
+            <!-- Computed Total Duty Banner -->
+            <div class="field span-two">
+              <div class="computed-duty-card">
+                <div class="duty-left">
+                  <i class="pi pi-calculator" aria-hidden="true"></i>
+                  <div>
+                    <span class="duty-title">Total Duty (BCD + SWS + IGST)</span>
+                    <span class="duty-subtitle">Automatically calculated customs liability</span>
+                  </div>
+                </div>
+                <div class="duty-amount">
+                  ₹&nbsp;{{ boeLiveTotalDuty() | number: '1.2-2' }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Attachments -->
+        <div class="dlg-section">
+          <p class="dlg-section-label">
+            <i class="pi pi-paperclip"></i> 3. Customs Documents & Attachments
+            @if (selectedBoeFiles().length) {
+            <span class="attach-count">{{ selectedBoeFiles().length }} new file{{ selectedBoeFiles().length === 1 ? '' : 's' }} selected</span>
+            }
+          </p>
+
+          <!-- Existing files -->
+          @if (existingBoeAttachments().length) {
+          <div class="existing-att-block">
+            <p class="existing-att-title">
+              <i class="pi pi-paperclip" aria-hidden="true"></i> Current Attachments ({{ existingBoeAttachments().length }})
+            </p>
+            <div class="file-list">
+              @for (file of existingBoeAttachments(); track file.id) {
+              <div class="file-chip existing-file-chip">
+                <i [class]="getFileIcon(file.content_type)" aria-hidden="true"></i>
+                <span class="file-chip-name" [title]="file.file_name">{{ file.file_name }}</span>
+                <span class="file-chip-size">{{ formatFileSize(file.file_size) }}</span>
+              </div>
+              }
+            </div>
+          </div>
+          }
+
+          <!-- Uploaded files -->
+          @if (selectedBoeFiles().length) {
+          <div class="file-list">
+            @for (file of selectedBoeFiles(); track $index) {
+            <div class="file-chip">
+              <i class="pi pi-paperclip" aria-hidden="true"></i>
+              <span class="file-chip-name" [title]="file.name">{{ file.name }}</span>
+              <span class="file-chip-size">{{ formatFileSize(file.size) }}</span>
+              <button type="button" class="remove-file" (click)="removeSelectedBoeFile($index)"
+                aria-label="Remove file">
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            }
+          </div>
+          }
+
+          <!-- Drop zone -->
+          <div class="file-drop-zone"
+            [class.file-drop-zone--compact]="selectedBoeFiles().length > 0 || existingBoeAttachments().length > 0"
+            (click)="boeFileInput.click()" tabindex="0" role="button">
+            <i class="pi pi-upload" aria-hidden="true"></i>
+            <span>{{ (selectedBoeFiles().length || existingBoeAttachments().length) ? 'Add more files' : 'Click to upload Bill of Entry documents & Duty challans' }}</span>
+            @if (!selectedBoeFiles().length && !existingBoeAttachments().length) {
+            <span class="file-hint">PDF, Excel, Word, Images (Up to 25MB each)</span>
+            }
+          </div>
+          <input #boeFileInput type="file" multiple style="display: none;" (change)="onBoeFilesSelected($event)" />
+        </div>
+
+        <!-- Section 4: Remarks -->
+        <div class="dlg-section">
+          <p class="dlg-section-label"><i class="pi pi-comment"></i> 4. Remarks & Special Notes</p>
+          <div class="field">
+            <textarea pTextarea formControlName="remark" rows="3"
+              placeholder="Add customs clearance notes, CHA details, duty payment reference…"
+              style="width: 100%; resize: vertical;"></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="dlg-footer">
+        <button pButton type="button" label="Cancel" class="p-button-text cancel-btn"
+          (click)="closeBoeDialog()" [disabled]="saving()"></button>
+        <button pButton type="submit" [label]="editingBoe() ? 'Update Bill of Entry' : 'Submit Bill of Entry'"
+          icon="pi pi-check" class="submit-btn" [loading]="saving()" [disabled]="saving() || boeForm.invalid"></button>
+      </div>
+    </form>
+  </p-dialog>
+
+</section>
