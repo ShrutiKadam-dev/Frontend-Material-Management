@@ -45,9 +45,9 @@ export class CustomsClearanceService {
     boeFiles.forEach((file) => fd.append('boe_file', file, file.name));
     otherDocsFiles.forEach((file) => fd.append('other_docs_file', file, file.name));
     // Also append to general 'file' for fallback backend support
-    [...dutyChallanFiles, ...boeFiles, ...otherDocsFiles].forEach((file) =>
-      fd.append('file', file, file.name),
-    );
+    // [...dutyChallanFiles, ...boeFiles, ...otherDocsFiles].forEach((file) =>
+    //   fd.append('file', file, file.name),
+    // );
 
     return this.http.post<CustomsClearance>(
       `${this.apiBaseUrl}/api/v1/customs-clearances`,

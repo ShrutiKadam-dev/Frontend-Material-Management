@@ -47,12 +47,12 @@
       <div class="kpi-metrics-grid" aria-label="Customs clearance metrics">
         <article class="kpi-card app-panel">
           <div class="kpi-icon-wrap kpi-icon--primary">
-            <i class="pi pi-building" aria-hidden="true"></i>
+            <i class="pi pi-id-card" aria-hidden="true"></i>
           </div>
           <div class="kpi-content">
             <span class="kpi-label">Clearance Records</span>
             <strong class="kpi-num">{{ totalRecordsCount() }}</strong>
-            <span class="kpi-hint">Recorded BOE clearances</span>
+            <span class="kpi-hint">Assessed BOE entries</span>
           </div>
         </article>
 
@@ -63,7 +63,7 @@
           <div class="kpi-content">
             <span class="kpi-label">Customs Duty Paid</span>
             <strong class="kpi-num">₹&nbsp;{{ totalDutyRemitted() | number:'1.2-2' }}</strong>
-            <span class="kpi-hint hint-success">Total duty assessed</span>
+            <span class="kpi-hint hint-success">Basic customs duty</span>
           </div>
         </article>
 
@@ -89,6 +89,38 @@
           </div>
         </article>
       </div>
+
+      <!-- ── Control Bar: Search & View Mode Toggle ─────────────────── -->
+      @if (!loading() && clearances().length > 0) {
+      <div class="control-panel app-panel">
+        <div class="search-input-wrapper">
+          <i class="pi pi-search search-icon" aria-hidden="true"></i>
+          <input type="text" class="search-input" [value]="searchQuery()" (input)="onSearchInput($event)"
+            placeholder="Search by CHA name, BOE number, port, challan, or UTR ref…"
+            aria-label="Search customs records" />
+          @if (searchQuery()) {
+          <button type="button" class="clear-search-btn" (click)="clearSearch()" aria-label="Clear search">
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+          }
+        </div>
+
+        <div class="view-mode-toggle" role="group" aria-label="View mode toggle">
+          <button type="button" class="view-btn" [class.view-btn--active]="viewMode() === 'cards'"
+            (click)="setViewMode('cards')" pTooltip="Cards Stream View" tooltipPosition="top"
+            aria-label="Switch to cards stream view">
+            <i class="pi pi-th-large" aria-hidden="true"></i>
+            <span>Cards</span>
+          </button>
+          <button type="button" class="view-btn" [class.view-btn--active]="viewMode() === 'table'"
+            (click)="setViewMode('table')" pTooltip="Table View" tooltipPosition="top"
+            aria-label="Switch to table view">
+            <i class="pi pi-list" aria-hidden="true"></i>
+            <span>Table</span>
+          </button>
+        </div>
+      </div>
+      }
 
       <!-- ── Loading / Error States ──────────────────────────────────── -->
       @if (loading()) {
@@ -116,29 +148,223 @@
         <button pButton type="button" icon="pi pi-plus" label="Record First Customs Clearance"
           class="create-cost-sheet-btn" (click)="openCreateDialog()"></button>
       </div>
+      } @else if (filteredClearances().length === 0) {
+      <div class="empty-state app-panel">
+        <div class="empty-icon-wrap" aria-hidden="true">
+          <i class="pi pi-search"></i>
+        </div>
+        <h3>No Matching Records Found</h3>
+        <p>No customs clearance records match your search query "{{ searchQuery() }}".</p>
+        <button pButton type="button" icon="pi pi-times" label="Clear Search" class="p-button-outlined"
+          (click)="clearSearch()"></button>
+      </div>
       } @else {
 
-      <!-- ── Customs Clearances Table ─────────────────────────────────── -->
-      <div class="table-container app-panel">
-        <div class="table-header-bar">
-          <div class="table-title-group">
-            <h2>Customs Clearance & Duty Remittance Entries</h2>
-            <span class="table-subtitle">All Out-Of-Charge (OOC) and assessment entries for this project</span>
-          </div>
-        </div>
+      <!-- ════════════════════════════════════════════════════════════════
+           VIEW 1: SIGNATURE CARDS STREAM (Theme Standard)
+      ════════════════════════════════════════════════════════════════ -->
+      @if (viewMode() === 'cards') {
+      <div class="version-cards-stream" role="feed" aria-label="Customs clearance records list">
+        @for (item of filteredClearances(); track item.id; let i = $index) {
+        <article class="version-sheet-card">
 
-        <p-table [value]="clearances()" [paginator]="clearances().length > 10" [rows]="10"
+          <!-- Card Header Bar -->
+          <div class="vsc-header">
+            <div class="vsc-header-left">
+              <span class="vsc-badge">
+                <i class="pi pi-file-check" aria-hidden="true"></i>
+                BOE #{{ item.bill_of_entry_no }}
+              </span>
+
+              @if (i === 0 && !searchQuery()) {
+              <span class="vsc-latest-pill">Latest</span>
+              }
+
+              <span class="vsc-date">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                BOE Date: {{ item.boe_date | date: 'dd MMM yyyy' }}
+              </span>
+
+              <h2 class="vsc-title">{{ item.cha_name }}</h2>
+            </div>
+
+            <div class="vsc-header-right">
+              <span class="vsc-cost-pill" [pTooltip]="'Total Customs Remittance: ₹ ' + ((item.total_customs_amount || 0) | number:'1.2-2')"
+                tooltipPosition="bottom">
+                <i class="pi pi-wallet" aria-hidden="true"></i>
+                ₹&nbsp;{{ (item.total_customs_amount || 0) | number:'1.2-2' }}
+              </span>
+
+              <span class="vsc-count-pill" [pTooltip]="'Customs Location / Port: ' + item.customs_location"
+                tooltipPosition="bottom">
+                <i class="pi pi-map-marker" aria-hidden="true"></i>
+                {{ item.customs_location }}
+              </span>
+
+              <div class="actions-cell">
+                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                  [attr.aria-label]="'Edit clearance record ' + item.id" pTooltip="Edit record"
+                  tooltipPosition="top" (click)="openEditDialog(item)"></button>
+                <button pButton type="button" icon="pi pi-trash"
+                  class="p-button-text p-button-sm p-button-danger qe-delete"
+                  [attr.aria-label]="'Delete clearance record ' + item.id" pTooltip="Delete record"
+                  tooltipPosition="top" (click)="deleteClearance(item)"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Body -->
+          <div class="vsc-body">
+
+            <!-- Refined Operational Parameters Strip -->
+            <div class="vsc-params-strip">
+              <div class="param-chip param-chip--highlight">
+                <i class="pi pi-map-marker" aria-hidden="true"></i>
+                <span class="p-lbl">Port / Location:</span>
+                <span class="p-val">{{ item.customs_location }}</span>
+              </div>
+
+              @if (item.cfs_name) {
+              <div class="param-chip">
+                <i class="pi pi-warehouse" aria-hidden="true"></i>
+                <span class="p-lbl">CFS Facility:</span>
+                <span class="p-val">{{ item.cfs_name }}</span>
+              </div>
+              }
+
+              @if (item.duty_paid_date) {
+              <div class="param-chip param-chip--paid">
+                <i class="pi pi-calendar-check" aria-hidden="true"></i>
+                <span class="p-lbl">Duty Paid:</span>
+                <span class="p-val">{{ item.duty_paid_date | date:'dd MMM yyyy' }}</span>
+              </div>
+              }
+
+              @if (item.challan_no) {
+              <div class="param-chip">
+                <i class="pi pi-receipt" aria-hidden="true"></i>
+                <span class="p-lbl">Challan No:</span>
+                <span class="p-val">{{ item.challan_no }}</span>
+              </div>
+              }
+
+              @if (item.transaction_ref_no) {
+              <div class="param-chip">
+                <i class="pi pi-credit-card" aria-hidden="true"></i>
+                <span class="p-lbl">Payment Ref / UTR:</span>
+                <span class="p-val">{{ item.transaction_ref_no }}</span>
+              </div>
+              }
+            </div>
+
+            <!-- Duty Assessment & Financial Calculation Grid -->
+            <div class="duty-calc-matrix">
+              <!-- Tile 1: Basic Duty -->
+              <div class="duty-matrix-tile">
+                <span class="dmt-label">
+                  <i class="pi pi-receipt" aria-hidden="true"></i> Basic Customs Duty (BCD)
+                </span>
+                <strong class="dmt-value">₹&nbsp;{{ (item.duty_amount || 0) | number:'1.2-2' }}</strong>
+                <span class="dmt-sub">Assessed customs duty</span>
+              </div>
+
+              <!-- Tile 2: IGST -->
+              <div class="duty-matrix-tile">
+                <span class="dmt-label">
+                  <i class="pi pi-percentage" aria-hidden="true"></i> Integrated GST (IGST)
+                </span>
+                <strong class="dmt-value">₹&nbsp;{{ (item.igst_amount || 0) | number:'1.2-2' }}</strong>
+                <span class="dmt-sub">Statutory import IGST</span>
+              </div>
+
+              <!-- Tile 3: Other Charges -->
+              <div class="duty-matrix-tile">
+                <span class="dmt-label">
+                  <i class="pi pi-box" aria-hidden="true"></i> Other Port & CFS Charges
+                </span>
+                <strong class="dmt-value">₹&nbsp;{{ (item.other_customs_charges || 0) | number:'1.2-2' }}</strong>
+                <span class="dmt-sub">Demurrage / Handling</span>
+              </div>
+
+              <!-- Tile 4: Total Customs Remittance -->
+              <div class="duty-matrix-tile duty-matrix-tile--total">
+                <div class="dmt-header-row">
+                  <span class="dmt-label">
+                    <i class="pi pi-wallet" aria-hidden="true"></i> Total Customs Remittance
+                  </span>
+                  <span class="dmt-badge">Duty + IGST + Other</span>
+                </div>
+                <strong class="dmt-value text-success">₹&nbsp;{{ (item.total_customs_amount || 0) | number:'1.2-2' }}</strong>
+                <span class="dmt-sub">Total statutory & port amount</span>
+              </div>
+            </div>
+
+            <!-- Operational Remarks Callout -->
+            @if (item.remark) {
+            <div class="clearance-remark-card">
+              <i class="pi pi-comment remark-icon" aria-hidden="true"></i>
+              <div class="remark-content">
+                <span class="remark-title">Operational Remark & Notes:</span>
+                <p class="remark-body">{{ item.remark }}</p>
+              </div>
+            </div>
+            }
+
+            <!-- ── Standard Attachments Cards (Matching Other Steps) ── -->
+            @if (item.attachments && item.attachments.length > 0) {
+            <div class="qe-attachments">
+              <span class="qe-section-label">
+                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                Attachments ({{ item.attachments.length }})
+              </span>
+              <div class="qe-attachment-list">
+                @for (att of item.attachments; track att.id) {
+                <div class="qe-attachment-chip">
+                  <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                  <div class="qe-att-meta">
+                    <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                    @if (att.file_size) {
+                    <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                    }
+                  </div>
+                  <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                    pTooltip="Download file" tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                    (click)="downloadAttachment(att)">
+                    @if (downloadingAttachmentId() === att.id) {
+                    <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                    } @else {
+                    <i class="pi pi-download" aria-hidden="true"></i>
+                    }
+                  </button>
+                </div>
+                }
+              </div>
+            </div>
+            }
+
+          </div>
+        </article>
+        }
+      </div>
+      }
+
+      <!-- ════════════════════════════════════════════════════════════════
+           VIEW 2: HIGH-DENSITY MODERN TABLE VIEW
+      ════════════════════════════════════════════════════════════════ -->
+      @if (viewMode() === 'table') {
+      <div class="table-container app-panel">
+        <p-table [value]="filteredClearances()" [paginator]="filteredClearances().length > 10" [rows]="10"
           styleClass="p-datatable-sm items-table-wrap" responsiveLayout="scroll">
           <ng-template pTemplate="header">
             <tr>
               <th scope="col" style="width: 50px; text-align: center;">#</th>
-              <th scope="col" style="min-width: 200px;">CHA & BOE Details</th>
+              <th scope="col" style="min-width: 220px;">CHA & BOE Details</th>
               <th scope="col" style="min-width: 170px;">Port & CFS Facility</th>
               <th scope="col" style="min-width: 200px;">Duty Payment & Challan</th>
-              <th scope="col" style="min-width: 160px; text-align: right;">Duty & IGST</th>
-              <th scope="col" style="min-width: 150px; text-align: right;">Total Customs Amount</th>
-              <th scope="col" style="min-width: 170px;">Remark</th>
-              <th scope="col" style="min-width: 180px;">Attached Documents</th>
+              <th scope="col" style="min-width: 170px; text-align: right;">Duty & IGST</th>
+              <th scope="col" style="min-width: 160px; text-align: right;">Total Customs Amount</th>
+              <th scope="col" style="min-width: 160px;">Remark</th>
+              <th scope="col" style="min-width: 220px;">Attached Documents</th>
               <th scope="col" style="width: 100px; text-align: center;">Actions</th>
             </tr>
           </ng-template>
@@ -236,24 +462,29 @@
                 }
               </td>
 
-              <!-- Attached Documents -->
+              <!-- Attached Documents in Table View -->
               <td>
-                <div class="att-chips-wrap">
-                  @if (item.attachments && item.attachments.length > 0) {
+                @if (item.attachments && item.attachments.length > 0) {
+                <div class="tbl-att-list">
                   @for (att of item.attachments; track att.id) {
-                  <button type="button" class="att-download-pill" (click)="downloadAttachment(att)"
-                    [pTooltip]="att.file_name" tooltipPosition="top"
-                    [disabled]="downloadingAttachmentId() === att.id">
-                    <i class="pi" [class.pi-download]="downloadingAttachmentId() !== att.id"
-                      [class.pi-spin]="downloadingAttachmentId() === att.id"
-                      [class.pi-spinner]="downloadingAttachmentId() === att.id" aria-hidden="true"></i>
-                    <span>{{ att.file_name }}</span>
-                  </button>
-                  }
-                  } @else {
-                  <span class="text-muted">No files</span>
+                  <div class="tbl-att-chip">
+                    <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                    <span class="tbl-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                    <button type="button" class="tbl-att-dl" [attr.aria-label]="'Download ' + att.file_name"
+                      pTooltip="Download file" tooltipPosition="top"
+                      [disabled]="downloadingAttachmentId() === att.id" (click)="downloadAttachment(att)">
+                      @if (downloadingAttachmentId() === att.id) {
+                      <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                      } @else {
+                      <i class="pi pi-download" aria-hidden="true"></i>
+                      }
+                    </button>
+                  </div>
                   }
                 </div>
+                } @else {
+                <span class="text-muted">No files</span>
+                }
               </td>
 
               <!-- Actions -->
@@ -271,6 +502,8 @@
           </ng-template>
         </p-table>
       </div>
+      }
+
       }
 
     </div>
@@ -429,7 +662,7 @@
         </div>
       </div>
 
-      <!-- Section 5: Document Uploads (Shown after Remark) -->
+      <!-- Section 5: Document Uploads (Shown after Remark, Matching Standard File Upload) -->
       <div class="dlg-section">
         <p class="dlg-section-label">
           <i class="pi pi-paperclip"></i> 5. Document Attachments
@@ -444,23 +677,21 @@
             <span class="upload-cat-sub">ICEGATE duty paid challan / bank payment receipt</span>
           </div>
 
-          <div class="file-drop-zone">
-            <input type="file" id="dlg-duty-challan-files" (change)="onDutyChallanFilesSelected($event)" multiple
-              class="file-input-hidden" />
-            <label for="dlg-duty-challan-files" class="file-drop-label">
-              <i class="pi pi-cloud-upload"></i>
-              <span>Click to select Duty Challan files</span>
-            </label>
+          <div class="file-upload-zone" (click)="dutyChallanInput.click()">
+            <input #dutyChallanInput type="file" (change)="onDutyChallanFilesSelected($event)" multiple hidden />
+            <i class="pi pi-cloud-upload upload-icon" aria-hidden="true"></i>
+            <span class="upload-text">Drop files here or click to browse</span>
+            <span class="upload-hint">PDF, DOC, XLS, images up to 25MB</span>
           </div>
 
           @if (selectedDutyChallanFiles().length > 0) {
-          <div class="selected-files-list">
+          <div class="file-list">
             @for (file of selectedDutyChallanFiles(); track $index) {
-            <div class="selected-file-chip">
-              <i class="pi pi-file" aria-hidden="true"></i>
-              <span class="file-name" [title]="file.name">{{ file.name }}</span>
-              <button type="button" class="remove-file-btn" (click)="removeSelectedDutyChallanFile($index)"
-                aria-label="Remove file">
+            <div class="file-chip">
+              <i [class]="getFileIcon(file.type)" aria-hidden="true"></i>
+              <span class="file-chip-name" [title]="file.name">{{ file.name }}</span>
+              <span class="file-chip-size">{{ formatFileSize(file.size) }}</span>
+              <button type="button" class="remove-file" (click)="removeSelectedDutyChallanFile($index)" aria-label="Remove file">
                 <i class="pi pi-times" aria-hidden="true"></i>
               </button>
             </div>
@@ -478,23 +709,21 @@
             <span class="upload-cat-sub">Out of Charge (OOC) / Assessed Bill of Entry copy</span>
           </div>
 
-          <div class="file-drop-zone">
-            <input type="file" id="dlg-boe-files" (change)="onBoeFilesSelected($event)" multiple
-              class="file-input-hidden" />
-            <label for="dlg-boe-files" class="file-drop-label">
-              <i class="pi pi-cloud-upload"></i>
-              <span>Click to select Bill of Entry files</span>
-            </label>
+          <div class="file-upload-zone" (click)="boeInput.click()">
+            <input #boeInput type="file" (change)="onBoeFilesSelected($event)" multiple hidden />
+            <i class="pi pi-cloud-upload upload-icon" aria-hidden="true"></i>
+            <span class="upload-text">Drop files here or click to browse</span>
+            <span class="upload-hint">PDF, DOC, XLS, images up to 25MB</span>
           </div>
 
           @if (selectedBoeFiles().length > 0) {
-          <div class="selected-files-list">
+          <div class="file-list">
             @for (file of selectedBoeFiles(); track $index) {
-            <div class="selected-file-chip">
-              <i class="pi pi-file" aria-hidden="true"></i>
-              <span class="file-name" [title]="file.name">{{ file.name }}</span>
-              <button type="button" class="remove-file-btn" (click)="removeSelectedBoeFile($index)"
-                aria-label="Remove file">
+            <div class="file-chip">
+              <i [class]="getFileIcon(file.type)" aria-hidden="true"></i>
+              <span class="file-chip-name" [title]="file.name">{{ file.name }}</span>
+              <span class="file-chip-size">{{ formatFileSize(file.size) }}</span>
+              <button type="button" class="remove-file" (click)="removeSelectedBoeFile($index)" aria-label="Remove file">
                 <i class="pi pi-times" aria-hidden="true"></i>
               </button>
             </div>
@@ -512,23 +741,21 @@
             <span class="upload-cat-sub">CFS gate pass, examination report, delivery orders</span>
           </div>
 
-          <div class="file-drop-zone">
-            <input type="file" id="dlg-other-docs-files" (change)="onOtherDocsFilesSelected($event)" multiple
-              class="file-input-hidden" />
-            <label for="dlg-other-docs-files" class="file-drop-label">
-              <i class="pi pi-cloud-upload"></i>
-              <span>Click to select other supporting documents</span>
-            </label>
+          <div class="file-upload-zone" (click)="otherDocsInput.click()">
+            <input #otherDocsInput type="file" (change)="onOtherDocsFilesSelected($event)" multiple hidden />
+            <i class="pi pi-cloud-upload upload-icon" aria-hidden="true"></i>
+            <span class="upload-text">Drop files here or click to browse</span>
+            <span class="upload-hint">PDF, DOC, XLS, images up to 25MB</span>
           </div>
 
           @if (selectedOtherDocsFiles().length > 0) {
-          <div class="selected-files-list">
+          <div class="file-list">
             @for (file of selectedOtherDocsFiles(); track $index) {
-            <div class="selected-file-chip">
-              <i class="pi pi-file" aria-hidden="true"></i>
-              <span class="file-name" [title]="file.name">{{ file.name }}</span>
-              <button type="button" class="remove-file-btn" (click)="removeSelectedOtherDocsFile($index)"
-                aria-label="Remove file">
+            <div class="file-chip">
+              <i [class]="getFileIcon(file.type)" aria-hidden="true"></i>
+              <span class="file-chip-name" [title]="file.name">{{ file.name }}</span>
+              <span class="file-chip-size">{{ formatFileSize(file.size) }}</span>
+              <button type="button" class="remove-file" (click)="removeSelectedOtherDocsFile($index)" aria-label="Remove file">
                 <i class="pi pi-times" aria-hidden="true"></i>
               </button>
             </div>
@@ -537,18 +764,30 @@
           }
         </div>
 
-        <!-- Existing Attachments in Edit Mode -->
+        <!-- Existing Attachments in Edit Mode (Standard Existing Attachment Block) -->
         @if (existingAttachments().length > 0) {
-        <div class="existing-attachments-wrap">
-          <span class="existing-lbl">Existing Attached Documents:</span>
-          <div class="att-chips-wrap">
-            @for (att of existingAttachments(); track att.id) {
-            <button type="button" class="att-download-pill" (click)="downloadAttachment(att)"
-              [pTooltip]="att.file_name" tooltipPosition="top"
-              [disabled]="downloadingAttachmentId() === att.id">
-              <i class="pi pi-download" aria-hidden="true"></i>
-              <span>{{ att.file_name }}</span>
-            </button>
+        <div class="existing-att-block">
+          <p class="existing-att-title">
+            <i class="pi pi-paperclip" aria-hidden="true"></i> Current Attachments ({{ existingAttachments().length }})
+          </p>
+          <div class="file-list">
+            @for (file of existingAttachments(); track file.id) {
+            <div class="file-chip existing-file-chip">
+              <i [class]="getFileIcon(file.content_type)" aria-hidden="true"></i>
+              <span class="file-chip-name" [title]="file.file_name">{{ file.file_name }}</span>
+              @if (file.file_size) {
+              <span class="file-chip-size">{{ formatFileSize(file.file_size) }}</span>
+              }
+              <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + file.file_name"
+                pTooltip="Download file" tooltipPosition="top" (click)="downloadAttachment(file)"
+                [disabled]="downloadingAttachmentId() === file.id">
+                @if (downloadingAttachmentId() === file.id) {
+                <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                } @else {
+                <i class="pi pi-download" aria-hidden="true"></i>
+                }
+              </button>
+            </div>
             }
           </div>
         </div>

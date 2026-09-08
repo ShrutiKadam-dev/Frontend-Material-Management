@@ -102,6 +102,10 @@ export class Step12CustomsClearance implements OnInit {
     remark: [''],
   });
 
+  // ── View Mode & Filter States ───────────────────────────────────
+  protected readonly viewMode = signal<'cards' | 'table'>('cards');
+  protected readonly searchQuery = signal<string>('');
+
   // ── Computed Top Summary Statistics ────────────────────────────
   protected readonly totalRecordsCount = computed(() => this.clearances().length);
 
@@ -123,6 +127,37 @@ export class Step12CustomsClearance implements OnInit {
       0,
     );
   });
+
+  // ── Filtered List ──────────────────────────────────────────────
+  protected readonly filteredClearances = computed(() => {
+    const q = this.searchQuery().toLowerCase().trim();
+    const list = this.clearances();
+    if (!q) return list;
+
+    return list.filter((c) => {
+      const chaMatch = c.cha_name?.toLowerCase().includes(q);
+      const boeMatch = c.bill_of_entry_no?.toLowerCase().includes(q);
+      const locMatch = c.customs_location?.toLowerCase().includes(q);
+      const cfsMatch = c.cfs_name?.toLowerCase().includes(q);
+      const challanMatch = c.challan_no?.toLowerCase().includes(q);
+      const utrMatch = c.transaction_ref_no?.toLowerCase().includes(q);
+      const remarkMatch = c.remark?.toLowerCase().includes(q);
+      return chaMatch || boeMatch || locMatch || cfsMatch || challanMatch || utrMatch || remarkMatch;
+    });
+  });
+
+  protected setViewMode(mode: 'cards' | 'table'): void {
+    this.viewMode.set(mode);
+  }
+
+  protected onSearchInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.searchQuery.set(input.value);
+  }
+
+  protected clearSearch(): void {
+    this.searchQuery.set('');
+  }
 
   ngOnInit(): void {
     const rawId = this.route.snapshot.paramMap.get('projectId');
@@ -442,6 +477,32 @@ export class Step12CustomsClearance implements OnInit {
     if (control.hasError('required')) return 'This field is required.';
     if (control.hasError('min')) return 'Value must be greater than or equal to 0.';
     return 'Invalid field value.';
+  }
+
+  // ── File Format & Icon Helpers ─────────────────────────────────
+  protected formatFileSize(bytes?: number): string {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  }
+
+  protected getFileIcon(contentType?: string): string {
+    if (!contentType) return 'pi pi-file';
+    if (contentType.includes('pdf')) return 'pi pi-file-pdf';
+    if (contentType.includes('image')) return 'pi pi-image';
+    if (
+      contentType.includes('sheet') ||
+      contentType.includes('excel') ||
+      contentType.includes('csv')
+    ) {
+      return 'pi pi-file-excel';
+    }
+    if (contentType.includes('word') || contentType.includes('document')) {
+      return 'pi pi-file-word';
+    }
+    return 'pi pi-file';
   }
 
   private formatDate(d: Date): string {
