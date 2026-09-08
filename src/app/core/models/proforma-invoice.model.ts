@@ -18,6 +18,7 @@ export interface ProformaInvoice {
   invoice_no?: string;
   proforma_invoice_date: string;
   date?: string;
+  currency?: string;
   delivery_terms: string;
   shipping_terms?: string;
   incoterms?: string;
@@ -38,6 +39,7 @@ export interface ProformaInvoiceCreateInput {
   project_id: number;
   proforma_invoice_no: string;
   proforma_invoice_date: string;
+  currency?: string;
   delivery_terms: string;
   payment_terms?: string;
   warranty_period?: string;
@@ -52,6 +54,7 @@ export interface ProformaInvoiceUpdateInput {
   project_id?: number;
   proforma_invoice_no?: string;
   proforma_invoice_date?: string;
+  currency?: string;
   delivery_terms?: string;
   payment_terms?: string;
   warranty_period?: string;

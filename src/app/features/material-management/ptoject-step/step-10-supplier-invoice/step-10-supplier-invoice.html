@@ -144,110 +144,195 @@
       <div class="version-cards-stream" role="feed" aria-label="Proforma invoices list">
         @for (item of proformaInvoices(); track item.id; let i = $index) {
         <article class="version-sheet-card">
-          <!-- Card Header -->
+
+          <!-- Card Header Bar -->
           <div class="vsc-header">
-            <div class="vsc-left">
+            <div class="vsc-header-left">
               <span class="vsc-badge">
-                <i class="pi pi-file-edit"></i>
-                #{{ proformaInvoices().length - i }} Proforma Invoice
+                <i class="pi pi-file-edit" aria-hidden="true"></i>
+                {{ item.proforma_invoice_no || item.invoice_no || ('PI #' + item.id) }}
               </span>
-              <span class="vsc-ref-pill">
-                <i class="pi pi-hashtag"></i>
-                {{ item.proforma_invoice_no || item.invoice_no || ('#' + item.id) }}
-              </span>
+
+              @if (i === 0) {
+              <span class="vsc-latest-pill">Latest</span>
+              }
+
               <span class="vsc-date">
-                <i class="pi pi-calendar"></i>
+                <i class="pi pi-calendar" aria-hidden="true"></i>
                 {{ (item.proforma_invoice_date || item.date) | date: 'dd MMM yyyy' }}
               </span>
+
+              <h2 class="vsc-title">{{ item.proforma_invoice_no ? ('Proforma Invoice (' + item.proforma_invoice_no + ')') : 'Supplier Proforma Invoice' }}</h2>
             </div>
 
-            <div class="vsc-right">
-              <span class="cost-sheet-sync-pill">
-                <i class="pi pi-wallet"></i>
-                Total Net: {{ calculateOrderNet(item) | number: '1.2-2' }}
+            <div class="vsc-header-right">
+              @if (calculateOrderNet(item) > 0) {
+              <span class="vsc-cost-pill" [pTooltip]="'Total Net Value: ' + (item.currency || 'USD') + ' ' + (calculateOrderNet(item) | number:'1.2-2')" tooltipPosition="bottom">
+                <i class="pi pi-wallet" aria-hidden="true"></i>
+                {{ item.currency || 'USD' }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
               </span>
-              <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="secondary"
-                pTooltip="Edit Proforma Invoice" tooltipPosition="bottom" (onClick)="openEditProformaDialog(item)" />
-              <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger"
-                pTooltip="Delete Proforma Invoice" tooltipPosition="bottom" (onClick)="deleteProforma(item)" />
+              }
+
+              @if (item.items && item.items.length) {
+              <span class="vsc-count-pill">
+                <i class="pi pi-box" aria-hidden="true"></i>
+                {{ item.items.length }} line item{{ item.items.length === 1 ? '' : 's' }}
+              </span>
+              }
+
+              <div class="actions-cell">
+                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                  [attr.aria-label]="'Edit proforma invoice ' + (item.proforma_invoice_no || item.id)" pTooltip="Edit proforma invoice"
+                  tooltipPosition="top" (click)="openEditProformaDialog(item)"></button>
+                <button pButton type="button" icon="pi pi-trash"
+                  class="p-button-text p-button-sm p-button-danger qe-delete"
+                  [attr.aria-label]="'Delete proforma invoice ' + (item.proforma_invoice_no || item.id)" pTooltip="Delete proforma invoice"
+                  tooltipPosition="top" (click)="deleteProforma(item)"></button>
+              </div>
             </div>
           </div>
 
-          <!-- Parameters Strip -->
-          <div class="vsc-params-strip">
-            <div class="vsc-param">
-              <span class="label">Delivery Terms</span>
-              <span class="val">{{ item.delivery_terms || item.shipping_terms || item.incoterms || '—' }}</span>
-            </div>
-            <div class="vsc-param">
-              <span class="label">Payment Terms</span>
-              <span class="val">{{ item.payment_terms || '—' }}</span>
-            </div>
-            <div class="vsc-param">
-              <span class="label">Warranty</span>
-              <span class="val">{{ item.warranty_period || '—' }}</span>
-            </div>
-            <div class="vsc-param">
-              <span class="label">Delivery Period</span>
-              <span class="val">{{ item.delivery_period || '—' }}</span>
-            </div>
-          </div>
+          <!-- Card Body -->
+          <div class="vsc-body">
 
-          <!-- Materials Table -->
-          @if (item.items && item.items.length > 0) {
-          <div class="cost-items-table-container">
-            <p-table [value]="item.items" [scrollable]="true" scrollHeight="260px" styleClass="p-datatable-sm">
-              <ng-template #header>
-                <tr>
-                  <th style="width: 44px">#</th>
-                  <th>Material / Description</th>
-                  <th style="width: 140px">HSN Code</th>
-                  <th style="width: 110px" class="text-right">Qty</th>
-                  <th style="width: 130px" class="text-right">Unit Price</th>
-                  <th style="width: 140px" class="text-right">Net Amount</th>
-                </tr>
-              </ng-template>
-              <ng-template #body let-row let-idx="rowIndex">
-                <tr>
-                  <td class="text-muted">{{ idx + 1 }}</td>
-                  <td><strong>{{ row.material_name || row.description }}</strong></td>
-                  <td><code>{{ row.hsn_code || '—' }}</code></td>
-                  <td class="text-right">{{ row.quantity | number }}</td>
-                  <td class="text-right">{{ (row.unit_price || 0) | number: '1.2-2' }}</td>
-                  <td class="text-right font-medium">
-                    {{ calculateRowNet(row) | number: '1.2-2' }}
-                  </td>
-                </tr>
-              </ng-template>
-            </p-table>
-          </div>
-          }
-
-          <!-- Attachments -->
-          @if (item.attachments && item.attachments.length > 0) {
-          <div class="qe-attachments">
-            <span class="att-heading">Attachments ({{ item.attachments.length }}):</span>
-            <div class="att-chips">
-              @for (att of item.attachments; track att.id) {
-              <button type="button" class="att-chip" (click)="downloadAttachment(att)"
-                [disabled]="downloadingAttachmentId() === att.id" pTooltip="Download attachment">
-                <i
-                  [class]="downloadingAttachmentId() === att.id ? 'pi pi-spin pi-spinner' : getFileIcon(att.content_type)"></i>
-                <span class="att-name">{{ att.file_name }}</span>
-                <span class="att-size">{{ formatFileSize(att.file_size) }}</span>
-              </button>
+            <!-- Refined Parameters Strip -->
+            <div class="vsc-params-strip">
+              @if (item.currency) {
+              <div class="param-chip">
+                <i class="pi pi-money-bill" aria-hidden="true"></i>
+                <span class="p-lbl">Currency:</span>
+                <span class="p-val">{{ item.currency }}</span>
+              </div>
+              }
+              @if (item.delivery_terms || item.shipping_terms || item.incoterms) {
+              <div class="param-chip">
+                <i class="pi pi-truck" aria-hidden="true"></i>
+                <span class="p-lbl">Delivery Terms:</span>
+                <span class="p-val">{{ item.delivery_terms || item.shipping_terms || item.incoterms }}</span>
+              </div>
+              }
+              @if (item.payment_terms) {
+              <div class="param-chip">
+                <i class="pi pi-credit-card" aria-hidden="true"></i>
+                <span class="p-lbl">Payment Terms:</span>
+                <span class="p-val">{{ item.payment_terms }}</span>
+              </div>
+              }
+              @if (item.warranty_period) {
+              <div class="param-chip">
+                <i class="pi pi-shield" aria-hidden="true"></i>
+                <span class="p-lbl">Warranty:</span>
+                <span class="p-val">{{ item.warranty_period }}</span>
+              </div>
+              }
+              @if (item.delivery_period) {
+              <div class="param-chip">
+                <i class="pi pi-clock" aria-hidden="true"></i>
+                <span class="p-lbl">Delivery Period:</span>
+                <span class="p-val">{{ item.delivery_period }}</span>
+              </div>
               }
             </div>
-          </div>
-          }
 
-          <!-- Remark -->
-          @if (item.remark) {
-          <div class="vsc-remark-box">
-            <i class="pi pi-comment"></i>
-            <p>{{ item.remark }}</p>
+            <!-- Materials Table -->
+            @if (item.items && item.items.length > 0) {
+            <div class="cost-items-table-container">
+              <p-table [value]="item.items" [paginator]="item.items.length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
+                [scrollable]="true" scrollHeight="320px" styleClass="p-datatable-sm items-table-wrap" [tableStyle]="{ 'min-width': '100%' }">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th style="width: 50px; text-align: center;">#</th>
+                    <th>MATERIAL / DESCRIPTION</th>
+                    <th style="width: 140px;">HSN CODE</th>
+                    <th style="width: 100px; text-align: right;">QTY</th>
+                    <th style="width: 140px; text-align: right;">UNIT PRICE</th>
+                    <th style="width: 150px; text-align: right;">NET AMOUNT</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-idx="rowIndex">
+                  <tr>
+                    <td style="text-align: center; color: #64748b; font-weight: 700;">{{ idx + 1 }}</td>
+                    <td>
+                      <strong class="item-desc-text">{{ row.material_name || row.description }}</strong>
+                    </td>
+                    <td>
+                      <span class="ref-badge">{{ row.hsn_code || '—' }}</span>
+                    </td>
+                    <td class="num-cell" style="font-weight: 700;">
+                      <span class="qty-badge">{{ row.quantity }}</span>
+                    </td>
+                    <td class="num-cell">
+                      {{ (row.unit_price || 0) | number: '1.2-2' }}
+                    </td>
+                    <td class="num-cell" style="font-weight: 700; color: var(--color-heading);">
+                      {{ calculateRowNet(row) | number: '1.2-2' }}
+                    </td>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="footer">
+                  <tr class="table-total-row table-grand-total-row">
+                    <td colspan="5" class="total-label-cell">
+                      <div class="total-label-wrapper">
+                        <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-calculator"></i></span>
+                        <span class="total-title" style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total Net Value</span>
+                        <span class="total-items-badge">({{ item.items.length }} {{ item.items.length === 1 ? 'item' : 'items' }})</span>
+                      </div>
+                    </td>
+                    <td class="total-amount-cell" style="min-width: 150px; text-align: right; white-space: nowrap;">
+                      <span class="total-amount-value" style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
+                        {{ item.currency || 'USD' }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
+                      </span>
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
+            }
+
+            <!-- Remark -->
+            @if (item.remark) {
+            <div class="vsc-remark-box">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <div class="vsc-remark-content">
+                <span class="vsc-remark-label">Remarks:</span>
+                <span class="vsc-remark-text">{{ item.remark }}</span>
+              </div>
+            </div>
+            }
+
+            <!-- Attachments -->
+            @if (item.attachments && item.attachments.length > 0) {
+            <div class="qe-attachments">
+              <span class="qe-section-label">
+                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                Attachments ({{ item.attachments.length }})
+              </span>
+              <div class="qe-attachment-list">
+                @for (att of item.attachments; track att.id) {
+                <div class="qe-attachment-chip">
+                  <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                  <div class="qe-att-meta">
+                    <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                    @if (att.file_size) {
+                    <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                    }
+                  </div>
+                  <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                    pTooltip="Download file" tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                    (click)="downloadAttachment(att)">
+                    @if (downloadingAttachmentId() === att.id) {
+                    <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                    } @else {
+                    <i class="pi pi-download" aria-hidden="true"></i>
+                    }
+                  </button>
+                </div>
+                }
+              </div>
+            </div>
+            }
+
           </div>
-          }
         </article>
         }
       </div>
@@ -280,119 +365,195 @@
       <div class="version-cards-stream" role="feed" aria-label="Commercial invoices list">
         @for (item of supplierInvoices(); track item.id; let i = $index) {
         <article class="version-sheet-card">
-          <!-- Card Header -->
+
+          <!-- Card Header Bar -->
           <div class="vsc-header">
-            <div class="vsc-left">
+            <div class="vsc-header-left">
               <span class="vsc-badge">
-                <i class="pi pi-receipt"></i>
-                #{{ supplierInvoices().length - i }} Invoice
+                <i class="pi pi-receipt" aria-hidden="true"></i>
+                {{ item.invoice_no || ('INV #' + item.id) }}
               </span>
-              <span class="vsc-ref-pill">
-                <i class="pi pi-hashtag"></i>
-                {{ item.invoice_no || ('#' + item.id) }}
-              </span>
+
+              @if (i === 0) {
+              <span class="vsc-latest-pill">Latest</span>
+              }
+
               <span class="vsc-date">
-                <i class="pi pi-calendar"></i>
+                <i class="pi pi-calendar" aria-hidden="true"></i>
                 {{ (item.invoice_date || item.date) | date: 'dd MMM yyyy' }}
               </span>
-              <span class="vsc-badge"
-                style="background: var(--color-primary-soft, #fef2f2); color: var(--color-primary, #e14d3f)">
-                <i class="pi pi-money-bill"></i>
-                {{ item.currency || 'USD' }}
+
+              <h2 class="vsc-title">{{ item.invoice_no ? ('Commercial Invoice (' + item.invoice_no + ')') : 'Supplier Commercial Invoice' }}</h2>
+            </div>
+
+            <div class="vsc-header-right">
+              @if (calculateOrderNet(item) > 0) {
+              <span class="vsc-cost-pill" [pTooltip]="'Total Net Value: ' + (item.currency || 'USD') + ' ' + (calculateOrderNet(item) | number:'1.2-2')" tooltipPosition="bottom">
+                <i class="pi pi-wallet" aria-hidden="true"></i>
+                {{ item.currency || 'USD' }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
               </span>
-            </div>
+              }
 
-            <div class="vsc-right">
-              <span class="cost-sheet-sync-pill">
-                <i class="pi pi-wallet"></i>
-                Total Net: {{ item.currency || 'USD' }} {{ calculateOrderNet(item) | number: '1.2-2' }}
+              @if (item.items && item.items.length) {
+              <span class="vsc-count-pill">
+                <i class="pi pi-box" aria-hidden="true"></i>
+                {{ item.items.length }} line item{{ item.items.length === 1 ? '' : 's' }}
               </span>
-              <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="secondary" pTooltip="Edit Invoice"
-                tooltipPosition="bottom" (onClick)="openEditInvoiceDialog(item)" />
-              <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" pTooltip="Delete Invoice"
-                tooltipPosition="bottom" (onClick)="deleteInvoice(item)" />
+              }
+
+              <div class="actions-cell">
+                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                  [attr.aria-label]="'Edit invoice ' + (item.invoice_no || item.id)" pTooltip="Edit invoice"
+                  tooltipPosition="top" (click)="openEditInvoiceDialog(item)"></button>
+                <button pButton type="button" icon="pi pi-trash"
+                  class="p-button-text p-button-sm p-button-danger qe-delete"
+                  [attr.aria-label]="'Delete invoice ' + (item.invoice_no || item.id)" pTooltip="Delete invoice"
+                  tooltipPosition="top" (click)="deleteInvoice(item)"></button>
+              </div>
             </div>
           </div>
 
-          <!-- Parameters Strip -->
-          <div class="vsc-params-strip">
-            <div class="vsc-param">
-              <span class="label">Currency</span>
-              <span class="val"><strong>{{ item.currency || 'USD' }}</strong></span>
-            </div>
-            <div class="vsc-param">
-              <span class="label">Delivery Terms</span>
-              <span class="val">{{ item.delivery_terms || item.shipping_terms || item.incoterms || '—' }}</span>
-            </div>
-            <div class="vsc-param">
-              <span class="label">Payment Terms</span>
-              <span class="val">{{ item.payment_terms || '—' }}</span>
-            </div>
-            <div class="vsc-param">
-              <span class="label">Warranty</span>
-              <span class="val">{{ item.warranty_period || '—' }}</span>
-            </div>
-            <div class="vsc-param">
-              <span class="label">Delivery Period</span>
-              <span class="val">{{ item.delivery_period || '—' }}</span>
-            </div>
-          </div>
+          <!-- Card Body -->
+          <div class="vsc-body">
 
-          <!-- Materials Table -->
-          @if (item.items && item.items.length > 0) {
-          <div class="cost-items-table-container">
-            <p-table [value]="item.items" [scrollable]="true" scrollHeight="260px" styleClass="p-datatable-sm">
-              <ng-template #header>
-                <tr>
-                  <th style="width: 44px">#</th>
-                  <th>Material / Description</th>
-                  <th style="width: 140px">HSN Code</th>
-                  <th style="width: 110px" class="text-right">Qty</th>
-                  <th style="width: 130px" class="text-right">Unit Price</th>
-                  <th style="width: 140px" class="text-right">Net Amount</th>
-                </tr>
-              </ng-template>
-              <ng-template #body let-row let-idx="rowIndex">
-                <tr>
-                  <td class="text-muted">{{ idx + 1 }}</td>
-                  <td><strong>{{ row.material_name || row.description }}</strong></td>
-                  <td><code>{{ row.hsn_code || '—' }}</code></td>
-                  <td class="text-right">{{ row.quantity | number }}</td>
-                  <td class="text-right">{{ (row.unit_price || 0) | number: '1.2-2' }}</td>
-                  <td class="text-right font-medium">
-                    {{ calculateRowNet(row) | number: '1.2-2' }}
-                  </td>
-                </tr>
-              </ng-template>
-            </p-table>
-          </div>
-          }
-
-          <!-- Attachments -->
-          @if (item.attachments && item.attachments.length > 0) {
-          <div class="qe-attachments">
-            <span class="att-heading">Attachments ({{ item.attachments.length }}):</span>
-            <div class="att-chips">
-              @for (att of item.attachments; track att.id) {
-              <button type="button" class="att-chip" (click)="downloadAttachment(att)"
-                [disabled]="downloadingAttachmentId() === att.id" pTooltip="Download attachment">
-                <i
-                  [class]="downloadingAttachmentId() === att.id ? 'pi pi-spin pi-spinner' : getFileIcon(att.content_type)"></i>
-                <span class="att-name">{{ att.file_name }}</span>
-                <span class="att-size">{{ formatFileSize(att.file_size) }}</span>
-              </button>
+            <!-- Refined Parameters Strip -->
+            <div class="vsc-params-strip">
+              @if (item.currency) {
+              <div class="param-chip">
+                <i class="pi pi-money-bill" aria-hidden="true"></i>
+                <span class="p-lbl">Currency:</span>
+                <span class="p-val">{{ item.currency }}</span>
+              </div>
+              }
+              @if (item.delivery_terms || item.shipping_terms || item.incoterms) {
+              <div class="param-chip">
+                <i class="pi pi-truck" aria-hidden="true"></i>
+                <span class="p-lbl">Delivery Terms:</span>
+                <span class="p-val">{{ item.delivery_terms || item.shipping_terms || item.incoterms }}</span>
+              </div>
+              }
+              @if (item.payment_terms) {
+              <div class="param-chip">
+                <i class="pi pi-credit-card" aria-hidden="true"></i>
+                <span class="p-lbl">Payment Terms:</span>
+                <span class="p-val">{{ item.payment_terms }}</span>
+              </div>
+              }
+              @if (item.warranty_period) {
+              <div class="param-chip">
+                <i class="pi pi-shield" aria-hidden="true"></i>
+                <span class="p-lbl">Warranty:</span>
+                <span class="p-val">{{ item.warranty_period }}</span>
+              </div>
+              }
+              @if (item.delivery_period) {
+              <div class="param-chip">
+                <i class="pi pi-clock" aria-hidden="true"></i>
+                <span class="p-lbl">Delivery Period:</span>
+                <span class="p-val">{{ item.delivery_period }}</span>
+              </div>
               }
             </div>
-          </div>
-          }
 
-          <!-- Remark -->
-          @if (item.remark) {
-          <div class="vsc-remark-box">
-            <i class="pi pi-comment"></i>
-            <p>{{ item.remark }}</p>
+            <!-- Materials Table -->
+            @if (item.items && item.items.length > 0) {
+            <div class="cost-items-table-container">
+              <p-table [value]="item.items" [paginator]="item.items.length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
+                [scrollable]="true" scrollHeight="320px" styleClass="p-datatable-sm items-table-wrap" [tableStyle]="{ 'min-width': '100%' }">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th style="width: 50px; text-align: center;">#</th>
+                    <th>MATERIAL / DESCRIPTION</th>
+                    <th style="width: 140px;">HSN CODE</th>
+                    <th style="width: 100px; text-align: right;">QTY</th>
+                    <th style="width: 140px; text-align: right;">UNIT PRICE</th>
+                    <th style="width: 150px; text-align: right;">NET AMOUNT</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-idx="rowIndex">
+                  <tr>
+                    <td style="text-align: center; color: #64748b; font-weight: 700;">{{ idx + 1 }}</td>
+                    <td>
+                      <strong class="item-desc-text">{{ row.material_name || row.description }}</strong>
+                    </td>
+                    <td>
+                      <span class="ref-badge">{{ row.hsn_code || '—' }}</span>
+                    </td>
+                    <td class="num-cell" style="font-weight: 700;">
+                      <span class="qty-badge">{{ row.quantity }}</span>
+                    </td>
+                    <td class="num-cell">
+                      {{ (row.unit_price || 0) | number: '1.2-2' }}
+                    </td>
+                    <td class="num-cell" style="font-weight: 700; color: var(--color-heading);">
+                      {{ calculateRowNet(row) | number: '1.2-2' }}
+                    </td>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="footer">
+                  <tr class="table-total-row table-grand-total-row">
+                    <td colspan="5" class="total-label-cell">
+                      <div class="total-label-wrapper">
+                        <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-calculator"></i></span>
+                        <span class="total-title" style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total Net Value</span>
+                        <span class="total-items-badge">({{ item.items.length }} {{ item.items.length === 1 ? 'item' : 'items' }})</span>
+                      </div>
+                    </td>
+                    <td class="total-amount-cell" style="min-width: 150px; text-align: right; white-space: nowrap;">
+                      <span class="total-amount-value" style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
+                        {{ item.currency || 'USD' }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
+                      </span>
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
+            }
+
+            <!-- Remark -->
+            @if (item.remark) {
+            <div class="vsc-remark-box">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <div class="vsc-remark-content">
+                <span class="vsc-remark-label">Remarks:</span>
+                <span class="vsc-remark-text">{{ item.remark }}</span>
+              </div>
+            </div>
+            }
+
+            <!-- Attachments -->
+            @if (item.attachments && item.attachments.length > 0) {
+            <div class="qe-attachments">
+              <span class="qe-section-label">
+                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                Attachments ({{ item.attachments.length }})
+              </span>
+              <div class="qe-attachment-list">
+                @for (att of item.attachments; track att.id) {
+                <div class="qe-attachment-chip">
+                  <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                  <div class="qe-att-meta">
+                    <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                    @if (att.file_size) {
+                    <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                    }
+                  </div>
+                  <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                    pTooltip="Download file" tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                    (click)="downloadAttachment(att)">
+                    @if (downloadingAttachmentId() === att.id) {
+                    <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                    } @else {
+                    <i class="pi pi-download" aria-hidden="true"></i>
+                    }
+                  </button>
+                </div>
+                }
+              </div>
+            </div>
+            }
+
           </div>
-          }
         </article>
         }
       </div>
@@ -424,98 +585,167 @@
       <div class="version-cards-stream" role="feed" aria-label="Packing lists">
         @for (item of packingLists(); track item.id; let i = $index) {
         <article class="version-sheet-card">
-          <!-- Card Header -->
+
+          <!-- Card Header Bar -->
           <div class="vsc-header">
-            <div class="vsc-left">
+            <div class="vsc-header-left">
               <span class="vsc-badge">
-                <i class="pi pi-box"></i>
-                #{{ packingLists().length - i }} Packing List
+                <i class="pi pi-box" aria-hidden="true"></i>
+                {{ item.packing_list_no || ('PL #' + item.id) }}
               </span>
-              <span class="vsc-ref-pill">
-                <i class="pi pi-hashtag"></i>
-                {{ item.packing_list_no || ('#' + item.id) }}
-              </span>
+
+              @if (i === 0) {
+              <span class="vsc-latest-pill">Latest</span>
+              }
+
               <span class="vsc-date">
-                <i class="pi pi-calendar"></i>
+                <i class="pi pi-calendar" aria-hidden="true"></i>
                 {{ (item.packing_list_date || item.date) | date: 'dd MMM yyyy' }}
               </span>
+
+              <h2 class="vsc-title">{{ item.packing_list_no ? ('Packing List (' + item.packing_list_no + ')') : 'Shipment Packing List' }}</h2>
             </div>
 
-            <div class="vsc-right">
+            <div class="vsc-header-right">
               @if (calculatePackingListTotalWeight(item) > 0) {
-              <span class="cost-sheet-sync-pill">
-                <i class="pi pi-box"></i>
-                Total Weight: {{ calculatePackingListTotalWeight(item) | number: '1.2-2' }} kg
+              <span class="vsc-cost-pill" [pTooltip]="'Total Weight: ' + (calculatePackingListTotalWeight(item) | number:'1.2-2') + ' kg'" tooltipPosition="bottom">
+                <i class="pi pi-box" aria-hidden="true"></i>
+                {{ calculatePackingListTotalWeight(item) | number: '1.2-2' }} kg
               </span>
               }
-              <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="secondary"
-                pTooltip="Edit Packing List" tooltipPosition="bottom" (onClick)="openEditPackingListDialog(item)" />
-              <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger"
-                pTooltip="Delete Packing List" tooltipPosition="bottom" (onClick)="deletePackingList(item)" />
+
+              @if (item.items && item.items.length) {
+              <span class="vsc-count-pill">
+                <i class="pi pi-box" aria-hidden="true"></i>
+                {{ item.items.length }} package item{{ item.items.length === 1 ? '' : 's' }}
+              </span>
+              }
+
+              <div class="actions-cell">
+                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                  [attr.aria-label]="'Edit packing list ' + (item.packing_list_no || item.id)" pTooltip="Edit packing list"
+                  tooltipPosition="top" (click)="openEditPackingListDialog(item)"></button>
+                <button pButton type="button" icon="pi pi-trash"
+                  class="p-button-text p-button-sm p-button-danger qe-delete"
+                  [attr.aria-label]="'Delete packing list ' + (item.packing_list_no || item.id)" pTooltip="Delete packing list"
+                  tooltipPosition="top" (click)="deletePackingList(item)"></button>
+              </div>
             </div>
           </div>
 
-          <!-- Parameters Strip -->
-          <div class="vsc-params-strip">
-            <div class="vsc-param">
-              <span class="label">Packing Condition</span>
-              <span class="val"><strong>{{ item.packing_condition || '—' }}</strong></span>
-            </div>
-          </div>
+          <!-- Card Body -->
+          <div class="vsc-body">
 
-          <!-- Materials / Package Breakdown Table -->
-          @if (item.items && item.items.length > 0) {
-          <div class="cost-items-table-container">
-            <p-table [value]="item.items" [scrollable]="true" scrollHeight="260px" styleClass="p-datatable-sm">
-              <ng-template #header>
-                <tr>
-                  <th style="width: 44px">#</th>
-                  <th>Material / Package Item</th>
-                  <th style="width: 140px">HSN Code</th>
-                  <th style="width: 110px" class="text-right">Qty</th>
-                  <th style="width: 130px" class="text-right">Unit Wt (kg)</th>
-                  <th style="width: 140px" class="text-right">Total Wt (kg)</th>
-                </tr>
-              </ng-template>
-              <ng-template #body let-row let-idx="rowIndex">
-                <tr>
-                  <td class="text-muted">{{ idx + 1 }}</td>
-                  <td><strong>{{ row.material_name || row.description }}</strong></td>
-                  <td><code>{{ row.hsn_code || '—' }}</code></td>
-                  <td class="text-right font-medium">{{ row.quantity | number }}</td>
-                  <td class="text-right">{{ (row.weight || row.unit_weight || 0) | number: '1.2-2' }}</td>
-                  <td class="text-right font-medium">{{ calculateRowWeight(row) | number: '1.2-2' }}</td>
-                </tr>
-              </ng-template>
-            </p-table>
-          </div>
-          }
-
-          <!-- Attachments -->
-          @if (item.attachments && item.attachments.length > 0) {
-          <div class="qe-attachments">
-            <span class="att-heading">Attachments ({{ item.attachments.length }}):</span>
-            <div class="att-chips">
-              @for (att of item.attachments; track att.id) {
-              <button type="button" class="att-chip" (click)="downloadAttachment(att)"
-                [disabled]="downloadingAttachmentId() === att.id" pTooltip="Download attachment">
-                <i
-                  [class]="downloadingAttachmentId() === att.id ? 'pi pi-spin pi-spinner' : getFileIcon(att.content_type)"></i>
-                <span class="att-name">{{ att.file_name }}</span>
-                <span class="att-size">{{ formatFileSize(att.file_size) }}</span>
-              </button>
+            <!-- Refined Parameters Strip -->
+            <div class="vsc-params-strip">
+              @if (item.packing_condition) {
+              <div class="param-chip">
+                <i class="pi pi-shield" aria-hidden="true"></i>
+                <span class="p-lbl">Packing Condition:</span>
+                <span class="p-val">{{ item.packing_condition }}</span>
+              </div>
               }
             </div>
-          </div>
-          }
 
-          <!-- Remark -->
-          @if (item.remark) {
-          <div class="vsc-remark-box">
-            <i class="pi pi-comment"></i>
-            <p>{{ item.remark }}</p>
+            <!-- Materials / Package Breakdown Table -->
+            @if (item.items && item.items.length > 0) {
+            <div class="cost-items-table-container">
+              <p-table [value]="item.items" [paginator]="item.items.length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
+                [scrollable]="true" scrollHeight="320px" styleClass="p-datatable-sm items-table-wrap" [tableStyle]="{ 'min-width': '100%' }">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th style="width: 50px; text-align: center;">#</th>
+                    <th>MATERIAL / PACKAGE ITEM</th>
+                    <th style="width: 140px;">HSN CODE</th>
+                    <th style="width: 100px; text-align: right;">QTY</th>
+                    <th style="width: 140px; text-align: right;">UNIT WT (KG)</th>
+                    <th style="width: 150px; text-align: right;">TOTAL WT (KG)</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-idx="rowIndex">
+                  <tr>
+                    <td style="text-align: center; color: #64748b; font-weight: 700;">{{ idx + 1 }}</td>
+                    <td>
+                      <strong class="item-desc-text">{{ row.material_name || row.description }}</strong>
+                    </td>
+                    <td>
+                      <span class="ref-badge">{{ row.hsn_code || '—' }}</span>
+                    </td>
+                    <td class="num-cell" style="font-weight: 700;">
+                      <span class="qty-badge">{{ row.quantity }}</span>
+                    </td>
+                    <td class="num-cell">
+                      {{ (row.weight || row.unit_weight || 0) | number: '1.2-2' }}
+                    </td>
+                    <td class="num-cell" style="font-weight: 700; color: var(--color-heading);">
+                      {{ calculateRowWeight(row) | number: '1.2-2' }}
+                    </td>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="footer">
+                  <tr class="table-total-row table-grand-total-row">
+                    <td colspan="5" class="total-label-cell">
+                      <div class="total-label-wrapper">
+                        <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-box"></i></span>
+                        <span class="total-title" style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total Weight</span>
+                        <span class="total-items-badge">({{ item.items.length }} {{ item.items.length === 1 ? 'item' : 'items' }})</span>
+                      </div>
+                    </td>
+                    <td class="total-amount-cell" style="min-width: 150px; text-align: right; white-space: nowrap;">
+                      <span class="total-amount-value" style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
+                        {{ calculatePackingListTotalWeight(item) | number:'1.2-2' }} kg
+                      </span>
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
+            }
+
+            <!-- Remark -->
+            @if (item.remark) {
+            <div class="vsc-remark-box">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <div class="vsc-remark-content">
+                <span class="vsc-remark-label">Remarks:</span>
+                <span class="vsc-remark-text">{{ item.remark }}</span>
+              </div>
+            </div>
+            }
+
+            <!-- Attachments -->
+            @if (item.attachments && item.attachments.length > 0) {
+            <div class="qe-attachments">
+              <span class="qe-section-label">
+                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                Attachments ({{ item.attachments.length }})
+              </span>
+              <div class="qe-attachment-list">
+                @for (att of item.attachments; track att.id) {
+                <div class="qe-attachment-chip">
+                  <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                  <div class="qe-att-meta">
+                    <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                    @if (att.file_size) {
+                    <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                    }
+                  </div>
+                  <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                    pTooltip="Download file" tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                    (click)="downloadAttachment(att)">
+                    @if (downloadingAttachmentId() === att.id) {
+                    <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                    } @else {
+                    <i class="pi pi-download" aria-hidden="true"></i>
+                    }
+                  </button>
+                </div>
+                }
+              </div>
+            </div>
+            }
+
           </div>
-          }
         </article>
         }
       </div>

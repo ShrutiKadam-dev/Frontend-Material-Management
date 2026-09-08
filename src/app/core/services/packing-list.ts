@@ -19,7 +19,7 @@ export class PackingListService {
   getByProject(projectId: number): Observable<PackingList[]> {
     return this.http
       .get<PackingList[] | { data: PackingList[] }>(
-        `${this.apiBaseUrl}/api/v1/packing-lists?project_id=${projectId}`,
+        `${this.apiBaseUrl}/api/v1/supplier-packing-lists?project_id=${projectId}`,
       )
       .pipe(
         map((res) => (Array.isArray(res) ? res : res?.data || [])),
@@ -29,7 +29,7 @@ export class PackingListService {
 
   getById(id: number): Observable<PackingList> {
     return this.http.get<PackingList>(
-      `${this.apiBaseUrl}/api/v1/packing-lists/${id}`,
+      `${this.apiBaseUrl}/api/v1/supplier-packing-lists/${id}`,
     );
   }
 
@@ -41,7 +41,7 @@ export class PackingListService {
     fd.append('data', JSON.stringify(payload));
     files.forEach((file) => fd.append('file', file, file.name));
     return this.http.post<PackingList>(
-      `${this.apiBaseUrl}/api/v1/packing-lists`,
+      `${this.apiBaseUrl}/api/v1/supplier-packing-lists`,
       fd,
     );
   }
@@ -55,14 +55,14 @@ export class PackingListService {
     fd.append('data', JSON.stringify(payload));
     files.forEach((file) => fd.append('file', file, file.name));
     return this.http.patch<PackingList>(
-      `${this.apiBaseUrl}/api/v1/packing-lists/${id}`,
+      `${this.apiBaseUrl}/api/v1/supplier-packing-lists/${id}`,
       fd,
     );
   }
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(
-      `${this.apiBaseUrl}/api/v1/packing-lists/${id}`,
+      `${this.apiBaseUrl}/api/v1/supplier-packing-lists/${id}`,
     );
   }
 }

@@ -1,60 +1,124 @@
 <section class="dashboard-page" aria-labelledby="dashboard-title">
   <header class="dashboard-hero">
     <p class="eyebrow">Overview</p>
-    <h1 id="dashboard-title" class="page-title">Good morning, Admin</h1>
+    <h1 id="dashboard-title" class="page-title">{{ greetingTitle() }}</h1>
     <p class="page-summary">
-      Here's where every material request stands right now - from requirement to final payment.
+      Here's where every material request stands right now — from requirement to final payment.
     </p>
   </header>
 
-  <div class="metric-grid" aria-label="Inventory control metrics">
-    @for (metric of metrics; track metric.label) {
-      <article class="metric-card app-panel">
-        <p>{{ metric.label }}</p>
-        <strong>{{ metric.value }}</strong>
-        <span [class.warning]="metric.tone === 'warning'">{{ metric.trend }}</span>
-      </article>
-    }
-  </div>
-
-  <section class="recent-section" aria-labelledby="recent-projects-title">
-    <div class="recent-heading">
-      <h2 id="recent-projects-title">Recent projects</h2>
-      <a routerLink="/projects">View all -></a>
+  @if (loading()) {
+    <div class="dashboard-loading" aria-live="polite" aria-busy="true">
+      <div class="skeleton-grid metric-grid">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="skeleton-card skeleton-metric"></div>
+        }
+      </div>
+      <div class="skeleton-grid project-grid">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="skeleton-card skeleton-project"></div>
+        }
+      </div>
     </div>
-
-    <div class="project-grid">
-      @for (project of recentProjects; track project.title) {
-        <article class="project-card app-panel">
-          <span class="project-stripe" aria-hidden="true"></span>
-          <div class="project-card-header">
-            <h3>{{ project.title }}</h3>
-            <span class="status-pill" [class.completed]="project.status === 'Completed'">
-              {{ project.status }}
-            </span>
-          </div>
-
-          <dl class="project-parties">
-            <div>
-              <dt>Supplier</dt>
-              <dd>{{ project.supplier }}</dd>
-            </div>
-            <div>
-              <dt>Customer</dt>
-              <dd>{{ project.customer }}</dd>
-            </div>
-          </dl>
-
-          <div class="progress-track" aria-hidden="true">
-            <span [style.width.%]="project.progress"></span>
-          </div>
-
-          <div class="project-progress">
-            <span>{{ project.step }}</span>
-            <span>{{ project.milestone }}</span>
-          </div>
+  } @else if (error()) {
+    <div class="dashboard-error app-panel" role="alert">
+      <i class="pi pi-exclamation-circle error-icon" aria-hidden="true"></i>
+      <div>
+        <h3>Unable to load dashboard data</h3>
+        <p>{{ error() }}</p>
+      </div>
+      <button type="button" class="retry-btn" (click)="loadDashboardData()">
+        <i class="pi pi-refresh" aria-hidden="true"></i> Retry
+      </button>
+    </div>
+  } @else {
+    <!-- Metrics Section -->
+    <div class="metric-grid" aria-label="Inventory control metrics">
+      @for (metric of metrics(); track metric.label) {
+        <article class="metric-card app-panel">
+          <p>{{ metric.label }}</p>
+          <strong>{{ metric.value }}</strong>
+          <span
+            [class.warning]="metric.tone === 'warning'"
+            [class.danger]="metric.tone === 'danger'"
+            [class.info]="metric.tone === 'info'"
+          >
+            {{ metric.trend }}
+          </span>
         </article>
       }
     </div>
-  </section>
+
+    <!-- Recent Projects Section -->
+    <section class="recent-section" aria-labelledby="recent-projects-title">
+      <div class="recent-heading">
+        <h2 id="recent-projects-title">Recent projects</h2>
+        <a routerLink="/projects" class="view-all-link">
+          View all
+          <span aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+
+      @if (recentProjects().length === 0) {
+        <div class="empty-projects-state app-panel">
+          <i class="pi pi-folder-open empty-icon" aria-hidden="true"></i>
+          <h3>No projects yet</h3>
+          <p>Create your first project to start tracking the 15-step material lifecycle.</p>
+          <a routerLink="/projects" class="create-project-link">Go to Projects</a>
+        </div>
+      } @else {
+        <div class="project-grid">
+          @for (project of recentProjects(); track project.id || project.title) {
+            <article
+              class="project-card app-panel clickable-card"
+              (click)="navigateToProject(project.id)"
+              (keydown.enter)="navigateToProject(project.id)"
+              tabindex="0"
+              role="button"
+              [attr.aria-label]="'View project ' + project.title"
+            >
+              <span class="project-stripe" aria-hidden="true"></span>
+              <div class="project-card-header">
+                <h3>{{ project.title }}</h3>
+                <span
+                  class="status-pill"
+                  [class.completed]="project.status === 'Completed'"
+                  [class.on-hold]="project.status === 'On Hold'"
+                  [class.pending]="project.status === 'Pending'"
+                >
+                  {{ project.status }}
+                </span>
+              </div>
+
+              <dl class="project-parties">
+                <div>
+                  <dt>Supplier</dt>
+                  <dd>{{ project.supplier }}</dd>
+                </div>
+                <div>
+                  <dt>Customer</dt>
+                  <dd>{{ project.customer }}</dd>
+                </div>
+              </dl>
+
+              <div
+                class="progress-track"
+                role="progressbar"
+                [attr.aria-valuenow]="project.progress"
+                aria-valuemin="0"
+                aria-valuemax="100"
+              >
+                <span [style.width.%]="project.progress"></span>
+              </div>
+
+              <div class="project-progress">
+                <span>{{ project.step }}</span>
+                <span>{{ project.milestone }}</span>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </section>
+  }
 </section>
