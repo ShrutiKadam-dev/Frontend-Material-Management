@@ -22,8 +22,6 @@ import { TableModule } from 'primeng/table';
 import { SelectModule } from 'primeng/select';
 
 import { SupplierQuotationService } from '../../../../core/services/supplier-quotation';
-import { QuotationRequestService } from '../../../../core/services/quotation-request';
-import { CustomerQueryService } from '../../../../core/services/customer-query';
 import { SupplierService } from '../../../../core/services/supplier';
 import { ProjectService } from '../../../../core/services/project';
 import { AttachmentService } from '../../../../core/services/attachment';
@@ -69,8 +67,6 @@ export class Step03SupplierQuotation implements OnInit {
   private readonly router = inject(Router);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly supplierQuotationService = inject(SupplierQuotationService);
-  private readonly quotationRequestService = inject(QuotationRequestService);
-  private readonly customerQueryService = inject(CustomerQueryService);
   private readonly supplierService = inject(SupplierService);
   private readonly projectService = inject(ProjectService);
   private readonly attachmentService = inject(AttachmentService);
@@ -285,47 +281,6 @@ export class Step03SupplierQuotation implements OnInit {
     this.editingIndex.set(null);
     this.errorMessage.set(null);
     this.dialogVisible.set(true);
-
-    // Auto-fetch material items from Step 2 / Step 1 if available
-    this.quotationRequestService.getByProject(this.projectId()).subscribe({
-      next: (requests) => {
-        const autoItems: SupplierQuotationItem[] = [];
-        requests.forEach((r) => {
-          r.items?.forEach((item) => {
-            autoItems.push({
-              material_name: item.material_name,
-              quantity: item.quantity,
-            });
-          });
-        });
-        if (autoItems.length > 0) {
-          this.items.set(autoItems);
-        } else {
-          this.loadFallbackItems();
-        }
-      },
-      error: () => this.loadFallbackItems(),
-    });
-  }
-
-  private loadFallbackItems(): void {
-    this.customerQueryService.getByProject(this.projectId()).subscribe({
-      next: (queries) => {
-        const autoItems: SupplierQuotationItem[] = [];
-        queries.forEach((q) => {
-          q.items?.forEach((item) => {
-            autoItems.push({
-              material_name: item.material_name,
-              quantity: item.quantity,
-            });
-          });
-        });
-        if (autoItems.length > 0) {
-          this.items.set(autoItems);
-        }
-      },
-      error: () => { },
-    });
   }
 
   protected openEditDialog(quotation: SupplierQuotation): void {

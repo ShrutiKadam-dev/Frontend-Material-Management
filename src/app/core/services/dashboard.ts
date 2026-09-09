@@ -151,7 +151,7 @@ export class DashboardService {
         // Compute overall dashboard metrics
         const metrics: DashboardMetric[] = [
           {
-            label: 'Active Projects',
+            label: 'Overall Projects',
             value: totalProjects,
             trend: `Across ${totalCustomers} client${totalCustomers === 1 ? '' : 's'}`,
             tone: 'info',
