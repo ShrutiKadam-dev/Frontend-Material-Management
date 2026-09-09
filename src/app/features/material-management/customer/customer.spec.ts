@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { of } from 'rxjs';
 
 import { CustomerService } from '../../../core/services/customer';
@@ -19,7 +20,6 @@ describe('Customer', () => {
         email: 'test@example.com',
         contact_number: '1234567890',
         address: '123 Test St',
-        website_url: 'https://test.com',
         created_at: '2026-08-27T11:00:00Z',
         updated_at: '2026-08-27T11:00:00Z',
       }),
@@ -45,6 +45,7 @@ describe('Customer', () => {
       providers: [
         provideRouter([]),
         provideNoopAnimations(),
+        MessageService,
         { provide: CustomerService, useValue: mockCustomerService },
       ],
     }).compileComponents();

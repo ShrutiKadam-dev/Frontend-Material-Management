@@ -1,165 +1,669 @@
-<section class="base-page" aria-labelledby="suppliers-title">
-  <div class="page-header">
-    <div>
-      <p class="eyebrow">Partners</p>
-      <h1 id="suppliers-title">Suppliers</h1>
-      <p>Monitor supplier contact details, linked projects, and active procurement milestones.</p>
+<section class="base-page suppliers-page" aria-labelledby="suppliers-title">
+
+  <!-- ── 1. Page Header Bar ───────────────────────────────────────────── -->
+  <header class="page-header suppliers-header">
+    <div class="header-left">
+      <div class="header-icon-box" aria-hidden="true">
+        <i class="pi pi-truck"></i>
+      </div>
+      <div class="header-title-group">
+        <span class="eyebrow">Supply Chain Partners · Vendor Network</span>
+        <h1 id="suppliers-title">Suppliers</h1>
+        <p class="header-desc">
+          Monitor vendor contact channels, procurement contracts, and supply chain milestones.
+        </p>
+      </div>
     </div>
+
     <div class="header-actions">
-      <p-iconfield>
-        <p-inputicon class="pi pi-search" />
-        <input pInputText type="search" placeholder="Search suppliers" aria-label="Search suppliers" />
-      </p-iconfield>
-      <button pButton type="button" icon="pi pi-plus" label="Add Supplier" (click)="openAddDialog()"></button>
+      <button
+        pButton
+        type="button"
+        icon="pi pi-refresh"
+        class="p-button-text p-button-secondary refresh-btn"
+        (click)="loadSuppliers()"
+        pTooltip="Refresh suppliers"
+        tooltipPosition="bottom"
+        aria-label="Refresh suppliers"
+      ></button>
+
+      <button
+        pButton
+        type="button"
+        icon="pi pi-plus"
+        label="Add Supplier"
+        class="create-entity-btn"
+        (click)="openAddDialog()"
+      ></button>
+    </div>
+  </header>
+
+  <!-- ── 2. KPI Summary Ribbon ─────────────────────────────────────────── -->
+  <div class="metrics-ribbon" role="region" aria-label="Suppliers statistics">
+    <!-- Stat 1: Total Suppliers -->
+    <div class="metric-card app-panel">
+      <div class="metric-icon-wrap metric-icon-wrap--primary" aria-hidden="true">
+        <i class="pi pi-building"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Total Suppliers</span>
+        <strong class="metric-value">{{ totalCount() }}</strong>
+      </div>
+    </div>
+
+    <!-- Stat 2: Verified Contacts -->
+    <div class="metric-card app-panel">
+      <div class="metric-icon-wrap metric-icon-wrap--success" aria-hidden="true">
+        <i class="pi pi-check-circle"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Verified Contacts</span>
+        <strong class="metric-value">{{ verifiedContactsCount() }}</strong>
+      </div>
+    </div>
+
+    <!-- Stat 3: Valid Addresses -->
+    <div class="metric-card app-panel">
+      <div class="metric-icon-wrap metric-icon-wrap--info" aria-hidden="true">
+        <i class="pi pi-map-marker"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Regional Footprint</span>
+        <strong class="metric-value">{{ withAddressCount() }}</strong>
+      </div>
+    </div>
+
+    <!-- Stat 4: Recently Updated -->
+    <div class="metric-card app-panel">
+      <div class="metric-icon-wrap metric-icon-wrap--accent" aria-hidden="true">
+        <i class="pi pi-history"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Active / Recent</span>
+        <strong class="metric-value">{{ recentCount() }}</strong>
+      </div>
     </div>
   </div>
 
+  <!-- ── 3. Controls Panel (Search & View Mode) ─────────────────────────── -->
+  <div class="control-panel app-panel">
+    <!-- Search Bar -->
+    <div class="search-input-wrapper">
+      <i class="pi pi-search search-icon" aria-hidden="true"></i>
+      <input
+        type="text"
+        class="search-input"
+        [value]="searchQuery()"
+        (input)="onSearchInput($event)"
+        placeholder="Search suppliers by name, email, phone, or location…"
+        aria-label="Search suppliers"
+      />
+      @if (searchQuery()) {
+        <button
+          type="button"
+          class="clear-search-btn"
+          (click)="clearSearch()"
+          aria-label="Clear search input"
+          pTooltip="Clear search"
+          tooltipPosition="top"
+        >
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+      }
+    </div>
+
+    <!-- View Mode Toggle -->
+    <div class="view-mode-toggle" role="group" aria-label="View mode toggle">
+      <button
+        type="button"
+        class="view-btn"
+        [class.view-btn--active]="viewMode() === 'grid'"
+        (click)="setViewMode('grid')"
+        pTooltip="Grid View"
+        tooltipPosition="top"
+        aria-label="Switch to grid view"
+      >
+        <i class="pi pi-th-large" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        class="view-btn"
+        [class.view-btn--active]="viewMode() === 'table'"
+        (click)="setViewMode('table')"
+        pTooltip="Table View"
+        tooltipPosition="top"
+        aria-label="Switch to table view"
+      >
+        <i class="pi pi-list" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── 4. Main Suppliers Content ──────────────────────────────────────── -->
   @if (loading() && suppliers().length === 0) {
-  <div class="loading-state"
-    style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 340px; gap: 12px;">
-    <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: var(--color-primary);" aria-hidden="true"></i>
-    <p style="color: var(--color-muted); font-size: 0.95rem;">Loading suppliers...</p>
-  </div>
+    <div class="center-state loading-state">
+      <div class="loading-ring" aria-hidden="true">
+        <i class="pi pi-spin pi-spinner"></i>
+      </div>
+      <p>Loading suppliers and vendor profiles…</p>
+    </div>
   } @else if (error()) {
-  <div class="error-state app-panel"
-    style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 340px; padding: 32px; gap: 16px; text-align: center;">
-    <i class="pi pi-exclamation-circle" style="font-size: 3rem; color: var(--color-danger);" aria-hidden="true"></i>
-    <h2 style="color: var(--color-heading); font-size: 1.24rem; font-weight: 750;">Failed to Load Suppliers</h2>
-    <p style="color: var(--color-muted); max-width: 400px; margin: 0;">{{ error() }}</p>
-    <button pButton type="button" icon="pi pi-refresh" label="Retry" class="p-button-outlined"
-      (click)="loadSuppliers()"></button>
-  </div>
-  } @else if (suppliers().length === 0) {
-  <div class="empty-state">
-    <i class="pi pi-users" aria-hidden="true"></i>
-    <h2>No Suppliers Found</h2>
-    <p>Get started by adding your first supplier.</p>
-    <button pButton type="button" icon="pi pi-plus" label="Add Supplier" (click)="openAddDialog()"></button>
-  </div>
+    <div class="error-state app-panel">
+      <i class="pi pi-exclamation-circle error-icon" aria-hidden="true"></i>
+      <h2>Failed to Load Suppliers</h2>
+      <p>{{ error() }}</p>
+      <button
+        pButton
+        type="button"
+        icon="pi pi-refresh"
+        label="Retry Connection"
+        class="create-entity-btn"
+        (click)="loadSuppliers()"
+      ></button>
+    </div>
+  } @else if (filteredSuppliers().length === 0) {
+    <div class="empty-state app-panel">
+      <div class="empty-icon-wrap" aria-hidden="true">
+        <i class="pi pi-search"></i>
+      </div>
+      <h2>No Matching Suppliers Found</h2>
+      <p>
+        @if (searchQuery()) {
+          No suppliers matched "{{ searchQuery() }}". Try adjusting your search keywords.
+        } @else {
+          Start building your supply network by adding your first supplier.
+        }
+      </p>
+      <div class="empty-actions">
+        @if (searchQuery()) {
+          <button
+            pButton
+            type="button"
+            icon="pi pi-times"
+            label="Clear Search"
+            class="p-button-outlined"
+            (click)="clearSearch()"
+          ></button>
+        }
+        <button
+          pButton
+          type="button"
+          icon="pi pi-plus"
+          label="Add Supplier"
+          class="create-entity-btn"
+          (click)="openAddDialog()"
+        ></button>
+      </div>
+    </div>
   } @else {
-  <div class="entity-grid">
-    @for (supplier of suppliers(); track supplier.id) {
-    <article class="entity-card app-panel">
-      <div class="entity-head">
-        <span class="entity-avatar" aria-hidden="true">{{ initials(supplier.name) }}</span>
-        <div>
-          <h2 class="entity-name">{{ supplier.name }}</h2>
-          <p class="entity-tag">{{ supplier.address }}</p>
-        </div>
-      </div>
 
-      <div class="entity-contact" aria-label="Contact details">
-        <span>{{ supplier.email }}</span>
-        <span>{{ supplier.contact_number }}</span>
-      </div>
+    <!-- ══════════════════════════════════════════════════════════════════
+         VIEW 1: MODERN GRID CARDS
+    ══════════════════════════════════════════════════════════════════ -->
+    @if (viewMode() === 'grid') {
+      <div class="entity-cards-grid" role="feed" aria-label="Suppliers list">
+        @for (supplier of filteredSuppliers(); track supplier.id) {
+          <article class="modern-entity-card app-panel">
+            <!-- Card Header Strip -->
+            <div class="card-top-bar">
+              <div class="badge-cluster">
+                <span class="id-pill">#{{ supplier.id < 10 ? '0' + supplier.id : supplier.id }}</span>
+                <span class="status-chip status-chip--verified">
+                  <span class="dot-indicator" aria-hidden="true"></span>
+                  Verified Vendor
+                </span>
+              </div>
+            </div>
 
-      <div class="entity-actions">
-        <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-sm"
-          (click)="openDetailsDialog(supplier)" aria-label="View supplier details" pTooltip="Details"
-          tooltipPosition="top"></button>
-        <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm"
-          (click)="openEditDialog(supplier)" aria-label="Edit supplier details" pTooltip="Edit"
-          tooltipPosition="top"></button>
+            <!-- Profile Info Hero -->
+            <div class="card-profile-row">
+              <div class="entity-avatar-box" aria-hidden="true">
+                {{ initials(supplier.name) }}
+              </div>
+              <div class="profile-meta">
+                <h2
+                  class="profile-name"
+                  (click)="openDetailsDialog(supplier)"
+                  [title]="supplier.name"
+                  tabindex="0"
+                  (keydown.enter)="openDetailsDialog(supplier)"
+                >
+                  {{ supplier.name }}
+                </h2>
+                <div class="profile-location" [title]="supplier.address">
+                  <i class="pi pi-map-marker location-icon" aria-hidden="true"></i>
+                  <span>{{ supplier.address }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contact Information Box -->
+            <div class="card-contact-box" aria-label="Supplier contact info">
+              <!-- Email Row -->
+              <div class="contact-row">
+                <div class="contact-lead">
+                  <i class="pi pi-envelope contact-icon" aria-hidden="true"></i>
+                  <a [href]="'mailto:' + supplier.email" class="contact-link" [title]="'Send email to ' + supplier.email">
+                    {{ supplier.email }}
+                  </a>
+                </div>
+              </div>
+
+              <!-- Phone Row -->
+              <div class="contact-row">
+                <div class="contact-lead">
+                  <i class="pi pi-phone contact-icon" aria-hidden="true"></i>
+                  <a [href]="'tel:' + supplier.contact_number" class="contact-link" [title]="'Call ' + supplier.contact_number">
+                    {{ supplier.contact_number }}
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Timestamps Meta -->
+            <div class="card-meta-row">
+              <span class="meta-item">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                Added: {{ supplier.created_at | date:'dd MMM yyyy' }}
+              </span>
+              @if (supplier.updated_at && supplier.updated_at !== supplier.created_at) {
+                <span class="meta-item meta-item--muted">
+                  <i class="pi pi-clock" aria-hidden="true"></i>
+                  Updated: {{ supplier.updated_at | date:'dd MMM' }}
+                </span>
+              }
+            </div>
+
+            <!-- Card Actions Footer -->
+            <div class="card-footer-actions">
+              <button
+                pButton
+                type="button"
+                icon="pi pi-pencil"
+                label="Edit"
+                class="p-button-outlined p-button-sm edit-card-btn"
+                (click)="openEditDialog(supplier)"
+                aria-label="Edit supplier details"
+              ></button>
+
+              <button
+                pButton
+                type="button"
+                icon="pi pi-arrow-up-right"
+                iconPos="right"
+                label="View Profile"
+                class="p-button-sm view-profile-btn"
+                (click)="openDetailsDialog(supplier)"
+                aria-label="View supplier profile"
+              ></button>
+            </div>
+          </article>
+        }
       </div>
-    </article>
     }
-  </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         VIEW 2: MODERN DATA TABLE
+    ══════════════════════════════════════════════════════════════════ -->
+    @if (viewMode() === 'table') {
+      <div class="table-container app-panel" role="region" aria-label="Suppliers table view">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th scope="col" class="th-id">ID</th>
+              <th scope="col" class="th-supplier">Supplier</th>
+              <th scope="col" class="th-email">Email</th>
+              <th scope="col" class="th-phone">Contact Number</th>
+              <th scope="col" class="th-address">Address</th>
+              <th scope="col" class="th-date">Created</th>
+              <th scope="col" class="th-actions text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (supplier of filteredSuppliers(); track supplier.id) {
+              <tr class="table-row">
+                <!-- ID Column -->
+                <td class="td-id">
+                  <span class="id-pill">#{{ supplier.id < 10 ? '0' + supplier.id : supplier.id }}</span>
+                </td>
+
+                <!-- Supplier Name + Avatar Column -->
+                <td class="td-supplier">
+                  <div class="table-supplier-cell">
+                    <span class="table-avatar" aria-hidden="true">{{ initials(supplier.name) }}</span>
+                    <div class="table-supplier-info">
+                      <strong
+                        class="table-supplier-name"
+                        (click)="openDetailsDialog(supplier)"
+                        tabindex="0"
+                        (keydown.enter)="openDetailsDialog(supplier)"
+                      >
+                        {{ supplier.name }}
+                      </strong>
+                      <span class="status-chip status-chip--verified-sm">Verified</span>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Email Column -->
+                <td class="td-email">
+                  <div class="contact-table-cell">
+                    <i class="pi pi-envelope cell-icon" aria-hidden="true"></i>
+                    <a [href]="'mailto:' + supplier.email" class="table-link">{{ supplier.email }}</a>
+                  </div>
+                </td>
+
+                <!-- Contact Number Column -->
+                <td class="td-phone">
+                  <div class="contact-table-cell">
+                    <i class="pi pi-phone cell-icon" aria-hidden="true"></i>
+                    <a [href]="'tel:' + supplier.contact_number" class="table-link">{{ supplier.contact_number }}</a>
+                  </div>
+                </td>
+
+                <!-- Address Column -->
+                <td class="td-address">
+                  <div class="address-cell" [title]="supplier.address">
+                    <i class="pi pi-map-marker cell-icon" aria-hidden="true"></i>
+                    <span>{{ supplier.address }}</span>
+                  </div>
+                </td>
+
+                <!-- Created Date Column -->
+                <td class="td-date">
+                  <span class="date-text">{{ supplier.created_at | date:'dd MMM yyyy' }}</span>
+                </td>
+
+                <!-- Actions Column -->
+                <td class="td-actions text-right">
+                  <div class="table-actions-group">
+                    <button
+                      pButton
+                      type="button"
+                      icon="pi pi-eye"
+                      class="p-button-text p-button-sm table-action-btn"
+                      (click)="openDetailsDialog(supplier)"
+                      pTooltip="View details"
+                      tooltipPosition="top"
+                      aria-label="View supplier details"
+                    ></button>
+                    <button
+                      pButton
+                      type="button"
+                      icon="pi pi-pencil"
+                      class="p-button-text p-button-sm table-action-btn"
+                      (click)="openEditDialog(supplier)"
+                      pTooltip="Edit supplier"
+                      tooltipPosition="top"
+                      aria-label="Edit supplier details"
+                    ></button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
   }
+
 </section>
 
-<!-- Dialog for Add/Edit Supplier -->
-<p-dialog [header]="isEditMode() ? 'Edit Supplier' : 'Add Supplier'" [visible]="dialogVisible()"
-  (visibleChange)="dialogVisible.set($event)" [modal]="true" [style]="{ width: '450px' }" [draggable]="false"
-  [resizable]="false">
+<!-- ── 5. Add / Edit Supplier Modal ───────────────────────────────────── -->
+<p-dialog
+  [visible]="dialogVisible()"
+  (visibleChange)="dialogVisible.set($event)"
+  [modal]="true"
+  [style]="{ width: '92vw', maxWidth: '520px' }"
+  [draggable]="false"
+  [resizable]="false"
+  [dismissableMask]="true"
+  [focusOnShow]="true"
+  styleClass="modern-dialog"
+>
+  <ng-template pTemplate="header">
+    <div class="dialog-header-box">
+      <div class="dialog-header-icon" aria-hidden="true">
+        <i [class]="isEditMode() ? 'pi pi-user-edit' : 'pi pi-user-plus'"></i>
+      </div>
+      <div class="dialog-header-titles">
+        <h2 class="dialog-title">{{ isEditMode() ? 'Edit Supplier' : 'Add New Supplier' }}</h2>
+        <p class="dialog-subtitle">
+          {{ isEditMode() ? 'Update vendor details and procurement channel info.' : 'Register a new supplier to link to your project pipelines.' }}
+        </p>
+      </div>
+    </div>
+  </ng-template>
 
-  <form [formGroup]="supplierForm" (ngSubmit)="onSubmit()" novalidate>
-    <div class="field" style="margin-top: 8px;">
-      <label for="name">Name *</label>
-      <input pInputText id="name" formControlName="name" style="width: 100%;" placeholder="Enter supplier name" />
-      @if (supplierForm.get('name')?.invalid && (supplierForm.get('name')?.dirty || supplierForm.get('name')?.touched))
-      {
-      <p class="error">Name is required.</p>
+  <form [formGroup]="supplierForm" (ngSubmit)="onSubmit()" novalidate class="modern-form">
+    <!-- Supplier Name -->
+    <div class="form-field-group">
+      <label for="supplier-name" class="form-label">
+        Supplier / Company Name <span class="required-star">*</span>
+      </label>
+      <p-iconfield>
+        <p-inputicon class="pi pi-building" />
+        <input
+          pInputText
+          id="supplier-name"
+          formControlName="name"
+          placeholder="e.g. Apex Industrial Supplies Ltd"
+          class="dialog-input"
+          [attr.aria-invalid]="supplierForm.get('name')?.invalid && supplierForm.get('name')?.touched"
+        />
+      </p-iconfield>
+      @if (supplierForm.get('name')?.invalid && (supplierForm.get('name')?.dirty || supplierForm.get('name')?.touched)) {
+        <p class="field-error-msg" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          Company or supplier name is required (min 2 characters).
+        </p>
       }
     </div>
 
-    <div class="field">
-      <label for="email">Email *</label>
-      <input pInputText id="email" type="email" formControlName="email" style="width: 100%;"
-        placeholder="Enter email address" />
-      @if (supplierForm.get('email')?.invalid && (supplierForm.get('email')?.dirty ||
-      supplierForm.get('email')?.touched)) {
-      @if (supplierForm.get('email')?.errors?.['required']) {
-      <p class="error">Email is required.</p>
-      } @else if (supplierForm.get('email')?.errors?.['email']) {
-      <p class="error">Enter a valid email address.</p>
-      }
-      }
-    </div>
-
-    <div class="field">
-      <label for="contact_number">Contact Number *</label>
-      <input pInputText id="contact_number" formControlName="contact_number" style="width: 100%;"
-        placeholder="Enter contact number" />
-      @if (supplierForm.get('contact_number')?.invalid && (supplierForm.get('contact_number')?.dirty ||
-      supplierForm.get('contact_number')?.touched)) {
-      @if (supplierForm.get('contact_number')?.errors?.['required']) {
-      <p class="error">Contact number is required.</p>
-      } @else if (supplierForm.get('contact_number')?.errors?.['pattern']) {
-      <p class="error">Enter a valid contact number.</p>
-      }
+    <!-- Email Address -->
+    <div class="form-field-group">
+      <label for="supplier-email" class="form-label">
+        Email Address <span class="required-star">*</span>
+      </label>
+      <p-iconfield>
+        <p-inputicon class="pi pi-envelope" />
+        <input
+          pInputText
+          id="supplier-email"
+          type="email"
+          formControlName="email"
+          placeholder="e.g. procurement@apexsupplies.com"
+          class="dialog-input"
+          [attr.aria-invalid]="supplierForm.get('email')?.invalid && supplierForm.get('email')?.touched"
+        />
+      </p-iconfield>
+      @if (supplierForm.get('email')?.invalid && (supplierForm.get('email')?.dirty || supplierForm.get('email')?.touched)) {
+        <p class="field-error-msg" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          Please enter a valid business email address.
+        </p>
       }
     </div>
 
-    <div class="field">
-      <label for="address">Address *</label>
-      <input pInputText id="address" formControlName="address" style="width: 100%;" placeholder="Enter address" />
-      @if (supplierForm.get('address')?.invalid && (supplierForm.get('address')?.dirty ||
-      supplierForm.get('address')?.touched)) {
-      <p class="error">Address is required.</p>
+    <!-- Contact Number -->
+    <div class="form-field-group">
+      <label for="supplier-phone" class="form-label">
+        Contact Phone Number <span class="required-star">*</span>
+      </label>
+      <p-iconfield>
+        <p-inputicon class="pi pi-phone" />
+        <input
+          pInputText
+          id="supplier-phone"
+          formControlName="contact_number"
+          placeholder="e.g. +91 98765 43210"
+          class="dialog-input"
+          [attr.aria-invalid]="supplierForm.get('contact_number')?.invalid && supplierForm.get('contact_number')?.touched"
+        />
+      </p-iconfield>
+      @if (supplierForm.get('contact_number')?.invalid && (supplierForm.get('contact_number')?.dirty || supplierForm.get('contact_number')?.touched)) {
+        <p class="field-error-msg" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          Valid phone number format required (7 to 20 digits).
+        </p>
       }
     </div>
 
-    <div class="dialog-footer">
-      <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary"
-        (click)="dialogVisible.set(false)"></button>
-      <button pButton type="submit" [label]="submitting() ? 'Submitting...' : 'Save'"
-        [disabled]="supplierForm.invalid || submitting()"></button>
+    <!-- Physical / Billing Address -->
+    <div class="form-field-group">
+      <label for="supplier-address" class="form-label">
+        Operating Address <span class="required-star">*</span>
+      </label>
+      <p-iconfield>
+        <p-inputicon class="pi pi-map-marker" />
+        <input
+          pInputText
+          id="supplier-address"
+          formControlName="address"
+          placeholder="e.g. Plot 42, Industrial Zone, Navi Mumbai"
+          class="dialog-input"
+          [attr.aria-invalid]="supplierForm.get('address')?.invalid && supplierForm.get('address')?.touched"
+        />
+      </p-iconfield>
+      @if (supplierForm.get('address')?.invalid && (supplierForm.get('address')?.dirty || supplierForm.get('address')?.touched)) {
+        <p class="field-error-msg" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          Operating address is required.
+        </p>
+      }
+    </div>
+
+    <!-- Form Footer Actions -->
+    <div class="dialog-actions-footer">
+      <button
+        pButton
+        type="button"
+        label="Cancel"
+        class="p-button-text p-button-secondary cancel-dialog-btn"
+        (click)="dialogVisible.set(false)"
+      ></button>
+
+      <button
+        pButton
+        type="submit"
+        [label]="submitting() ? 'Saving...' : (isEditMode() ? 'Save Changes' : 'Create Supplier')"
+        [icon]="submitting() ? 'pi pi-spin pi-spinner' : (isEditMode() ? 'pi pi-check' : 'pi pi-plus')"
+        [disabled]="supplierForm.invalid || submitting()"
+        class="submit-dialog-btn"
+      ></button>
     </div>
   </form>
 </p-dialog>
 
-<!-- Dialog for Supplier Details -->
-<p-dialog header="Supplier Details" [visible]="detailsVisible()" (visibleChange)="detailsVisible.set($event)"
-  [modal]="true" [style]="{ width: '450px' }" [draggable]="false" [resizable]="false">
-
+<!-- ── 6. Rich Supplier Details Modal ──────────────────────────────────── -->
+<p-dialog
+  [visible]="detailsVisible()"
+  (visibleChange)="detailsVisible.set($event)"
+  [modal]="true"
+  [style]="{ width: '92vw', maxWidth: '540px' }"
+  [draggable]="false"
+  [resizable]="false"
+  [dismissableMask]="true"
+  styleClass="modern-dialog details-dialog"
+>
   @if (selectedSupplier(); as supplier) {
-  <div class="detail-header">
-    <h3 class="entity-name" style="margin: 0 0 4px 0;">{{ supplier.name }}</h3>
-    <p class="entity-tag" style="margin: 0;">{{ supplier.address }}</p>
-  </div>
+    <!-- Hero Profile Box -->
+    <div class="details-hero">
+      <div class="details-avatar" aria-hidden="true">
+        {{ initials(supplier.name) }}
+      </div>
+      <div class="details-hero-body">
+        <div class="hero-tag-row">
+          <span class="id-pill">Supplier ID #{{ supplier.id }}</span>
+          <span class="status-chip status-chip--verified">Verified Partner</span>
+        </div>
+        <h2 class="details-hero-name">{{ supplier.name }}</h2>
+        <p class="details-hero-location">
+          <i class="pi pi-map-marker" aria-hidden="true"></i>
+          {{ supplier.address }}
+        </p>
+      </div>
+    </div>
 
-  <div class="detail-row" style="margin-top: 16px;">
-    <span class="detail-label">Email</span>
-    <span class="detail-value">{{ supplier.email }}</span>
-  </div>
+    <!-- Details Body Cards -->
+    <div class="details-body">
+      <!-- Direct Contact Channels -->
+      <div class="details-card">
+        <h3 class="details-card-title">Communication Channels</h3>
 
-  <div class="detail-row">
-    <span class="detail-label">Contact</span>
-    <span class="detail-value">{{ supplier.contact_number }}</span>
-  </div>
+        <div class="details-row">
+          <div class="details-channel-lead">
+            <span class="channel-icon-wrap channel-icon-wrap--email" aria-hidden="true">
+              <i class="pi pi-envelope"></i>
+            </span>
+            <div class="channel-info">
+              <span class="channel-label">Email Address</span>
+              <a [href]="'mailto:' + supplier.email" class="channel-value channel-link">{{ supplier.email }}</a>
+            </div>
+          </div>
+        </div>
 
-  <div class="detail-row">
-    <span class="detail-label">Created At</span>
-    <span class="detail-value">{{ supplier.created_at | date:'medium' }}</span>
-  </div>
+        <div class="details-row">
+          <div class="details-channel-lead">
+            <span class="channel-icon-wrap channel-icon-wrap--phone" aria-hidden="true">
+              <i class="pi pi-phone"></i>
+            </span>
+            <div class="channel-info">
+              <span class="channel-label">Primary Phone</span>
+              <a [href]="'tel:' + supplier.contact_number" class="channel-value channel-link">{{ supplier.contact_number }}</a>
+            </div>
+          </div>
+        </div>
+      </div>
 
-  <div class="detail-row">
-    <span class="detail-label">Updated At</span>
-    <span class="detail-value">{{ supplier.updated_at | date:'medium' }}</span>
-  </div>
+      <!-- Address & Operational Hub -->
+      <div class="details-card">
+        <h3 class="details-card-title">Location & Hub</h3>
+        <div class="details-row">
+          <div class="details-channel-lead">
+            <span class="channel-icon-wrap channel-icon-wrap--map" aria-hidden="true">
+              <i class="pi pi-building"></i>
+            </span>
+            <div class="channel-info">
+              <span class="channel-label">Registered Address</span>
+              <span class="channel-value">{{ supplier.address }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Metadata -->
+      <div class="details-metadata-grid">
+        <div class="meta-card">
+          <span class="meta-label">Created At</span>
+          <strong class="meta-val">{{ supplier.created_at | date:'medium' }}</strong>
+        </div>
+        <div class="meta-card">
+          <span class="meta-label">Last Updated</span>
+          <strong class="meta-val">{{ supplier.updated_at | date:'medium' }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Details Footer Actions -->
+    <div class="details-footer">
+      <button
+        pButton
+        type="button"
+        icon="pi pi-pencil"
+        label="Edit Supplier"
+        class="p-button-outlined edit-details-btn"
+        (click)="detailsVisible.set(false); openEditDialog(supplier)"
+      ></button>
+
+      <button
+        pButton
+        type="button"
+        label="Close"
+        class="create-entity-btn close-details-btn"
+        (click)="detailsVisible.set(false)"
+      ></button>
+    </div>
   }
-
-  <div class="dialog-footer">
-    <button pButton type="button" label="Close" class="p-button-text" (click)="detailsVisible.set(false)"></button>
-  </div>
 </p-dialog>

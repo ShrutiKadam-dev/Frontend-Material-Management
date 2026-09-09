@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { of } from 'rxjs';
 
 import { SupplierService } from '../../../core/services/supplier';
@@ -19,7 +20,6 @@ describe('Suppliers', () => {
         email: 'supplier@example.com',
         contact_number: '9876543210',
         address: '456 Supplier Rd',
-        website_url: 'www.supplier.com',
         created_at: '2026-08-27T11:00:00Z',
         updated_at: '2026-08-27T11:00:00Z',
       }),
@@ -45,6 +45,7 @@ describe('Suppliers', () => {
       providers: [
         provideRouter([]),
         provideNoopAnimations(),
+        MessageService,
         { provide: SupplierService, useValue: mockSupplierService },
       ],
     }).compileComponents();

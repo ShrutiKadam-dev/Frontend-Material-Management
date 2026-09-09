@@ -582,6 +582,33 @@ export class Step13CustomerDelivery implements OnInit {
     }
   }
 
+  protected calculateInvoiceSubtotal(inv: CustomerTaxInvoice): number {
+    if (!inv.items || !inv.items.length) return 0;
+    return inv.items.reduce(
+      (sum, it) =>
+        sum +
+        (Number(it.net_amount) ||
+          (Number(it.quantity) || 0) * (Number(it.unit_price) || 0)),
+      0,
+    );
+  }
+
+  protected calculateChallanTotal(dc: CustomerDeliveryChallan): number {
+    if (!dc.items || !dc.items.length) return 0;
+    return dc.items.reduce(
+      (sum, it) =>
+        sum +
+        (Number(it.net_amount) ||
+          (Number(it.quantity) || 0) * (Number(it.unit_price) || 0)),
+      0,
+    );
+  }
+
+  protected calculatePackingTotalQty(pl: CustomerPackingList): number {
+    if (!pl.items || !pl.items.length) return 0;
+    return pl.items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
+  }
+
   protected deleteInvoice(item: CustomerTaxInvoice): void {
     if (!confirm(`Are you sure you want to delete Tax Invoice #${item.invoice_no}?`)) return;
     this.deliveryService.deleteTaxInvoice(item.id).subscribe({

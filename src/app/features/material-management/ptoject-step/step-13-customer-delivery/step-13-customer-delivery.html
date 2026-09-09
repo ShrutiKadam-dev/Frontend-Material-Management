@@ -235,119 +235,184 @@
             <div class="version-cards-stream">
                 @for (inv of taxInvoices(); track inv.id; let idx = $index) {
                 <article class="version-sheet-card">
-                    <header class="vcard-header">
-                        <div class="vcard-header-left">
-                            <span class="vcard-tag">INVOICE #{{ inv.invoice_no }}</span>
-                            <span class="vcard-title">Tax Invoice — {{ inv.invoice_date | date:'dd MMM yyyy' }}</span>
-                            <span class="vcard-badge vcard-badge--approved">
-                                <i class="pi pi-check-circle" aria-hidden="true"></i> GST {{ inv.gst_rate }}%
+                    <div class="vsc-header">
+                        <div class="vsc-header-left">
+                            <span class="vsc-badge">
+                                <i class="pi pi-receipt" aria-hidden="true"></i>
+                                INVOICE #{{ inv.invoice_no }}
                             </span>
+                            @if (idx === 0) {
+                            <span class="vsc-latest-pill">Latest</span>
+                            }
+                            <span class="vsc-date">
+                                <i class="pi pi-calendar" aria-hidden="true"></i>
+                                {{ inv.invoice_date | date:'dd MMM yyyy' }}
+                            </span>
+                            <h2 class="vsc-title">Tax Invoice — {{ inv.invoice_no }}</h2>
                         </div>
-                        <div class="vcard-header-actions">
-                            <button pButton type="button" icon="pi pi-pencil" label="Edit"
-                                class="p-button-outlined p-button-sm edit-version-btn"
-                                (click)="openEditInvoiceDialog(inv)"></button>
-                            <button pButton type="button" icon="pi pi-trash"
-                                class="p-button-outlined p-button-danger p-button-sm delete-version-btn"
-                                (click)="deleteInvoice(inv)" pTooltip="Delete Invoice" tooltipPosition="top"></button>
-                        </div>
-                    </header>
-
-                    <!-- Parameters Grid -->
-                    <div class="vcard-params-grid">
-                        <div class="param-chip">
-                            <span class="param-label">Invoice Date:</span>
-                            <span class="param-value">{{ inv.invoice_date | date:'mediumDate' }}</span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">GST Rate:</span>
-                            <span class="param-value">{{ inv.gst_rate }}%</span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">GST Amount:</span>
-                            <span class="param-value font-mono">₹ {{ inv.gst_amount | number:'1.2-2' }}</span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">Round Off:</span>
-                            <span class="param-value font-mono">₹ {{ inv.round_off | number:'1.2-2' }}</span>
-                        </div>
-                        <div class="param-chip param-chip--highlight">
-                            <span class="param-label">Net Total:</span>
-                            <span class="param-value font-mono font-bold">₹ {{ inv.net_total | number:'1.2-2' }}</span>
+                        <div class="vsc-header-right">
+                            <span class="vsc-cost-pill" [pTooltip]="'Net Total: ₹ ' + (inv.net_total | number:'1.2-2')" tooltipPosition="bottom">
+                                <i class="pi pi-wallet" aria-hidden="true"></i>
+                                ₹ {{ inv.net_total | number:'1.2-2' }}
+                            </span>
+                            @if (inv.items && inv.items.length) {
+                            <span class="vsc-count-pill">
+                                <i class="pi pi-box" aria-hidden="true"></i>
+                                {{ inv.items.length }} line item{{ inv.items.length === 1 ? '' : 's' }}
+                            </span>
+                            }
+                            <div class="actions-cell">
+                                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                                    [attr.aria-label]="'Edit invoice ' + inv.invoice_no" pTooltip="Edit invoice"
+                                    tooltipPosition="top" (click)="openEditInvoiceDialog(inv)"></button>
+                                <button pButton type="button" icon="pi pi-trash"
+                                    class="p-button-text p-button-sm p-button-danger qe-delete"
+                                    [attr.aria-label]="'Delete invoice ' + inv.invoice_no" pTooltip="Delete invoice"
+                                    tooltipPosition="top" (click)="deleteInvoice(inv)"></button>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Material Items Table -->
-                    @if (inv.items && inv.items.length > 0) {
-                    <div class="vcard-table-wrap">
-                        <table class="detail-data-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Material Name</th>
-                                    <th>HSN Code</th>
-                                    <th class="text-right">Quantity</th>
-                                    <th class="text-right">Unit Price</th>
-                                    <th class="text-right">Net Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @for (item of inv.items; track $index; let i = $index) {
-                                <tr>
-                                    <td>{{ i + 1 }}</td>
-                                    <td class="font-medium">{{ item.material_name }}</td>
-                                    <td><span class="hsn-pill">{{ item.hsn_code }}</span></td>
-                                    <td class="text-right">{{ item.quantity }}</td>
-                                    <td class="text-right font-mono">₹ {{ item.unit_price | number:'1.2-2' }}</td>
-                                    <td class="text-right font-mono font-bold">₹ {{ (item.net_amount || (item.quantity *
-                                        (item.unit_price || 0))) | number:'1.2-2' }}</td>
-                                </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    }
-
-                    <!-- Remarks -->
-                    @if (inv.remark) {
-                    <div class="vcard-remark">
-                        <i class="pi pi-comment" aria-hidden="true"></i>
-                        <div class="remark-content">
-                            <span class="remark-label">Remark</span>
-                            <p>{{ inv.remark }}</p>
-                        </div>
-                    </div>
-                    }
-
-                    <!-- Attachments -->
-                    @if (inv.attachments && inv.attachments.length > 0) {
-                    <div class="vcard-attachments">
-                        <div class="vcard-attachments-label">
-                            <i class="pi pi-paperclip" aria-hidden="true"></i>
-                            <span>Attachments ({{ inv.attachments.length }})</span>
-                        </div>
-                        <div class="qe-attachments">
-                            @for (att of inv.attachments; track att.id) {
-                            <div class="qe-attachment-chip">
-                                <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
-                                <span class="att-name" [title]="att.file_name">{{ att.file_name }}</span>
-                                @if (att.file_size) {
-                                <span class="att-size">({{ formatFileSize(att.file_size) }})</span>
-                                }
-                                <button type="button" class="att-download-btn" (click)="downloadAttachment(att)"
-                                    [disabled]="downloadingAttachmentId() === att.id" pTooltip="Download attachment"
-                                    tooltipPosition="top">
-                                    @if (downloadingAttachmentId() === att.id) {
-                                    <i class="pi pi-spin pi-spinner"></i>
-                                    } @else {
-                                    <i class="pi pi-download"></i>
-                                    }
-                                </button>
+                    <div class="vsc-body">
+                        <!-- Parameters Strip -->
+                        <div class="vsc-params-strip">
+                            <div class="param-chip">
+                                <i class="pi pi-calendar" aria-hidden="true"></i>
+                                <span class="p-lbl">Invoice Date:</span>
+                                <span class="p-val">{{ inv.invoice_date | date:'mediumDate' }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-percentage" aria-hidden="true"></i>
+                                <span class="p-lbl">GST Rate:</span>
+                                <span class="p-val">{{ inv.gst_rate }}%</span>
+                            </div>
+                            @if (inv.items && inv.items.length) {
+                            <div class="param-chip">
+                                <i class="pi pi-box" aria-hidden="true"></i>
+                                <span class="p-lbl">Line Items:</span>
+                                <span class="p-val font-bold">{{ inv.items.length }} Item{{ inv.items.length === 1 ? '' : 's' }}</span>
                             </div>
                             }
                         </div>
+
+                        <!-- Material Items Table -->
+                        @if (inv.items && inv.items.length > 0) {
+                        <div class="items-table-wrap">
+                            <table class="items-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px; text-align: center;">#</th>
+                                        <th>Material Name</th>
+                                        <th style="width: 130px;">HSN Code</th>
+                                        <th style="width: 110px; text-align: right;">Quantity</th>
+                                        <th style="width: 140px; text-align: right;">Unit Price</th>
+                                        <th style="width: 150px; text-align: right;">Net Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (item of inv.items; track $index; let i = $index) {
+                                    <tr>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{ i + 1 }}</td>
+                                        <td class="font-medium">{{ item.material_name }}</td>
+                                        <td><span class="hsn-pill">{{ item.hsn_code || '—' }}</span></td>
+                                        <td class="text-right">{{ item.quantity }}</td>
+                                        <td class="text-right font-mono">₹ {{ item.unit_price | number:'1.2-2' }}</td>
+                                        <td class="text-right font-mono font-bold">₹ {{ (item.net_amount || (item.quantity *
+                                            (item.unit_price || 0))) | number:'1.2-2' }}</td>
+                                    </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr class="tfoot-subtotal-row">
+                                        <td colspan="5" style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
+                                            Taxable Amount (Subtotal):
+                                        </td>
+                                        <td style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
+                                            ₹ {{ calculateInvoiceSubtotal(inv) | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                    <tr class="tfoot-gst-row">
+                                        <td colspan="5" style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
+                                            <span style="display: inline-flex; align-items: center; gap: 5px;">
+                                                <i class="pi pi-percentage" style="color: #d97706; font-size: 0.74rem;"></i>
+                                                GST Amount ({{ inv.gst_rate }}%):
+                                            </span>
+                                        </td>
+                                        <td style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
+                                            ₹ {{ (inv.gst_amount || 0) | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                    @if (inv.round_off) {
+                                    <tr class="tfoot-round-row">
+                                        <td colspan="5" style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
+                                            Round Off:
+                                        </td>
+                                        <td style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
+                                            ₹ {{ inv.round_off | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                    }
+                                    <tr class="tfoot-grand-total-row">
+                                        <td colspan="5" style="text-align: right; font-weight: 800; color: #991b1b; padding: 10px 14px; background: #fef2f2; border-top: 2px solid rgba(225, 77, 63, 0.25);">
+                                            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 7px;">
+                                                <span class="total-icon-badge" aria-hidden="true" style="background: rgba(225,77,63,0.12); color: #e14d3f; border-radius: 4px; padding: 2px 6px; font-size: 0.78rem;">
+                                                    <i class="pi pi-calculator"></i>
+                                                </span>
+                                                <span>Net Total (Incl. GST):</span>
+                                            </div>
+                                        </td>
+                                        <td style="text-align: right; font-family: monospace; font-size: 1.05rem; font-weight: 850; color: #e14d3f; padding: 10px 14px; background: #fef2f2; border-top: 2px solid rgba(225, 77, 63, 0.25); white-space: nowrap;">
+                                            ₹ {{ inv.net_total | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        }
+
+                        <!-- Remarks -->
+                        @if (inv.remark) {
+                        <div class="vsc-remark-box">
+                            <i class="pi pi-comment" aria-hidden="true"></i>
+                            <div class="vsc-remark-content">
+                                <span class="vsc-remark-label">Remarks:</span>
+                                <span class="vsc-remark-text">{{ inv.remark }}</span>
+                            </div>
+                        </div>
+                        }
+
+                        <!-- Attachments -->
+                        @if (inv.attachments && inv.attachments.length > 0) {
+                        <div class="qe-attachments">
+                            <span class="qe-section-label">
+                                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                                Attachments ({{ inv.attachments.length }})
+                            </span>
+                            <div class="qe-attachment-list">
+                                @for (att of inv.attachments; track att.id) {
+                                <div class="qe-attachment-chip">
+                                    <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                                    <div class="qe-att-meta">
+                                        <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                        @if (att.file_size) {
+                                        <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                                        }
+                                    </div>
+                                    <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                                        pTooltip="Download attachment" tooltipPosition="top"
+                                        [disabled]="downloadingAttachmentId() === att.id" (click)="downloadAttachment(att)">
+                                        @if (downloadingAttachmentId() === att.id) {
+                                        <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                                        } @else {
+                                        <i class="pi pi-download" aria-hidden="true"></i>
+                                        }
+                                    </button>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                        }
                     </div>
-                    }
                 </article>
                 }
             </div>
@@ -374,120 +439,151 @@
             <div class="version-cards-stream">
                 @for (pl of packingLists(); track pl.id; let idx = $index) {
                 <article class="version-sheet-card">
-                    <header class="vcard-header">
-                        <div class="vcard-header-left">
-                            <span class="vcard-tag">PACKING LIST #{{ pl.packing_list_no }}</span>
-                            <span class="vcard-title">Packing List — {{ pl.packing_list_date | date:'dd MMM yyyy'
-                                }}</span>
-                            <span class="vcard-badge vcard-badge--primary">
-                                <i class="pi pi-box" aria-hidden="true"></i> {{ pl.total_no_of_packs }} Pack(s)
+                    <div class="vsc-header">
+                        <div class="vsc-header-left">
+                            <span class="vsc-badge">
+                                <i class="pi pi-box" aria-hidden="true"></i>
+                                PACKING LIST #{{ pl.packing_list_no }}
                             </span>
+                            @if (idx === 0) {
+                            <span class="vsc-latest-pill">Latest</span>
+                            }
+                            <span class="vsc-date">
+                                <i class="pi pi-calendar" aria-hidden="true"></i>
+                                {{ pl.packing_list_date | date:'dd MMM yyyy' }}
+                            </span>
+                            <h2 class="vsc-title">Packing List — {{ pl.packing_list_no }}</h2>
                         </div>
-                        <div class="vcard-header-actions">
-                            <button pButton type="button" icon="pi pi-pencil" label="Edit"
-                                class="p-button-outlined p-button-sm edit-version-btn"
-                                (click)="openEditPackingListDialog(pl)"></button>
-                            <button pButton type="button" icon="pi pi-trash"
-                                class="p-button-outlined p-button-danger p-button-sm delete-version-btn"
-                                (click)="deletePackingList(pl)" pTooltip="Delete Packing List"
-                                tooltipPosition="top"></button>
-                        </div>
-                    </header>
-
-                    <!-- Parameters Grid -->
-                    <div class="vcard-params-grid">
-                        <div class="param-chip">
-                            <span class="param-label">Date:</span>
-                            <span class="param-value">{{ pl.packing_list_date | date:'mediumDate' }}</span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">Total Packs:</span>
-                            <span class="param-value font-bold">{{ pl.total_no_of_packs }}</span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">Packing Condition:</span>
-                            <span class="param-value">{{ pl.packing_condition || 'Standard Packaging' }}</span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">Net Weight:</span>
-                            <span class="param-value font-mono">{{ pl.net_weight || '—' }}</span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">Gross Weight:</span>
-                            <span class="param-value font-mono">{{ pl.gross_weight || '—' }}</span>
+                        <div class="vsc-header-right">
+                            <span class="vsc-cost-pill">
+                                <i class="pi pi-box" aria-hidden="true"></i>
+                                {{ pl.total_no_of_packs }} Pack{{ pl.total_no_of_packs === 1 ? '' : 's' }}
+                            </span>
+                            @if (pl.items && pl.items.length) {
+                            <span class="vsc-count-pill">
+                                <i class="pi pi-list" aria-hidden="true"></i>
+                                {{ pl.items.length }} line item{{ pl.items.length === 1 ? '' : 's' }}
+                            </span>
+                            }
+                            <div class="actions-cell">
+                                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                                    [attr.aria-label]="'Edit packing list ' + pl.packing_list_no" pTooltip="Edit packing list"
+                                    tooltipPosition="top" (click)="openEditPackingListDialog(pl)"></button>
+                                <button pButton type="button" icon="pi pi-trash"
+                                    class="p-button-text p-button-sm p-button-danger qe-delete"
+                                    [attr.aria-label]="'Delete packing list ' + pl.packing_list_no" pTooltip="Delete packing list"
+                                    tooltipPosition="top" (click)="deletePackingList(pl)"></button>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Material Items Table -->
-                    @if (pl.items && pl.items.length > 0) {
-                    <div class="vcard-table-wrap">
-                        <table class="detail-data-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Package / Box</th>
-                                    <th>Material Name</th>
-                                    <th>HSN Code</th>
-                                    <th class="text-right">Quantity</th>
-                                    <th class="text-right">Weight</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @for (item of pl.items; track $index; let i = $index) {
-                                <tr>
-                                    <td>{{ i + 1 }}</td>
-                                    <td><span class="box-pill">{{ item.package_no || 'Box #' + (i + 1) }}</span></td>
-                                    <td class="font-medium">{{ item.material_name }}</td>
-                                    <td><span class="hsn-pill">{{ item.hsn_code }}</span></td>
-                                    <td class="text-right">{{ item.quantity }}</td>
-                                    <td class="text-right font-mono">{{ item.weight || '—' }}</td>
-                                </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    }
-
-                    <!-- Remarks -->
-                    @if (pl.remark) {
-                    <div class="vcard-remark">
-                        <i class="pi pi-comment" aria-hidden="true"></i>
-                        <div class="remark-content">
-                            <span class="remark-label">Remark</span>
-                            <p>{{ pl.remark }}</p>
-                        </div>
-                    </div>
-                    }
-
-                    <!-- Attachments -->
-                    @if (pl.attachments && pl.attachments.length > 0) {
-                    <div class="vcard-attachments">
-                        <div class="vcard-attachments-label">
-                            <i class="pi pi-paperclip" aria-hidden="true"></i>
-                            <span>Attachments ({{ pl.attachments.length }})</span>
-                        </div>
-                        <div class="qe-attachments">
-                            @for (att of pl.attachments; track att.id) {
-                            <div class="qe-attachment-chip">
-                                <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
-                                <span class="att-name" [title]="att.file_name">{{ att.file_name }}</span>
-                                @if (att.file_size) {
-                                <span class="att-size">({{ formatFileSize(att.file_size) }})</span>
-                                }
-                                <button type="button" class="att-download-btn" (click)="downloadAttachment(att)"
-                                    [disabled]="downloadingAttachmentId() === att.id" pTooltip="Download attachment"
-                                    tooltipPosition="top">
-                                    @if (downloadingAttachmentId() === att.id) {
-                                    <i class="pi pi-spin pi-spinner"></i>
-                                    } @else {
-                                    <i class="pi pi-download"></i>
-                                    }
-                                </button>
+                    <div class="vsc-body">
+                        <!-- Parameters Strip -->
+                        <div class="vsc-params-strip">
+                            <div class="param-chip">
+                                <i class="pi pi-calendar" aria-hidden="true"></i>
+                                <span class="p-lbl">Date:</span>
+                                <span class="p-val">{{ pl.packing_list_date | date:'mediumDate' }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-box" aria-hidden="true"></i>
+                                <span class="p-lbl">Total Packs:</span>
+                                <span class="p-val font-bold">{{ pl.total_no_of_packs }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-check-circle" aria-hidden="true"></i>
+                                <span class="p-lbl">Condition:</span>
+                                <span class="p-val">{{ pl.packing_condition || 'Standard Packaging' }}</span>
+                            </div>
+                            @if (pl.net_weight) {
+                            <div class="param-chip">
+                                <i class="pi pi-tag" aria-hidden="true"></i>
+                                <span class="p-lbl">Net Weight:</span>
+                                <span class="p-val font-mono">{{ pl.net_weight }}</span>
+                            </div>
+                            }
+                            @if (pl.gross_weight) {
+                            <div class="param-chip">
+                                <i class="pi pi-tag" aria-hidden="true"></i>
+                                <span class="p-lbl">Gross Weight:</span>
+                                <span class="p-val font-mono">{{ pl.gross_weight }}</span>
                             </div>
                             }
                         </div>
+
+                        <!-- Material Items Table -->
+                        @if (pl.items && pl.items.length > 0) {
+                        <div class="items-table-wrap">
+                            <table class="items-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px; text-align: center;">#</th>
+                                        <th style="width: 140px;">Package / Box</th>
+                                        <th>Material Name</th>
+                                        <th style="width: 130px;">HSN Code</th>
+                                        <th style="width: 110px; text-align: right;">Quantity</th>
+                                        <th style="width: 120px; text-align: right;">Weight</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (item of pl.items; track $index; let i = $index) {
+                                    <tr>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{ i + 1 }}</td>
+                                        <td><span class="box-pill">{{ item.package_no || 'Box #' + (i + 1) }}</span></td>
+                                        <td class="font-medium">{{ item.material_name }}</td>
+                                        <td><span class="hsn-pill">{{ item.hsn_code || '—' }}</span></td>
+                                        <td class="text-right">{{ item.quantity }}</td>
+                                        <td class="text-right font-mono">{{ item.weight || '—' }}</td>
+                                    </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        }
+
+                        <!-- Remarks -->
+                        @if (pl.remark) {
+                        <div class="vsc-remark-box">
+                            <i class="pi pi-comment" aria-hidden="true"></i>
+                            <div class="vsc-remark-content">
+                                <span class="vsc-remark-label">Remarks:</span>
+                                <span class="vsc-remark-text">{{ pl.remark }}</span>
+                            </div>
+                        </div>
+                        }
+
+                        <!-- Attachments -->
+                        @if (pl.attachments && pl.attachments.length > 0) {
+                        <div class="qe-attachments">
+                            <span class="qe-section-label">
+                                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                                Attachments ({{ pl.attachments.length }})
+                            </span>
+                            <div class="qe-attachment-list">
+                                @for (att of pl.attachments; track att.id) {
+                                <div class="qe-attachment-chip">
+                                    <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                                    <div class="qe-att-meta">
+                                        <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                        @if (att.file_size) {
+                                        <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                                        }
+                                    </div>
+                                    <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                                        pTooltip="Download attachment" tooltipPosition="top"
+                                        [disabled]="downloadingAttachmentId() === att.id" (click)="downloadAttachment(att)">
+                                        @if (downloadingAttachmentId() === att.id) {
+                                        <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                                        } @else {
+                                        <i class="pi pi-download" aria-hidden="true"></i>
+                                        }
+                                    </button>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                        }
                     </div>
-                    }
                 </article>
                 }
             </div>
@@ -514,113 +610,153 @@
             <div class="version-cards-stream">
                 @for (dc of deliveryChallans(); track dc.id; let idx = $index) {
                 <article class="version-sheet-card">
-                    <header class="vcard-header">
-                        <div class="vcard-header-left">
-                            <span class="vcard-tag">CHALLAN #{{ dc.delivery_challan_no }}</span>
-                            <span class="vcard-title">Delivery Challan — {{ dc.delivery_challan_date | date:'dd MMM
-                                yyyy' }}</span>
-                            <span class="vcard-badge vcard-badge--success">
-                                <i class="pi pi-check" aria-hidden="true"></i> Dispatched
+                    <div class="vsc-header">
+                        <div class="vsc-header-left">
+                            <span class="vsc-badge">
+                                <i class="pi pi-send" aria-hidden="true"></i>
+                                CHALLAN #{{ dc.delivery_challan_no }}
                             </span>
-                        </div>
-                        <div class="vcard-header-actions">
-                            <button pButton type="button" icon="pi pi-pencil" label="Edit"
-                                class="p-button-outlined p-button-sm edit-version-btn"
-                                (click)="openEditChallanDialog(dc)"></button>
-                            <button pButton type="button" icon="pi pi-trash"
-                                class="p-button-outlined p-button-danger p-button-sm delete-version-btn"
-                                (click)="deleteChallan(dc)" pTooltip="Delete Delivery Challan"
-                                tooltipPosition="top"></button>
-                        </div>
-                    </header>
-
-                    <!-- Parameters Grid -->
-                    <div class="vcard-params-grid">
-                        <div class="param-chip">
-                            <span class="param-label">Challan Date:</span>
-                            <span class="param-value">{{ dc.delivery_challan_date | date:'mediumDate' }}</span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">Total Items:</span>
-                            <span class="param-value font-bold">{{ dc.items.length || 0 }} Items</span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">Recipient:</span>
-                            <span class="param-value">{{ project()?.customer_name || 'Customer' }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Material Items Table -->
-                    @if (dc.items && dc.items.length > 0) {
-                    <div class="vcard-table-wrap">
-                        <table class="detail-data-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Material Name</th>
-                                    <th>HSN Code</th>
-                                    <th class="text-right">Dispatched Quantity</th>
-                                    <th class="text-right">Unit Price</th>
-                                    <th class="text-right">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @for (item of dc.items; track $index; let i = $index) {
-                                <tr>
-                                    <td>{{ i + 1 }}</td>
-                                    <td class="font-medium">{{ item.material_name }}</td>
-                                    <td><span class="hsn-pill">{{ item.hsn_code }}</span></td>
-                                    <td class="text-right font-bold">{{ item.quantity }}</td>
-                                    <td class="text-right font-mono">₹ {{ item.unit_price | number:'1.2-2' }}</td>
-                                    <td class="text-right font-mono font-bold">₹ {{ (item.net_amount || (item.quantity *
-                                        (item.unit_price || 0))) | number:'1.2-2' }}</td>
-                                </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    }
-
-                    <!-- Remarks -->
-                    @if (dc.remark) {
-                    <div class="vcard-remark">
-                        <i class="pi pi-comment" aria-hidden="true"></i>
-                        <div class="remark-content">
-                            <span class="remark-label">Remark</span>
-                            <p>{{ dc.remark }}</p>
-                        </div>
-                    </div>
-                    }
-
-                    <!-- Attachments -->
-                    @if (dc.attachments && dc.attachments.length > 0) {
-                    <div class="vcard-attachments">
-                        <div class="vcard-attachments-label">
-                            <i class="pi pi-paperclip" aria-hidden="true"></i>
-                            <span>Attachments ({{ dc.attachments.length }})</span>
-                        </div>
-                        <div class="qe-attachments">
-                            @for (att of dc.attachments; track att.id) {
-                            <div class="qe-attachment-chip">
-                                <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
-                                <span class="att-name" [title]="att.file_name">{{ att.file_name }}</span>
-                                @if (att.file_size) {
-                                <span class="att-size">({{ formatFileSize(att.file_size) }})</span>
-                                }
-                                <button type="button" class="att-download-btn" (click)="downloadAttachment(att)"
-                                    [disabled]="downloadingAttachmentId() === att.id" pTooltip="Download attachment"
-                                    tooltipPosition="top">
-                                    @if (downloadingAttachmentId() === att.id) {
-                                    <i class="pi pi-spin pi-spinner"></i>
-                                    } @else {
-                                    <i class="pi pi-download"></i>
-                                    }
-                                </button>
-                            </div>
+                            @if (idx === 0) {
+                            <span class="vsc-latest-pill">Latest</span>
                             }
+                            <span class="vsc-date">
+                                <i class="pi pi-calendar" aria-hidden="true"></i>
+                                {{ dc.delivery_challan_date | date:'dd MMM yyyy' }}
+                            </span>
+                            <h2 class="vsc-title">Delivery Challan — {{ dc.delivery_challan_no }}</h2>
+                        </div>
+                        <div class="vsc-header-right">
+                            <span class="vsc-cost-pill">
+                                <i class="pi pi-check-circle" aria-hidden="true"></i>
+                                Dispatched
+                            </span>
+                            @if (dc.items && dc.items.length) {
+                            <span class="vsc-count-pill">
+                                <i class="pi pi-box" aria-hidden="true"></i>
+                                {{ dc.items.length }} line item{{ dc.items.length === 1 ? '' : 's' }}
+                            </span>
+                            }
+                            <div class="actions-cell">
+                                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                                    [attr.aria-label]="'Edit challan ' + dc.delivery_challan_no" pTooltip="Edit delivery challan"
+                                    tooltipPosition="top" (click)="openEditChallanDialog(dc)"></button>
+                                <button pButton type="button" icon="pi pi-trash"
+                                    class="p-button-text p-button-sm p-button-danger qe-delete"
+                                    [attr.aria-label]="'Delete challan ' + dc.delivery_challan_no" pTooltip="Delete delivery challan"
+                                    tooltipPosition="top" (click)="deleteChallan(dc)"></button>
+                            </div>
                         </div>
                     </div>
-                    }
+
+                    <div class="vsc-body">
+                        <!-- Parameters Strip -->
+                        <div class="vsc-params-strip">
+                            <div class="param-chip">
+                                <i class="pi pi-calendar" aria-hidden="true"></i>
+                                <span class="p-lbl">Challan Date:</span>
+                                <span class="p-val">{{ dc.delivery_challan_date | date:'mediumDate' }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-box" aria-hidden="true"></i>
+                                <span class="p-lbl">Total Items:</span>
+                                <span class="p-val font-bold">{{ dc.items.length || 0 }} Items</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-building" aria-hidden="true"></i>
+                                <span class="p-lbl">Recipient:</span>
+                                <span class="p-val">{{ project()?.customer_name || 'Customer' }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Material Items Table -->
+                        @if (dc.items && dc.items.length > 0) {
+                        <div class="items-table-wrap">
+                            <table class="items-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px; text-align: center;">#</th>
+                                        <th>Material Name</th>
+                                        <th style="width: 130px;">HSN Code</th>
+                                        <th style="width: 140px; text-align: right;">Dispatched Qty</th>
+                                        <th style="width: 140px; text-align: right;">Unit Price</th>
+                                        <th style="width: 150px; text-align: right;">Net Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (item of dc.items; track $index; let i = $index) {
+                                    <tr>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{ i + 1 }}</td>
+                                        <td class="font-medium">{{ item.material_name }}</td>
+                                        <td><span class="hsn-pill">{{ item.hsn_code || '—' }}</span></td>
+                                        <td class="text-right font-bold">{{ item.quantity }}</td>
+                                        <td class="text-right font-mono">₹ {{ item.unit_price | number:'1.2-2' }}</td>
+                                        <td class="text-right font-mono font-bold">₹ {{ (item.net_amount || (item.quantity *
+                                            (item.unit_price || 0))) | number:'1.2-2' }}</td>
+                                    </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr class="tfoot-grand-total-row">
+                                        <td colspan="5" style="text-align: right; font-weight: 800; color: #1e3a8a; padding: 10px 14px; background: #eff6ff; border-top: 2px solid #bfdbfe;">
+                                            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 7px;">
+                                                <span class="total-icon-badge" aria-hidden="true" style="background: #dbeafe; color: #1d4ed8; border-radius: 4px; padding: 2px 6px; font-size: 0.78rem;">
+                                                    <i class="pi pi-calculator"></i>
+                                                </span>
+                                                <span>Total Dispatched Net Value:</span>
+                                            </div>
+                                        </td>
+                                        <td style="text-align: right; font-family: monospace; font-size: 1.05rem; font-weight: 850; color: #1d4ed8; padding: 10px 14px; background: #eff6ff; border-top: 2px solid #bfdbfe; white-space: nowrap;">
+                                            ₹ {{ calculateChallanTotal(dc) | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        }
+
+                        <!-- Remarks -->
+                        @if (dc.remark) {
+                        <div class="vsc-remark-box">
+                            <i class="pi pi-comment" aria-hidden="true"></i>
+                            <div class="vsc-remark-content">
+                                <span class="vsc-remark-label">Remarks:</span>
+                                <span class="vsc-remark-text">{{ dc.remark }}</span>
+                            </div>
+                        </div>
+                        }
+
+                        <!-- Attachments -->
+                        @if (dc.attachments && dc.attachments.length > 0) {
+                        <div class="qe-attachments">
+                            <span class="qe-section-label">
+                                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                                Attachments ({{ dc.attachments.length }})
+                            </span>
+                            <div class="qe-attachment-list">
+                                @for (att of dc.attachments; track att.id) {
+                                <div class="qe-attachment-chip">
+                                    <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                                    <div class="qe-att-meta">
+                                        <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                        @if (att.file_size) {
+                                        <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                                        }
+                                    </div>
+                                    <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                                        pTooltip="Download attachment" tooltipPosition="top"
+                                        [disabled]="downloadingAttachmentId() === att.id" (click)="downloadAttachment(att)">
+                                        @if (downloadingAttachmentId() === att.id) {
+                                        <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                                        } @else {
+                                        <i class="pi pi-download" aria-hidden="true"></i>
+                                        }
+                                    </button>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                        }
+                    </div>
                 </article>
                 }
             </div>
@@ -647,90 +783,111 @@
             <div class="version-cards-stream">
                 @for (wc of warrantyCertificates(); track wc.id; let idx = $index) {
                 <article class="version-sheet-card">
-                    <header class="vcard-header">
-                        <div class="vcard-header-left">
-                            <span class="vcard-tag">WARRANTY CERTIFICATE</span>
-                            <span class="vcard-title">Certificate Issued — {{ wc.certificate_date | date:'dd MMM yyyy'
-                                }}</span>
-                            <span class="vcard-badge vcard-badge--success">
-                                <i class="pi pi-verified" aria-hidden="true"></i> Active Guarantee
+                    <div class="vsc-header">
+                        <div class="vsc-header-left">
+                            <span class="vsc-badge">
+                                <i class="pi pi-shield" aria-hidden="true"></i>
+                                WARRANTY CERTIFICATE
                             </span>
-                        </div>
-                        <div class="vcard-header-actions">
-                            <button pButton type="button" icon="pi pi-pencil" label="Edit"
-                                class="p-button-outlined p-button-sm edit-version-btn"
-                                (click)="openEditWarrantyDialog(wc)"></button>
-                            <button pButton type="button" icon="pi pi-trash"
-                                class="p-button-outlined p-button-danger p-button-sm delete-version-btn"
-                                (click)="deleteWarranty(wc)" pTooltip="Delete Warranty Certificate"
-                                tooltipPosition="top"></button>
-                        </div>
-                    </header>
-
-                    <!-- Parameters Grid -->
-                    <div class="vcard-params-grid">
-                        <div class="param-chip param-chip--highlight">
-                            <span class="param-label">Warranty Period:</span>
-                            <span class="param-value font-bold">{{ wc.warranty_period }}</span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">Customer PO No:</span>
-                            <span class="param-value font-mono">{{ wc.po_no }}</span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">PO Date:</span>
-                            <span class="param-value">{{ wc.po_date | date:'mediumDate' }}</span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">Invoice Ref No:</span>
-                            <span class="param-value font-mono">{{ wc.invoice_no }}</span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">Invoice Date:</span>
-                            <span class="param-value">{{ wc.invoice_date | date:'mediumDate' }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Remarks -->
-                    @if (wc.remark) {
-                    <div class="vcard-remark">
-                        <i class="pi pi-comment" aria-hidden="true"></i>
-                        <div class="remark-content">
-                            <span class="remark-label">Remark & Terms</span>
-                            <p>{{ wc.remark }}</p>
-                        </div>
-                    </div>
-                    }
-
-                    <!-- Attachments -->
-                    @if (wc.attachments && wc.attachments.length > 0) {
-                    <div class="vcard-attachments">
-                        <div class="vcard-attachments-label">
-                            <i class="pi pi-paperclip" aria-hidden="true"></i>
-                            <span>Attachments ({{ wc.attachments.length }})</span>
-                        </div>
-                        <div class="qe-attachments">
-                            @for (att of wc.attachments; track att.id) {
-                            <div class="qe-attachment-chip">
-                                <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
-                                <span class="att-name" [title]="att.file_name">{{ att.file_name }}</span>
-                                @if (att.file_size) {
-                                <span class="att-size">({{ formatFileSize(att.file_size) }})</span>
-                                }
-                                <button type="button" class="att-download-btn" (click)="downloadAttachment(att)"
-                                    [disabled]="downloadingAttachmentId() === att.id" pTooltip="Download attachment"
-                                    tooltipPosition="top">
-                                    @if (downloadingAttachmentId() === att.id) {
-                                    <i class="pi pi-spin pi-spinner"></i>
-                                    } @else {
-                                    <i class="pi pi-download"></i>
-                                    }
-                                </button>
-                            </div>
+                            @if (idx === 0) {
+                            <span class="vsc-latest-pill">Latest</span>
                             }
+                            <span class="vsc-date">
+                                <i class="pi pi-calendar" aria-hidden="true"></i>
+                                {{ wc.certificate_date | date:'dd MMM yyyy' }}
+                            </span>
+                            <h2 class="vsc-title">Warranty Certificate — {{ wc.warranty_period }}</h2>
+                        </div>
+                        <div class="vsc-header-right">
+                            <span class="vsc-cost-pill">
+                                <i class="pi pi-verified" aria-hidden="true"></i>
+                                Active Guarantee
+                            </span>
+                            <div class="actions-cell">
+                                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                                    [attr.aria-label]="'Edit warranty certificate ' + wc.id" pTooltip="Edit warranty certificate"
+                                    tooltipPosition="top" (click)="openEditWarrantyDialog(wc)"></button>
+                                <button pButton type="button" icon="pi pi-trash"
+                                    class="p-button-text p-button-sm p-button-danger qe-delete"
+                                    [attr.aria-label]="'Delete warranty certificate ' + wc.id" pTooltip="Delete warranty certificate"
+                                    tooltipPosition="top" (click)="deleteWarranty(wc)"></button>
+                            </div>
                         </div>
                     </div>
-                    }
+
+                    <div class="vsc-body">
+                        <!-- Parameters Strip -->
+                        <div class="vsc-params-strip">
+                            <div class="param-chip param-chip--highlight">
+                                <i class="pi pi-shield" aria-hidden="true"></i>
+                                <span class="p-lbl">Warranty Period:</span>
+                                <span class="p-val font-bold">{{ wc.warranty_period }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-file" aria-hidden="true"></i>
+                                <span class="p-lbl">Customer PO No:</span>
+                                <span class="p-val font-mono">{{ wc.po_no }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-calendar" aria-hidden="true"></i>
+                                <span class="p-lbl">PO Date:</span>
+                                <span class="p-val">{{ wc.po_date | date:'mediumDate' }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-receipt" aria-hidden="true"></i>
+                                <span class="p-lbl">Invoice Ref No:</span>
+                                <span class="p-val font-mono">{{ wc.invoice_no }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-calendar" aria-hidden="true"></i>
+                                <span class="p-lbl">Invoice Date:</span>
+                                <span class="p-val">{{ wc.invoice_date | date:'mediumDate' }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Remarks -->
+                        @if (wc.remark) {
+                        <div class="vsc-remark-box">
+                            <i class="pi pi-comment" aria-hidden="true"></i>
+                            <div class="vsc-remark-content">
+                                <span class="vsc-remark-label">Remarks & Terms:</span>
+                                <span class="vsc-remark-text">{{ wc.remark }}</span>
+                            </div>
+                        </div>
+                        }
+
+                        <!-- Attachments -->
+                        @if (wc.attachments && wc.attachments.length > 0) {
+                        <div class="qe-attachments">
+                            <span class="qe-section-label">
+                                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                                Attachments ({{ wc.attachments.length }})
+                            </span>
+                            <div class="qe-attachment-list">
+                                @for (att of wc.attachments; track att.id) {
+                                <div class="qe-attachment-chip">
+                                    <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                                    <div class="qe-att-meta">
+                                        <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                        @if (att.file_size) {
+                                        <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                                        }
+                                    </div>
+                                    <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                                        pTooltip="Download attachment" tooltipPosition="top"
+                                        [disabled]="downloadingAttachmentId() === att.id" (click)="downloadAttachment(att)">
+                                        @if (downloadingAttachmentId() === att.id) {
+                                        <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                                        } @else {
+                                        <i class="pi pi-download" aria-hidden="true"></i>
+                                        }
+                                    </button>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                        }
+                    </div>
                 </article>
                 }
             </div>
@@ -757,10 +914,22 @@
             <div class="version-cards-stream">
                 @for (td of transportDetails(); track td.id; let idx = $index) {
                 <article class="version-sheet-card">
-                    <header class="vcard-header">
-                        <div class="vcard-header-left">
-                            <span class="vcard-tag">CONSIGNMENT #{{ td.id }}</span>
-                            <span class="vcard-title">
+                    <div class="vsc-header">
+                        <div class="vsc-header-left">
+                            <span class="vsc-badge">
+                                <i class="pi" [class.pi-car]="td.transport_mode === 'road'"
+                                    [class.pi-truck]="td.transport_mode === 'train'"
+                                    [class.pi-send]="td.transport_mode === 'air'" aria-hidden="true"></i>
+                                {{ td.transport_mode | uppercase }}
+                            </span>
+                            @if (idx === 0) {
+                            <span class="vsc-latest-pill">Latest</span>
+                            }
+                            <span class="vsc-date">
+                                <i class="pi pi-calendar" aria-hidden="true"></i>
+                                {{ td.date | date:'dd MMM yyyy' }}
+                            </span>
+                            <h2 class="vsc-title">
                                 @if (td.transport_mode === 'road') {
                                 Road Freight — L.R. No. {{ td.lr_no }}
                                 } @else if (td.transport_mode === 'train') {
@@ -768,95 +937,108 @@
                                 } @else {
                                 Air Freight — AWB No. {{ td.awb_no }}
                                 }
+                            </h2>
+                        </div>
+                        <div class="vsc-header-right">
+                            @if (td.transport_charges) {
+                            <span class="vsc-cost-pill" [pTooltip]="'Transport Charges: ₹ ' + (td.transport_charges | number:'1.2-2')" tooltipPosition="bottom">
+                                <i class="pi pi-wallet" aria-hidden="true"></i>
+                                ₹ {{ (td.transport_charges || 0) | number:'1.2-2' }}
                             </span>
-                            <span class="mode-badge" [class.mode-badge--road]="td.transport_mode === 'road'"
-                                [class.mode-badge--train]="td.transport_mode === 'train'"
-                                [class.mode-badge--air]="td.transport_mode === 'air'">
-                                <i class="pi" [class.pi-car]="td.transport_mode === 'road'"
-                                    [class.pi-truck]="td.transport_mode === 'train'"
-                                    [class.pi-send]="td.transport_mode === 'air'" aria-hidden="true"></i>
-                                By {{ td.transport_mode | uppercase }}
+                            }
+                            <span class="vsc-count-pill" [pTooltip]="td.from_location + ' → ' + td.to_location" tooltipPosition="bottom">
+                                <i class="pi pi-map-marker" aria-hidden="true"></i>
+                                {{ td.from_location }} &rarr; {{ td.to_location }}
                             </span>
-                        </div>
-                        <div class="vcard-header-actions">
-                            <button pButton type="button" icon="pi pi-pencil" label="Edit"
-                                class="p-button-outlined p-button-sm edit-version-btn"
-                                (click)="openEditTransportDialog(td)"></button>
-                            <button pButton type="button" icon="pi pi-trash"
-                                class="p-button-outlined p-button-danger p-button-sm delete-version-btn"
-                                (click)="deleteTransport(td)" pTooltip="Delete Transport Record"
-                                tooltipPosition="top"></button>
-                        </div>
-                    </header>
-
-                    <!-- Parameters Grid -->
-                    <div class="vcard-params-grid">
-                        <div class="param-chip">
-                            <span class="param-label">Tracking / Receipt No:</span>
-                            <span class="param-value font-mono font-bold">
-                                {{ td.transport_mode === 'road' ? td.lr_no : (td.transport_mode === 'train' ? td.rr_no :
-                                td.awb_no) }}
-                            </span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">Dispatch Date:</span>
-                            <span class="param-value">{{ td.date | date:'mediumDate' }}</span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">From (Origin):</span>
-                            <span class="param-value">{{ td.from_location }}</span>
-                        </div>
-                        <div class="param-chip">
-                            <span class="param-label">To (Destination):</span>
-                            <span class="param-value">{{ td.to_location }}</span>
-                        </div>
-                        <div class="param-chip param-chip--highlight">
-                            <span class="param-label">Transport Charges:</span>
-                            <span class="param-value font-mono font-bold">₹ {{ (td.transport_charges || 0) |
-                                number:'1.2-2' }}</span>
+                            <div class="actions-cell">
+                                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                                    [attr.aria-label]="'Edit consignment ' + td.id" pTooltip="Edit consignment"
+                                    tooltipPosition="top" (click)="openEditTransportDialog(td)"></button>
+                                <button pButton type="button" icon="pi pi-trash"
+                                    class="p-button-text p-button-sm p-button-danger qe-delete"
+                                    [attr.aria-label]="'Delete consignment ' + td.id" pTooltip="Delete consignment"
+                                    tooltipPosition="top" (click)="deleteTransport(td)"></button>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Remarks -->
-                    @if (td.remark) {
-                    <div class="vcard-remark">
-                        <i class="pi pi-comment" aria-hidden="true"></i>
-                        <div class="remark-content">
-                            <span class="remark-label">Remark</span>
-                            <p>{{ td.remark }}</p>
-                        </div>
-                    </div>
-                    }
-
-                    <!-- Attachments -->
-                    @if (td.attachments && td.attachments.length > 0) {
-                    <div class="vcard-attachments">
-                        <div class="vcard-attachments-label">
-                            <i class="pi pi-paperclip" aria-hidden="true"></i>
-                            <span>Attachments ({{ td.attachments.length }})</span>
-                        </div>
-                        <div class="qe-attachments">
-                            @for (att of td.attachments; track att.id) {
-                            <div class="qe-attachment-chip">
-                                <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
-                                <span class="att-name" [title]="att.file_name">{{ att.file_name }}</span>
-                                @if (att.file_size) {
-                                <span class="att-size">({{ formatFileSize(att.file_size) }})</span>
-                                }
-                                <button type="button" class="att-download-btn" (click)="downloadAttachment(att)"
-                                    [disabled]="downloadingAttachmentId() === att.id" pTooltip="Download attachment"
-                                    tooltipPosition="top">
-                                    @if (downloadingAttachmentId() === att.id) {
-                                    <i class="pi pi-spin pi-spinner"></i>
-                                    } @else {
-                                    <i class="pi pi-download"></i>
-                                    }
-                                </button>
+                    <div class="vsc-body">
+                        <!-- Parameters Strip -->
+                        <div class="vsc-params-strip">
+                            <div class="param-chip">
+                                <i class="pi pi-ticket" aria-hidden="true"></i>
+                                <span class="p-lbl">Tracking No:</span>
+                                <span class="p-val font-mono font-bold">
+                                    {{ td.transport_mode === 'road' ? td.lr_no : (td.transport_mode === 'train' ? td.rr_no : td.awb_no) }}
+                                </span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-calendar" aria-hidden="true"></i>
+                                <span class="p-lbl">Dispatch Date:</span>
+                                <span class="p-val">{{ td.date | date:'mediumDate' }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-map-marker" aria-hidden="true"></i>
+                                <span class="p-lbl">From:</span>
+                                <span class="p-val">{{ td.from_location }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-map-marker" aria-hidden="true"></i>
+                                <span class="p-lbl">To:</span>
+                                <span class="p-val">{{ td.to_location }}</span>
+                            </div>
+                            @if (td.transport_charges) {
+                            <div class="param-chip param-chip--highlight">
+                                <i class="pi pi-wallet" aria-hidden="true"></i>
+                                <span class="p-lbl">Transport Charges:</span>
+                                <span class="p-val font-mono font-bold">₹ {{ (td.transport_charges || 0) | number:'1.2-2' }}</span>
                             </div>
                             }
                         </div>
+
+                        <!-- Remarks -->
+                        @if (td.remark) {
+                        <div class="vsc-remark-box">
+                            <i class="pi pi-comment" aria-hidden="true"></i>
+                            <div class="vsc-remark-content">
+                                <span class="vsc-remark-label">Remarks:</span>
+                                <span class="vsc-remark-text">{{ td.remark }}</span>
+                            </div>
+                        </div>
+                        }
+
+                        <!-- Attachments -->
+                        @if (td.attachments && td.attachments.length > 0) {
+                        <div class="qe-attachments">
+                            <span class="qe-section-label">
+                                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                                Attachments ({{ td.attachments.length }})
+                            </span>
+                            <div class="qe-attachment-list">
+                                @for (att of td.attachments; track att.id) {
+                                <div class="qe-attachment-chip">
+                                    <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                                    <div class="qe-att-meta">
+                                        <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                        @if (att.file_size) {
+                                        <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                                        }
+                                    </div>
+                                    <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                                        pTooltip="Download attachment" tooltipPosition="top"
+                                        [disabled]="downloadingAttachmentId() === att.id" (click)="downloadAttachment(att)">
+                                        @if (downloadingAttachmentId() === att.id) {
+                                        <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                                        } @else {
+                                        <i class="pi pi-download" aria-hidden="true"></i>
+                                        }
+                                    </button>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                        }
                     </div>
-                    }
                 </article>
                 }
             </div>
