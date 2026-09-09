@@ -55,6 +55,13 @@
   }
 }
 
+:host {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
 /* ── Wide Cost Items Table Container ─────────────────────── */
 .cost-items-table-container {
   background: var(--color-surface);
@@ -63,14 +70,17 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 
   .items-table-wrap {
     border: none !important;
     box-shadow: none !important;
+    width: 100%;
   }
 
   .p-datatable-table {
-    min-width: 1050px;
+    min-width: 900px;
     width: 100%;
   }
 

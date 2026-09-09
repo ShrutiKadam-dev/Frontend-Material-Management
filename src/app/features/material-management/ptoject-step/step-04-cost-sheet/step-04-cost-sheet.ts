@@ -132,39 +132,21 @@ export class Step04CostSheet implements OnInit {
     };
   });
 
-  /** Items with live calculated landed costs and selling rates */
-  protected readonly calculatedItems = computed<CostSheetItem[]>(() => {
-    const rawItems = this.items();
-    const params = this.activeGlobalParams();
-    return rawItems.map((item) => this.computeItemCalculations(item, params));
-  });
-
-  /* ── Derived Live Summary Totals ─────────────────────── */
-  protected readonly totalItemCount = computed(() => this.calculatedItems().length);
+  /* ── Derived Totals for Draft Items ─────────────────── */
+  protected readonly totalItemCount = computed(() => this.items().length);
 
   protected readonly totalEurValue = computed(() =>
-    this.calculatedItems().reduce((acc, it) => acc + (it.totalLineEur || 0), 0)
-  );
-
-  protected readonly totalLandedCostInr = computed(() =>
-    this.calculatedItems().reduce(
-      (acc, it) => acc + ((it.landedCostInr || 0) * (it.quantity || 0)),
+    this.items().reduce(
+      (acc, it) => acc + ((Number(it.quantity) || 0) * (Number(it.pricePerUnitEur) || 0)),
       0
     )
-  );
-
-  protected readonly totalMarginInr = computed(() =>
-    this.calculatedItems().reduce(
-      (acc, it) => acc + ((it.marginInr || 0) * (it.quantity || 0)),
-      0
-    )
-  );
-
-  protected readonly cumulativeProjectCostInr = computed(() =>
-    this.calculatedItems().reduce((acc, it) => acc + (it.totalLineInr || 0), 0)
   );
 
   protected readonly latestCostSheet = computed(() => this.costSheets()[0] || null);
+  protected readonly latestItemsCount = computed(() => this.latestCostSheet()?.items?.length ?? 0);
+  protected readonly latestLandedCost = computed(() => this.latestCostSheet()?.cumulativeProjectCostInr ?? 0);
+  protected readonly latestMarginRate = computed(() => this.latestCostSheet()?.globalParams?.marginRate ?? 0);
+  protected readonly latestEurRate = computed(() => this.latestCostSheet()?.globalParams?.eurToInr ?? 0);
 
   protected readonly latestTotalItems = computed(() => {
     const list = this.costSheets();
@@ -217,21 +199,109 @@ export class Step04CostSheet implements OnInit {
     });
   }
 
+  protected formatPercent(rate: number | null | undefined): string {
+    if (rate === null || rate === undefined || isNaN(Number(rate))) {
+      return '0%';
+    }
+    const num = Number(rate);
+    if (num > 0 && num <= 1) {
+      return `${Number((num * 100).toFixed(2))}%`;
+    }
+    return `${num}%`;
+  }
+
   protected loadCostSheets(projectId: number): void {
     this.loadingCostSheets.set(true);
     this.costSheetService.getByProject(projectId).subscribe({
       next: (data) => {
-        // Compute landed costs for each cost sheet's items
-        const computedData = (data || []).map((sheet) => ({
-          ...sheet,
-          items: (sheet.items || []).map((item) =>
-            this.computeItemCalculations(item, sheet.globalParams || this.activeGlobalParams())
-          ),
-        }));
-        this.costSheets.set(computedData);
-        // Expand the most recent sheet by default
-        if (computedData.length > 0) {
-          this.expandedSheets.set({ [computedData[0].id]: true });
+        const rawList = Array.isArray(data) ? data : data ? [data] : [];
+        const mappedData: CostSheet[] = rawList.map((sheet: any) => {
+          const outputItems = sheet.output?.items || [];
+          const outputTotals = sheet.output?.columnTotals || {};
+
+          const items: CostSheetItem[] = (sheet.items || []).map((item: any, idx: number) => {
+            const outItem = outputItems.find((o: any) =>
+              (o.itemCode && o.itemCode === item.itemCode) ||
+              (o.quotationIndex && String(o.quotationIndex) === String(item.quotationIndex)) ||
+              (o.itemDescription && o.itemDescription === item.itemDescription)
+            ) || outputItems[idx] || {};
+
+            const qty = Number(outItem.quantity ?? item.quantity ?? item.qty ?? 0);
+            const priceEur = Number(outItem.pricePerUnitEur ?? item.pricePerUnitEur ?? item.price_per_unit_eur ?? 0);
+            const dutyRate = Number(outItem.customsDutyRate ?? item.customsDutyRate ?? item.duty_rate ?? 0);
+            const totalLineEur = Number(outItem.totalPriceEur ?? item.totalPriceEur ?? (qty * priceEur));
+
+            const insuranceFreightInr = Number(outItem.insuranceFreightInr ?? item.insuranceFreightInr ?? 0);
+            const totalPriceInr = Number(outItem.totalPriceInr ?? item.totalPriceInr ?? 0);
+            const assessableValueInr = Number(
+              outItem.assessableValueInr ??
+              item.assessableValueInr ??
+              (insuranceFreightInr + totalPriceInr)
+            );
+
+            const landedCostInr = Number(outItem.landedCostInr ?? item.landedCostInr ?? 0);
+            const marginInr = Number(outItem.marginInr ?? item.marginInr ?? 0);
+            const totalLineInr = Number(
+              outItem.sellingPriceExclGst ??
+              outItem.totalCostInr ??
+              outItem.sellingPriceInclGst ??
+              item.totalPriceInr ??
+              item.totalLineInr ??
+              0
+            );
+
+            return {
+              ...item,
+              ...outItem,
+              id: item.id ?? outItem.id,
+              quotationNumber: item.quotationNumber ?? outItem.quotationNumber ?? '',
+              quotationIndex: item.quotationIndex ?? outItem.quotationIndex ?? String(idx + 1),
+              itemDescription: item.itemDescription ?? outItem.itemDescription ?? '',
+              itemCode: item.itemCode ?? outItem.itemCode ?? '',
+              quantity: qty,
+              pricePerUnitEur: priceEur,
+              customsDutyRate: dutyRate,
+              totalLineEur,
+              assessableValueInr,
+              landedCostInr,
+              marginInr,
+              totalLineInr,
+            };
+          });
+
+          const cumulativeCost = Number(
+            sheet.cumulativeProjectCostInr ??
+            sheet.cumulative_project_cost_inr ??
+            outputTotals.totalCostInr ??
+            outputTotals.sellingPriceExclGst ??
+            sheet.totalSellingPriceExclGst ??
+            sheet.grandTotalInclGst ??
+            items.reduce((sum, it) => sum + (it.totalLineInr || 0), 0)
+          );
+
+          const rawGp = sheet.globalParams ?? sheet.output?.globalParams ?? {};
+          const globalParams: CostSheetGlobalParams = {
+            eurToInr: Number(rawGp.eurToInr ?? sheet.eur_to_inr ?? 0),
+            insuranceFreightRate: Number(rawGp.insuranceFreightRate ?? sheet.insurance_freight_rate ?? 0),
+            defaultCustomsDutyRate: Number(rawGp.defaultCustomsDutyRate ?? sheet.default_customs_duty_rate ?? 0),
+            igstRate: Number(rawGp.igstRate ?? sheet.igst_rate ?? 0),
+            transportationRate: Number(rawGp.transportationRate ?? sheet.transportation_rate ?? 0),
+            financeChargesRate: Number(rawGp.financeChargesRate ?? sheet.finance_charges_rate ?? 0),
+            marginRate: Number(rawGp.marginRate ?? sheet.margin_rate ?? 0),
+            gstRate: Number(rawGp.gstRate ?? sheet.gst_rate ?? 0),
+          };
+
+          return {
+            ...sheet,
+            cumulativeProjectCostInr: cumulativeCost,
+            globalParams,
+            items,
+          };
+        });
+
+        this.costSheets.set(mappedData);
+        if (mappedData.length > 0) {
+          this.expandedSheets.set({ [mappedData[0].id]: true });
         }
         this.loadingCostSheets.set(false);
       },

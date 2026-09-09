@@ -9,6 +9,7 @@ export const INCOTERMS_OPTIONS: SelectOption<string>[] = [
   { label: 'EXW - Ex Works', value: 'EXW' },
   { label: 'FOB - Free on Board', value: 'FOB' },
   { label: 'CIF - Cost, Insurance and Freight', value: 'CIF' },
+  { label: 'FOR', value: 'FOR' },
   { label: 'CPT - Carriage Paid To', value: 'CPT' },
   { label: 'CIP - Carriage and Insurance Paid to', value: 'CIP' },
   { label: 'FCA - Free Carrier', value: 'FCA' },

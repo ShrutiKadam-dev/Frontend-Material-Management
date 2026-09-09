@@ -757,6 +757,9 @@
   flex-direction: column;
   gap: 20px;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .version-sheet-card {
@@ -769,6 +772,9 @@
   flex-direction: column;
   gap: 16px;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   transition: all 150ms ease;
 
   &.empty-card {
@@ -883,6 +889,10 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .vsc-params-strip {

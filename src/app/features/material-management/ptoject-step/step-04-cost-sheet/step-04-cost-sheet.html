@@ -1,13 +1,13 @@
-<section class="base-page step-page" aria-labelledby="step-page-title">
+<main class="step-page">
 
     <!-- ── 1. Page Header Bar ───────────────────────────────── -->
-    <div class="page-header">
+    <header class="page-header">
         <div class="header-left">
-            <button pButton type="button" icon="pi pi-arrow-left" class="p-button-text p-button-secondary back-btn"
-                (click)="goBack()" aria-label="Back to project pipeline" pTooltip="Back to Project Steps"
+            <button pButton type="button" icon="pi pi-arrow-left" class="back-btn"
+                (click)="goBack()" aria-label="Back to project timeline" pTooltip="Back to Project Steps"
                 tooltipPosition="bottom"></button>
             <div class="header-title-group">
-                <span class="eyebrow">Step 04 · Cost Sheet Calculation</span>
+                <span class="eyebrow">STEP 04 • COST SHEET CALCULATION</span>
                 <h1 id="step-page-title">
                     @if (project(); as p) { {{ p.project_title }} }
                     @else { Cost Sheet Calculation }
@@ -16,28 +16,81 @@
         </div>
 
         <div class="header-actions">
+            <span class="header-step-pill">
+                <strong>Step 04</strong> of 15
+            </span>
+
             @if (customer(); as c) {
-            <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+            <span class="header-partner-pill" [pTooltip]="'Customer: ' + c.name" tooltipPosition="bottom">
                 <i class="pi pi-user" aria-hidden="true"></i>
                 {{ c.name }}
             </span>
             } @else if (project()?.customer_name) {
-            <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+            <span class="header-partner-pill" [pTooltip]="'Customer: ' + project()?.customer_name" tooltipPosition="bottom">
                 <i class="pi pi-user" aria-hidden="true"></i>
                 {{ project()?.customer_name }}
             </span>
             }
-            <div class="header-step-pill" aria-hidden="true">
-                Step <strong>04</strong> of 15
-            </div>
+
             <button pButton type="button" icon="pi pi-plus" label="Create Cost Sheet" class="create-cost-sheet-btn"
                 (click)="openCreateDialog()"></button>
         </div>
-    </div>
+    </header>
 
-    <!-- ── 2. Full-Width Version History Stream ─────────────── -->
+    <!-- ── 2. KPI Metrics Grid ──────────────────────────────── -->
+    <section class="kpi-metrics-grid" aria-label="Cost Sheet Financial Metrics">
+        <!-- Tile 1: Total Cost Sheets Created -->
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-icon--primary" aria-hidden="true">
+                <i class="pi pi-calculator"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Cost Sheet Versions</span>
+                <span class="kpi-num">{{ costSheets().length }}</span>
+                <span class="kpi-hint">{{ costSheets().length === 1 ? '1 calculated version' : costSheets().length + ' calculated versions' }}</span>
+            </div>
+        </div>
+
+        <!-- Tile 2: Total Items Configured -->
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-icon--progress" aria-hidden="true">
+                <i class="pi pi-box"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Configured Items</span>
+                <span class="kpi-num">{{ latestItemsCount() }}</span>
+                <span class="kpi-hint">In latest cost sheet</span>
+            </div>
+        </div>
+
+        <!-- Tile 3: Cumulative Project Cost (INR) -->
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-icon--success" aria-hidden="true">
+                <i class="pi pi-receipt"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Total Landed Cost</span>
+                <span class="kpi-num">₹ {{ latestLandedCost() | number:'1.2-2' }}</span>
+                <span class="kpi-hint hint-success">Duty + Freight + Taxes</span>
+            </div>
+        </div>
+
+        <!-- Tile 4: Active Margin & EUR Rate -->
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-icon--health" aria-hidden="true">
+                <i class="pi pi-percentage"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Profit Margin</span>
+                <span class="kpi-num">{{ formatPercent(latestMarginRate()) }}</span>
+                <span class="kpi-hint">EUR Rate: ₹{{ latestEurRate() }}</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 3. Full-Width Version History Stream ─────────────── -->
     <div class="step-layout--fullwidth">
-        <div class="step-main step-main--fullwidth">
+        <div class="step-main--fullwidth">
 
             <!-- Loading State -->
             @if (loadingCostSheets()) {
@@ -133,31 +186,31 @@
                             </div>
                             <div class="param-chip">
                                 <span class="p-lbl">Ins. & Freight:</span>
-                                <span class="p-val">{{ gp.insuranceFreightRate }}%</span>
+                                <span class="p-val">{{ formatPercent(gp.insuranceFreightRate) }}</span>
                             </div>
                             <div class="param-chip">
                                 <span class="p-lbl">Duty (BCD):</span>
-                                <span class="p-val">{{ gp.defaultCustomsDutyRate }}%</span>
+                                <span class="p-val">{{ formatPercent(gp.defaultCustomsDutyRate) }}</span>
                             </div>
                             <div class="param-chip">
                                 <span class="p-lbl">IGST:</span>
-                                <span class="p-val">{{ gp.igstRate }}%</span>
+                                <span class="p-val">{{ formatPercent(gp.igstRate) }}</span>
                             </div>
                             <div class="param-chip">
                                 <span class="p-lbl">Transport:</span>
-                                <span class="p-val">{{ gp.transportationRate }}%</span>
+                                <span class="p-val">{{ formatPercent(gp.transportationRate) }}</span>
                             </div>
                             <div class="param-chip">
                                 <span class="p-lbl">Finance:</span>
-                                <span class="p-val">{{ gp.financeChargesRate }}%</span>
+                                <span class="p-val">{{ formatPercent(gp.financeChargesRate) }}</span>
                             </div>
                             <div class="param-chip param-chip--highlight">
                                 <span class="p-lbl">Margin:</span>
-                                <span class="p-val">{{ gp.marginRate }}%</span>
+                                <span class="p-val">{{ formatPercent(gp.marginRate) }}</span>
                             </div>
                             <div class="param-chip">
                                 <span class="p-lbl">GST:</span>
-                                <span class="p-val">{{ gp.gstRate }}%</span>
+                                <span class="p-val">{{ formatPercent(gp.gstRate) }}</span>
                             </div>
                         </div>
                         }
@@ -493,24 +546,22 @@
                     </div>
                 </div>
 
-                <!-- Dialog Items Table with Live Calculations -->
+                <!-- Dialog Items Table -->
                 @if (items().length > 0) {
                 <div class="cost-items-table-container">
-                    <p-table [value]="calculatedItems()" [paginator]="calculatedItems().length > 5" [rows]="5"
+                    <p-table [value]="items()" [paginator]="items().length > 5" [rows]="5"
                         [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
                         aria-label="Cost sheet draft items">
                         <ng-template pTemplate="header">
                             <tr>
-                                <th scope="col" style="width: 40px; text-align: center;">#</th>
-                                <th scope="col" style="min-width: 95px;">Quote #</th>
-                                <th scope="col" style="min-width: 180px;">Material Description</th>
-                                <th scope="col" style="min-width: 65px; text-align: right;">Qty</th>
+                                <th scope="col" style="width: 45px; text-align: center;">#</th>
+                                <th scope="col" style="min-width: 120px;">Quote #</th>
+                                <th scope="col" style="min-width: 220px;">Material Description</th>
+                                <th scope="col" style="min-width: 110px;">Item Code</th>
+                                <th scope="col" style="min-width: 70px; text-align: right;">Qty</th>
                                 <th scope="col" style="min-width: 110px; text-align: right;">Price (€)</th>
                                 <th scope="col" style="min-width: 115px; text-align: right;">Total (€)</th>
-                                <th scope="col" style="min-width: 130px; text-align: right;">Assessable (₹)</th>
-                                <th scope="col" style="min-width: 135px; text-align: right;">Landed (₹)</th>
-                                <th scope="col" style="min-width: 130px; text-align: right;">Margin (₹)</th>
-                                <th scope="col" style="min-width: 160px; text-align: right;">Total Selling (₹)</th>
+                                <th scope="col" style="min-width: 85px; text-align: right;">Duty (%)</th>
                                 <th scope="col" style="width: 80px; text-align: right;">Actions</th>
                             </tr>
                         </ng-template>
@@ -523,9 +574,9 @@
                                 </td>
                                 <td>
                                     <strong>{{ item.itemDescription }}</strong>
-                                    @if (item.itemCode) {
-                                    <span class="item-sub-code">Code: {{ item.itemCode }}</span>
-                                    }
+                                </td>
+                                <td>
+                                    <span class="item-sub-code">{{ item.itemCode || '—' }}</span>
                                 </td>
                                 <td class="num-cell" style="font-weight: 700;">
                                     <span class="qty-badge">{{ item.quantity }}</span>
@@ -534,19 +585,10 @@
                                     €&nbsp;{{ item.pricePerUnitEur | number:'1.2-2' }}
                                 </td>
                                 <td class="num-cell" style="font-weight: 600;">
-                                    €&nbsp;{{ item.totalLineEur | number:'1.2-2' }}
+                                    €&nbsp;{{ ((item.quantity || 0) * (item.pricePerUnitEur || 0)) | number:'1.2-2' }}
                                 </td>
                                 <td class="num-cell">
-                                    ₹&nbsp;{{ item.assessableValueInr | number:'1.2-2' }}
-                                </td>
-                                <td class="num-cell" style="font-weight: 600;">
-                                    ₹&nbsp;{{ item.landedCostInr | number:'1.2-2' }}
-                                </td>
-                                <td class="num-cell" style="color: #0284c7;">
-                                    ₹&nbsp;{{ item.marginInr | number:'1.2-2' }}
-                                </td>
-                                <td class="num-cell" style="font-weight: 700; color: var(--color-heading);">
-                                    ₹&nbsp;{{ item.totalLineInr | number:'1.2-2' }}
+                                    {{ formatPercent(item.customsDutyRate ?? globalParamsForm.controls.defaultCustomsDutyRate.value ?? 0) }}
                                 </td>
                                 <td style="text-align: right; width: 80px; white-space: nowrap;">
                                     <div class="actions-cell">
@@ -565,21 +607,21 @@
 
                         <ng-template pTemplate="footer">
                             <tr class="table-total-row">
-                                <td colspan="9" class="total-label-cell">
+                                <td colspan="6" class="total-label-cell">
                                     <div class="total-label-wrapper">
                                         <span class="total-icon-badge" aria-hidden="true"><i
-                                                class="pi pi-calculator"></i></span>
-                                        <span class="total-title">Cumulative Project Cost</span>
+                                                class="pi pi-box"></i></span>
+                                        <span class="total-title">Total Draft Items</span>
                                         <span class="total-items-badge">({{ items().length }} {{ items().length === 1 ?
                                             'item' : 'items' }})</span>
                                     </div>
                                 </td>
                                 <td class="total-amount-cell"
-                                    style="min-width: 160px; text-align: right; white-space: nowrap;">
-                                    <span class="total-amount-value" style="white-space: nowrap;">₹&nbsp;{{
-                                        cumulativeProjectCostInr() | number:'1.2-2' }}</span>
+                                    style="min-width: 115px; text-align: right; white-space: nowrap;">
+                                    <span class="total-amount-value" style="white-space: nowrap;">€&nbsp;{{
+                                        totalEurValue() | number:'1.2-2' }}</span>
                                 </td>
-                                <td class="total-empty-cell" style="width: 80px;"></td>
+                                <td colspan="2" class="total-empty-cell"></td>
                             </tr>
                         </ng-template>
                     </p-table>
@@ -592,32 +634,6 @@
                 </div>
                 }
             </div>
-
-            <!-- ── D. Live Summary Bar ────────────────────────── -->
-            @if (items().length > 0) {
-            <div class="live-summary-bar">
-                <div class="summary-metric">
-                    <span class="sm-label">Total Line Items</span>
-                    <span class="sm-value">{{ totalItemCount() }}</span>
-                </div>
-                <div class="summary-metric">
-                    <span class="sm-label">Total EUR Base</span>
-                    <span class="sm-value">€ {{ totalEurValue() | number:'1.2-2' }}</span>
-                </div>
-                <div class="summary-metric">
-                    <span class="sm-label">Cumulative Landed Cost</span>
-                    <span class="sm-value">₹ {{ totalLandedCostInr() | number:'1.2-2' }}</span>
-                </div>
-                <div class="summary-metric">
-                    <span class="sm-label">Total Margin (INR)</span>
-                    <span class="sm-value sm-value--margin">₹ {{ totalMarginInr() | number:'1.2-2' }}</span>
-                </div>
-                <div class="summary-metric summary-metric--total">
-                    <span class="sm-label">Final Project Cost (INR)</span>
-                    <span class="sm-value sm-value--grand">₹ {{ cumulativeProjectCostInr() | number:'1.2-2' }}</span>
-                </div>
-            </div>
-            }
 
         </div>
 
@@ -671,5 +687,4 @@
             }
         </div>
     </p-dialog>
-
-</section>
+</main>

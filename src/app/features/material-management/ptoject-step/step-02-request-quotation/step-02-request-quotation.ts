@@ -21,6 +21,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { TableModule } from 'primeng/table';
 
 import { QuotationRequestService } from '../../../../core/services/quotation-request';
+import { CustomerQueryService } from '../../../../core/services/customer-query';
 import { SupplierService } from '../../../../core/services/supplier';
 import { ProjectService } from '../../../../core/services/project';
 import { AttachmentService } from '../../../../core/services/attachment';
@@ -57,6 +58,7 @@ export class Step02RequestQuotation implements OnInit {
   private readonly router = inject(Router);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly quotationRequestService = inject(QuotationRequestService);
+  private readonly customerQueryService = inject(CustomerQueryService);
   private readonly supplierService = inject(SupplierService);
   private readonly projectService = inject(ProjectService);
   private readonly attachmentService = inject(AttachmentService);
@@ -165,6 +167,25 @@ export class Step02RequestQuotation implements OnInit {
     this.editingIndex.set(null);
     this.errorMessage.set(null);
     this.dialogVisible.set(true);
+
+    // Auto-fetch material items from Step 1 (Customer Queries)
+    this.customerQueryService.getByProject(this.projectId()).subscribe({
+      next: (queries) => {
+        const autoItems: QuotationRequestItem[] = [];
+        queries.forEach((q) => {
+          q.items?.forEach((item) => {
+            autoItems.push({
+              material_name: item.material_name,
+              quantity: item.quantity,
+            });
+          });
+        });
+        if (autoItems.length > 0) {
+          this.items.set(autoItems);
+        }
+      },
+      error: () => {},
+    });
   }
 
   protected openEditDialog(request: QuotationRequest): void {
