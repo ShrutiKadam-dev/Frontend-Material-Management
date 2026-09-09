@@ -59,6 +59,7 @@ import {
   CURRENCY_OPTIONS,
   INCOTERMS_OPTIONS,
   VALIDITY_UNIT_OPTIONS,
+  WARRANTY_PERIOD_OPTIONS,
 } from '../../../../core/constants/dropdown-options.constant';
 
 export type SubStepType = 'proforma' | 'invoice' | 'packing-list';
@@ -115,6 +116,7 @@ export class Step10SupplierInvoice implements OnInit {
   protected readonly incotermsOptions = INCOTERMS_OPTIONS;
   protected readonly currencyOptions = CURRENCY_OPTIONS;
   protected readonly validityUnitOptions = VALIDITY_UNIT_OPTIONS;
+  protected readonly warrantyPeriodOptions = WARRANTY_PERIOD_OPTIONS;
 
   /* ── Dialog States ──────────────────────────────────────── */
   protected readonly proformaDialogVisible = signal(false);

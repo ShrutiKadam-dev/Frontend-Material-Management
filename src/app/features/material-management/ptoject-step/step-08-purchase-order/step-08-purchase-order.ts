@@ -42,6 +42,7 @@ import { Project } from '../../../../core/models/project.model';
 import {
   INCOTERMS_OPTIONS,
   VALIDITY_UNIT_OPTIONS,
+  WARRANTY_PERIOD_OPTIONS,
 } from '../../../../core/constants/dropdown-options.constant';
 
 @Component({
@@ -96,6 +97,7 @@ export class Step08PurchaseOrder implements OnInit {
   /* ── Dropdown Constants ─────────────────────────────────── */
   protected readonly incotermsOptions = INCOTERMS_OPTIONS;
   protected readonly validityUnitOptions = VALIDITY_UNIT_OPTIONS;
+  protected readonly warrantyPeriodOptions = WARRANTY_PERIOD_OPTIONS;
 
   /* ── Reactive Forms ────────────────────────────────────── */
   protected readonly headerForm = this.fb.group({

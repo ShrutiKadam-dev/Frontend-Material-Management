@@ -492,8 +492,9 @@
             <!-- Warranty Period -->
             <div class="field">
               <label for="dlg-tnd-warranty">Warranty Period</label>
-              <input id="dlg-tnd-warranty" pInputText formControlName="warranty_period"
-                placeholder="Enter warranty period" />
+              <p-select id="dlg-tnd-warranty" formControlName="warranty_period" [options]="warrantyPeriodOptions"
+                optionLabel="label" optionValue="value" placeholder="Select Warranty Period" [fluid]="true"
+                appendTo="body" [showClear]="true" />
             </div>
 
           </div>

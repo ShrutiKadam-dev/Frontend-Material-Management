@@ -124,6 +124,13 @@ export const routes: Routes = [
           ).then((m) => m.Step12CustomsClearance),
       },
       {
+        path: 'projects/:projectId/steps/13',
+        loadComponent: () =>
+          import(
+            './features/material-management/ptoject-step/step-13-customer-delivery/step-13-customer-delivery'
+          ).then((m) => m.Step13CustomerDelivery),
+      },
+      {
         path: 'customers',
         loadComponent: () =>
           import('./features/material-management/customer/customer').then((m) => m.Customer),

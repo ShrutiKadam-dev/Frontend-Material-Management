@@ -48,6 +48,15 @@ export const VALIDITY_UNIT_OPTIONS: SelectOption<string>[] = [
 ];
 
 /**
+ * Standard Warranty Period options
+ */
+export const WARRANTY_PERIOD_OPTIONS: SelectOption<string>[] = [
+  { label: '3 Months', value: '3 Months' },
+  { label: '6 Months', value: '6 Months' },
+  { label: '12 Months', value: '12 Months' },
+];
+
+/**
  * Standard Units of Measure (UOM) for materials & items
  */
 export const UNIT_OF_MEASURE_OPTIONS: SelectOption<string>[] = [

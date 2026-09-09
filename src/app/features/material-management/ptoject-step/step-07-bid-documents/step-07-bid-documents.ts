@@ -29,6 +29,7 @@ import { AttachmentService } from '../../../../core/services/attachment';
 import {
   INCOTERMS_OPTIONS,
   VALIDITY_UNIT_OPTIONS,
+  WARRANTY_PERIOD_OPTIONS,
   parseValidity,
 } from '../../../../core/constants/dropdown-options.constant';
 import {
@@ -96,6 +97,7 @@ export class Step07BidDocuments implements OnInit {
   /* ── Dropdown Constants ────────────────────────────────── */
   protected readonly incotermsOptions = INCOTERMS_OPTIONS;
   protected readonly validityUnitOptions = VALIDITY_UNIT_OPTIONS;
+  protected readonly warrantyPeriodOptions = WARRANTY_PERIOD_OPTIONS;
 
   /* ── Reactive Forms ────────────────────────────────────── */
   protected readonly headerForm = this.fb.group({

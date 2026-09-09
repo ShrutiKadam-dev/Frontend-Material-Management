@@ -436,8 +436,9 @@
             <!-- Warranty Period -->
             <div class="field">
               <label for="dlg-bid-warranty">Warranty Period</label>
-              <input id="dlg-bid-warranty" pInputText formControlName="warranty_period"
-                placeholder="e.g. 1 Year Comprehensive" />
+              <p-select id="dlg-bid-warranty" formControlName="warranty_period" [options]="warrantyPeriodOptions"
+                optionLabel="label" optionValue="value" placeholder="Select Warranty Period" [fluid]="true"
+                appendTo="body" [showClear]="true" />
             </div>
 
             <!-- GST Rate (%) -->

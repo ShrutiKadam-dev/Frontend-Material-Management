@@ -843,9 +843,9 @@
 
             <div class="field">
               <label for="dlg-pi-warranty">Warranty Period <span class="req" aria-hidden="true">*</span></label>
-              <input id="dlg-pi-warranty" pInputText formControlName="warranty_period"
-                placeholder="e.g. 12 Months from commissioning"
-                [class.ng-invalid]="isFieldInvalid('proforma', 'warranty_period')" />
+              <p-select id="dlg-pi-warranty" formControlName="warranty_period" [options]="warrantyPeriodOptions"
+                optionLabel="label" optionValue="value" placeholder="Select Warranty Period" [fluid]="true" appendTo="body"
+                [style]="{ width: '100%', height: '38px' }" />
               @if (isFieldInvalid('proforma', 'warranty_period')) {
               <p class="field-error">{{ getFieldError('proforma', 'warranty_period') }}</p>
               }
@@ -1172,8 +1172,9 @@
 
             <div class="field">
               <label for="dlg-inv-warranty">Warranty Period <span class="req" aria-hidden="true">*</span></label>
-              <input id="dlg-inv-warranty" pInputText formControlName="warranty_period" placeholder="e.g. 24 Months"
-                [class.ng-invalid]="isFieldInvalid('invoice', 'warranty_period')" />
+              <p-select id="dlg-inv-warranty" formControlName="warranty_period" [options]="warrantyPeriodOptions"
+                optionLabel="label" optionValue="value" placeholder="Select Warranty Period" [fluid]="true" appendTo="body"
+                [style]="{ width: '100%', height: '38px' }" />
               @if (isFieldInvalid('invoice', 'warranty_period')) {
               <p class="field-error">{{ getFieldError('invoice', 'warranty_period') }}</p>
               }

@@ -462,8 +462,9 @@
             <!-- Warranty Period -->
             <div class="field">
               <label for="dlg-po-warranty">Warranty Period <span class="req" aria-hidden="true">*</span></label>
-              <input id="dlg-po-warranty" pInputText formControlName="warranty_period"
-                placeholder="e.g. 1 Year Comprehensive" [class.ng-invalid]="isFieldInvalid('warranty_period')" />
+              <p-select id="dlg-po-warranty" formControlName="warranty_period" [options]="warrantyPeriodOptions"
+                optionLabel="label" optionValue="value" placeholder="Select Warranty Period" [fluid]="true" appendTo="body"
+                [invalid]="isFieldInvalid('warranty_period')" />
               @if (isFieldInvalid('warranty_period')) {
               <p class="field-error">{{ getFieldError('warranty_period') }}</p>
               }

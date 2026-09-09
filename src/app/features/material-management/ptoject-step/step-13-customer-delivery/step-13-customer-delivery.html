@@ -1,1 +1,2199 @@
-<p>step-13-customer-delivery works!</p>
+<section class="base-page step-page" aria-labelledby="step-page-title">
+
+    <!-- ── 1. Page Header Bar ───────────────────────────────────────────── -->
+    <div class="page-header">
+        <div class="header-left">
+            <button pButton type="button" icon="pi pi-arrow-left" class="p-button-text p-button-secondary back-btn"
+                (click)="goBack()" aria-label="Back to project pipeline" pTooltip="Back to Project Steps"
+                tooltipPosition="bottom"></button>
+            <div class="header-title-group">
+                <span class="eyebrow">Step 13 · Customer Delivery & Dispatch</span>
+                <h1 id="step-page-title">
+                    @if (project(); as p) {
+                    {{ p.project_title }}
+                    } @else {
+                    Customer Delivery & Logistics Documentation
+                    }
+                </h1>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            @if (customer(); as c) {
+            <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+                <i class="pi pi-user" aria-hidden="true"></i>
+                {{ c.name }}
+            </span>
+            } @else if (project()?.customer_name) {
+            <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
+                <i class="pi pi-user" aria-hidden="true"></i>
+                {{ project()?.customer_name }}
+            </span>
+            }
+            <div class="header-step-pill" aria-hidden="true">
+                Step <strong>13</strong> of 15
+            </div>
+
+            @switch (activeTab()) {
+            @case ('tax-invoice') {
+            <button pButton type="button" icon="pi pi-plus" label="Create Tax Invoice" class="create-cost-sheet-btn"
+                (click)="openCreateInvoiceDialog()"></button>
+            }
+            @case ('packing-list') {
+            <button pButton type="button" icon="pi pi-plus" label="Create Packing List" class="create-cost-sheet-btn"
+                (click)="openCreatePackingListDialog()"></button>
+            }
+            @case ('delivery-challan') {
+            <button pButton type="button" icon="pi pi-plus" label="Create Delivery Challan"
+                class="create-cost-sheet-btn" (click)="openCreateChallanDialog()"></button>
+            }
+            @case ('warranty') {
+            <button pButton type="button" icon="pi pi-plus" label="Issue Warranty Certificate"
+                class="create-cost-sheet-btn" (click)="openCreateWarrantyDialog()"></button>
+            }
+            @case ('transport') {
+            <button pButton type="button" icon="pi pi-plus" label="Record Transport Details"
+                class="create-cost-sheet-btn" (click)="openCreateTransportDialog()"></button>
+            }
+            }
+        </div>
+    </div>
+
+    <!-- ── 2. Full-Width Step Main Layout ───────────────────────────────── -->
+    <div class="step-layout--fullwidth">
+        <div class="step-main step-main--fullwidth">
+
+            <!-- ── Modern Standard 5 Sub-Step Tabs Navigation ── -->
+            <nav class="substep-tabs-nav" aria-label="Step 13 Sub-steps">
+                <div class="substep-tabs-list" role="tablist">
+                    <!-- Tab 1: Tax Invoice -->
+                    <button type="button" role="tab" class="substep-tab-btn"
+                        [class.substep-tab-btn--active]="activeTab() === 'tax-invoice'"
+                        [attr.aria-selected]="activeTab() === 'tax-invoice'" (click)="selectTab('tax-invoice')">
+                        <div class="tab-icon-wrap">
+                            <i class="pi pi-receipt tab-icon" aria-hidden="true"></i>
+                        </div>
+                        <div class="tab-text-group">
+                            <div class="tab-title-row">
+                                <span class="tab-title">13.1 Tax Invoice</span>
+                                <span class="tab-badge">{{ taxInvoices().length }}</span>
+                            </div>
+                            <span class="tab-subtitle">GST billing & net total</span>
+                        </div>
+                    </button>
+
+                    <!-- Tab 2: Packing List -->
+                    <button type="button" role="tab" class="substep-tab-btn"
+                        [class.substep-tab-btn--active]="activeTab() === 'packing-list'"
+                        [attr.aria-selected]="activeTab() === 'packing-list'" (click)="selectTab('packing-list')">
+                        <div class="tab-icon-wrap">
+                            <i class="pi pi-box tab-icon" aria-hidden="true"></i>
+                        </div>
+                        <div class="tab-text-group">
+                            <div class="tab-title-row">
+                                <span class="tab-title">13.2 Packing List</span>
+                                <span class="tab-badge">{{ packingLists().length }}</span>
+                            </div>
+                            <span class="tab-subtitle">Packs, net & gross weights</span>
+                        </div>
+                    </button>
+
+                    <!-- Tab 3: Delivery Challan -->
+                    <button type="button" role="tab" class="substep-tab-btn"
+                        [class.substep-tab-btn--active]="activeTab() === 'delivery-challan'"
+                        [attr.aria-selected]="activeTab() === 'delivery-challan'"
+                        (click)="selectTab('delivery-challan')">
+                        <div class="tab-icon-wrap">
+                            <i class="pi pi-send tab-icon" aria-hidden="true"></i>
+                        </div>
+                        <div class="tab-text-group">
+                            <div class="tab-title-row">
+                                <span class="tab-title">13.3 Delivery Challan</span>
+                                <span class="tab-badge">{{ deliveryChallans().length }}</span>
+                            </div>
+                            <span class="tab-subtitle">Handover & proof of dispatch</span>
+                        </div>
+                    </button>
+
+                    <!-- Tab 4: Warranty Certificate -->
+                    <button type="button" role="tab" class="substep-tab-btn"
+                        [class.substep-tab-btn--active]="activeTab() === 'warranty'"
+                        [attr.aria-selected]="activeTab() === 'warranty'" (click)="selectTab('warranty')">
+                        <div class="tab-icon-wrap">
+                            <i class="pi pi-shield tab-icon" aria-hidden="true"></i>
+                        </div>
+                        <div class="tab-text-group">
+                            <div class="tab-title-row">
+                                <span class="tab-title">13.4 Warranty Certificate</span>
+                                <span class="tab-badge">{{ warrantyCertificates().length }}</span>
+                            </div>
+                            <span class="tab-subtitle">Coverage terms & validity</span>
+                        </div>
+                    </button>
+
+                    <!-- Tab 5: Transport Details -->
+                    <button type="button" role="tab" class="substep-tab-btn"
+                        [class.substep-tab-btn--active]="activeTab() === 'transport'"
+                        [attr.aria-selected]="activeTab() === 'transport'" (click)="selectTab('transport')">
+                        <div class="tab-icon-wrap">
+                            <i class="pi pi-truck tab-icon" aria-hidden="true"></i>
+                        </div>
+                        <div class="tab-text-group">
+                            <div class="tab-title-row">
+                                <span class="tab-title">13.5 Transport Details</span>
+                                <span class="tab-badge">{{ transportDetails().length }}</span>
+                            </div>
+                            <span class="tab-subtitle">Road (LR) / Train (RR) / Air (AWB)</span>
+                        </div>
+                    </button>
+                </div>
+            </nav>
+
+            <!-- ── Top KPI Metrics Strip ────────────────────────────────────── -->
+            <div class="kpi-metrics-grid" aria-label="Customer Delivery metrics">
+                <article class="kpi-card">
+                    <div class="kpi-icon-wrap kpi-icon--primary">
+                        <i class="pi pi-receipt" aria-hidden="true"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <span class="kpi-label">Total Invoiced Amount</span>
+                        <strong class="kpi-num">₹&nbsp;{{ totalInvoicedAmount() | number:'1.2-2' }}</strong>
+                        <span class="kpi-hint hint-success">{{ taxInvoices().length }} Tax Invoices Generated</span>
+                    </div>
+                </article>
+
+                <article class="kpi-card">
+                    <div class="kpi-icon-wrap kpi-icon--success">
+                        <i class="pi pi-box" aria-hidden="true"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <span class="kpi-label">Total Packs Dispatched</span>
+                        <strong class="kpi-num">{{ totalPacksDispatched() }}</strong>
+                        <span class="kpi-hint">{{ packingLists().length }} Packing Lists</span>
+                    </div>
+                </article>
+
+                <article class="kpi-card">
+                    <div class="kpi-icon-wrap kpi-icon--progress">
+                        <i class="pi pi-shield" aria-hidden="true"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <span class="kpi-label">Warranty Active</span>
+                        <strong class="kpi-num">{{ warrantyCertificates().length }}</strong>
+                        <span class="kpi-hint">Certificates Issued</span>
+                    </div>
+                </article>
+
+                <article class="kpi-card">
+                    <div class="kpi-icon-wrap kpi-icon--health">
+                        <i class="pi pi-truck" aria-hidden="true"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <span class="kpi-label">Total Freight / Transport</span>
+                        <strong class="kpi-num">₹&nbsp;{{ totalTransportCharges() | number:'1.2-2' }}</strong>
+                        <span class="kpi-hint hint-success">{{ transportDetails().length }} Consignments</span>
+                    </div>
+                </article>
+            </div>
+
+            <!-- ── Loading / Error States ──────────────────────────────────── -->
+            @if (loading()) {
+            <div class="center-state loading-state">
+                <div class="loading-ring" aria-hidden="true">
+                    <i class="pi pi-spin pi-spinner"></i>
+                </div>
+                <p>Loading Customer Delivery & Invoicing details…</p>
+            </div>
+            } @else if (errorMessage()) {
+            <div class="error-banner" role="alert">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="pi pi-exclamation-circle error-icon" aria-hidden="true"></i>
+                    <span>{{ errorMessage() }}</span>
+                </div>
+                <button pButton type="button" icon="pi pi-refresh" label="Retry" class="p-button-text p-button-sm"
+                    (click)="loadAllStep13Data()"></button>
+            </div>
+            } @else {
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- TAB 1: TAX INVOICES                                            -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            @if (activeTab() === 'tax-invoice') {
+            @if (taxInvoices().length === 0) {
+            <div class="version-sheet-card empty-card">
+                <div class="center-state empty-cta">
+                    <span class="empty-icon" aria-hidden="true">
+                        <i class="pi pi-receipt"></i>
+                    </span>
+                    <h3>No Customer Tax Invoices recorded yet</h3>
+                    <p>Generate customer tax invoice with GST rates, auto-calculated net totals, and line items.</p>
+                    <button pButton type="button" icon="pi pi-plus" label="Create First Tax Invoice"
+                        class="create-cost-sheet-btn" (click)="openCreateInvoiceDialog()"></button>
+                </div>
+            </div>
+            } @else {
+            <div class="version-cards-stream">
+                @for (inv of taxInvoices(); track inv.id; let idx = $index) {
+                <article class="version-sheet-card">
+                    <header class="vcard-header">
+                        <div class="vcard-header-left">
+                            <span class="vcard-tag">INVOICE #{{ inv.invoice_no }}</span>
+                            <span class="vcard-title">Tax Invoice — {{ inv.invoice_date | date:'dd MMM yyyy' }}</span>
+                            <span class="vcard-badge vcard-badge--approved">
+                                <i class="pi pi-check-circle" aria-hidden="true"></i> GST {{ inv.gst_rate }}%
+                            </span>
+                        </div>
+                        <div class="vcard-header-actions">
+                            <button pButton type="button" icon="pi pi-pencil" label="Edit"
+                                class="p-button-outlined p-button-sm edit-version-btn"
+                                (click)="openEditInvoiceDialog(inv)"></button>
+                            <button pButton type="button" icon="pi pi-trash"
+                                class="p-button-outlined p-button-danger p-button-sm delete-version-btn"
+                                (click)="deleteInvoice(inv)" pTooltip="Delete Invoice" tooltipPosition="top"></button>
+                        </div>
+                    </header>
+
+                    <!-- Parameters Grid -->
+                    <div class="vcard-params-grid">
+                        <div class="param-chip">
+                            <span class="param-label">Invoice Date:</span>
+                            <span class="param-value">{{ inv.invoice_date | date:'mediumDate' }}</span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">GST Rate:</span>
+                            <span class="param-value">{{ inv.gst_rate }}%</span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">GST Amount:</span>
+                            <span class="param-value font-mono">₹ {{ inv.gst_amount | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">Round Off:</span>
+                            <span class="param-value font-mono">₹ {{ inv.round_off | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="param-chip param-chip--highlight">
+                            <span class="param-label">Net Total:</span>
+                            <span class="param-value font-mono font-bold">₹ {{ inv.net_total | number:'1.2-2' }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Material Items Table -->
+                    @if (inv.items && inv.items.length > 0) {
+                    <div class="vcard-table-wrap">
+                        <table class="detail-data-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Material Name</th>
+                                    <th>HSN Code</th>
+                                    <th class="text-right">Quantity</th>
+                                    <th class="text-right">Unit Price</th>
+                                    <th class="text-right">Net Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (item of inv.items; track $index; let i = $index) {
+                                <tr>
+                                    <td>{{ i + 1 }}</td>
+                                    <td class="font-medium">{{ item.material_name }}</td>
+                                    <td><span class="hsn-pill">{{ item.hsn_code }}</span></td>
+                                    <td class="text-right">{{ item.quantity }}</td>
+                                    <td class="text-right font-mono">₹ {{ item.unit_price | number:'1.2-2' }}</td>
+                                    <td class="text-right font-mono font-bold">₹ {{ (item.net_amount || (item.quantity *
+                                        (item.unit_price || 0))) | number:'1.2-2' }}</td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+
+                    <!-- Remarks -->
+                    @if (inv.remark) {
+                    <div class="vcard-remark">
+                        <i class="pi pi-comment" aria-hidden="true"></i>
+                        <div class="remark-content">
+                            <span class="remark-label">Remark</span>
+                            <p>{{ inv.remark }}</p>
+                        </div>
+                    </div>
+                    }
+
+                    <!-- Attachments -->
+                    @if (inv.attachments && inv.attachments.length > 0) {
+                    <div class="vcard-attachments">
+                        <div class="vcard-attachments-label">
+                            <i class="pi pi-paperclip" aria-hidden="true"></i>
+                            <span>Attachments ({{ inv.attachments.length }})</span>
+                        </div>
+                        <div class="qe-attachments">
+                            @for (att of inv.attachments; track att.id) {
+                            <div class="qe-attachment-chip">
+                                <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                                <span class="att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                @if (att.file_size) {
+                                <span class="att-size">({{ formatFileSize(att.file_size) }})</span>
+                                }
+                                <button type="button" class="att-download-btn" (click)="downloadAttachment(att)"
+                                    [disabled]="downloadingAttachmentId() === att.id" pTooltip="Download attachment"
+                                    tooltipPosition="top">
+                                    @if (downloadingAttachmentId() === att.id) {
+                                    <i class="pi pi-spin pi-spinner"></i>
+                                    } @else {
+                                    <i class="pi pi-download"></i>
+                                    }
+                                </button>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+                </article>
+                }
+            </div>
+            }
+            }
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- TAB 2: PACKING LIST                                            -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            @if (activeTab() === 'packing-list') {
+            @if (packingLists().length === 0) {
+            <div class="version-sheet-card empty-card">
+                <div class="center-state empty-cta">
+                    <span class="empty-icon" aria-hidden="true">
+                        <i class="pi pi-box"></i>
+                    </span>
+                    <h3>No Customer Packing Lists recorded yet</h3>
+                    <p>Create detailed packing lists with package boxes, condition, net & gross weights.</p>
+                    <button pButton type="button" icon="pi pi-plus" label="Create First Packing List"
+                        class="create-cost-sheet-btn" (click)="openCreatePackingListDialog()"></button>
+                </div>
+            </div>
+            } @else {
+            <div class="version-cards-stream">
+                @for (pl of packingLists(); track pl.id; let idx = $index) {
+                <article class="version-sheet-card">
+                    <header class="vcard-header">
+                        <div class="vcard-header-left">
+                            <span class="vcard-tag">PACKING LIST #{{ pl.packing_list_no }}</span>
+                            <span class="vcard-title">Packing List — {{ pl.packing_list_date | date:'dd MMM yyyy'
+                                }}</span>
+                            <span class="vcard-badge vcard-badge--primary">
+                                <i class="pi pi-box" aria-hidden="true"></i> {{ pl.total_no_of_packs }} Pack(s)
+                            </span>
+                        </div>
+                        <div class="vcard-header-actions">
+                            <button pButton type="button" icon="pi pi-pencil" label="Edit"
+                                class="p-button-outlined p-button-sm edit-version-btn"
+                                (click)="openEditPackingListDialog(pl)"></button>
+                            <button pButton type="button" icon="pi pi-trash"
+                                class="p-button-outlined p-button-danger p-button-sm delete-version-btn"
+                                (click)="deletePackingList(pl)" pTooltip="Delete Packing List"
+                                tooltipPosition="top"></button>
+                        </div>
+                    </header>
+
+                    <!-- Parameters Grid -->
+                    <div class="vcard-params-grid">
+                        <div class="param-chip">
+                            <span class="param-label">Date:</span>
+                            <span class="param-value">{{ pl.packing_list_date | date:'mediumDate' }}</span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">Total Packs:</span>
+                            <span class="param-value font-bold">{{ pl.total_no_of_packs }}</span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">Packing Condition:</span>
+                            <span class="param-value">{{ pl.packing_condition || 'Standard Packaging' }}</span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">Net Weight:</span>
+                            <span class="param-value font-mono">{{ pl.net_weight || '—' }}</span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">Gross Weight:</span>
+                            <span class="param-value font-mono">{{ pl.gross_weight || '—' }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Material Items Table -->
+                    @if (pl.items && pl.items.length > 0) {
+                    <div class="vcard-table-wrap">
+                        <table class="detail-data-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Package / Box</th>
+                                    <th>Material Name</th>
+                                    <th>HSN Code</th>
+                                    <th class="text-right">Quantity</th>
+                                    <th class="text-right">Weight</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (item of pl.items; track $index; let i = $index) {
+                                <tr>
+                                    <td>{{ i + 1 }}</td>
+                                    <td><span class="box-pill">{{ item.package_no || 'Box #' + (i + 1) }}</span></td>
+                                    <td class="font-medium">{{ item.material_name }}</td>
+                                    <td><span class="hsn-pill">{{ item.hsn_code }}</span></td>
+                                    <td class="text-right">{{ item.quantity }}</td>
+                                    <td class="text-right font-mono">{{ item.weight || '—' }}</td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+
+                    <!-- Remarks -->
+                    @if (pl.remark) {
+                    <div class="vcard-remark">
+                        <i class="pi pi-comment" aria-hidden="true"></i>
+                        <div class="remark-content">
+                            <span class="remark-label">Remark</span>
+                            <p>{{ pl.remark }}</p>
+                        </div>
+                    </div>
+                    }
+
+                    <!-- Attachments -->
+                    @if (pl.attachments && pl.attachments.length > 0) {
+                    <div class="vcard-attachments">
+                        <div class="vcard-attachments-label">
+                            <i class="pi pi-paperclip" aria-hidden="true"></i>
+                            <span>Attachments ({{ pl.attachments.length }})</span>
+                        </div>
+                        <div class="qe-attachments">
+                            @for (att of pl.attachments; track att.id) {
+                            <div class="qe-attachment-chip">
+                                <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                                <span class="att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                @if (att.file_size) {
+                                <span class="att-size">({{ formatFileSize(att.file_size) }})</span>
+                                }
+                                <button type="button" class="att-download-btn" (click)="downloadAttachment(att)"
+                                    [disabled]="downloadingAttachmentId() === att.id" pTooltip="Download attachment"
+                                    tooltipPosition="top">
+                                    @if (downloadingAttachmentId() === att.id) {
+                                    <i class="pi pi-spin pi-spinner"></i>
+                                    } @else {
+                                    <i class="pi pi-download"></i>
+                                    }
+                                </button>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+                </article>
+                }
+            </div>
+            }
+            }
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- TAB 3: DELIVERY CHALLAN                                        -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            @if (activeTab() === 'delivery-challan') {
+            @if (deliveryChallans().length === 0) {
+            <div class="version-sheet-card empty-card">
+                <div class="center-state empty-cta">
+                    <span class="empty-icon" aria-hidden="true">
+                        <i class="pi pi-send"></i>
+                    </span>
+                    <h3>No Delivery Challans recorded yet</h3>
+                    <p>Create customer delivery challans for official dispatch verification and customer receipt.</p>
+                    <button pButton type="button" icon="pi pi-plus" label="Create First Delivery Challan"
+                        class="create-cost-sheet-btn" (click)="openCreateChallanDialog()"></button>
+                </div>
+            </div>
+            } @else {
+            <div class="version-cards-stream">
+                @for (dc of deliveryChallans(); track dc.id; let idx = $index) {
+                <article class="version-sheet-card">
+                    <header class="vcard-header">
+                        <div class="vcard-header-left">
+                            <span class="vcard-tag">CHALLAN #{{ dc.delivery_challan_no }}</span>
+                            <span class="vcard-title">Delivery Challan — {{ dc.delivery_challan_date | date:'dd MMM
+                                yyyy' }}</span>
+                            <span class="vcard-badge vcard-badge--success">
+                                <i class="pi pi-check" aria-hidden="true"></i> Dispatched
+                            </span>
+                        </div>
+                        <div class="vcard-header-actions">
+                            <button pButton type="button" icon="pi pi-pencil" label="Edit"
+                                class="p-button-outlined p-button-sm edit-version-btn"
+                                (click)="openEditChallanDialog(dc)"></button>
+                            <button pButton type="button" icon="pi pi-trash"
+                                class="p-button-outlined p-button-danger p-button-sm delete-version-btn"
+                                (click)="deleteChallan(dc)" pTooltip="Delete Delivery Challan"
+                                tooltipPosition="top"></button>
+                        </div>
+                    </header>
+
+                    <!-- Parameters Grid -->
+                    <div class="vcard-params-grid">
+                        <div class="param-chip">
+                            <span class="param-label">Challan Date:</span>
+                            <span class="param-value">{{ dc.delivery_challan_date | date:'mediumDate' }}</span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">Total Items:</span>
+                            <span class="param-value font-bold">{{ dc.items.length || 0 }} Items</span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">Recipient:</span>
+                            <span class="param-value">{{ project()?.customer_name || 'Customer' }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Material Items Table -->
+                    @if (dc.items && dc.items.length > 0) {
+                    <div class="vcard-table-wrap">
+                        <table class="detail-data-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Material Name</th>
+                                    <th>HSN Code</th>
+                                    <th class="text-right">Dispatched Quantity</th>
+                                    <th class="text-right">Unit Price</th>
+                                    <th class="text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (item of dc.items; track $index; let i = $index) {
+                                <tr>
+                                    <td>{{ i + 1 }}</td>
+                                    <td class="font-medium">{{ item.material_name }}</td>
+                                    <td><span class="hsn-pill">{{ item.hsn_code }}</span></td>
+                                    <td class="text-right font-bold">{{ item.quantity }}</td>
+                                    <td class="text-right font-mono">₹ {{ item.unit_price | number:'1.2-2' }}</td>
+                                    <td class="text-right font-mono font-bold">₹ {{ (item.net_amount || (item.quantity *
+                                        (item.unit_price || 0))) | number:'1.2-2' }}</td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+
+                    <!-- Remarks -->
+                    @if (dc.remark) {
+                    <div class="vcard-remark">
+                        <i class="pi pi-comment" aria-hidden="true"></i>
+                        <div class="remark-content">
+                            <span class="remark-label">Remark</span>
+                            <p>{{ dc.remark }}</p>
+                        </div>
+                    </div>
+                    }
+
+                    <!-- Attachments -->
+                    @if (dc.attachments && dc.attachments.length > 0) {
+                    <div class="vcard-attachments">
+                        <div class="vcard-attachments-label">
+                            <i class="pi pi-paperclip" aria-hidden="true"></i>
+                            <span>Attachments ({{ dc.attachments.length }})</span>
+                        </div>
+                        <div class="qe-attachments">
+                            @for (att of dc.attachments; track att.id) {
+                            <div class="qe-attachment-chip">
+                                <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                                <span class="att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                @if (att.file_size) {
+                                <span class="att-size">({{ formatFileSize(att.file_size) }})</span>
+                                }
+                                <button type="button" class="att-download-btn" (click)="downloadAttachment(att)"
+                                    [disabled]="downloadingAttachmentId() === att.id" pTooltip="Download attachment"
+                                    tooltipPosition="top">
+                                    @if (downloadingAttachmentId() === att.id) {
+                                    <i class="pi pi-spin pi-spinner"></i>
+                                    } @else {
+                                    <i class="pi pi-download"></i>
+                                    }
+                                </button>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+                </article>
+                }
+            </div>
+            }
+            }
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- TAB 4: WARRANTY CERTIFICATE                                    -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            @if (activeTab() === 'warranty') {
+            @if (warrantyCertificates().length === 0) {
+            <div class="version-sheet-card empty-card">
+                <div class="center-state empty-cta">
+                    <span class="empty-icon" aria-hidden="true">
+                        <i class="pi pi-shield"></i>
+                    </span>
+                    <h3>No Warranty Certificates recorded yet</h3>
+                    <p>Issue standard OEM warranty certificates referencing the Customer PO & Tax Invoice.</p>
+                    <button pButton type="button" icon="pi pi-plus" label="Issue Warranty Certificate"
+                        class="create-cost-sheet-btn" (click)="openCreateWarrantyDialog()"></button>
+                </div>
+            </div>
+            } @else {
+            <div class="version-cards-stream">
+                @for (wc of warrantyCertificates(); track wc.id; let idx = $index) {
+                <article class="version-sheet-card">
+                    <header class="vcard-header">
+                        <div class="vcard-header-left">
+                            <span class="vcard-tag">WARRANTY CERTIFICATE</span>
+                            <span class="vcard-title">Certificate Issued — {{ wc.certificate_date | date:'dd MMM yyyy'
+                                }}</span>
+                            <span class="vcard-badge vcard-badge--success">
+                                <i class="pi pi-verified" aria-hidden="true"></i> Active Guarantee
+                            </span>
+                        </div>
+                        <div class="vcard-header-actions">
+                            <button pButton type="button" icon="pi pi-pencil" label="Edit"
+                                class="p-button-outlined p-button-sm edit-version-btn"
+                                (click)="openEditWarrantyDialog(wc)"></button>
+                            <button pButton type="button" icon="pi pi-trash"
+                                class="p-button-outlined p-button-danger p-button-sm delete-version-btn"
+                                (click)="deleteWarranty(wc)" pTooltip="Delete Warranty Certificate"
+                                tooltipPosition="top"></button>
+                        </div>
+                    </header>
+
+                    <!-- Parameters Grid -->
+                    <div class="vcard-params-grid">
+                        <div class="param-chip param-chip--highlight">
+                            <span class="param-label">Warranty Period:</span>
+                            <span class="param-value font-bold">{{ wc.warranty_period }}</span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">Customer PO No:</span>
+                            <span class="param-value font-mono">{{ wc.po_no }}</span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">PO Date:</span>
+                            <span class="param-value">{{ wc.po_date | date:'mediumDate' }}</span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">Invoice Ref No:</span>
+                            <span class="param-value font-mono">{{ wc.invoice_no }}</span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">Invoice Date:</span>
+                            <span class="param-value">{{ wc.invoice_date | date:'mediumDate' }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Remarks -->
+                    @if (wc.remark) {
+                    <div class="vcard-remark">
+                        <i class="pi pi-comment" aria-hidden="true"></i>
+                        <div class="remark-content">
+                            <span class="remark-label">Remark & Terms</span>
+                            <p>{{ wc.remark }}</p>
+                        </div>
+                    </div>
+                    }
+
+                    <!-- Attachments -->
+                    @if (wc.attachments && wc.attachments.length > 0) {
+                    <div class="vcard-attachments">
+                        <div class="vcard-attachments-label">
+                            <i class="pi pi-paperclip" aria-hidden="true"></i>
+                            <span>Attachments ({{ wc.attachments.length }})</span>
+                        </div>
+                        <div class="qe-attachments">
+                            @for (att of wc.attachments; track att.id) {
+                            <div class="qe-attachment-chip">
+                                <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                                <span class="att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                @if (att.file_size) {
+                                <span class="att-size">({{ formatFileSize(att.file_size) }})</span>
+                                }
+                                <button type="button" class="att-download-btn" (click)="downloadAttachment(att)"
+                                    [disabled]="downloadingAttachmentId() === att.id" pTooltip="Download attachment"
+                                    tooltipPosition="top">
+                                    @if (downloadingAttachmentId() === att.id) {
+                                    <i class="pi pi-spin pi-spinner"></i>
+                                    } @else {
+                                    <i class="pi pi-download"></i>
+                                    }
+                                </button>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+                </article>
+                }
+            </div>
+            }
+            }
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- TAB 5: TRANSPORT DETAILS                                       -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            @if (activeTab() === 'transport') {
+            @if (transportDetails().length === 0) {
+            <div class="version-sheet-card empty-card">
+                <div class="center-state empty-cta">
+                    <span class="empty-icon" aria-hidden="true">
+                        <i class="pi pi-truck"></i>
+                    </span>
+                    <h3>No Transport Consignments recorded yet</h3>
+                    <p>Record road (L.R. No.), train (R.R. No.), or air freight (AWB No.) consignment details.</p>
+                    <button pButton type="button" icon="pi pi-plus" label="Record First Consignment"
+                        class="create-cost-sheet-btn" (click)="openCreateTransportDialog()"></button>
+                </div>
+            </div>
+            } @else {
+            <div class="version-cards-stream">
+                @for (td of transportDetails(); track td.id; let idx = $index) {
+                <article class="version-sheet-card">
+                    <header class="vcard-header">
+                        <div class="vcard-header-left">
+                            <span class="vcard-tag">CONSIGNMENT #{{ td.id }}</span>
+                            <span class="vcard-title">
+                                @if (td.transport_mode === 'road') {
+                                Road Freight — L.R. No. {{ td.lr_no }}
+                                } @else if (td.transport_mode === 'train') {
+                                Railway Freight — R.R. No. {{ td.rr_no }}
+                                } @else {
+                                Air Freight — AWB No. {{ td.awb_no }}
+                                }
+                            </span>
+                            <span class="mode-badge" [class.mode-badge--road]="td.transport_mode === 'road'"
+                                [class.mode-badge--train]="td.transport_mode === 'train'"
+                                [class.mode-badge--air]="td.transport_mode === 'air'">
+                                <i class="pi" [class.pi-car]="td.transport_mode === 'road'"
+                                    [class.pi-truck]="td.transport_mode === 'train'"
+                                    [class.pi-send]="td.transport_mode === 'air'" aria-hidden="true"></i>
+                                By {{ td.transport_mode | uppercase }}
+                            </span>
+                        </div>
+                        <div class="vcard-header-actions">
+                            <button pButton type="button" icon="pi pi-pencil" label="Edit"
+                                class="p-button-outlined p-button-sm edit-version-btn"
+                                (click)="openEditTransportDialog(td)"></button>
+                            <button pButton type="button" icon="pi pi-trash"
+                                class="p-button-outlined p-button-danger p-button-sm delete-version-btn"
+                                (click)="deleteTransport(td)" pTooltip="Delete Transport Record"
+                                tooltipPosition="top"></button>
+                        </div>
+                    </header>
+
+                    <!-- Parameters Grid -->
+                    <div class="vcard-params-grid">
+                        <div class="param-chip">
+                            <span class="param-label">Tracking / Receipt No:</span>
+                            <span class="param-value font-mono font-bold">
+                                {{ td.transport_mode === 'road' ? td.lr_no : (td.transport_mode === 'train' ? td.rr_no :
+                                td.awb_no) }}
+                            </span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">Dispatch Date:</span>
+                            <span class="param-value">{{ td.date | date:'mediumDate' }}</span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">From (Origin):</span>
+                            <span class="param-value">{{ td.from_location }}</span>
+                        </div>
+                        <div class="param-chip">
+                            <span class="param-label">To (Destination):</span>
+                            <span class="param-value">{{ td.to_location }}</span>
+                        </div>
+                        <div class="param-chip param-chip--highlight">
+                            <span class="param-label">Transport Charges:</span>
+                            <span class="param-value font-mono font-bold">₹ {{ (td.transport_charges || 0) |
+                                number:'1.2-2' }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Remarks -->
+                    @if (td.remark) {
+                    <div class="vcard-remark">
+                        <i class="pi pi-comment" aria-hidden="true"></i>
+                        <div class="remark-content">
+                            <span class="remark-label">Remark</span>
+                            <p>{{ td.remark }}</p>
+                        </div>
+                    </div>
+                    }
+
+                    <!-- Attachments -->
+                    @if (td.attachments && td.attachments.length > 0) {
+                    <div class="vcard-attachments">
+                        <div class="vcard-attachments-label">
+                            <i class="pi pi-paperclip" aria-hidden="true"></i>
+                            <span>Attachments ({{ td.attachments.length }})</span>
+                        </div>
+                        <div class="qe-attachments">
+                            @for (att of td.attachments; track att.id) {
+                            <div class="qe-attachment-chip">
+                                <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                                <span class="att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                @if (att.file_size) {
+                                <span class="att-size">({{ formatFileSize(att.file_size) }})</span>
+                                }
+                                <button type="button" class="att-download-btn" (click)="downloadAttachment(att)"
+                                    [disabled]="downloadingAttachmentId() === att.id" pTooltip="Download attachment"
+                                    tooltipPosition="top">
+                                    @if (downloadingAttachmentId() === att.id) {
+                                    <i class="pi pi-spin pi-spinner"></i>
+                                    } @else {
+                                    <i class="pi pi-download"></i>
+                                    }
+                                </button>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+                </article>
+                }
+            </div>
+            }
+            }
+
+            }
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- MODAL 1: TAX INVOICE DIALOG (Global Design Standard)                -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <p-dialog [header]="editingInvoice() ? 'Edit Customer Tax Invoice' : 'New Customer Tax Invoice'"
+        [visible]="invoiceDialogVisible()" (visibleChange)="invoiceDialogVisible.set($event)" [modal]="true"
+        [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '1000px' }"
+        styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
+
+        <form [formGroup]="invoiceForm" (ngSubmit)="onSubmitInvoice()" novalidate>
+            <div class="dlg-body">
+
+                <!-- Section 1: Invoice Identification -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-id-card"></i> 1. Tax Invoice Details
+                    </p>
+                    <div class="dlg-grid">
+                        <div class="field">
+                            <label for="inv-no">Invoice No. <span class="req" aria-hidden="true">*</span></label>
+                            <input id="inv-no" pInputText formControlName="invoice_no" placeholder="e.g. INV-2026-001"
+                                [class.ng-invalid]="isFieldInvalid(invoiceForm, 'invoice_no')" />
+                            @if (isFieldInvalid(invoiceForm, 'invoice_no')) {
+                            <p class="field-error">{{ getFieldError(invoiceForm, 'invoice_no') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="inv-date">Invoice Date <span class="req" aria-hidden="true">*</span></label>
+                            <p-datepicker inputId="inv-date" formControlName="invoice_date" dateFormat="yy-mm-dd"
+                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                                [invalid]="isFieldInvalid(invoiceForm, 'invoice_date')" />
+                            @if (isFieldInvalid(invoiceForm, 'invoice_date')) {
+                            <p class="field-error">{{ getFieldError(invoiceForm, 'invoice_date') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="inv-gst-rate">GST Rate (%) <span class="req" aria-hidden="true">*</span></label>
+                            <input id="inv-gst-rate" pInputText type="number" formControlName="gst_rate"
+                                placeholder="e.g. 18" [class.ng-invalid]="isFieldInvalid(invoiceForm, 'gst_rate')" />
+                            @if (isFieldInvalid(invoiceForm, 'gst_rate')) {
+                            <p class="field-error">{{ getFieldError(invoiceForm, 'gst_rate') }}</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Line Items -->
+                <div class="dlg-section">
+                    <div class="dlg-section-header">
+                        <p class="dlg-section-label">
+                            <i class="pi pi-box"></i> 2. Invoiced Material Line Items
+                            @if (invoiceItemsList().length > 0) {
+                            <span class="attach-count">({{ invoiceItemsList().length }} {{ invoiceItemsList().length ===
+                                1 ? 'item' : 'items' }})</span>
+                            }
+                        </p>
+                        @if (invoiceSubtotal() > 0) {
+                        <div class="header-totals-group" style="display: inline-flex; align-items: center; gap: 8px;">
+                            <span class="vsc-cost-pill"
+                                style="background: var(--color-surface, #fff); border: 1px solid var(--color-border, #e2e8f0); color: #475569;">
+                                Net (Excl. GST): ₹&nbsp;{{ invoiceSubtotal() | number:'1.2-2' }}
+                            </span>
+                            <span class="vsc-cost-pill">
+                                <i class="pi pi-indian-rupee" aria-hidden="true"></i>
+                                Total (Incl. GST): ₹&nbsp;{{ (invoiceForm.get('net_total')?.value || invoiceSubtotal())
+                                | number:'1.2-2' }}
+                            </span>
+                        </div>
+                        }
+                    </div>
+
+                    <!-- Fast Inline Item Entry Row -->
+                    <div class="quick-add-bar" [class.quick-add-bar--editing]="editingInvoiceItemIdx() !== null"
+                        [formGroup]="invoiceRowForm">
+                        <div class="quick-add-grid">
+                            <div class="quick-field quick-field--name" style="flex: 2 1 220px;">
+                                <label for="dlg-inv-mat-name">Material Description <span class="req">*</span></label>
+                                <input #invMatInput id="dlg-inv-mat-name" pInputText formControlName="material_name"
+                                    placeholder="Enter material description"
+                                    [class.ng-invalid]="isRowFieldInvalid(invoiceRowForm, 'material_name')"
+                                    (keydown.enter)="$event.preventDefault(); invHsnInput.focus()" />
+                                @if (isRowFieldInvalid(invoiceRowForm, 'material_name')) {
+                                <p class="field-error">{{ getRowFieldError(invoiceRowForm, 'material_name') }}</p>
+                                }
+                            </div>
+
+                            <div class="quick-field" style="flex: 1 1 120px;">
+                                <label for="dlg-inv-hsn">HSN / SAC</label>
+                                <input #invHsnInput id="dlg-inv-hsn" pInputText formControlName="hsn_code"
+                                    placeholder="e.g. 841899"
+                                    (keydown.enter)="$event.preventDefault(); invQtyInput.focus()" />
+                            </div>
+
+                            <div class="quick-field quick-field--qty" style="flex: 1 1 90px;">
+                                <label for="dlg-inv-qty">Quantity <span class="req">*</span></label>
+                                <input #invQtyInput id="dlg-inv-qty" pInputText formControlName="quantity"
+                                    placeholder="Enter qty"
+                                    [class.ng-invalid]="isRowFieldInvalid(invoiceRowForm, 'quantity')"
+                                    (keydown.enter)="$event.preventDefault(); invPriceInput.focus()" />
+                                @if (isRowFieldInvalid(invoiceRowForm, 'quantity')) {
+                                <p class="field-error">{{ getRowFieldError(invoiceRowForm, 'quantity') }}</p>
+                                }
+                            </div>
+
+                            <div class="quick-field quick-field--price" style="flex: 1 1 120px;">
+                                <label for="dlg-inv-price">Unit Price (₹) <span class="req">*</span></label>
+                                <input #invPriceInput id="dlg-inv-price" pInputText formControlName="unit_price"
+                                    placeholder="Enter unit price"
+                                    [class.ng-invalid]="isRowFieldInvalid(invoiceRowForm, 'unit_price')"
+                                    (keydown.enter)="$event.preventDefault(); saveInvoiceRow(invMatInput)" />
+                                @if (isRowFieldInvalid(invoiceRowForm, 'unit_price')) {
+                                <p class="field-error">{{ getRowFieldError(invoiceRowForm, 'unit_price') }}</p>
+                                }
+                            </div>
+
+                            <div class="quick-add-actions">
+                                <button pButton type="button"
+                                    [icon]="editingInvoiceItemIdx() !== null ? 'pi pi-check' : 'pi pi-plus'"
+                                    [label]="editingInvoiceItemIdx() !== null ? 'Update' : 'Add Item'"
+                                    class="quick-submit-btn" (click)="saveInvoiceRow(invMatInput)"
+                                    [disabled]="invoiceRowForm.invalid"></button>
+                                @if (editingInvoiceItemIdx() !== null) {
+                                <button pButton type="button" icon="pi pi-times"
+                                    class="p-button-text p-button-secondary cancel-edit-btn" pTooltip="Cancel edit"
+                                    (click)="cancelInvoiceRow()"></button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Table -->
+                    @if (invoiceItemsList().length > 0) {
+                    <div class="cost-items-table-container">
+                        <p-table [value]="invoiceItemsList()" [paginator]="invoiceItemsList().length > 5" [rows]="5"
+                            [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
+                            aria-label="Tax invoice materials list">
+                            <ng-template pTemplate="header">
+                                <tr>
+                                    <th scope="col" style="width: 45px; text-align: center;">#</th>
+                                    <th scope="col" style="min-width: 240px;">Material Description</th>
+                                    <th scope="col" style="min-width: 110px;">HSN/SAC</th>
+                                    <th scope="col" style="min-width: 90px; text-align: right;">Quantity</th>
+                                    <th scope="col" style="min-width: 110px; text-align: right;">Unit Price (₹)</th>
+                                    <th scope="col" style="min-width: 120px; text-align: right;">Net Total (₹)</th>
+                                    <th scope="col" style="width: 80px; text-align: right;">Actions</th>
+                                </tr>
+                            </ng-template>
+
+                            <ng-template pTemplate="body" let-item let-i="rowIndex">
+                                <tr>
+                                    <td style="text-align: center; color: #64748b; font-weight: 700;">{{ i + 1 }}</td>
+                                    <td><strong class="item-desc-text">{{ item.material_name }}</strong></td>
+                                    <td><span class="ref-badge">{{ item.hsn_code || '—' }}</span></td>
+                                    <td class="num-cell" style="font-weight: 700;">
+                                        <span class="qty-badge">{{ item.quantity }}</span>
+                                    </td>
+                                    <td style="text-align: right; color: #334155;">
+                                        {{ (item.unit_price | number:'1.2-2') || '—' }}
+                                    </td>
+                                    <td style="text-align: right; font-weight: 700; color: var(--color-heading);">
+                                        {{ calculateInvoiceItemNet(item) ? ('₹ ' + (calculateInvoiceItemNet(item) |
+                                        number:'1.2-2')) : '—' }}
+                                    </td>
+                                    <td style="text-align: right; width: 80px; white-space: nowrap;">
+                                        <div class="actions-cell">
+                                            <button pButton type="button" icon="pi pi-pencil" [text]="true"
+                                                class="p-button-text p-button-sm qe-edit"
+                                                [attr.aria-label]="'Edit ' + item.material_name" pTooltip="Edit"
+                                                tooltipPosition="top"
+                                                (click)="openEditInvoiceRow(i, invMatInput)"></button>
+                                            <button pButton type="button" icon="pi pi-trash" [text]="true"
+                                                class="p-button-text p-button-sm p-button-danger qe-delet   e"
+                                                [attr.aria-label]="'Delete ' + item.material_name" pTooltip="Delete"
+                                                tooltipPosition="top" (click)="deleteInvoiceRow(i)"></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </ng-template>
+
+                            <ng-template pTemplate="footer">
+                                <!-- Subtotal row (Excl. GST) -->
+                                <tr class="table-total-row table-subtotal-row">
+                                    <td colspan="5" class="total-label-cell">
+                                        <div class="total-label-wrapper">
+                                            <span class="total-title">Total Invoiced Net Amount (Excl. GST)</span>
+                                            <span class="total-items-badge">({{ invoiceItemsList().length }} {{
+                                                invoiceItemsList().length === 1 ? 'item' : 'items' }})</span>
+                                        </div>
+                                    </td>
+                                    <td class="total-amount-cell"
+                                        style="min-width: 120px; text-align: right; white-space: nowrap;">
+                                        <span class="total-amount-value" style="font-size: 0.92rem; font-weight: 600;">
+                                            ₹&nbsp;{{ invoiceSubtotal() | number:'1.2-2' }}
+                                        </span>
+                                    </td>
+                                    <td class="total-empty-cell" style="width: 80px;"></td>
+                                </tr>
+
+                                <!-- GST row -->
+                                <tr class="table-total-row table-tax-row">
+                                    <td colspan="5" class="total-label-cell">
+                                        <div class="total-label-wrapper">
+                                            <span class="total-title">GST ({{ invoiceForm.get('gst_rate')?.value || 18
+                                                }}%)</span>
+                                        </div>
+                                    </td>
+                                    <td class="total-amount-cell"
+                                        style="min-width: 120px; text-align: right; white-space: nowrap;">
+                                        <span class="total-amount-value"
+                                            style="font-size: 0.92rem; font-weight: 600; color: #64748b;">
+                                            + ₹&nbsp;{{ (invoiceForm.get('gst_amount')?.value || 0) | number:'1.2-2' }}
+                                        </span>
+                                    </td>
+                                    <td class="total-empty-cell" style="width: 80px;"></td>
+                                </tr>
+
+                                <!-- Round Off row (if present) -->
+                                @if (invoiceForm.get('round_off')?.value) {
+                                <tr class="table-total-row table-tax-row" style="border-top: none;">
+                                    <td colspan="5" class="total-label-cell">
+                                        <div class="total-label-wrapper">
+                                            <span class="total-title">Round Off</span>
+                                        </div>
+                                    </td>
+                                    <td class="total-amount-cell"
+                                        style="min-width: 120px; text-align: right; white-space: nowrap;">
+                                        <span class="total-amount-value"
+                                            style="font-size: 0.92rem; font-weight: 600; color: #64748b;">
+                                            {{ (invoiceForm.get('round_off')?.value || 0) >= 0 ? '+ ' : '' }}₹&nbsp;{{
+                                            invoiceForm.get('round_off')?.value | number:'1.2-2' }}
+                                        </span>
+                                    </td>
+                                    <td class="total-empty-cell" style="width: 80px;"></td>
+                                </tr>
+                                }
+
+                                <!-- Grand Total row (Incl. GST) -->
+                                <tr class="table-total-row table-grand-total-row">
+                                    <td colspan="5" class="total-label-cell">
+                                        <div class="total-label-wrapper">
+                                            <span class="total-icon-badge" aria-hidden="true"><i
+                                                    class="pi pi-calculator"></i></span>
+                                            <span class="total-title"
+                                                style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total
+                                                Invoice Value (Incl. GST)</span>
+                                        </div>
+                                    </td>
+                                    <td class="total-amount-cell"
+                                        style="min-width: 120px; text-align: right; white-space: nowrap;">
+                                        <span class="total-amount-value"
+                                            style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
+                                            ₹&nbsp;{{ (invoiceForm.get('net_total')?.value || invoiceSubtotal()) |
+                                            number:'1.2-2' }}
+                                        </span>
+                                    </td>
+                                    <td class="total-empty-cell" style="width: 80px;"></td>
+                                </tr>
+                            </ng-template>
+                        </p-table>
+                    </div>
+                    } @else {
+                    <div class="empty-items" role="note">
+                        <i class="pi pi-inbox" aria-hidden="true"></i>
+                        <p>No materials added to this tax invoice yet. Use the entry bar above to add items.</p>
+                    </div>
+                    }
+                </div>
+
+                <!-- Section 3: Invoice Attachments -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-paperclip"></i> 3. Invoice Attachments
+                        @if (selectedFiles().length > 0) {
+                        <span class="attach-count">({{ selectedFiles().length }} new file{{ selectedFiles().length === 1
+                            ? '' : 's' }} selected)</span>
+                        }
+                    </p>
+
+                    <!-- Existing Files -->
+                    @if (existingAttachments().length > 0) {
+                    <div class="existing-att-block">
+                        <p class="existing-att-title"><i class="pi pi-paperclip" aria-hidden="true"></i> Current
+                            Attachments ({{ existingAttachments().length }}):</p>
+                        <div class="file-list">
+                            @for (att of existingAttachments(); track att.id) {
+                            <div class="file-chip existing-file-chip">
+                                <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                                <span class="file-chip-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                @if (att.file_size) {
+                                <span class="file-chip-size">({{ formatFileSize(att.file_size) }})</span>
+                                }
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+
+                    <!-- Uploaded new files list -->
+                    @if (selectedFiles().length > 0) {
+                    <div class="file-list">
+                        @for (f of selectedFiles(); track $index; let idx = $index) {
+                        <div class="file-chip">
+                            <i class="pi pi-paperclip" aria-hidden="true"></i>
+                            <span class="file-chip-name" [title]="f.name">{{ f.name }}</span>
+                            <span class="file-chip-size">({{ formatFileSize(f.size) }})</span>
+                            <button type="button" class="remove-file" (click)="removeFile(idx)"
+                                [attr.aria-label]="'Remove ' + f.name">
+                                <i class="pi pi-times" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        }
+                    </div>
+                    }
+
+                    <!-- Drop zone -->
+                    <div class="file-drop-zone"
+                        [class.file-drop-zone--compact]="selectedFiles().length > 0 || existingAttachments().length > 0"
+                        (click)="invFileInput.click()" (keydown.enter)="invFileInput.click()" tabindex="0" role="button"
+                        aria-label="Upload invoice documents">
+                        <i class="pi pi-upload" aria-hidden="true"></i>
+                        <span>{{ (selectedFiles().length || existingAttachments().length) ? 'Add more files' : 'Click to
+                            upload Tax Invoice documents or drag & drop here' }}</span>
+                        @if (!selectedFiles().length && !existingAttachments().length) {
+                        <span class="file-hint">PDF, DOCX, XLSX, PNG, JPG (max 25MB each)</span>
+                        }
+                    </div>
+                    <input #invFileInput id="dlg-inv-attachment-input" type="file" multiple style="display: none;"
+                        (change)="onFileSelected($event)" />
+                </div>
+
+                <!-- Section 4: Remark -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-comment"></i> 4. Remark
+                    </p>
+                    <div class="field">
+                        <label for="inv-remark">Remark / Payment Instructions</label>
+                        <textarea id="inv-remark" pTextarea formControlName="remark" rows="2"
+                            placeholder="Enter bank instructions, payment notes or billing remarks…"></textarea>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Standard Global Dialog Footer -->
+            <div class="dlg-footer">
+                <button pButton type="button" label="Cancel" class="p-button-outlined p-button-secondary cancel-btn"
+                    (click)="invoiceDialogVisible.set(false)"></button>
+                <button pButton type="submit" [label]="editingInvoice() ? 'Update Invoice' : 'Save Invoice'"
+                    icon="pi pi-check" class="create-cost-sheet-btn save-btn" [loading]="saving()"></button>
+            </div>
+        </form>
+    </p-dialog>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- MODAL 2: PACKING LIST DIALOG (Global Design Standard)               -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <p-dialog [header]="editingPackingList() ? 'Edit Packing List' : 'New Packing List'"
+        [visible]="packingListDialogVisible()" (visibleChange)="packingListDialogVisible.set($event)" [modal]="true"
+        [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '1000px' }"
+        styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
+
+        <form [formGroup]="packingListForm" (ngSubmit)="onSubmitPackingList()" novalidate>
+            <div class="dlg-body">
+
+                <!-- Section 1: Packing Identification -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-box"></i> 1. Packing Identification & Metrics
+                    </p>
+                    <div class="dlg-grid">
+                        <div class="field">
+                            <label for="pl-no">Packing List No. <span class="req" aria-hidden="true">*</span></label>
+                            <input id="pl-no" pInputText formControlName="packing_list_no"
+                                placeholder="e.g. PL-2026-001"
+                                [class.ng-invalid]="isFieldInvalid(packingListForm, 'packing_list_no')" />
+                            @if (isFieldInvalid(packingListForm, 'packing_list_no')) {
+                            <p class="field-error">{{ getFieldError(packingListForm, 'packing_list_no') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="pl-date">Packing List Date <span class="req" aria-hidden="true">*</span></label>
+                            <p-datepicker inputId="pl-date" formControlName="packing_list_date" dateFormat="yy-mm-dd"
+                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                                [invalid]="isFieldInvalid(packingListForm, 'packing_list_date')" />
+                            @if (isFieldInvalid(packingListForm, 'packing_list_date')) {
+                            <p class="field-error">{{ getFieldError(packingListForm, 'packing_list_date') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="pl-packs">Total No. of Packs <span class="req"
+                                    aria-hidden="true">*</span></label>
+                            <input id="pl-packs" pInputText type="number" formControlName="total_no_of_packs"
+                                placeholder="1"
+                                [class.ng-invalid]="isFieldInvalid(packingListForm, 'total_no_of_packs')" />
+                            @if (isFieldInvalid(packingListForm, 'total_no_of_packs')) {
+                            <p class="field-error">{{ getFieldError(packingListForm, 'total_no_of_packs') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="pl-condition">Packing Condition <span class="req"
+                                    aria-hidden="true">*</span></label>
+                            <input id="pl-condition" pInputText formControlName="packing_condition"
+                                placeholder="e.g. Export Standard Wooden Boxes"
+                                [class.ng-invalid]="isFieldInvalid(packingListForm, 'packing_condition')" />
+                            @if (isFieldInvalid(packingListForm, 'packing_condition')) {
+                            <p class="field-error">{{ getFieldError(packingListForm, 'packing_condition') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="pl-net-wt">Net Weight </label>
+                            <input id="pl-net-wt" pInputText formControlName="net_weight"
+                                placeholder="e.g. 1450.50 KGS" />
+                        </div>
+
+                        <div class="field">
+                            <label for="pl-gross-wt">Gross Weight </label>
+                            <input id="pl-gross-wt" pInputText formControlName="gross_weight"
+                                placeholder="e.g. 1580.00 KGS" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Items Breakdown -->
+                <div class="dlg-section">
+                    <div class="dlg-section-header">
+                        <p class="dlg-section-label">
+                            <i class="pi pi-box"></i> 2. Packed Materials Breakdown
+                            @if (packingItemsList().length > 0) {
+                            <span class="attach-count">({{ packingItemsList().length }} {{ packingItemsList().length ===
+                                1 ? 'item' : 'items' }})</span>
+                            }
+                        </p>
+                        @if (packingTotalQty() > 0) {
+                        <div class="header-totals-group" style="display: inline-flex; align-items: center; gap: 8px;">
+                            <span class="vsc-cost-pill">
+                                <i class="pi pi-box" aria-hidden="true"></i>
+                                Total Packed Qty: {{ packingTotalQty() }}
+                            </span>
+                        </div>
+                        }
+                    </div>
+
+                    <!-- Fast Inline Item Entry Row -->
+                    <div class="quick-add-bar" [class.quick-add-bar--editing]="editingPackingItemIdx() !== null"
+                        [formGroup]="packingRowForm">
+                        <div class="quick-add-grid">
+                            <div class="quick-field" style="flex: 1 1 120px;">
+                                <label for="dlg-pl-pkg-no">Package / Box No.</label>
+                                <input #plPkgInput id="dlg-pl-pkg-no" pInputText formControlName="package_no"
+                                    placeholder="e.g. Box #1"
+                                    (keydown.enter)="$event.preventDefault(); plMatInput.focus()" />
+                            </div>
+
+                            <div class="quick-field quick-field--name" style="flex: 2 1 200px;">
+                                <label for="dlg-pl-mat-name">Material Description <span class="req">*</span></label>
+                                <input #plMatInput id="dlg-pl-mat-name" pInputText formControlName="material_name"
+                                    placeholder="Enter material description"
+                                    [class.ng-invalid]="isRowFieldInvalid(packingRowForm, 'material_name')"
+                                    (keydown.enter)="$event.preventDefault(); plHsnInput.focus()" />
+                                @if (isRowFieldInvalid(packingRowForm, 'material_name')) {
+                                <p class="field-error">{{ getRowFieldError(packingRowForm, 'material_name') }}</p>
+                                }
+                            </div>
+
+                            <div class="quick-field" style="flex: 1 1 110px;">
+                                <label for="dlg-pl-hsn">HSN / SAC</label>
+                                <input #plHsnInput id="dlg-pl-hsn" pInputText formControlName="hsn_code"
+                                    placeholder="e.g. 841899"
+                                    (keydown.enter)="$event.preventDefault(); plQtyInput.focus()" />
+                            </div>
+
+                            <div class="quick-field quick-field--qty" style="flex: 1 1 90px;">
+                                <label for="dlg-pl-qty">Quantity <span class="req">*</span></label>
+                                <input #plQtyInput id="dlg-pl-qty" pInputText formControlName="quantity"
+                                    placeholder="Enter qty"
+                                    [class.ng-invalid]="isRowFieldInvalid(packingRowForm, 'quantity')"
+                                    (keydown.enter)="$event.preventDefault(); plWtInput.focus()" />
+                                @if (isRowFieldInvalid(packingRowForm, 'quantity')) {
+                                <p class="field-error">{{ getRowFieldError(packingRowForm, 'quantity') }}</p>
+                                }
+                            </div>
+
+                            <div class="quick-field" style="flex: 1 1 100px;">
+                                <label for="dlg-pl-wt">Weight (Kg)</label>
+                                <input #plWtInput id="dlg-pl-wt" pInputText formControlName="weight"
+                                    placeholder="e.g. 25.0"
+                                    (keydown.enter)="$event.preventDefault(); savePackingRow(plPkgInput)" />
+                            </div>
+
+                            <div class="quick-add-actions">
+                                <button pButton type="button"
+                                    [icon]="editingPackingItemIdx() !== null ? 'pi pi-check' : 'pi pi-plus'"
+                                    [label]="editingPackingItemIdx() !== null ? 'Update' : 'Add Item'"
+                                    class="quick-submit-btn" (click)="savePackingRow(plPkgInput)"
+                                    [disabled]="packingRowForm.invalid"></button>
+                                @if (editingPackingItemIdx() !== null) {
+                                <button pButton type="button" icon="pi pi-times"
+                                    class="p-button-text p-button-secondary cancel-edit-btn" pTooltip="Cancel edit"
+                                    (click)="cancelPackingRow()"></button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Table -->
+                    @if (packingItemsList().length > 0) {
+                    <div class="cost-items-table-container">
+                        <p-table [value]="packingItemsList()" [paginator]="packingItemsList().length > 5" [rows]="5"
+                            [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
+                            aria-label="Packing list items table">
+                            <ng-template pTemplate="header">
+                                <tr>
+                                    <th scope="col" style="width: 45px; text-align: center;">#</th>
+                                    <th scope="col" style="min-width: 120px;">Package / Box No.</th>
+                                    <th scope="col" style="min-width: 240px;">Material Description</th>
+                                    <th scope="col" style="min-width: 110px;">HSN/SAC</th>
+                                    <th scope="col" style="min-width: 90px; text-align: right;">Quantity</th>
+                                    <th scope="col" style="min-width: 100px; text-align: right;">Weight (Kg)</th>
+                                    <th scope="col" style="width: 80px; text-align: right;">Actions</th>
+                                </tr>
+                            </ng-template>
+
+                            <ng-template pTemplate="body" let-item let-i="rowIndex">
+                                <tr>
+                                    <td style="text-align: center; color: #64748b; font-weight: 700;">{{ i + 1 }}</td>
+                                    <td><span class="ref-badge" style="font-weight: 700;">{{ item.package_no || ('Box #'
+                                            + (i + 1)) }}</span></td>
+                                    <td><strong class="item-desc-text">{{ item.material_name }}</strong></td>
+                                    <td><span class="ref-badge">{{ item.hsn_code || '—' }}</span></td>
+                                    <td class="num-cell" style="font-weight: 700;">
+                                        <span class="qty-badge">{{ item.quantity }}</span>
+                                    </td>
+                                    <td style="text-align: right; color: #334155; font-weight: 600;">
+                                        {{ item.weight ? (item.weight | number:'1.1-2') : '—' }}
+                                    </td>
+                                    <td style="text-align: right; width: 80px; white-space: nowrap;">
+                                        <div class="actions-cell">
+                                            <button pButton type="button" icon="pi pi-pencil" [text]="true"
+                                                class="p-button-text p-button-sm qe-edit"
+                                                [attr.aria-label]="'Edit ' + item.material_name" pTooltip="Edit"
+                                                tooltipPosition="top"
+                                                (click)="openEditPackingRow(i, plPkgInput)"></button>
+                                            <button pButton type="button" icon="pi pi-trash" [text]="true"
+                                                class="p-button-text p-button-sm p-button-danger qe-delete"
+                                                [attr.aria-label]="'Delete ' + item.material_name" pTooltip="Delete"
+                                                tooltipPosition="top" (click)="deletePackingRow(i)"></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </ng-template>
+
+                            <ng-template pTemplate="footer">
+                                <tr class="table-total-row table-grand-total-row">
+                                    <td colspan="4" class="total-label-cell">
+                                        <div class="total-label-wrapper">
+                                            <span class="total-icon-badge" aria-hidden="true"><i
+                                                    class="pi pi-box"></i></span>
+                                            <span class="total-title"
+                                                style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total
+                                                Packed Items</span>
+                                            <span class="total-items-badge">({{ packingItemsList().length }} {{
+                                                packingItemsList().length === 1 ? 'item' : 'items' }})</span>
+                                        </div>
+                                    </td>
+                                    <td class="total-amount-cell"
+                                        style="min-width: 90px; text-align: right; white-space: nowrap;">
+                                        <span class="total-amount-value"
+                                            style="font-size: 1rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
+                                            {{ packingTotalQty() }}
+                                        </span>
+                                    </td>
+                                    <td class="total-amount-cell"
+                                        style="min-width: 100px; text-align: right; white-space: nowrap;">
+                                        <span class="total-amount-value"
+                                            style="font-size: 0.95rem; font-weight: 700; color: var(--color-heading, #241b18);">
+                                            {{ packingTotalWeight() ? (packingTotalWeight() | number:'1.1-2') + ' Kg' :
+                                            '—' }}
+                                        </span>
+                                    </td>
+                                    <td class="total-empty-cell" style="width: 80px;"></td>
+                                </tr>
+                            </ng-template>
+                        </p-table>
+                    </div>
+                    } @else {
+                    <div class="empty-items" role="note">
+                        <i class="pi pi-inbox" aria-hidden="true"></i>
+                        <p>No materials added to this packing list yet. Use the entry bar above to add items.</p>
+                    </div>
+                    }
+                </div>
+
+                <!-- Section 3: Packing List Attachments -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-paperclip"></i> 3. Packing List Attachments
+                        @if (selectedFiles().length > 0) {
+                        <span class="attach-count">({{ selectedFiles().length }} new file{{ selectedFiles().length === 1
+                            ? '' : 's' }} selected)</span>
+                        }
+                    </p>
+
+                    @if (existingAttachments().length > 0) {
+                    <div class="existing-att-block">
+                        <p class="existing-att-title"><i class="pi pi-paperclip" aria-hidden="true"></i> Current
+                            Attachments ({{ existingAttachments().length }}):</p>
+                        <div class="file-list">
+                            @for (att of existingAttachments(); track att.id) {
+                            <div class="file-chip existing-file-chip">
+                                <i [class]="getFileIcon(att.content_type)"></i>
+                                <span class="file-chip-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                @if (att.file_size) {
+                                <span class="file-chip-size">({{ formatFileSize(att.file_size) }})</span>
+                                }
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+
+                    @if (selectedFiles().length > 0) {
+                    <div class="file-list">
+                        @for (f of selectedFiles(); track $index; let idx = $index) {
+                        <div class="file-chip">
+                            <i class="pi pi-paperclip" aria-hidden="true"></i>
+                            <span class="file-chip-name" [title]="f.name">{{ f.name }}</span>
+                            <span class="file-size">({{ formatFileSize(f.size) }})</span>
+                            <button type="button" class="remove-file" (click)="removeFile(idx)"
+                                [attr.aria-label]="'Remove ' + f.name">
+                                <i class="pi pi-times" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        }
+                    </div>
+                    }
+
+                    <div class="file-drop-zone"
+                        [class.file-drop-zone--compact]="selectedFiles().length > 0 || existingAttachments().length > 0"
+                        (click)="plFileInput.click()" (keydown.enter)="plFileInput.click()" tabindex="0" role="button"
+                        aria-label="Upload packing list documents">
+                        <i class="pi pi-upload" aria-hidden="true"></i>
+                        <span>{{ (selectedFiles().length || existingAttachments().length) ? 'Add more files' : 'Click to
+                            upload Packing List documents or drag & drop here' }}</span>
+                        @if (!selectedFiles().length && !existingAttachments().length) {
+                        <span class="file-hint">Attach signed packing lists, box photos, or dimension sheets</span>
+                        }
+                    </div>
+                    <input #plFileInput id="dlg-pl-attachment-input" type="file" multiple style="display: none;"
+                        (change)="onFileSelected($event)" />
+                </div>
+
+                <!-- Section 4: Remark -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-comment"></i> 4. Remark
+                    </p>
+                    <div class="field">
+                        <label for="pl-remark">Remark / Handling Instructions</label>
+                        <textarea id="pl-remark" pTextarea formControlName="remark" rows="2"
+                            placeholder="Fragile handling, crate dimensions or dispatch notes…"></textarea>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="dlg-footer">
+                <button pButton type="button" label="Cancel" class="p-button-outlined p-button-secondary cancel-btn"
+                    (click)="packingListDialogVisible.set(false)"></button>
+                <button pButton type="submit"
+                    [label]="editingPackingList() ? 'Update Packing List' : 'Save Packing List'" icon="pi pi-check"
+                    class="create-cost-sheet-btn save-btn" [loading]="saving()"></button>
+            </div>
+        </form>
+    </p-dialog>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- MODAL 3: DELIVERY CHALLAN DIALOG (Global Design Standard)           -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <p-dialog [header]="editingChallan() ? 'Edit Delivery Challan' : 'New Delivery Challan'"
+        [visible]="challanDialogVisible()" (visibleChange)="challanDialogVisible.set($event)" [modal]="true"
+        [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '1000px' }"
+        styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
+
+        <form [formGroup]="challanForm" (ngSubmit)="onSubmitChallan()" novalidate>
+            <div class="dlg-body">
+
+                <!-- Section 1: Challan Details -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-send"></i> 1. Delivery Challan Details
+                    </p>
+                    <div class="dlg-grid">
+                        <div class="field">
+                            <label for="dc-no">Delivery Challan No. <span class="req"
+                                    aria-hidden="true">*</span></label>
+                            <input id="dc-no" pInputText formControlName="delivery_challan_no"
+                                placeholder="e.g. DC-2026-001"
+                                [class.ng-invalid]="isFieldInvalid(challanForm, 'delivery_challan_no')" />
+                            @if (isFieldInvalid(challanForm, 'delivery_challan_no')) {
+                            <p class="field-error">{{ getFieldError(challanForm, 'delivery_challan_no') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="dc-date">Delivery Challan Date <span class="req"
+                                    aria-hidden="true">*</span></label>
+                            <p-datepicker inputId="dc-date" formControlName="delivery_challan_date"
+                                dateFormat="yy-mm-dd" [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                                [invalid]="isFieldInvalid(challanForm, 'delivery_challan_date')" />
+                            @if (isFieldInvalid(challanForm, 'delivery_challan_date')) {
+                            <p class="field-error">{{ getFieldError(challanForm, 'delivery_challan_date') }}</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Items -->
+                <div class="dlg-section">
+                    <div class="dlg-section-header">
+                        <p class="dlg-section-label">
+                            <i class="pi pi-box"></i> 2. Dispatched Materials List
+                            @if (challanItemsList().length > 0) {
+                            <span class="attach-count">({{ challanItemsList().length }} {{ challanItemsList().length ===
+                                1 ? 'item' : 'items' }})</span>
+                            }
+                        </p>
+                        @if (challanTotalNetValue() > 0) {
+                        <div class="header-totals-group" style="display: inline-flex; align-items: center; gap: 8px;">
+                            <span class="vsc-cost-pill">
+                                <i class="pi pi-indian-rupee" aria-hidden="true"></i>
+                                Total Value: ₹&nbsp;{{ challanTotalNetValue() | number:'1.2-2' }}
+                            </span>
+                        </div>
+                        }
+                    </div>
+
+                    <!-- Fast Inline Item Entry Row -->
+                    <div class="quick-add-bar" [class.quick-add-bar--editing]="editingChallanItemIdx() !== null"
+                        [formGroup]="challanRowForm">
+                        <div class="quick-add-grid">
+                            <div class="quick-field quick-field--name" style="flex: 2 1 220px;">
+                                <label for="dlg-dc-mat-name">Material Description <span class="req">*</span></label>
+                                <input #dcMatInput id="dlg-dc-mat-name" pInputText formControlName="material_name"
+                                    placeholder="Enter material description"
+                                    [class.ng-invalid]="isRowFieldInvalid(challanRowForm, 'material_name')"
+                                    (keydown.enter)="$event.preventDefault(); dcHsnInput.focus()" />
+                                @if (isRowFieldInvalid(challanRowForm, 'material_name')) {
+                                <p class="field-error">{{ getRowFieldError(challanRowForm, 'material_name') }}</p>
+                                }
+                            </div>
+
+                            <div class="quick-field" style="flex: 1 1 120px;">
+                                <label for="dlg-dc-hsn">HSN / SAC</label>
+                                <input #dcHsnInput id="dlg-dc-hsn" pInputText formControlName="hsn_code"
+                                    placeholder="e.g. 841899"
+                                    (keydown.enter)="$event.preventDefault(); dcQtyInput.focus()" />
+                            </div>
+
+                            <div class="quick-field quick-field--qty" style="flex: 1 1 90px;">
+                                <label for="dlg-dc-qty">Quantity <span class="req">*</span></label>
+                                <input #dcQtyInput id="dlg-dc-qty" pInputText formControlName="quantity"
+                                    placeholder="Enter qty"
+                                    [class.ng-invalid]="isRowFieldInvalid(challanRowForm, 'quantity')"
+                                    (keydown.enter)="$event.preventDefault(); dcPriceInput.focus()" />
+                                @if (isRowFieldInvalid(challanRowForm, 'quantity')) {
+                                <p class="field-error">{{ getRowFieldError(challanRowForm, 'quantity') }}</p>
+                                }
+                            </div>
+
+                            <div class="quick-field quick-field--price" style="flex: 1 1 120px;">
+                                <label for="dlg-dc-price">Unit Price (₹)</label>
+                                <input #dcPriceInput id="dlg-dc-price" pInputText formControlName="unit_price"
+                                    placeholder="Enter unit price"
+                                    [class.ng-invalid]="isRowFieldInvalid(challanRowForm, 'unit_price')"
+                                    (keydown.enter)="$event.preventDefault(); saveChallanRow(dcMatInput)" />
+                                @if (isRowFieldInvalid(challanRowForm, 'unit_price')) {
+                                <p class="field-error">{{ getRowFieldError(challanRowForm, 'unit_price') }}</p>
+                                }
+                            </div>
+
+                            <div class="quick-add-actions">
+                                <button pButton type="button"
+                                    [icon]="editingChallanItemIdx() !== null ? 'pi pi-check' : 'pi pi-plus'"
+                                    [label]="editingChallanItemIdx() !== null ? 'Update' : 'Add Item'"
+                                    class="quick-submit-btn" (click)="saveChallanRow(dcMatInput)"
+                                    [disabled]="challanRowForm.invalid"></button>
+                                @if (editingChallanItemIdx() !== null) {
+                                <button pButton type="button" icon="pi pi-times"
+                                    class="p-button-text p-button-secondary cancel-edit-btn" pTooltip="Cancel edit"
+                                    (click)="cancelChallanRow()"></button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Table -->
+                    @if (challanItemsList().length > 0) {
+                    <div class="cost-items-table-container">
+                        <p-table [value]="challanItemsList()" [paginator]="challanItemsList().length > 5" [rows]="5"
+                            [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
+                            aria-label="Delivery challan items table">
+                            <ng-template pTemplate="header">
+                                <tr>
+                                    <th scope="col" style="width: 45px; text-align: center;">#</th>
+                                    <th scope="col" style="min-width: 240px;">Material Description</th>
+                                    <th scope="col" style="min-width: 110px;">HSN/SAC</th>
+                                    <th scope="col" style="min-width: 90px; text-align: right;">Quantity</th>
+                                    <th scope="col" style="min-width: 110px; text-align: right;">Unit Price (₹)</th>
+                                    <th scope="col" style="min-width: 120px; text-align: right;">Net Total (₹)</th>
+                                    <th scope="col" style="width: 80px; text-align: right;">Actions</th>
+                                </tr>
+                            </ng-template>
+
+                            <ng-template pTemplate="body" let-item let-i="rowIndex">
+                                <tr>
+                                    <td style="text-align: center; color: #64748b; font-weight: 700;">{{ i + 1 }}</td>
+                                    <td><strong class="item-desc-text">{{ item.material_name }}</strong></td>
+                                    <td><span class="ref-badge">{{ item.hsn_code || '—' }}</span></td>
+                                    <td class="num-cell" style="font-weight: 700;">
+                                        <span class="qty-badge">{{ item.quantity }}</span>
+                                    </td>
+                                    <td style="text-align: right; color: #334155;">
+                                        {{ (item.unit_price | number:'1.2-2') || '—' }}
+                                    </td>
+                                    <td style="text-align: right; font-weight: 700; color: var(--color-heading);">
+                                        {{ calculateChallanItemNet(item) ? ('₹ ' + (calculateChallanItemNet(item) |
+                                        number:'1.2-2')) : '—' }}
+                                    </td>
+                                    <td style="text-align: right; width: 80px; white-space: nowrap;">
+                                        <div class="actions-cell">
+                                            <button pButton type="button" icon="pi pi-pencil" [text]="true"
+                                                class="p-button-text p-button-sm qe-edit"
+                                                [attr.aria-label]="'Edit ' + item.material_name" pTooltip="Edit"
+                                                tooltipPosition="top"
+                                                (click)="openEditChallanRow(i, dcMatInput)"></button>
+                                            <button pButton type="button" icon="pi pi-trash" [text]="true"
+                                                class="p-button-text p-button-sm p-button-danger qe-delete"
+                                                [attr.aria-label]="'Delete ' + item.material_name" pTooltip="Delete"
+                                                tooltipPosition="top" (click)="deleteChallanRow(i)"></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </ng-template>
+
+                            <ng-template pTemplate="footer">
+                                <tr class="table-total-row table-grand-total-row">
+                                    <td colspan="5" class="total-label-cell">
+                                        <div class="total-label-wrapper">
+                                            <span class="total-icon-badge" aria-hidden="true"><i
+                                                    class="pi pi-send"></i></span>
+                                            <span class="total-title"
+                                                style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total
+                                                Challan Value</span>
+                                            <span class="total-items-badge">({{ challanItemsList().length }} {{
+                                                challanItemsList().length === 1 ? 'item' : 'items' }})</span>
+                                        </div>
+                                    </td>
+                                    <td class="total-amount-cell"
+                                        style="min-width: 120px; text-align: right; white-space: nowrap;">
+                                        <span class="total-amount-value"
+                                            style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
+                                            ₹&nbsp;{{ challanTotalNetValue() | number:'1.2-2' }}
+                                        </span>
+                                    </td>
+                                    <td class="total-empty-cell" style="width: 80px;"></td>
+                                </tr>
+                            </ng-template>
+                        </p-table>
+                    </div>
+                    } @else {
+                    <div class="empty-items" role="note">
+                        <i class="pi pi-inbox" aria-hidden="true"></i>
+                        <p>No materials added to this delivery challan yet. Use the entry bar above to add items.</p>
+                    </div>
+                    }
+                </div>
+
+                <!-- Section 3: Delivery Challan Attachments -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-paperclip"></i> 3. Delivery Challan Attachments
+                        @if (selectedFiles().length > 0) {
+                        <span class="attach-count">({{ selectedFiles().length }} new file{{ selectedFiles().length === 1
+                            ? '' : 's' }} selected)</span>
+                        }
+                    </p>
+
+                    @if (existingAttachments().length > 0) {
+                    <div class="existing-att-block">
+                        <p class="existing-att-title"><i class="pi pi-paperclip" aria-hidden="true"></i> Current
+                            Attachments ({{ existingAttachments().length }}):</p>
+                        <div class="file-list">
+                            @for (att of existingAttachments(); track att.id) {
+                            <div class="file-chip existing-file-chip">
+                                <i [class]="getFileIcon(att.content_type)"></i>
+                                <span class="file-chip-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                @if (att.file_size) {
+                                <span class="file-chip-size">({{ formatFileSize(att.file_size) }})</span>
+                                }
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+
+                    @if (selectedFiles().length > 0) {
+                    <div class="file-list">
+                        @for (f of selectedFiles(); track $index; let idx = $index) {
+                        <div class="file-chip">
+                            <i class="pi pi-paperclip" aria-hidden="true"></i>
+                            <span class="file-chip-name" [title]="f.name">{{ f.name }}</span>
+                            <span class="file-size">({{ formatFileSize(f.size) }})</span>
+                            <button type="button" class="remove-file" (click)="removeFile(idx)"
+                                [attr.aria-label]="'Remove ' + f.name">
+                                <i class="pi pi-times" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        }
+                    </div>
+                    }
+
+                    <div class="file-drop-zone"
+                        [class.file-drop-zone--compact]="selectedFiles().length > 0 || existingAttachments().length > 0"
+                        (click)="dcFileInput.click()" (keydown.enter)="dcFileInput.click()" tabindex="0" role="button"
+                        aria-label="Upload delivery challan documents">
+                        <i class="pi pi-upload" aria-hidden="true"></i>
+                        <span>{{ (selectedFiles().length || existingAttachments().length) ? 'Add more files' : 'Click to
+                            upload Delivery Challan documents or drag & drop here' }}</span>
+                        @if (!selectedFiles().length && !existingAttachments().length) {
+                        <span class="file-hint">Attach signed delivery acknowledgement copy or gate pass</span>
+                        }
+                    </div>
+                    <input #dcFileInput id="dlg-dc-attachment-input" type="file" multiple style="display: none;"
+                        (change)="onFileSelected($event)" />
+                </div>
+
+                <!-- Section 4: Remark -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-comment"></i> 4. Remark
+                    </p>
+                    <div class="field">
+                        <label for="dc-remark">Remark / Delivery Terms</label>
+                        <textarea id="dc-remark" pTextarea formControlName="remark" rows="2"
+                            placeholder="Recipient acknowledgement instructions, vehicle remarks…"></textarea>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="dlg-footer">
+                <button pButton type="button" label="Cancel" class="p-button-outlined p-button-secondary cancel-btn"
+                    (click)="challanDialogVisible.set(false)"></button>
+                <button pButton type="submit"
+                    [label]="editingChallan() ? 'Update Delivery Challan' : 'Save Delivery Challan'" icon="pi pi-check"
+                    class="create-cost-sheet-btn save-btn" [loading]="saving()"></button>
+            </div>
+        </form>
+    </p-dialog>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- MODAL 4: WARRANTY CERTIFICATE DIALOG (Global Design Standard)       -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <p-dialog [header]="editingWarranty() ? 'Edit Warranty Certificate' : 'Issue Warranty Certificate'"
+        [visible]="warrantyDialogVisible()" (visibleChange)="warrantyDialogVisible.set($event)" [modal]="true"
+        [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '850px' }"
+        styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
+
+        <form [formGroup]="warrantyForm" (ngSubmit)="onSubmitWarranty()" novalidate>
+            <div class="dlg-body">
+
+                <!-- Section 1: Certificate Specs -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-shield"></i> 1. Certificate Specifications
+                    </p>
+                    <div class="dlg-grid">
+                        <div class="field">
+                            <label for="wc-date">Certificate Date <span class="req" aria-hidden="true">*</span></label>
+                            <p-datepicker inputId="wc-date" formControlName="certificate_date" dateFormat="yy-mm-dd"
+                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                                [invalid]="isFieldInvalid(warrantyForm, 'certificate_date')" />
+                            @if (isFieldInvalid(warrantyForm, 'certificate_date')) {
+                            <p class="field-error">{{ getFieldError(warrantyForm, 'certificate_date') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="wc-period">Warranty Period <span class="req" aria-hidden="true">*</span></label>
+                            <p-select id="wc-period" formControlName="warranty_period" [options]="warrantyPeriodOptions"
+                                optionLabel="label" optionValue="value" placeholder="Select Warranty Period" [fluid]="true"
+                                appendTo="body" [invalid]="isFieldInvalid(warrantyForm, 'warranty_period')" />
+                            @if (isFieldInvalid(warrantyForm, 'warranty_period')) {
+                            <p class="field-error">{{ getFieldError(warrantyForm, 'warranty_period') }}</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Reference PO & Invoice -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-link"></i> 2. Purchase Order & Invoice References
+                    </p>
+                    <div class="dlg-grid">
+                        <div class="field">
+                            <label for="wc-po-no">PO No. <span class="req" aria-hidden="true">*</span></label>
+                            <input id="wc-po-no" pInputText formControlName="po_no" placeholder="Customer PO number"
+                                [class.ng-invalid]="isFieldInvalid(warrantyForm, 'po_no')" />
+                            @if (isFieldInvalid(warrantyForm, 'po_no')) {
+                            <p class="field-error">{{ getFieldError(warrantyForm, 'po_no') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="wc-po-date">PO Date <span class="req" aria-hidden="true">*</span></label>
+                            <p-datepicker inputId="wc-po-date" formControlName="po_date" dateFormat="yy-mm-dd"
+                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                                [invalid]="isFieldInvalid(warrantyForm, 'po_date')" />
+                            @if (isFieldInvalid(warrantyForm, 'po_date')) {
+                            <p class="field-error">{{ getFieldError(warrantyForm, 'po_date') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="wc-inv-no">Invoice No. <span class="req" aria-hidden="true">*</span></label>
+                            <input id="wc-inv-no" pInputText formControlName="invoice_no"
+                                placeholder="Tax Invoice number"
+                                [class.ng-invalid]="isFieldInvalid(warrantyForm, 'invoice_no')" />
+                            @if (isFieldInvalid(warrantyForm, 'invoice_no')) {
+                            <p class="field-error">{{ getFieldError(warrantyForm, 'invoice_no') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="wc-inv-date">Invoice Date <span class="req" aria-hidden="true">*</span></label>
+                            <p-datepicker inputId="wc-inv-date" formControlName="invoice_date" dateFormat="yy-mm-dd"
+                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                                [invalid]="isFieldInvalid(warrantyForm, 'invoice_date')" />
+                            @if (isFieldInvalid(warrantyForm, 'invoice_date')) {
+                            <p class="field-error">{{ getFieldError(warrantyForm, 'invoice_date') }}</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Warranty Certificate Attachments -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-paperclip"></i> 3. Warranty Certificate Attachments
+                        @if (selectedFiles().length > 0) {
+                        <span class="attach-count">({{ selectedFiles().length }} new file{{ selectedFiles().length === 1
+                            ? '' : 's' }} selected)</span>
+                        }
+                    </p>
+
+                    @if (existingAttachments().length > 0) {
+                    <div class="existing-att-block">
+                        <p class="existing-att-title"><i class="pi pi-paperclip" aria-hidden="true"></i> Current
+                            Attachments ({{ existingAttachments().length }}):</p>
+                        <div class="file-list">
+                            @for (att of existingAttachments(); track att.id) {
+                            <div class="file-chip existing-file-chip">
+                                <i [class]="getFileIcon(att.content_type)"></i>
+                                <span class="file-chip-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                @if (att.file_size) {
+                                <span class="file-chip-size">({{ formatFileSize(att.file_size) }})</span>
+                                }
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+
+                    @if (selectedFiles().length > 0) {
+                    <div class="file-list">
+                        @for (f of selectedFiles(); track $index; let idx = $index) {
+                        <div class="file-chip">
+                            <i class="pi pi-paperclip" aria-hidden="true"></i>
+                            <span class="file-chip-name" [title]="f.name">{{ f.name }}</span>
+                            <span class="file-size">({{ formatFileSize(f.size) }})</span>
+                            <button type="button" class="remove-file" (click)="removeFile(idx)"
+                                [attr.aria-label]="'Remove ' + f.name">
+                                <i class="pi pi-times" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        }
+                    </div>
+                    }
+
+                    <div class="file-drop-zone"
+                        [class.file-drop-zone--compact]="selectedFiles().length > 0 || existingAttachments().length > 0"
+                        (click)="wcFileInput.click()" (keydown.enter)="wcFileInput.click()" tabindex="0" role="button"
+                        aria-label="Upload warranty certificate documents">
+                        <i class="pi pi-upload" aria-hidden="true"></i>
+                        <span>{{ (selectedFiles().length || existingAttachments().length) ? 'Add more files' : 'Click to
+                            upload Warranty Certificate documents or drag & drop here' }}</span>
+                        @if (!selectedFiles().length && !existingAttachments().length) {
+                        <span class="file-hint">Attach OEM signed warranty certificates or technical specification
+                            cards</span>
+                        }
+                    </div>
+                    <input #wcFileInput id="dlg-wc-attachment-input" type="file" multiple style="display: none;"
+                        (change)="onFileSelected($event)" />
+                </div>
+
+                <!-- Section 4: Remark -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-comment"></i> 4. Remark & Coverage Clauses
+                    </p>
+                    <div class="field">
+                        <label for="wc-remark">Remark / Warranty Clauses</label>
+                        <textarea id="wc-remark" pTextarea formControlName="remark" rows="3"
+                            placeholder="Manufacturer guarantee terms, exclusions, service contact details…"></textarea>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="dlg-footer">
+                <button pButton type="button" label="Cancel" class="p-button-outlined p-button-secondary cancel-btn"
+                    (click)="warrantyDialogVisible.set(false)"></button>
+                <button pButton type="submit" [label]="editingWarranty() ? 'Update Certificate' : 'Issue Certificate'"
+                    icon="pi pi-check" class="create-cost-sheet-btn save-btn" [loading]="saving()"></button>
+            </div>
+        </form>
+    </p-dialog>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- MODAL 5: TRANSPORT DETAILS DIALOG (Global Design Standard)          -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <p-dialog [header]="editingTransport() ? 'Edit Transport Details' : 'Record Transport Details'"
+        [visible]="transportDialogVisible()" (visibleChange)="transportDialogVisible.set($event)" [modal]="true"
+        [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '850px' }"
+        styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
+
+        <form [formGroup]="transportForm" (ngSubmit)="onSubmitTransport()" novalidate>
+            <div class="dlg-body">
+
+                <!-- Section 1: Mode & Identification -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-directions"></i> 1. Transport Mode & Identification
+                    </p>
+                    <div class="dlg-grid">
+                        <div class="field span-two">
+                            <label for="tr-mode">Select Transport Mode <span class="req"
+                                    aria-hidden="true">*</span></label>
+                            <p-select id="tr-mode" formControlName="transport_mode" [options]="transportModeOptions"
+                                optionLabel="label" optionValue="value" placeholder="Select Transport Mode"
+                                [fluid]="true" appendTo="body" />
+                        </div>
+
+                        <!-- Road: L.R. No. -->
+                        @if (transportForm.get('transport_mode')?.value === 'road') {
+                        <div class="field">
+                            <label for="tr-lr">L.R. No. (Lorry Receipt Number) <span class="req"
+                                    aria-hidden="true">*</span></label>
+                            <input id="tr-lr" pInputText formControlName="lr_no" placeholder="e.g. LR-987654"
+                                [class.ng-invalid]="isFieldInvalid(transportForm, 'lr_no')" />
+                            @if (isFieldInvalid(transportForm, 'lr_no')) {
+                            <p class="field-error">L.R. No. is required for road dispatch.</p>
+                            }
+                        </div>
+                        }
+
+                        <!-- Train: R.R. No. -->
+                        @if (transportForm.get('transport_mode')?.value === 'train') {
+                        <div class="field">
+                            <label for="tr-rr">R.R. No. (Railway Receipt Number) <span class="req"
+                                    aria-hidden="true">*</span></label>
+                            <input id="tr-rr" pInputText formControlName="rr_no" placeholder="e.g. RR-456789"
+                                [class.ng-invalid]="isFieldInvalid(transportForm, 'rr_no')" />
+                            @if (isFieldInvalid(transportForm, 'rr_no')) {
+                            <p class="field-error">R.R. No. is required for train dispatch.</p>
+                            }
+                        </div>
+                        }
+
+                        <!-- Air: AWB No. -->
+                        @if (transportForm.get('transport_mode')?.value === 'air') {
+                        <div class="field">
+                            <label for="tr-awb">AWB No. (Airway Bill Number) <span class="req"
+                                    aria-hidden="true">*</span></label>
+                            <input id="tr-awb" pInputText formControlName="awb_no" placeholder="e.g. AWB-12345678"
+                                [class.ng-invalid]="isFieldInvalid(transportForm, 'awb_no')" />
+                            @if (isFieldInvalid(transportForm, 'awb_no')) {
+                            <p class="field-error">AWB No. is required for air dispatch.</p>
+                            }
+                        </div>
+                        }
+
+                        <div class="field">
+                            <label for="tr-date">Consignment Date <span class="req" aria-hidden="true">*</span></label>
+                            <p-datepicker inputId="tr-date" formControlName="date" dateFormat="yy-mm-dd"
+                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                                [invalid]="isFieldInvalid(transportForm, 'date')" />
+                            @if (isFieldInvalid(transportForm, 'date')) {
+                            <p class="field-error">{{ getFieldError(transportForm, 'date') }}</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Routing & Charges -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-map-marker"></i> 2. Consignment Routing & Charges
+                    </p>
+                    <div class="dlg-grid">
+                        <div class="field">
+                            <label for="tr-from">From (Origin) <span class="req" aria-hidden="true">*</span></label>
+                            <input id="tr-from" pInputText formControlName="from_location"
+                                placeholder="e.g. Mumbai CFS Warehouse"
+                                [class.ng-invalid]="isFieldInvalid(transportForm, 'from_location')" />
+                            @if (isFieldInvalid(transportForm, 'from_location')) {
+                            <p class="field-error">{{ getFieldError(transportForm, 'from_location') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="tr-to">To (Destination) <span class="req" aria-hidden="true">*</span></label>
+                            <input id="tr-to" pInputText formControlName="to_location"
+                                placeholder="e.g. Customer Plant, Pune"
+                                [class.ng-invalid]="isFieldInvalid(transportForm, 'to_location')" />
+                            @if (isFieldInvalid(transportForm, 'to_location')) {
+                            <p class="field-error">{{ getFieldError(transportForm, 'to_location') }}</p>
+                            }
+                        </div>
+
+                        <div class="field span-two">
+                            <label for="tr-charges">Transport / Freight Charges (₹)</label>
+                            <input id="tr-charges" pInputText type="number" formControlName="transport_charges"
+                                placeholder="0.00" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Transport Document Attachments -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-paperclip"></i> 3. Transport Document Attachments
+                        @if (selectedFiles().length > 0) {
+                        <span class="attach-count">({{ selectedFiles().length }} new file{{ selectedFiles().length === 1
+                            ? '' : 's' }} selected)</span>
+                        }
+                    </p>
+
+                    @if (existingAttachments().length > 0) {
+                    <div class="existing-att-block">
+                        <p class="existing-att-title"><i class="pi pi-paperclip" aria-hidden="true"></i> Current
+                            Attachments ({{ existingAttachments().length }}):</p>
+                        <div class="file-list">
+                            @for (att of existingAttachments(); track att.id) {
+                            <div class="file-chip existing-file-chip">
+                                <i [class]="getFileIcon(att.content_type)"></i>
+                                <span class="file-chip-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                @if (att.file_size) {
+                                <span class="file-chip-size">({{ formatFileSize(att.file_size) }})</span>
+                                }
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+
+                    @if (selectedFiles().length > 0) {
+                    <div class="file-list">
+                        @for (f of selectedFiles(); track $index; let idx = $index) {
+                        <div class="file-chip">
+                            <i class="pi pi-paperclip" aria-hidden="true"></i>
+                            <span class="file-chip-name" [title]="f.name">{{ f.name }}</span>
+                            <span class="file-size">({{ formatFileSize(f.size) }})</span>
+                            <button type="button" class="remove-file" (click)="removeFile(idx)"
+                                [attr.aria-label]="'Remove ' + f.name">
+                                <i class="pi pi-times" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        }
+                    </div>
+                    }
+
+                    <div class="file-drop-zone"
+                        [class.file-drop-zone--compact]="selectedFiles().length > 0 || existingAttachments().length > 0"
+                        (click)="trFileInput.click()" (keydown.enter)="trFileInput.click()" tabindex="0" role="button"
+                        aria-label="Upload transport documents">
+                        <i class="pi pi-upload" aria-hidden="true"></i>
+                        <span>{{ (selectedFiles().length || existingAttachments().length) ? 'Add more files' : 'Click to
+                            upload Transport documents or drag & drop here' }}</span>
+                        @if (!selectedFiles().length && !existingAttachments().length) {
+                        <span class="file-hint">Attach scanned L.R. / R.R. / AWB receipt copies, e-way bills or freight
+                            receipts</span>
+                        }
+                    </div>
+                    <input #trFileInput id="dlg-tr-attachment-input" type="file" multiple style="display: none;"
+                        (change)="onFileSelected($event)" />
+                </div>
+
+                <!-- Section 4: Remark -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-comment"></i> 4. Remark
+                    </p>
+                    <div class="field">
+                        <label for="tr-remark">Remark / Driver & Vehicle Details</label>
+                        <textarea id="tr-remark" pTextarea formControlName="remark" rows="2"
+                            placeholder="Vehicle number, transporter name, driver contact info, transit notes…"></textarea>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="dlg-footer">
+                <button pButton type="button" label="Cancel" class="p-button-outlined p-button-secondary cancel-btn"
+                    (click)="transportDialogVisible.set(false)"></button>
+                <button pButton type="submit"
+                    [label]="editingTransport() ? 'Update Transport Record' : 'Save Transport Record'"
+                    icon="pi pi-check" class="create-cost-sheet-btn save-btn" [loading]="saving()"></button>
+            </div>
+        </form>
+    </p-dialog>
+
+</section>
