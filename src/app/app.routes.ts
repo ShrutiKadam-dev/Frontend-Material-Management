@@ -131,6 +131,20 @@ export const routes: Routes = [
           ).then((m) => m.Step13CustomerDelivery),
       },
       {
+        path: 'projects/:projectId/steps/14',
+        loadComponent: () =>
+          import(
+            './features/material-management/ptoject-step/step-14-customer-payment/step-14-customer-payment'
+          ).then((m) => m.Step14CustomerPayment),
+      },
+      {
+        path: 'projects/:projectId/steps/15',
+        loadComponent: () =>
+          import(
+            './features/material-management/ptoject-step/step-15-supplier-payment/step-15-supplier-payment'
+          ).then((m) => m.Step15SupplierPayment),
+      },
+      {
         path: 'customers',
         loadComponent: () =>
           import('./features/material-management/customer/customer').then((m) => m.Customer),

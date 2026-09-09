@@ -1,1 +1,589 @@
-<p>step-14-customer-payment works!</p>
+<main class="step-page">
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 1. MINIMAL PAGE HEADER (Standard Global Design System)           -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <header class="page-header">
+        <div class="header-left">
+            <button pButton type="button" icon="pi pi-arrow-left" class="back-btn" (click)="goBack()"
+                aria-label="Back to Project Timeline" pTooltip="Back to Timeline" tooltipPosition="bottom"></button>
+            <div class="header-title-group">
+                <span class="eyebrow">STEP 14 • FINANCIAL REALIZATION</span>
+                <h1 id="step-page-title">Customer Payment Settlement</h1>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <span class="header-step-pill">
+                <strong>Step 14</strong> of 15
+            </span>
+
+            @if (project()?.project_title) {
+            <span class="header-partner-pill" [pTooltip]="'Project: ' + project()?.project_title" tooltipPosition="bottom">
+                <i class="pi pi-folder" aria-hidden="true"></i>
+                {{ project()?.project_title }}
+            </span>
+            }
+
+            @if (customer()?.name || project()?.customer_name) {
+            <span class="header-partner-pill" [pTooltip]="'Customer: ' + (customer()?.name || project()?.customer_name)"
+                tooltipPosition="bottom">
+                <i class="pi pi-building" aria-hidden="true"></i>
+                {{ customer()?.name || project()?.customer_name }}
+            </span>
+            }
+
+            <button pButton type="button" icon="pi pi-plus" label="Record Customer Payment"
+                class="create-cost-sheet-btn" (click)="openCreatePaymentDialog()"></button>
+        </div>
+    </header>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 2. KPI METRICS GRID                                             -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section class="kpi-metrics-grid" aria-label="Customer Payment Financial Metrics">
+        <!-- Tile 1: Total Invoiced Value -->
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-icon--primary" aria-hidden="true">
+                <i class="pi pi-receipt"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Customer Invoice Value</span>
+                <span class="kpi-num">₹ {{ totalInvoiced() | number:'1.2-2' }}</span>
+                <span class="kpi-hint">Step 13 Tax Invoice Total</span>
+            </div>
+        </div>
+
+        <!-- Tile 2: Total Payment Received -->
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-icon--success" aria-hidden="true">
+                <i class="pi pi-wallet"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Payment Realized</span>
+                <span class="kpi-num">₹ {{ totalPaymentReceived() | number:'1.2-2' }}</span>
+                <span class="kpi-hint hint-success">Direct funds received</span>
+            </div>
+        </div>
+
+        <!-- Tile 3: Total Deductions (TDS + LD) -->
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-icon--progress" aria-hidden="true">
+                <i class="pi pi-percentage"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">TDS & LD Deductions</span>
+                <span class="kpi-num">₹ {{ totalDeductions() | number:'1.2-2' }}</span>
+                <span class="kpi-hint">TDS: ₹{{ totalTdsDeducted() | number:'1.2-2' }} | LD: ₹{{ totalLdDeducted() | number:'1.2-2' }}</span>
+            </div>
+        </div>
+
+        <!-- Tile 4: Outstanding Balance / Realization % -->
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-icon--health" aria-hidden="true">
+                <i class="pi pi-chart-pie"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Outstanding Balance</span>
+                <span class="kpi-num" [class.text-danger]="totalOutstandingBalance() > 0">
+                    ₹ {{ totalOutstandingBalance() | number:'1.2-2' }}
+                </span>
+                <span class="kpi-hint hint-success">{{ realizationRate() }}% Settled</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 3. MAIN CONTENT STREAM VIEW                                     -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="step-layout--fullwidth">
+        <div class="step-main--fullwidth">
+
+            <!-- Search / Filter Bar (if records exist) -->
+            @if (payments().length > 1) {
+            <div class="records-filter-bar">
+                <div class="filter-search-wrap">
+                    <i class="pi pi-search" aria-hidden="true"></i>
+                    <input pInputText type="text" [value]="searchQuery()"
+                        (input)="searchQuery.set($any($event.target).value)"
+                        placeholder="Search by invoice no, bank UTR, date or receipt #…" />
+                    @if (searchQuery()) {
+                    <button type="button" class="clear-search-btn" (click)="searchQuery.set('')"
+                        aria-label="Clear Search">
+                        <i class="pi pi-times"></i>
+                    </button>
+                    }
+                </div>
+            </div>
+            }
+
+            <!-- Loading State -->
+            @if (loading()) {
+            <div class="center-state loading-state">
+                <div class="loading-ring" aria-hidden="true">
+                    <i class="pi pi-spin pi-spinner"></i>
+                </div>
+                <p>Loading Customer Payment settlement records…</p>
+            </div>
+            } @else if (errorMessage()) {
+            <div class="error-banner" role="alert">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="pi pi-exclamation-circle error-icon" aria-hidden="true"></i>
+                    <span>{{ errorMessage() }}</span>
+                </div>
+                <button pButton type="button" icon="pi pi-refresh" label="Retry" class="p-button-text p-button-sm"
+                    (click)="loadAllStep14Data()"></button>
+            </div>
+            } @else if (payments().length === 0) {
+            <!-- Empty State -->
+            <div class="version-sheet-card empty-card">
+                <div class="center-state empty-cta">
+                    <span class="empty-icon" aria-hidden="true">
+                        <i class="pi pi-money-bill"></i>
+                    </span>
+                    <h3>No Customer Payment records yet</h3>
+                    <p>Record customer payment realizations with auto-patched invoice value, TDS, Liquidated Damages (LD), and bank advice vouchers.
+                        @if (latestTaxInvoice(); as inv) {
+                        <br /><strong>Latest Customer Tax Invoice ({{ inv.invoice_no }})</strong> is available to automatically pre-fill invoice details.
+                        }
+                    </p>
+                    <button pButton type="button" icon="pi pi-plus" label="Record First Customer Payment"
+                        class="create-cost-sheet-btn" (click)="openCreatePaymentDialog()"></button>
+                </div>
+            </div>
+            } @else {
+            <!-- Payment Records Stream -->
+            <div class="version-cards-stream">
+                @for (payment of filteredPayments(); track payment.id; let idx = $index) {
+                <article class="version-sheet-card">
+                    <!-- Card Header Bar -->
+                    <div class="vsc-header">
+                        <div class="vsc-header-left">
+                            <span class="vsc-badge">
+                                <i class="pi pi-receipt" aria-hidden="true"></i>
+                                INVOICE #{{ payment.invoice_no }}
+                            </span>
+                            @if (idx === 0 && !searchQuery()) {
+                            <span class="vsc-latest-pill">Latest</span>
+                            }
+                            <span class="vsc-date">
+                                <i class="pi pi-calendar-check" aria-hidden="true"></i>
+                                Payment Date: {{ payment.payment_date | date:'dd MMM yyyy' }}
+                            </span>
+                            <h2 class="vsc-title">Payment Voucher #{{ payment.id }} — {{ payment.invoice_no }}</h2>
+                        </div>
+                        <div class="vsc-header-right">
+                            <span class="vsc-cost-pill" [pTooltip]="'Payment Realized: ₹ ' + (payment.payment_amount | number:'1.2-2')"
+                                tooltipPosition="bottom">
+                                <i class="pi pi-check-circle" aria-hidden="true"></i>
+                                Received: ₹ {{ payment.payment_amount | number:'1.2-2' }}
+                            </span>
+
+                            @if (calculateSettlementBalance(payment) > 0) {
+                            <span class="vsc-count-pill vsc-count-pill--pending" [pTooltip]="'Remaining Balance: ₹ ' + (calculateSettlementBalance(payment) | number:'1.2-2')"
+                                tooltipPosition="bottom">
+                                <i class="pi pi-clock" aria-hidden="true"></i>
+                                Balance: ₹ {{ calculateSettlementBalance(payment) | number:'1.2-2' }}
+                            </span>
+                            } @else {
+                            <span class="vsc-count-pill vsc-count-pill--settled" pTooltip="Invoice fully settled" tooltipPosition="bottom">
+                                <i class="pi pi-verified" aria-hidden="true"></i>
+                                Fully Settled
+                            </span>
+                            }
+
+                            <div class="actions-cell">
+                                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                                    [attr.aria-label]="'Edit payment ' + payment.id" pTooltip="Edit payment record"
+                                    tooltipPosition="top" (click)="openEditPaymentDialog(payment)"></button>
+                                <button pButton type="button" icon="pi pi-trash"
+                                    class="p-button-text p-button-sm p-button-danger qe-delete"
+                                    [attr.aria-label]="'Delete payment ' + payment.id" pTooltip="Delete payment record"
+                                    tooltipPosition="top" (click)="deletePayment(payment)"></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Body -->
+                    <div class="vsc-body">
+                        <!-- Operational Parameters Strip -->
+                        <div class="vsc-params-strip">
+                            <div class="param-chip">
+                                <i class="pi pi-receipt" aria-hidden="true"></i>
+                                <span class="p-lbl">Invoice No:</span>
+                                <span class="p-val font-mono font-bold">{{ payment.invoice_no }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-calendar" aria-hidden="true"></i>
+                                <span class="p-lbl">Invoice Date:</span>
+                                <span class="p-val">{{ payment.invoice_date | date:'mediumDate' }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-calendar-check" aria-hidden="true"></i>
+                                <span class="p-lbl">Payment Date:</span>
+                                <span class="p-val">{{ payment.payment_date | date:'mediumDate' }}</span>
+                            </div>
+                            @if (payment.tds > 0) {
+                            <div class="param-chip">
+                                <i class="pi pi-percentage" aria-hidden="true"></i>
+                                <span class="p-lbl">TDS:</span>
+                                <span class="p-val font-mono">₹ {{ payment.tds | number:'1.2-2' }}</span>
+                            </div>
+                            }
+                            @if (payment.ld > 0) {
+                            <div class="param-chip">
+                                <i class="pi pi-shield" aria-hidden="true"></i>
+                                <span class="p-lbl">LD:</span>
+                                <span class="p-val font-mono">₹ {{ payment.ld | number:'1.2-2' }}</span>
+                            </div>
+                            }
+                        </div>
+
+                        <!-- Financial Settlement Table -->
+                        <div class="items-table-wrap">
+                            <table class="items-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px; text-align: center;">#</th>
+                                        <th>Settlement Component</th>
+                                        <th style="width: 180px;">Category</th>
+                                        <th style="width: 200px;">Reference / Note</th>
+                                        <th style="width: 180px; text-align: right;">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">1</td>
+                                        <td><strong style="color: var(--color-heading);">Customer Tax Invoice Value</strong></td>
+                                        <td><span class="ref-badge">Total Invoiced (Step 13)</span></td>
+                                        <td class="font-mono">Invoice #{{ payment.invoice_no }}</td>
+                                        <td class="text-right font-mono font-bold">₹ {{ payment.invoice_value | number:'1.2-2' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">2</td>
+                                        <td><strong style="color: #059669;">Direct Payment Realized</strong></td>
+                                        <td><span class="ref-badge" style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;">Bank Receipt</span></td>
+                                        <td>Payment Date: {{ payment.payment_date | date:'dd MMM yyyy' }}</td>
+                                        <td class="text-right font-mono font-bold" style="color: #059669;">₹ {{ payment.payment_amount | number:'1.2-2' }}</td>
+                                    </tr>
+                                    @if (payment.tds > 0) {
+                                    <tr>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">3</td>
+                                        <td><strong>Tax Deducted at Source (TDS)</strong></td>
+                                        <td><span class="ref-badge">Statutory Deduction</span></td>
+                                        <td>Income Tax / GST TDS</td>
+                                        <td class="text-right font-mono">₹ {{ payment.tds | number:'1.2-2' }}</td>
+                                    </tr>
+                                    }
+                                    @if (payment.ld > 0) {
+                                    <tr>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{ payment.tds > 0 ? 4 : 3 }}</td>
+                                        <td><strong>Liquidated Damages (LD)</strong></td>
+                                        <td><span class="ref-badge" style="background: #fef2f2; color: #b91c1c; border-color: #fecaca;">Contract Penalty</span></td>
+                                        <td>Delay / SLA Deductions</td>
+                                        <td class="text-right font-mono">₹ {{ payment.ld | number:'1.2-2' }}</td>
+                                    </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr class="tfoot-subtotal-row">
+                                        <td colspan="4" style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
+                                            Total Recovered & Deducted (Payment + TDS + LD):
+                                        </td>
+                                        <td style="text-align: right; font-family: monospace; font-weight: 750; color: var(--color-heading); padding: 8px 14px;">
+                                            ₹ {{ (payment.payment_amount + (payment.tds || 0) + (payment.ld || 0)) | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                    <tr class="tfoot-grand-total-row">
+                                        <td colspan="4" style="text-align: right; font-weight: 800; padding: 10px 14px; border-top: 2px solid var(--color-border);"
+                                            [class.tfoot-balance-pending]="calculateSettlementBalance(payment) > 0"
+                                            [class.tfoot-balance-settled]="calculateSettlementBalance(payment) <= 0">
+                                            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 7px;">
+                                                <span class="total-icon-badge" aria-hidden="true">
+                                                    <i class="pi" [class.pi-clock]="calculateSettlementBalance(payment) > 0"
+                                                        [class.pi-verified]="calculateSettlementBalance(payment) <= 0"></i>
+                                                </span>
+                                                <span>{{ calculateSettlementBalance(payment) > 0 ? 'Remaining Outstanding Balance:' : 'Net Status: Fully Paid & Settled' }}</span>
+                                            </div>
+                                        </td>
+                                        <td style="text-align: right; font-family: monospace; font-size: 1.05rem; font-weight: 850; padding: 10px 14px; border-top: 2px solid var(--color-border); white-space: nowrap;"
+                                            [class.tfoot-balance-pending]="calculateSettlementBalance(payment) > 0"
+                                            [class.tfoot-balance-settled]="calculateSettlementBalance(payment) <= 0">
+                                            ₹ {{ calculateSettlementBalance(payment) | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <!-- Attachments -->
+                        @if (payment.attachments && payment.attachments.length > 0) {
+                        <div class="qe-attachments">
+                            <span class="qe-section-label">
+                                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                                Attachments ({{ payment.attachments.length }})
+                            </span>
+                            <div class="qe-attachment-list">
+                                @for (att of payment.attachments; track att.id) {
+                                <div class="qe-attachment-chip">
+                                    <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
+                                    <div class="qe-att-meta">
+                                        <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                        @if (att.file_size) {
+                                        <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                                        }
+                                    </div>
+                                    <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                                        pTooltip="Download attachment" tooltipPosition="top"
+                                        [disabled]="downloadingAttachmentId() === att.id" (click)="downloadAttachment(att)">
+                                        @if (downloadingAttachmentId() === att.id) {
+                                        <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                                        } @else {
+                                        <i class="pi pi-download" aria-hidden="true"></i>
+                                        }
+                                    </button>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                        }
+
+                        <!-- Remarks / Payment Instructions -->
+                        @if (payment.remark) {
+                        <div class="vsc-remark-box">
+                            <i class="pi pi-comment" aria-hidden="true"></i>
+                            <div class="vsc-remark-content">
+                                <span class="vsc-remark-label">Payment Ref & Remarks:</span>
+                                <span class="vsc-remark-text">{{ payment.remark }}</span>
+                            </div>
+                        </div>
+                        }
+                    </div>
+                </article>
+                }
+            </div>
+            }
+
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- MODAL: RECORD / EDIT CUSTOMER PAYMENT DIALOG                    -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <p-dialog [header]="editingPayment() ? 'Edit Customer Payment Record' : 'Record Customer Payment'"
+        [visible]="paymentDialogVisible()" (visibleChange)="paymentDialogVisible.set($event)" [modal]="true"
+        [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '880px' }"
+        styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
+
+        <form [formGroup]="paymentForm" (ngSubmit)="onSubmitPayment()" novalidate>
+            <div class="dlg-body">
+
+                <!-- Auto-Sync Notice from Step 13 Latest Customer Tax Invoice -->
+                @if (latestTaxInvoice(); as inv) {
+                @if (!editingPayment()) {
+                <div class="cost-sheet-sync-pill" role="status">
+                    <i class="pi pi-check-circle" aria-hidden="true"></i>
+                    <span>
+                        Auto-imported from <strong>Latest Customer Tax Invoice ({{ inv.invoice_no }})</strong> · Invoice Date: {{ inv.invoice_date | date:'dd MMM yyyy' }} · Value: ₹{{ inv.net_total | number:'1.2-2' }}.
+                    </span>
+                </div>
+                }
+                }
+
+                <!-- Section 1: Tax Invoice Reference -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-receipt"></i> 1. Customer Tax Invoice Reference
+                    </p>
+
+                    <div class="dlg-grid">
+                        <div class="field">
+                            <label for="inv-no">Invoice No. <span class="req" aria-hidden="true">*</span></label>
+                            <input id="inv-no" pInputText formControlName="invoice_no" placeholder="e.g. INV-2026-001"
+                                [class.ng-invalid]="isFieldInvalid(paymentForm, 'invoice_no')" />
+                            @if (isFieldInvalid(paymentForm, 'invoice_no')) {
+                            <p class="field-error">{{ getFieldError(paymentForm, 'invoice_no') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="inv-date">Invoice Date <span class="req" aria-hidden="true">*</span></label>
+                            <input id="inv-date" pInputText formControlName="invoice_date" placeholder="YYYY-MM-DD"
+                                [class.ng-invalid]="isFieldInvalid(paymentForm, 'invoice_date')" />
+                            @if (isFieldInvalid(paymentForm, 'invoice_date')) {
+                            <p class="field-error">{{ getFieldError(paymentForm, 'invoice_date') }}</p>
+                            }
+                        </div>
+
+                        <div class="field field--span2">
+                            <label for="inv-val">Invoice Value (Net Total) (₹) <span class="req" aria-hidden="true">*</span></label>
+                            <input id="inv-val" pInputText type="number" step="0.01" formControlName="invoice_value"
+                                placeholder="0.00" class="font-mono net-total-input"
+                                [class.ng-invalid]="isFieldInvalid(paymentForm, 'invoice_value')" />
+                            @if (isFieldInvalid(paymentForm, 'invoice_value')) {
+                            <p class="field-error">{{ getFieldError(paymentForm, 'invoice_value') }}</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Realized Payment & Deductions -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-wallet"></i> 2. Payment Realization & Deductions
+                    </p>
+
+                    <div class="dlg-grid">
+                        <div class="field">
+                            <label for="pay-amt">Payment Amount Received (₹) <span class="req" aria-hidden="true">*</span></label>
+                            <input id="pay-amt" pInputText type="number" step="0.01" formControlName="payment_amount"
+                                placeholder="0.00" class="font-mono"
+                                [class.ng-invalid]="isFieldInvalid(paymentForm, 'payment_amount')" />
+                            @if (isFieldInvalid(paymentForm, 'payment_amount')) {
+                            <p class="field-error">{{ getFieldError(paymentForm, 'payment_amount') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="pay-date">Payment Date <span class="req" aria-hidden="true">*</span></label>
+                            <p-datepicker inputId="pay-date" formControlName="payment_date" dateFormat="yy-mm-dd"
+                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                                [invalid]="isFieldInvalid(paymentForm, 'payment_date')" />
+                            @if (isFieldInvalid(paymentForm, 'payment_date')) {
+                            <p class="field-error">{{ getFieldError(paymentForm, 'payment_date') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="tds">TDS Deduction (₹)</label>
+                            <input id="tds" pInputText type="number" step="0.01" formControlName="tds"
+                                placeholder="0.00" class="font-mono"
+                                [class.ng-invalid]="isFieldInvalid(paymentForm, 'tds')" />
+                            @if (isFieldInvalid(paymentForm, 'tds')) {
+                            <p class="field-error">{{ getFieldError(paymentForm, 'tds') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="ld">Liquidated Damages (LD) (₹)</label>
+                            <input id="ld" pInputText type="number" step="0.01" formControlName="ld"
+                                placeholder="0.00" class="font-mono"
+                                [class.ng-invalid]="isFieldInvalid(paymentForm, 'ld')" />
+                            @if (isFieldInvalid(paymentForm, 'ld')) {
+                            <p class="field-error">{{ getFieldError(paymentForm, 'ld') }}</p>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Live Settlement Balance Pill Bar -->
+                    <div class="settlement-calc-banner">
+                        <div class="scb-item">
+                            <span class="scb-label">Invoice Value:</span>
+                            <span class="scb-val">₹ {{ paymentForm.get('invoice_value')?.value || 0 | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="scb-op">-</div>
+                        <div class="scb-item">
+                            <span class="scb-label">Paid:</span>
+                            <span class="scb-val" style="color: #059669;">₹ {{ paymentForm.get('payment_amount')?.value || 0 | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="scb-op">-</div>
+                        <div class="scb-item">
+                            <span class="scb-label">TDS:</span>
+                            <span class="scb-val">₹ {{ paymentForm.get('tds')?.value || 0 | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="scb-op">-</div>
+                        <div class="scb-item">
+                            <span class="scb-label">LD:</span>
+                            <span class="scb-val">₹ {{ paymentForm.get('ld')?.value || 0 | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="scb-op">=</div>
+                        <div class="scb-item scb-item--result" [class.scb-item--zero]="getDialogLiveBalance() <= 0">
+                            <span class="scb-label">Remaining Balance:</span>
+                            <span class="scb-val">₹ {{ getDialogLiveBalance() | number:'1.2-2' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Attachments (Upload First) -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-paperclip"></i> 3. Payment Advice & Supporting Documents
+                    </p>
+
+                    <!-- Existing Attachments -->
+                    @if (existingAttachments().length > 0) {
+                    <div class="file-list">
+                        @for (att of existingAttachments(); track att.id) {
+                        <div class="file-chip">
+                            <i class="pi pi-paperclip" aria-hidden="true"></i>
+                            <span class="file-chip-name" [title]="att.file_name">{{ att.file_name }}</span>
+                            @if (att.file_size) {
+                            <span class="file-chip-size">{{ formatFileSize(att.file_size) }}</span>
+                            }
+                            <button type="button" class="remove-file" (click)="removeExistingAttachment(att.id)"
+                                [attr.aria-label]="'Remove ' + att.file_name" pTooltip="Remove file" tooltipPosition="top">
+                                <i class="pi pi-times" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        }
+                    </div>
+                    }
+
+                    <!-- Selected Files Queue -->
+                    @if (selectedFiles().length > 0) {
+                    <div class="file-list">
+                        @for (file of selectedFiles(); track $index; let i = $index) {
+                        <div class="file-chip">
+                            <i class="pi pi-paperclip" aria-hidden="true"></i>
+                            <span class="file-chip-name" [title]="file.name">{{ file.name }}</span>
+                            <span class="file-chip-size">{{ formatFileSize(file.size) }}</span>
+                            <button type="button" class="remove-file" (click)="removeSelectedFile(i)"
+                                [attr.aria-label]="'Remove ' + file.name">
+                                <i class="pi pi-times" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        }
+                    </div>
+                    }
+
+                    <!-- Drop zone -->
+                    <div class="file-drop-zone"
+                        [class.file-drop-zone--compact]="selectedFiles().length > 0 || existingAttachments().length > 0"
+                        (click)="fileInput.click()" (keydown.enter)="fileInput.click()" (drop)="onFileDropped($event)"
+                        (dragover)="onDragOver($event)" role="button" tabindex="0"
+                        aria-label="Upload payment advice documents">
+                        <i class="pi pi-upload" aria-hidden="true"></i>
+                        <span>{{ (selectedFiles().length || existingAttachments().length) ? 'Add more files' : 'Click to upload payment advice, receipt vouchers or drag & drop here' }}</span>
+                        @if (!selectedFiles().length && !existingAttachments().length) {
+                        <span class="file-hint">PDF, DOCX, XLSX, Images up to 25 MB</span>
+                        }
+                    </div>
+                    <input #fileInput id="dlg-pay-attachment-input" type="file" multiple style="display: none;"
+                        (change)="onFileSelected($event)" />
+                </div>
+
+                <!-- Section 4: Bank Details & Remarks (Then Remarks) -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-comment"></i> 4. Bank UTR & Settlement Remarks
+                    </p>
+                    <div class="field">
+                        <label for="remark">Bank UTR / Transaction Ref / Remarks</label>
+                        <textarea id="remark" pTextarea formControlName="remark" rows="2"
+                            placeholder="e.g. Bank UTR #AXIS12345678, RTGS received on 10 Sep 2026..."></textarea>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Dialog Footer -->
+            <div class="dlg-footer">
+                <button pButton type="button" label="Cancel" class="p-button-text"
+                    (click)="paymentDialogVisible.set(false)" [disabled]="saving()"></button>
+                <button pButton type="submit" [icon]="saving() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
+                    [label]="saving() ? 'Saving…' : (editingPayment() ? 'Update Payment Record' : 'Record Customer Payment')"
+                    class="create-cost-sheet-btn" [disabled]="saving() || paymentForm.invalid"></button>
+            </div>
+        </form>
+    </p-dialog>
+
+</main>

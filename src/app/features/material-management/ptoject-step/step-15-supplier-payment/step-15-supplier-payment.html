@@ -1,1 +1,546 @@
-<p>step-15-supplier-payment works!</p>
+<main class="step-page">
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 1. MINIMAL PAGE HEADER (Standard Global Design System)           -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <header class="page-header">
+        <div class="header-left">
+            <button pButton type="button" icon="pi pi-arrow-left" class="back-btn" (click)="goBack()"
+                aria-label="Back to Project Timeline" pTooltip="Back to Timeline" tooltipPosition="bottom"></button>
+            <div class="header-title-group">
+                <span class="eyebrow">STEP 15 • FINAL STEP • SUPPLIER DISBURSEMENT</span>
+                <h1 id="step-page-title">Supplier Payment Settlement</h1>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <span class="header-step-pill">
+                <strong>Step 15</strong> of 15
+            </span>
+
+            @if (project()?.project_title) {
+            <span class="header-partner-pill" [pTooltip]="'Project: ' + project()?.project_title" tooltipPosition="bottom">
+                <i class="pi pi-folder" aria-hidden="true"></i>
+                {{ project()?.project_title }}
+            </span>
+            }
+
+            @if (supplier()?.name || project()?.supplier_name) {
+            <span class="header-partner-pill" [pTooltip]="'Supplier: ' + (supplier()?.name || project()?.supplier_name)"
+                tooltipPosition="bottom">
+                <i class="pi pi-truck" aria-hidden="true"></i>
+                {{ supplier()?.name || project()?.supplier_name }}
+            </span>
+            }
+
+            <button pButton type="button" icon="pi pi-plus" label="Record Supplier Payment"
+                class="create-cost-sheet-btn" (click)="openCreatePaymentDialog()"></button>
+        </div>
+    </header>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 2. KPI METRICS GRID                                             -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section class="kpi-metrics-grid" aria-label="Supplier Payment Financial Metrics">
+        <!-- Tile 1: Total Supplier Commitment -->
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-icon--primary" aria-hidden="true">
+                <i class="pi pi-building"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Total Supplier Value</span>
+                <span class="kpi-num">{{ project()?.currency || 'INR' }} {{ totalCommitmentValue() | number:'1.2-2' }}</span>
+                <span class="kpi-hint">PO &amp; Invoice commitments</span>
+            </div>
+        </div>
+
+        <!-- Tile 2: Total Disbursed / Paid -->
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-icon--success" aria-hidden="true">
+                <i class="pi pi-send"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Amount Paid</span>
+                <span class="kpi-num font-emerald">{{ project()?.currency || 'INR' }} {{ totalDisbursed() | number:'1.2-2' }}</span>
+                <span class="kpi-hint hint-success">{{ payments().length }} remittance(s) cleared</span>
+            </div>
+        </div>
+
+        <!-- Tile 3: Total Pending Balance -->
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-icon--health" aria-hidden="true">
+                <i class="pi pi-hourglass"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Pending Amount</span>
+                <span class="kpi-num font-amber" [class.text-danger]="totalPending() > 0">
+                    {{ project()?.currency || 'INR' }} {{ totalPending() | number:'1.2-2' }}
+                </span>
+                <span class="kpi-hint" [class.hint-success]="totalPending() <= 0">{{ totalPending() > 0 ? 'Remaining to disburse' : 'Fully Settled' }}</span>
+            </div>
+        </div>
+
+        <!-- Tile 4: Disbursement Rate % -->
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-icon--progress" aria-hidden="true">
+                <i class="pi pi-chart-pie"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Disbursement Rate</span>
+                <span class="kpi-num">{{ disbursementRate() }}%</span>
+                <span class="kpi-hint hint-success">{{ totalPending() <= 0 ? 'Fully Disbursed' : 'Settlement in Progress' }}</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 3. CONTROL PANEL: SEARCH & VIEW ACTIONS                         -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="step-control-panel">
+        <div class="search-box">
+            <i class="pi pi-search" aria-hidden="true"></i>
+            <input type="text" pInputText placeholder="Search payments by currency, UTR, remarks, or date…"
+                [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" />
+            @if (searchQuery()) {
+            <button type="button" class="clear-search-btn" (click)="searchQuery.set('')" aria-label="Clear search">
+                <i class="pi pi-times"></i>
+            </button>
+            }
+        </div>
+
+        <div class="summary-count-badge">
+            <i class="pi pi-list"></i>
+            <span>{{ filteredPayments().length }} Payment Record(s)</span>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 4. MAIN CONTENT: STREAM OF VERSION SHEET CARDS                  -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="step-main-layout">
+        <div class="step-content-area">
+
+            @if (loading()) {
+            <!-- Loading Skeleton State -->
+            <div class="version-sheet-card loading-state">
+                <div class="loading-spinner-wrap">
+                    <i class="pi pi-spin pi-spinner"></i>
+                    <p>Loading supplier payment records…</p>
+                </div>
+            </div>
+            } @else if (errorMessage()) {
+            <!-- Error State -->
+            <div class="error-banner" role="alert">
+                <div class="error-content">
+                    <i class="pi pi-exclamation-circle error-icon" aria-hidden="true"></i>
+                    <span>{{ errorMessage() }}</span>
+                </div>
+                <button pButton type="button" icon="pi pi-refresh" label="Retry" class="p-button-text p-button-sm"
+                    (click)="loadAllStep15Data()"></button>
+            </div>
+            } @else if (payments().length === 0) {
+            <!-- Empty State -->
+            <div class="version-sheet-card empty-card">
+                <div class="center-state empty-cta">
+                    <span class="empty-icon" aria-hidden="true">
+                        <i class="pi pi-wallet"></i>
+                    </span>
+                    <h3>No Supplier Payment records yet</h3>
+                    <p>Disburse vendor milestones with payment %, currency selection, amount paid, transaction UTRs, and bank realization vouchers.
+                        @if (latestPoOrInvoice(); as bench) {
+                        <br /><strong>Latest {{ bench.type }} ({{ bench.ref }})</strong> with value {{ bench.currency }} {{ bench.total | number:'1.2-2' }} is available to benchmark payments.
+                        }
+                    </p>
+                    <button pButton type="button" icon="pi pi-plus" label="Record First Supplier Payment"
+                        class="create-cost-sheet-btn" (click)="openCreatePaymentDialog()"></button>
+                </div>
+            </div>
+            } @else {
+            <!-- Payment Records Stream -->
+            <div class="version-cards-stream">
+                @for (payment of filteredPayments(); track payment.id; let idx = $index) {
+                <article class="version-sheet-card">
+                    <!-- Card Header Bar -->
+                    <div class="vsc-header">
+                        <div class="vsc-header-left">
+                            <span class="vsc-badge">
+                                <i class="pi pi-send" aria-hidden="true"></i>
+                                DISBURSEMENT #{{ payment.id }}
+                            </span>
+                            @if (idx === 0 && !searchQuery()) {
+                            <span class="vsc-latest-pill">Latest</span>
+                            }
+                            <span class="vsc-date">
+                                <i class="pi pi-calendar-check" aria-hidden="true"></i>
+                                {{ payment.payment_date | date:'mediumDate' }}
+                            </span>
+                            <span class="vsc-title font-mono">
+                                {{ payment.transaction_details }}
+                            </span>
+                        </div>
+
+                        <div class="vsc-header-right">
+                            @if (payment.payment_percentage != null) {
+                            <span class="vsc-count-pill" style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;">
+                                <i class="pi pi-percentage"></i>
+                                {{ payment.payment_percentage }}% Paid
+                            </span>
+                            }
+                            <span class="vsc-cost-pill font-mono font-bold">
+                                {{ payment.currency }} {{ payment.amount_paid | number:'1.2-2' }}
+                            </span>
+
+                            <div class="actions-cell">
+                                <button type="button" class="qe-edit" (click)="openEditPaymentDialog(payment)"
+                                    aria-label="Edit Payment Record" pTooltip="Edit Payment" tooltipPosition="top">
+                                    <i class="pi pi-pencil"></i>
+                                </button>
+                                <button type="button" class="qe-delete" (click)="deletePayment(payment.id)"
+                                    aria-label="Delete Payment Record" pTooltip="Delete Payment" tooltipPosition="top">
+                                    <i class="pi pi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Body -->
+                    <div class="vsc-body">
+                        <!-- Operational Parameters Strip -->
+                        <div class="vsc-params-strip">
+                            <div class="param-chip">
+                                <i class="pi pi-money-bill" aria-hidden="true"></i>
+                                <span class="p-lbl">Currency:</span>
+                                <span class="p-val font-mono font-bold">{{ payment.currency }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-calendar-check" aria-hidden="true"></i>
+                                <span class="p-lbl">Payment Date:</span>
+                                <span class="p-val">{{ payment.payment_date | date:'mediumDate' }}</span>
+                            </div>
+                            @if (payment.payment_percentage != null) {
+                            <div class="param-chip">
+                                <i class="pi pi-percentage" aria-hidden="true"></i>
+                                <span class="p-lbl">Payment %:</span>
+                                <span class="p-val font-mono font-bold">{{ payment.payment_percentage }}%</span>
+                            </div>
+                            }
+                            <div class="param-chip param-chip--highlight">
+                                <i class="pi pi-check-circle" aria-hidden="true"></i>
+                                <span class="p-lbl">Amount Paid:</span>
+                                <span class="p-val font-mono font-bold">{{ payment.currency }} {{ payment.amount_paid | number:'1.2-2' }}</span>
+                            </div>
+                            @if (payment.pending_amount != null) {
+                            <div class="param-chip">
+                                <i class="pi pi-hourglass" aria-hidden="true"></i>
+                                <span class="p-lbl">Pending Amount:</span>
+                                <span class="p-val font-mono">{{ payment.currency }} {{ payment.pending_amount | number:'1.2-2' }}</span>
+                            </div>
+                            }
+                        </div>
+
+                        <!-- Financial Settlement Table -->
+                        <div class="items-table-wrap">
+                            <table class="items-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px; text-align: center;">#</th>
+                                        <th>Settlement Item</th>
+                                        <th style="width: 220px;">Transaction Details</th>
+                                        <th style="width: 140px; text-align: center;">Payment %</th>
+                                        <th style="width: 180px; text-align: right;">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (payment.total_supplier_value) {
+                                    <tr>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">1</td>
+                                        <td><strong style="color: var(--color-heading);">Total Supplier Commitment Value</strong></td>
+                                        <td><span class="ref-badge">PO / Invoiced Benchmark</span></td>
+                                        <td style="text-align: center;" class="font-mono">100.0%</td>
+                                        <td class="text-right font-mono font-bold">{{ payment.currency }} {{ payment.total_supplier_value | number:'1.2-2' }}</td>
+                                    </tr>
+                                    }
+                                    <tr>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{ payment.total_supplier_value ? 2 : 1 }}</td>
+                                        <td><strong style="color: #059669;">Amount Paid / Remitted</strong></td>
+                                        <td class="font-mono">{{ payment.transaction_details }}</td>
+                                        <td style="text-align: center;" class="font-mono font-bold" style="color: #059669;">
+                                            {{ payment.payment_percentage != null ? (payment.payment_percentage + '%') : '—' }}
+                                        </td>
+                                        <td class="text-right font-mono font-bold" style="color: #059669;">
+                                            {{ payment.currency }} {{ payment.amount_paid | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="tfoot-grand-total-row">
+                                        <td colspan="4" style="text-align: right; font-weight: 800; padding: 10px 14px; border-top: 2px solid var(--color-border);"
+                                            [class.tfoot-balance-pending]="(payment.pending_amount || 0) > 0"
+                                            [class.tfoot-balance-settled]="(payment.pending_amount || 0) <= 0">
+                                            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 7px;">
+                                                <span class="total-icon-badge" aria-hidden="true">
+                                                    <i class="pi" [class.pi-hourglass]="(payment.pending_amount || 0) > 0"
+                                                        [class.pi-verified]="(payment.pending_amount || 0) <= 0"></i>
+                                                </span>
+                                                <span>{{ (payment.pending_amount || 0) > 0 ? 'Remaining Pending Amount:' : 'Net Status: Fully Cleared & Disbursed' }}</span>
+                                            </div>
+                                        </td>
+                                        <td style="text-align: right; font-family: monospace; font-size: 1.05rem; font-weight: 850; padding: 10px 14px; border-top: 2px solid var(--color-border); white-space: nowrap;"
+                                            [class.tfoot-balance-pending]="(payment.pending_amount || 0) > 0"
+                                            [class.tfoot-balance-settled]="(payment.pending_amount || 0) <= 0">
+                                            {{ payment.currency }} {{ (payment.pending_amount || 0) | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <!-- Attachments (Upload First) -->
+                        @if (payment.attachments && payment.attachments.length > 0) {
+                        <div class="qe-attachments">
+                            <span class="qe-section-label">
+                                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                                Supporting Attachments ({{ payment.attachments.length }})
+                            </span>
+                            <div class="qe-attachment-list">
+                                @for (att of payment.attachments; track att.id) {
+                                <div class="qe-attachment-chip">
+                                    <i class="pi pi-paperclip" aria-hidden="true"></i>
+                                    <div class="qe-att-meta">
+                                        <span class="qe-att-name" [title]="att.file_name">{{ att.file_name }}</span>
+                                        @if (att.file_size) {
+                                        <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
+                                        }
+                                    </div>
+                                    <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
+                                        pTooltip="Download attachment" tooltipPosition="top"
+                                        [disabled]="downloadingAttachmentId() === att.id" (click)="downloadAttachment(att)">
+                                        @if (downloadingAttachmentId() === att.id) {
+                                        <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                                        } @else {
+                                        <i class="pi pi-download" aria-hidden="true"></i>
+                                        }
+                                    </button>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                        }
+
+                        <!-- Remarks / Payment Instructions (Then Remarks) -->
+                        @if (payment.remark) {
+                        <div class="vsc-remark-box">
+                            <i class="pi pi-comment" aria-hidden="true"></i>
+                            <div class="vsc-remark-content">
+                                <span class="vsc-remark-label">Disbursement Note &amp; Remarks:</span>
+                                <span class="vsc-remark-text">{{ payment.remark }}</span>
+                            </div>
+                        </div>
+                        }
+                    </div>
+                </article>
+                }
+            </div>
+            }
+
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 5. MODAL: RECORD / EDIT SUPPLIER PAYMENT DIALOG                 -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <p-dialog [header]="editingPayment() ? 'Edit Supplier Payment Record' : 'Record Supplier Payment'"
+        [visible]="paymentDialogVisible()" (visibleChange)="paymentDialogVisible.set($event)" [modal]="true"
+        [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '880px' }"
+        styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
+
+        <form [formGroup]="paymentForm" (ngSubmit)="onSubmitPayment()" novalidate>
+            <div class="dlg-body">
+
+                <!-- Section 1: Supplier Commitment & Currency -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-money-bill"></i> 1. Commitment Value &amp; Currency Selection
+                    </p>
+
+                    <div class="dlg-grid">
+                        <div class="field">
+                            <label for="dlg-pay-currency">Currency <span class="req" aria-hidden="true">*</span></label>
+                            <p-select id="dlg-pay-currency" formControlName="currency" [options]="currencyOptions"
+                                optionLabel="label" optionValue="value" [style]="{ width: '100%', height: '38px' }"
+                                appendTo="body" [invalid]="isFieldInvalid(paymentForm, 'currency')"></p-select>
+                            @if (isFieldInvalid(paymentForm, 'currency')) {
+                            <p class="field-error">{{ getFieldError(paymentForm, 'currency') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="dlg-pay-total">Total Commitment Value (PO/Invoice)</label>
+                            <input id="dlg-pay-total" pInputText type="number" step="0.01"
+                                formControlName="total_supplier_value" placeholder="e.g. 50000.00" class="font-mono"
+                                (input)="onTotalValueChange($any($event.target).value)" />
+                        </div>
+
+                        <div class="field field--span2">
+                            <label for="dlg-pay-pct">Payment Percentage (%)</label>
+                            <input id="dlg-pay-pct" pInputText type="number" step="0.1" min="0" max="100"
+                                formControlName="payment_percentage" placeholder="e.g. 20, 50, 100" class="font-mono"
+                                (input)="onPercentageChange($any($event.target).value)"
+                                [class.ng-invalid]="isFieldInvalid(paymentForm, 'payment_percentage')" />
+                            <span class="field-helper" style="font-size: 0.76rem; color: var(--color-muted); margin-top: 3px; display: block;">
+                                Entering % will automatically calculate the Amount Paid.
+                            </span>
+                            @if (isFieldInvalid(paymentForm, 'payment_percentage')) {
+                            <p class="field-error">{{ getFieldError(paymentForm, 'payment_percentage') }}</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Realized Payment & Transaction Details -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-send"></i> 2. Payment Realization &amp; Transaction Details
+                    </p>
+
+                    <div class="dlg-grid">
+                        <div class="field">
+                            <label for="dlg-pay-amount">Amount Paid <span class="req" aria-hidden="true">*</span></label>
+                            <input id="dlg-pay-amount" pInputText type="number" step="0.01" formControlName="amount_paid"
+                                placeholder="0.00" class="font-mono"
+                                (input)="onAmountPaidChange($any($event.target).value)"
+                                [class.ng-invalid]="isFieldInvalid(paymentForm, 'amount_paid')" />
+                            @if (isFieldInvalid(paymentForm, 'amount_paid')) {
+                            <p class="field-error">{{ getFieldError(paymentForm, 'amount_paid') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="dlg-pay-date">Payment Date <span class="req" aria-hidden="true">*</span></label>
+                            <p-datepicker inputId="dlg-pay-date" formControlName="payment_date" dateFormat="yy-mm-dd"
+                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                                [invalid]="isFieldInvalid(paymentForm, 'payment_date')" />
+                            @if (isFieldInvalid(paymentForm, 'payment_date')) {
+                            <p class="field-error">{{ getFieldError(paymentForm, 'payment_date') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="dlg-pay-txn">Transaction Details / Bank UTR / SWIFT <span class="req" aria-hidden="true">*</span></label>
+                            <input id="dlg-pay-txn" pInputText formControlName="transaction_details"
+                                placeholder="e.g. UTR #AXIS98765432, SWIFT MT103 Ref #..."
+                                [class.ng-invalid]="isFieldInvalid(paymentForm, 'transaction_details')" />
+                            @if (isFieldInvalid(paymentForm, 'transaction_details')) {
+                            <p class="field-error">{{ getFieldError(paymentForm, 'transaction_details') }}</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="dlg-pay-pending">Pending Amount</label>
+                            <input id="dlg-pay-pending" pInputText type="number" step="0.01" formControlName="pending_amount"
+                                placeholder="0.00" class="font-mono" />
+                        </div>
+                    </div>
+
+                    <!-- Live Settlement Balance Pill Bar -->
+                    <div class="settlement-calc-banner">
+                        <div class="scb-item">
+                            <span class="scb-label">Commitment Value:</span>
+                            <span class="scb-val">{{ paymentForm.get('currency')?.value || 'INR' }} {{ paymentForm.get('total_supplier_value')?.value || 0 | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="scb-op">-</div>
+                        <div class="scb-item">
+                            <span class="scb-label">Amount Paid:</span>
+                            <span class="scb-val" style="color: #059669;">{{ paymentForm.get('currency')?.value || 'INR' }} {{ paymentForm.get('amount_paid')?.value || 0 | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="scb-op">=</div>
+                        <div class="scb-item scb-item--result" [class.scb-item--zero]="getDialogPendingBalance() <= 0">
+                            <span class="scb-label">Remaining Pending:</span>
+                            <span class="scb-val">{{ paymentForm.get('currency')?.value || 'INR' }} {{ getDialogPendingBalance() | number:'1.2-2' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Attachments (Upload First) -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-paperclip"></i> 3. Payment Advice &amp; Supporting Documents
+                    </p>
+
+                    <!-- Existing Attachments -->
+                    @if (existingAttachments().length > 0) {
+                    <div class="file-list">
+                        @for (att of existingAttachments(); track att.id) {
+                        <div class="file-chip">
+                            <i class="pi pi-paperclip" aria-hidden="true"></i>
+                            <span class="file-chip-name" [title]="att.file_name">{{ att.file_name }}</span>
+                            @if (att.file_size) {
+                            <span class="file-chip-size">{{ formatFileSize(att.file_size) }}</span>
+                            }
+                            <button type="button" class="remove-file" (click)="removeExistingAttachment(att.id)"
+                                [attr.aria-label]="'Remove ' + att.file_name" pTooltip="Remove file" tooltipPosition="top">
+                                <i class="pi pi-times"></i>
+                            </button>
+                        </div>
+                        }
+                    </div>
+                    }
+
+                    <!-- Selected Files Queue -->
+                    @if (selectedFiles().length > 0) {
+                    <div class="file-list">
+                        @for (file of selectedFiles(); track $index; let i = $index) {
+                        <div class="file-chip">
+                            <i class="pi pi-paperclip" aria-hidden="true"></i>
+                            <span class="file-chip-name" [title]="file.name">{{ file.name }}</span>
+                            <span class="file-chip-size">{{ formatFileSize(file.size) }}</span>
+                            <button type="button" class="remove-file" (click)="removeSelectedFile(i)"
+                                [attr.aria-label]="'Remove ' + file.name">
+                                <i class="pi pi-times"></i>
+                            </button>
+                        </div>
+                        }
+                    </div>
+                    }
+
+                    <!-- Drop zone -->
+                    <div class="file-drop-zone"
+                        [class.file-drop-zone--compact]="selectedFiles().length > 0 || existingAttachments().length > 0"
+                        (click)="fileInput.click()" (keydown.enter)="fileInput.click()" (drop)="onFileDropped($event)"
+                        (dragover)="onDragOver($event)" role="button" tabindex="0"
+                        aria-label="Upload payment advice documents">
+                        <i class="pi pi-upload" aria-hidden="true"></i>
+                        <span>{{ (selectedFiles().length || existingAttachments().length) ? 'Add more files' : 'Click to upload payment advice, debit voucher or drag & drop here' }}</span>
+                        @if (!selectedFiles().length && !existingAttachments().length) {
+                        <span class="file-hint">PDF, DOCX, XLSX, Images up to 25 MB</span>
+                        }
+                    </div>
+                    <input #fileInput id="dlg-supplier-pay-attachment-input" type="file" multiple style="display: none;"
+                        (change)="onFileSelected($event)" />
+                </div>
+
+                <!-- Section 4: Bank Details & Remarks (Then Remarks) -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-comment"></i> 4. Disbursement Notes &amp; Remarks
+                    </p>
+                    <div class="field">
+                        <label for="dlg-pay-remark">Remarks / Wire Transfer Instructions</label>
+                        <textarea id="dlg-pay-remark" pTextarea formControlName="remark" rows="2"
+                            placeholder="e.g. Advance 30% payment processed via Bank Wire, TT receipt attached..."></textarea>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Dialog Footer -->
+            <div class="dlg-footer">
+                <button pButton type="button" label="Cancel" class="p-button-text"
+                    (click)="paymentDialogVisible.set(false)" [disabled]="saving()"></button>
+                <button pButton type="submit" [icon]="saving() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
+                    [label]="saving() ? 'Saving…' : (editingPayment() ? 'Update Payment Record' : 'Record Supplier Payment')"
+                    class="create-cost-sheet-btn" [disabled]="saving() || paymentForm.invalid"></button>
+            </div>
+        </form>
+    </p-dialog>
+
+</main>
