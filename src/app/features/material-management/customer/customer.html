@@ -53,20 +53,13 @@
         <span>{{ customer.contact_number }}</span>
       </div>
 
-      @if (customer.website_url) {
-      <div style="font-size: 0.85rem; margin-top: 4px;">
-        <a [href]="customer.website_url" target="_blank" rel="noopener"
-          style="color: var(--color-primary); text-decoration: underline;">
-          {{ customer.website_url }}
-        </a>
-      </div>
-      }
-
       <div class="entity-actions">
         <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-sm"
-          (click)="openDetailsDialog(customer)" aria-label="View customer details" pTooltip="Details" tooltipPosition="top"></button>
+          (click)="openDetailsDialog(customer)" aria-label="View customer details" pTooltip="Details"
+          tooltipPosition="top"></button>
         <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm"
-          (click)="openEditDialog(customer)" aria-label="Edit customer details" pTooltip="Edit" tooltipPosition="top"></button>
+          (click)="openEditDialog(customer)" aria-label="Edit customer details" pTooltip="Edit"
+          tooltipPosition="top"></button>
       </div>
     </article>
     }
@@ -126,16 +119,6 @@
       }
     </div>
 
-    <div class="field">
-      <label for="website_url">Website URL (Optional)</label>
-      <input pInputText id="website_url" formControlName="website_url" style="width: 100%;"
-        placeholder="https://example.com" />
-      @if (customerForm.get('website_url')?.invalid && (customerForm.get('website_url')?.dirty ||
-      customerForm.get('website_url')?.touched)) {
-      <p class="error">Enter a valid URL (starting with http:// or https:// or www.).</p>
-      }
-    </div>
-
     <div class="dialog-footer">
       <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary"
         (click)="dialogVisible.set(false)"></button>
@@ -163,20 +146,6 @@
   <div class="detail-row">
     <span class="detail-label">Contact</span>
     <span class="detail-value">{{ customer.contact_number }}</span>
-  </div>
-
-  <div class="detail-row">
-    <span class="detail-label">Website</span>
-    <span class="detail-value">
-      @if (customer.website_url) {
-      <a [href]="customer.website_url" target="_blank" rel="noopener"
-        style="color: var(--color-primary); text-decoration: underline;">
-        {{ customer.website_url }}
-      </a>
-      } @else {
-      -
-      }
-    </span>
   </div>
 
   <div class="detail-row">

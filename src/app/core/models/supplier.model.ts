@@ -4,7 +4,6 @@ export interface Supplier {
   email: string;
   contact_number: string;
   address: string;
-  website_url: string;
   created_at: string;
   updated_at: string;
 }
@@ -14,7 +13,6 @@ export interface SupplierCreateInput {
   email: string;
   contact_number: string;
   address: string;
-  website_url: string;
 }
 
 export interface SupplierUpdateInput {
@@ -22,5 +20,4 @@ export interface SupplierUpdateInput {
   email: string;
   contact_number: string;
   address: string;
-  website_url: string;
 }

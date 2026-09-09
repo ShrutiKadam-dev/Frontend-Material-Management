@@ -60,33 +60,33 @@ export class DashboardService {
 
     const metrics: DashboardMetric[] = Array.isArray(metricsRaw)
       ? metricsRaw.map((m: Record<string, unknown>) => ({
-          label: String(m['label'] ?? m['title'] ?? 'Metric'),
-          value: String(m['value'] ?? '0'),
-          trend: String(m['trend'] ?? m['subtitle'] ?? m['description'] ?? ''),
-          tone: (m['tone'] as DashboardMetric['tone']) || 'success',
-        }))
+        label: String(m['label'] ?? m['title'] ?? 'Metric'),
+        value: String(m['value'] ?? '0'),
+        trend: String(m['trend'] ?? m['subtitle'] ?? m['description'] ?? ''),
+        tone: (m['tone'] as DashboardMetric['tone']) || 'success',
+      }))
       : [];
 
     const recent_projects: DashboardProject[] = Array.isArray(projectsRaw)
       ? projectsRaw.map((p: Record<string, unknown>, index: number) => ({
-          id: Number(p['id'] ?? p['project_id'] ?? index + 1),
-          title: String(p['title'] ?? p['project_title'] ?? 'Untitled Project'),
-          supplier: String(p['supplier'] ?? p['supplier_name'] ?? 'N/A'),
-          customer: String(p['customer'] ?? p['customer_name'] ?? 'N/A'),
-          step: String(p['step'] ?? (p['current_step_number'] ? `Step ${p['current_step_number']} of 15` : 'Step 1 of 15')),
-          milestone: String(p['milestone'] ?? p['current_step_name'] ?? 'In Progress'),
-          progress: Number(p['progress'] ?? p['progress_percentage'] ?? 0),
-          status: (p['status'] as DashboardProject['status']) || 'In Progress',
-          current_step_number: p['current_step_number'] ? Number(p['current_step_number']) : undefined,
-          total_steps: p['total_steps'] ? Number(p['total_steps']) : 15,
-          total_value: p['total_value'] ? Number(p['total_value']) : undefined,
-          currency: String(p['currency'] ?? 'INR'),
-          health_status: String(p['health_status'] ?? 'on_track'),
-          next_action: p['next_action'] ? String(p['next_action']) : undefined,
-          target_delivery_date: p['target_delivery_date'] ? String(p['target_delivery_date']) : null,
-          customer_payment_status: p['customer_payment_status'] ? String(p['customer_payment_status']) : undefined,
-          supplier_payment_status: p['supplier_payment_status'] ? String(p['supplier_payment_status']) : undefined,
-        }))
+        id: Number(p['id'] ?? p['project_id'] ?? index + 1),
+        title: String(p['title'] ?? p['project_title'] ?? 'Untitled Project'),
+        supplier: String(p['supplier'] ?? p['supplier_name'] ?? 'N/A'),
+        customer: String(p['customer'] ?? p['customer_name'] ?? 'N/A'),
+        step: String(p['step'] ?? (p['current_step_number'] ? `Step ${p['current_step_number']} of 15` : 'Step 1 of 15')),
+        milestone: String(p['milestone'] ?? p['current_step_name'] ?? 'In Progress'),
+        progress: Number(p['progress'] ?? p['progress_percentage'] ?? 0),
+        status: (p['status'] as DashboardProject['status']) || 'In Progress',
+        current_step_number: p['current_step_number'] ? Number(p['current_step_number']) : undefined,
+        total_steps: p['total_steps'] ? Number(p['total_steps']) : 15,
+        total_value: p['total_value'] ? Number(p['total_value']) : undefined,
+        currency: String(p['currency'] ?? 'INR'),
+        health_status: String(p['health_status'] ?? 'on_track'),
+        next_action: p['next_action'] ? String(p['next_action']) : undefined,
+        target_delivery_date: p['target_delivery_date'] ? String(p['target_delivery_date']) : null,
+        customer_payment_status: p['customer_payment_status'] ? String(p['customer_payment_status']) : undefined,
+        supplier_payment_status: p['supplier_payment_status'] ? String(p['supplier_payment_status']) : undefined,
+      }))
       : [];
 
     const overview_stats = (nestedData['overview_stats'] ?? payload['overview_stats']) as DashboardData['overview_stats'] | undefined;
@@ -112,20 +112,20 @@ export class DashboardService {
         const customerMap = new Map<number, string>(customers.map((c) => [c.id, c.name]));
         const supplierMap = new Map<number, string>(suppliers.map((s) => [s.id, s.name]));
 
-    const totalValue = projects.reduce((sum, p) => sum + (Number(p.total_value) || 0), 0);
+        const totalValue = projects.reduce((sum, p) => sum + (Number(p.total_value) || 0), 0);
         const onTrackCount = projects.filter((p) => p.health_status === 'on_track').length;
         const delayedCount = projects.filter((p) => p.health_status === 'delayed' || p.health_status === 'at_risk').length;
         const completedCount = projects.filter((p) => p.status === 'completed' || p.progress_percentage === 100).length;
 
         const avgProgress = totalProjects > 0
           ? Math.round(
-              projects.reduce((sum, p) => {
-                const prog = p.progress_percentage !== undefined && p.progress_percentage !== null
-                  ? p.progress_percentage
-                  : Math.round(((p.current_step_number || 1) / 15) * 100);
-                return sum + prog;
-              }, 0) / totalProjects,
-            )
+            projects.reduce((sum, p) => {
+              const prog = p.progress_percentage !== undefined && p.progress_percentage !== null
+                ? p.progress_percentage
+                : Math.round(((p.current_step_number || 1) / 15) * 100);
+              return sum + prog;
+            }, 0) / totalProjects,
+          )
           : 0;
 
         // Stage breakdown
@@ -151,13 +151,13 @@ export class DashboardService {
         // Compute overall dashboard metrics
         const metrics: DashboardMetric[] = [
           {
-            label: 'Active Pipelines',
+            label: 'Active Projects',
             value: totalProjects,
             trend: `Across ${totalCustomers} client${totalCustomers === 1 ? '' : 's'}`,
             tone: 'info',
           },
           {
-            label: 'Total Portfolio Value',
+            label: 'Total Project Value',
             value: formattedTotalValue,
             trend: 'Contracted procurement volume',
             tone: 'success',

@@ -46,7 +46,6 @@ export class Customer implements OnInit {
     email: ['', [Validators.required, Validators.email]],
     contact_number: ['', [Validators.required, Validators.pattern(/^\+?[0-9\s\-()]{7,20}$/)]],
     address: ['', [Validators.required]],
-    website_url: ['', [Validators.pattern(/^(https?:\/\/|www\.).+$/)]],
   });
 
   ngOnInit(): void {
@@ -85,7 +84,6 @@ export class Customer implements OnInit {
           email: freshCustomer.email,
           contact_number: freshCustomer.contact_number,
           address: freshCustomer.address,
-          website_url: freshCustomer.website_url || '',
         });
         this.isEditMode.set(true);
         this.dialogVisible.set(true);
@@ -129,7 +127,6 @@ export class Customer implements OnInit {
       email: formValue.email || '',
       contact_number: formValue.contact_number || '',
       address: formValue.address || '',
-      website_url: formValue.website_url || '',
     };
 
     if (this.isEditMode()) {

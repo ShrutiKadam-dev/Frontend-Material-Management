@@ -29,23 +29,17 @@
     </nav>
 
     <div class="topbar-actions">
-      <button
+      <!-- <button
         class="new-project-button"
         pButton
         type="button"
         icon="pi pi-plus"
         label="New Project"
         routerLink="/projects"
-      ></button>
+      ></button> -->
 
-      <button
-        class="profile-button"
-        pButton
-        type="button"
-        rounded
-        aria-label="Sign out {{ user()?.name ?? 'Admin' }}"
-        (click)="logout()"
-      >
+      <button class="profile-button" pButton type="button" rounded aria-label="Sign out {{ user()?.name ?? 'Admin' }}"
+        (click)="logout()">
         <span>{{ userInitials() }}</span>
       </button>
     </div>
