@@ -76,8 +76,6 @@ export class Projects implements OnInit {
     project_title: ['', [Validators.required]],
     customer_id: [null as number | null, [Validators.required]],
     supplier_id: [null as number | null, [Validators.required]],
-    currency: ['INR'],
-    target_delivery_date: [null as Date | string | null],
   });
 
   // ── Project Filter Counts ───────────────────────────────────────
@@ -185,8 +183,6 @@ export class Projects implements OnInit {
       project_title: '',
       customer_id: null,
       supplier_id: null,
-      currency: 'INR',
-      target_delivery_date: null,
     });
     this.isEditMode.set(false);
     this.dialogVisible.set(true);
@@ -201,8 +197,6 @@ export class Projects implements OnInit {
           project_title: fresh.project_title,
           customer_id: fresh.customer_id,
           supplier_id: fresh.supplier_id,
-          currency: fresh.currency || 'INR',
-          target_delivery_date: fresh.target_delivery_date ? new Date(fresh.target_delivery_date) : null,
         });
         this.isEditMode.set(true);
         this.dialogVisible.set(true);
@@ -224,18 +218,11 @@ export class Projects implements OnInit {
 
     this.submitting.set(true);
     const formValue = this.projectForm.value;
-    const targetDateStr = formValue.target_delivery_date
-      ? formValue.target_delivery_date instanceof Date
-        ? this.formatDate(formValue.target_delivery_date)
-        : String(formValue.target_delivery_date)
-      : undefined;
 
     const payload: ProjectCreateInput = {
       project_title: formValue.project_title ?? '',
       customer_id: formValue.customer_id as number,
       supplier_id: formValue.supplier_id as number,
-      currency: formValue.currency || 'INR',
-      target_delivery_date: targetDateStr,
     };
 
     if (this.isEditMode()) {

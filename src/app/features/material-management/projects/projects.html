@@ -131,13 +131,13 @@
       <div class="mpc-topbar">
         <div class="mpc-badge-group">
           <span class="mpc-id-pill">#{{ project.id < 10 ? '0' + project.id : project.id }}</span>
-          <span class="health-pill" [class]="'health-pill ' + getHealthBadgeClass(project.health_status)">
-            <span class="pulse-dot" aria-hidden="true"></span>
-            {{ getHealthLabel(project.health_status) }}
-          </span>
-          <span class="status-badge" [class]="'status-badge ' + getStatusBadgeClass(project.status)">
-            {{ getStatusLabel(project.status) }}
-          </span>
+              <span class="health-pill" [class]="'health-pill ' + getHealthBadgeClass(project.health_status)">
+                <span class="pulse-dot" aria-hidden="true"></span>
+                {{ getHealthLabel(project.health_status) }}
+              </span>
+              <span class="status-badge" [class]="'status-badge ' + getStatusBadgeClass(project.status)">
+                {{ getStatusLabel(project.status) }}
+              </span>
         </div>
 
         <div class="mpc-value-badge" pTooltip="Contract Total Value" tooltipPosition="left">
@@ -202,7 +202,8 @@
           <span class="percent-text">{{ getProgressPercent(project) }}%</span>
         </div>
 
-        <div class="progress-track" role="progressbar" [attr.aria-valuenow]="getProgressPercent(project)" aria-valuemin="0" aria-valuemax="100">
+        <div class="progress-track" role="progressbar" [attr.aria-valuenow]="getProgressPercent(project)"
+          aria-valuemin="0" aria-valuemax="100">
           <div class="progress-fill" [style.width.%]="getProgressPercent(project)"
             [class.progress-fill--delayed]="project.health_status === 'delayed'"></div>
         </div>
@@ -274,8 +275,7 @@
       <ng-template pTemplate="body" let-p let-i="rowIndex">
         <tr class="table-project-row">
           <td style="text-align: center; font-weight: 700; color: #64748b;">
-            #{{ p.id < 10 ? '0' + p.id : p.id }}
-          </td>
+            #{{ p.id < 10 ? '0' + p.id : p.id }} </td>
           <td>
             <strong class="tbl-project-title" (click)="openDetailsDialog(p)">{{ p.project_title }}</strong>
             <span class="tbl-date-sub">{{ p.created_at | date:'dd MMM yyyy' }}</span>
@@ -358,27 +358,13 @@
           <div class="field span-two">
             <label for="dlg-project-title">Project Title <span class="req" aria-hidden="true">*</span></label>
             <input id="dlg-project-title" pInputText formControlName="project_title"
-              placeholder="e.g. Cold Storage Refrigeration Units" [class.ng-invalid]="isFieldInvalid('project_title')" />
+              placeholder="e.g. Cold Storage Refrigeration Units"
+              [class.ng-invalid]="isFieldInvalid('project_title')" />
             @if (isFieldInvalid('project_title')) {
             <p class="field-error">{{ getFieldError('project_title') }}</p>
             }
           </div>
 
-          <div class="field">
-            <label for="dlg-currency">Currency</label>
-            <p-select id="dlg-currency" formControlName="currency" [options]="[
-                { label: 'INR (₹) — Indian Rupee', value: 'INR' },
-                { label: 'USD ($) — US Dollar', value: 'USD' },
-                { label: 'EUR (€) — Euro', value: 'EUR' }
-              ]" optionLabel="label" optionValue="value" placeholder="Select Currency" [fluid]="true" appendTo="body"
-              [style]="{ width: '100%', height: '38px' }" />
-          </div>
-
-          <div class="field">
-            <label for="dlg-target-delivery">Target Delivery Date</label>
-            <p-datepicker inputId="dlg-target-delivery" formControlName="target_delivery_date" dateFormat="yy-mm-dd"
-              [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD" />
-          </div>
         </div>
       </div>
 
@@ -415,8 +401,8 @@
 
     <!-- Dialog Footer -->
     <div class="dlg-footer">
-      <button pButton type="button" label="Cancel" class="p-button-text cancel-btn"
-        (click)="dialogVisible.set(false)" [disabled]="submitting()"></button>
+      <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="dialogVisible.set(false)"
+        [disabled]="submitting()"></button>
       <button pButton type="submit" [label]="isEditMode() ? 'Update Project' : 'Create Project'" icon="pi pi-check"
         class="submit-btn" [loading]="submitting()" [disabled]="submitting() || projectForm.invalid"></button>
     </div>
