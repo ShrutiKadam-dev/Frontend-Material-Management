@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   OnInit,
   signal,
@@ -136,6 +137,7 @@ export class Step05CustomerQuotation implements OnInit {
       placeholder: 'Enter quotation value',
       required: true,
       colSpan: 1,
+      helperText: 'Auto-calculated from total net amount',
     },
     {
       key: 'validity_amount',
@@ -183,12 +185,26 @@ export class Step05CustomerQuotation implements OnInit {
   /* ── Derived Summaries ───────────────────────────────── */
   protected readonly totalNetAmount = computed(() => {
     return this.items().reduce((sum, item) => {
-      const net = this.calculateNet(item.quantity, item.unit_price);
+      const calculated = this.calculateNet(item.quantity, item.unit_price);
+      const net = calculated !== null ? calculated : (Number(item.net_amount) > 0 ? Number(item.net_amount) : 0);
       return sum + (net ?? 0);
     }, 0);
   });
 
   protected readonly totalItemCount = computed(() => this.items().length);
+
+  constructor() {
+    effect(() => {
+      const total = this.totalNetAmount();
+      if (this.dialogVisible()) {
+        if (total > 0) {
+          this.headerForm.controls.quotation_value.setValue(total.toFixed(2), { emitEvent: false });
+        } else if (this.items().length === 0 && !this.editingQuotation()) {
+          this.headerForm.controls.quotation_value.setValue('', { emitEvent: false });
+        }
+      }
+    });
+  }
 
   /* ── Lifecycle ───────────────────────────────────────── */
   ngOnInit(): void {
@@ -297,16 +313,20 @@ export class Step05CustomerQuotation implements OnInit {
     });
 
     const defaultQuoteVal = costSheet?.cumulativeProjectCostInr
-      ? String(costSheet.cumulativeProjectCostInr)
+      ? Number(costSheet.cumulativeProjectCostInr).toFixed(2)
       : mappedItems.length
-        ? String(mappedItems.reduce((acc, it) => acc + (Number(it.net_amount) || 0), 0))
+        ? mappedItems.reduce((acc, it) => {
+            const calculated = this.calculateNet(it.quantity, it.unit_price);
+            const net = calculated !== null ? calculated : (Number(it.net_amount) > 0 ? Number(it.net_amount) : 0);
+            return acc + net;
+          }, 0).toFixed(2)
         : '';
 
     this.headerForm.reset({
       customer_id: proj?.customer_id || cust?.id || 0,
       quotation_number: '',
       quotation_date: '',
-      quotation_value: '',
+      quotation_value: defaultQuoteVal,
       currency_unit: 'INR',
       currency_symbol: '₹',
       validity_amount: '',

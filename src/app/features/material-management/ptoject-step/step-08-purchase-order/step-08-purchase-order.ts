@@ -102,8 +102,8 @@ export class Step08PurchaseOrder implements OnInit {
   /* ── Reactive Forms ────────────────────────────────────── */
   protected readonly headerForm = this.fb.group({
     customer_id: [0],
-    poc_name: ['', [Validators.required, Validators.minLength(2)]],
-    email: ['', [Validators.required, Validators.email]],
+    poc_name: ['', [Validators.minLength(2)]],
+    email: ['', [Validators.email]],
     po_no: ['', [Validators.required]],
     po_title: ['', [Validators.required, Validators.minLength(2)]],
     po_date: [null as Date | null, [Validators.required]],
@@ -201,11 +201,11 @@ export class Step08PurchaseOrder implements OnInit {
         if (proj?.customer_id) {
           this.customerService.getCustomerById(proj.customer_id).subscribe({
             next: (cust) => this.customer.set(cust),
-            error: () => {/* non-fatal */},
+            error: () => {/* non-fatal */ },
           });
         }
       },
-      error: () => {/* non-fatal */},
+      error: () => {/* non-fatal */ },
     });
   }
 
@@ -231,7 +231,7 @@ export class Step08PurchaseOrder implements OnInit {
         next: (data) => {
           this.latestBid.set(data);
         },
-        error: () => {/* non-fatal */},
+        error: () => {/* non-fatal */ },
       });
   }
 
@@ -320,7 +320,7 @@ export class Step08PurchaseOrder implements OnInit {
             this.items.set(mappedItems);
           }
         },
-        error: () => {/* non-fatal, user enters manually */},
+        error: () => {/* non-fatal, user enters manually */ },
       });
   }
 

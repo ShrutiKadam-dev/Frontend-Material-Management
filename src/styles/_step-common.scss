@@ -1514,6 +1514,23 @@
     line-height: 1.25;
   }
 
+  .field-hint,
+  .field-helper {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--color-muted);
+    font-size: 0.76rem;
+    font-weight: 500;
+    margin: 2px 0 0;
+    line-height: 1.25;
+
+    i {
+      font-size: 0.75rem;
+      color: var(--color-primary);
+    }
+  }
+
   .p-inputtext,
   .p-textarea,
   .p-select {

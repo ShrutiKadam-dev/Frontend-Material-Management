@@ -167,9 +167,9 @@
 
             <div class="vsc-header-right">
               @if (calculateOrderNet(item) > 0) {
-              <span class="vsc-cost-pill" [pTooltip]="'Total Net Value: ' + (item.currency || 'USD') + ' ' + (calculateOrderNet(item) | number:'1.2-2')" tooltipPosition="bottom">
+              <span class="vsc-cost-pill" [pTooltip]="'Total Net Value: ' + getCurrencyCode(item.currency) + ' ' + (calculateOrderNet(item) | number:'1.2-2')" tooltipPosition="bottom">
                 <i class="pi pi-wallet" aria-hidden="true"></i>
-                {{ item.currency || 'USD' }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
+                {{ getCurrencySymbol(item.currency) }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
               </span>
               }
 
@@ -280,7 +280,7 @@
                     </td>
                     <td class="total-amount-cell" style="min-width: 150px; text-align: right; white-space: nowrap;">
                       <span class="total-amount-value" style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
-                        {{ item.currency || 'USD' }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
+                        {{ getCurrencySymbol(item.currency) }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
                       </span>
                     </td>
                   </tr>
@@ -388,9 +388,9 @@
 
             <div class="vsc-header-right">
               @if (calculateOrderNet(item) > 0) {
-              <span class="vsc-cost-pill" [pTooltip]="'Total Net Value: ' + (item.currency || 'USD') + ' ' + (calculateOrderNet(item) | number:'1.2-2')" tooltipPosition="bottom">
+              <span class="vsc-cost-pill" [pTooltip]="'Total Net Value: ' + getCurrencyCode(item.currency) + ' ' + (calculateOrderNet(item) | number:'1.2-2')" tooltipPosition="bottom">
                 <i class="pi pi-wallet" aria-hidden="true"></i>
-                {{ item.currency || 'USD' }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
+                {{ getCurrencySymbol(item.currency) }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
               </span>
               }
 
@@ -501,7 +501,7 @@
                     </td>
                     <td class="total-amount-cell" style="min-width: 150px; text-align: right; white-space: nowrap;">
                       <span class="total-amount-value" style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
-                        {{ item.currency || 'USD' }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
+                        {{ getCurrencySymbol(item.currency) }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
                       </span>
                     </td>
                   </tr>
@@ -1208,7 +1208,7 @@
             @if (invoiceTotalNet() > 0) {
             <div class="header-totals-group" style="display: inline-flex; align-items: center; gap: 8px;">
               <span class="vsc-cost-pill">
-                Total Net ({{ invoiceForm.get('currency')?.value || 'USD' }}): {{ invoiceTotalNet() | number: '1.2-2' }}
+                Total Net ({{ getCurrencyCode(invoiceForm.get('currency')?.value) }}): {{ invoiceTotalNet() | number: '1.2-2' }}
               </span>
             </div>
             }
@@ -1312,7 +1312,7 @@
                     <div class="total-label-wrapper">
                       <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-calculator"></i></span>
                       <span class="total-title" style="font-weight: 700; color: var(--color-primary, #e14d3f);">
-                        Total Invoice Value ({{ invoiceForm.get('currency')?.value || 'USD' }})
+                        Total Invoice Value ({{ getCurrencyCode(invoiceForm.get('currency')?.value) }})
                       </span>
                     </div>
                   </td>

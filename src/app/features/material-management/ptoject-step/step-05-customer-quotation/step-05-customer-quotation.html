@@ -364,6 +364,11 @@
 
               @if (isFieldInvalid(field.key)) {
               <p class="field-error">{{ field.label }} is required.</p>
+              } @else if (field.helperText) {
+              <p class="field-hint">
+                <i class="pi pi-info-circle" aria-hidden="true"></i>
+                {{ field.helperText }}
+              </p>
               }
             </div>
             }

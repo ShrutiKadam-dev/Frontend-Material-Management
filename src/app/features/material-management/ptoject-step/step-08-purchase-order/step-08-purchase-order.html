@@ -96,7 +96,9 @@
 
             <div class="vsc-header-right">
               @if (calculatePOGross(po) > 0) {
-              <span class="vsc-cost-pill" [pTooltip]="'Net: ₹ ' + (calculatePONet(po) | number:'1.2-2') + ' | GST (' + po.gst_rate + '%): ₹ ' + (calculatePOGst(po) | number:'1.2-2')" tooltipPosition="bottom">
+              <span class="vsc-cost-pill"
+                [pTooltip]="'Net: ₹ ' + (calculatePONet(po) | number:'1.2-2') + ' | GST (' + po.gst_rate + '%): ₹ ' + (calculatePOGst(po) | number:'1.2-2')"
+                tooltipPosition="bottom">
                 <i class="pi pi-indian-rupee" aria-hidden="true"></i>
                 ₹&nbsp;{{ calculatePOGross(po) | number:'1.2-2' }}
                 <small style="font-size: 0.72rem; opacity: 0.85; margin-left: 2px;">(Incl. GST)</small>
@@ -181,8 +183,9 @@
             <!-- Ordered Materials Table -->
             @if (po.items && po.items.length) {
             <div class="cost-items-table-container">
-              <p-table [value]="po.items" [paginator]="po.items.length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
-                styleClass="p-datatable-sm items-table-wrap" aria-label="Purchase order items">
+              <p-table [value]="po.items" [paginator]="po.items.length > 5" [rows]="5"
+                [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
+                aria-label="Purchase order items">
                 <ng-template pTemplate="header">
                   <tr>
                     <th scope="col" style="width: 45px; text-align: center;">#</th>
@@ -218,7 +221,8 @@
                     <td colspan="5" class="total-label-cell">
                       <div class="total-label-wrapper">
                         <span class="total-title">Total Quoted Net Amount (Excl. GST)</span>
-                        <span class="total-items-badge">({{ po.items.length }} {{ po.items.length === 1 ? 'item' : 'items' }})</span>
+                        <span class="total-items-badge">({{ po.items.length }} {{ po.items.length === 1 ? 'item' :
+                          'items' }})</span>
                       </div>
                     </td>
                     <td class="total-amount-cell" style="min-width: 140px; text-align: right; white-space: nowrap;">
@@ -243,11 +247,13 @@
                     <td colspan="5" class="total-label-cell">
                       <div class="total-label-wrapper">
                         <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-calculator"></i></span>
-                        <span class="total-title" style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total PO Value (Incl. GST)</span>
+                        <span class="total-title" style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total
+                          PO Value (Incl. GST)</span>
                       </div>
                     </td>
                     <td class="total-amount-cell" style="min-width: 140px; text-align: right; white-space: nowrap;">
-                      <span class="total-amount-value" style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
+                      <span class="total-amount-value"
+                        style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
                         ₹&nbsp;{{ calculatePOGross(po) | number:'1.2-2' }}
                       </span>
                     </td>
@@ -311,10 +317,10 @@
   </div>
 
   <!-- ── 3. Create / Edit Purchase Order Dialog ───────────── -->
-  <p-dialog [header]="editingPO() ? 'Edit Customer Purchase Order' : 'New Customer Purchase Order'" [visible]="dialogVisible()"
-    (visibleChange)="dialogVisible.set($event)" [modal]="true" [blockScroll]="true" [draggable]="false"
-    [resizable]="false" [style]="{ width: '92vw', maxWidth: '1100px' }" styleClass="cq-dialog cost-sheet-dialog"
-    appendTo="body">
+  <p-dialog [header]="editingPO() ? 'Edit Customer Purchase Order' : 'New Customer Purchase Order'"
+    [visible]="dialogVisible()" (visibleChange)="dialogVisible.set($event)" [modal]="true" [blockScroll]="true"
+    [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '1100px' }"
+    styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
 
     <form [formGroup]="headerForm" (ngSubmit)="submit()" novalidate id="po-form">
       <div class="dlg-body">
@@ -333,7 +339,8 @@
         <div class="cost-sheet-sync-pill" role="status">
           <i class="pi pi-check-circle" aria-hidden="true"></i>
           <span>
-            Auto-imported from <strong>Latest Bid Submission</strong> · {{ items().length }} items with commercial terms pre-filled.
+            Auto-imported from <strong>Latest Bid Submission</strong> · {{ items().length }} items with commercial terms
+            pre-filled.
           </span>
         </div>
         }
@@ -354,25 +361,19 @@
             <!-- POC Name -->
             <div class="field">
               <label for="dlg-po-poc">
-                POC / Contact Person Name <span class="req" aria-hidden="true">*</span>
+                POC / Contact Person Name
               </label>
               <input id="dlg-po-poc" pInputText formControlName="poc_name" placeholder="Enter contact person name"
                 [class.ng-invalid]="isFieldInvalid('poc_name')" />
-              @if (isFieldInvalid('poc_name')) {
-              <p class="field-error">{{ getFieldError('poc_name') }}</p>
-              }
             </div>
 
             <!-- Email -->
             <div class="field">
               <label for="dlg-po-email">
-                Contact Email <span class="req" aria-hidden="true">*</span>
+                Contact Email
               </label>
               <input id="dlg-po-email" pInputText type="email" formControlName="email"
                 placeholder="Enter contact email address" [class.ng-invalid]="isFieldInvalid('email')" />
-              @if (isFieldInvalid('email')) {
-              <p class="field-error">{{ getFieldError('email') }}</p>
-              }
             </div>
 
             <!-- PO Title -->
@@ -392,8 +393,8 @@
               <label for="dlg-po-no">
                 PO Number / Reference <span class="req" aria-hidden="true">*</span>
               </label>
-              <input id="dlg-po-no" pInputText formControlName="po_no"
-                placeholder="Enter PO reference number" [class.ng-invalid]="isFieldInvalid('po_no')" />
+              <input id="dlg-po-no" pInputText formControlName="po_no" placeholder="Enter PO reference number"
+                [class.ng-invalid]="isFieldInvalid('po_no')" />
               @if (isFieldInvalid('po_no')) {
               <p class="field-error">{{ getFieldError('po_no') }}</p>
               }
@@ -404,9 +405,8 @@
               <label for="dlg-po-date">
                 PO Date <span class="req" aria-hidden="true">*</span>
               </label>
-              <p-datepicker inputId="dlg-po-date" formControlName="po_date" dateFormat="dd-mm-yy"
-                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
-                [invalid]="isFieldInvalid('po_date')" />
+              <p-datepicker inputId="dlg-po-date" formControlName="po_date" dateFormat="dd-mm-yy" [showIcon]="true"
+                [fluid]="true" placeholder="DD-MM-YYYY" [invalid]="isFieldInvalid('po_date')" />
               @if (isFieldInvalid('po_date')) {
               <p class="field-error">{{ getFieldError('po_date') }}</p>
               }
@@ -418,8 +418,7 @@
                 Delivery Date <span class="req" aria-hidden="true">*</span>
               </label>
               <p-datepicker inputId="dlg-po-delivery-date" formControlName="delivery_date" dateFormat="dd-mm-yy"
-                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
-                [invalid]="isFieldInvalid('delivery_date')" />
+                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY" [invalid]="isFieldInvalid('delivery_date')" />
               @if (isFieldInvalid('delivery_date')) {
               <p class="field-error">{{ getFieldError('delivery_date') }}</p>
               }
@@ -458,8 +457,8 @@
             <div class="field">
               <label for="dlg-po-warranty">Warranty Period <span class="req" aria-hidden="true">*</span></label>
               <p-select id="dlg-po-warranty" formControlName="warranty_period" [options]="warrantyPeriodOptions"
-                optionLabel="label" optionValue="value" placeholder="Select Warranty Period" [fluid]="true" appendTo="body"
-                [invalid]="isFieldInvalid('warranty_period')" />
+                optionLabel="label" optionValue="value" placeholder="Select Warranty Period" [fluid]="true"
+                appendTo="body" [invalid]="isFieldInvalid('warranty_period')" />
               @if (isFieldInvalid('warranty_period')) {
               <p class="field-error">{{ getFieldError('warranty_period') }}</p>
               }
@@ -489,7 +488,8 @@
             </p>
             @if (dialogTotalNetValue() > 0) {
             <div class="header-totals-group" style="display: inline-flex; align-items: center; gap: 8px;">
-              <span class="vsc-cost-pill" style="background: var(--color-surface, #fff); border: 1px solid var(--color-border, #e2e8f0); color: #475569;">
+              <span class="vsc-cost-pill"
+                style="background: var(--color-surface, #fff); border: 1px solid var(--color-border, #e2e8f0); color: #475569;">
                 Net (Excl. GST): ₹&nbsp;{{ dialogTotalNetValue() | number:'1.2-2' }}
               </span>
               <span class="vsc-cost-pill">
@@ -586,12 +586,13 @@
                   <td style="text-align: right; width: 80px; white-space: nowrap;">
                     <div class="actions-cell">
                       <button pButton type="button" icon="pi pi-pencil" [text]="true"
-                        class="p-button-text p-button-sm qe-edit" [attr.aria-label]="'Edit ' + (item.material_name || item.description)"
-                        pTooltip="Edit" tooltipPosition="top" (click)="openEditRow(i, matInput)"></button>
+                        class="p-button-text p-button-sm qe-edit"
+                        [attr.aria-label]="'Edit ' + (item.material_name || item.description)" pTooltip="Edit"
+                        tooltipPosition="top" (click)="openEditRow(i, matInput)"></button>
                       <button pButton type="button" icon="pi pi-trash" [text]="true"
                         class="p-button-text p-button-sm p-button-danger qe-delete"
-                        [attr.aria-label]="'Delete ' + (item.material_name || item.description)" pTooltip="Delete" tooltipPosition="top"
-                        (click)="deleteRow(i)"></button>
+                        [attr.aria-label]="'Delete ' + (item.material_name || item.description)" pTooltip="Delete"
+                        tooltipPosition="top" (click)="deleteRow(i)"></button>
                     </div>
                   </td>
                 </tr>
@@ -602,7 +603,8 @@
                   <td colspan="5" class="total-label-cell">
                     <div class="total-label-wrapper">
                       <span class="total-title">Total Quoted Net Amount (Excl. GST)</span>
-                      <span class="total-items-badge">({{ items().length }} {{ items().length === 1 ? 'item' : 'items' }})</span>
+                      <span class="total-items-badge">({{ items().length }} {{ items().length === 1 ? 'item' : 'items'
+                        }})</span>
                     </div>
                   </td>
                   <td class="total-amount-cell" style="min-width: 120px; text-align: right; white-space: nowrap;">
@@ -629,11 +631,13 @@
                   <td colspan="5" class="total-label-cell">
                     <div class="total-label-wrapper">
                       <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-calculator"></i></span>
-                      <span class="total-title" style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total PO Value (Incl. GST)</span>
+                      <span class="total-title" style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total PO
+                        Value (Incl. GST)</span>
                     </div>
                   </td>
                   <td class="total-amount-cell" style="min-width: 120px; text-align: right; white-space: nowrap;">
-                    <span class="total-amount-value" style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
+                    <span class="total-amount-value"
+                      style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
                       ₹&nbsp;{{ dialogTotalGrossValue() | number:'1.2-2' }}
                     </span>
                   </td>
@@ -664,7 +668,8 @@
           @if (existingAttachments().length) {
           <div class="existing-att-block">
             <p class="existing-att-title">
-              <i class="pi pi-paperclip" aria-hidden="true"></i> Current Attachments ({{ existingAttachments().length }})
+              <i class="pi pi-paperclip" aria-hidden="true"></i> Current Attachments ({{ existingAttachments().length
+              }})
             </p>
             <div class="file-list">
               @for (file of existingAttachments(); track file.id) {
@@ -702,7 +707,8 @@
             (keydown.space)="$event.preventDefault(); fileInput.click()" tabindex="0" role="button"
             aria-label="Upload PO documents">
             <i class="pi pi-upload" aria-hidden="true"></i>
-            <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload PO documents' }}</span>
+            <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload PO
+              documents' }}</span>
             @if (!attachments().length && !existingAttachments().length) {
             <span class="file-hint">PDF, Excel, Word, Images — Official signed PO copy, commercial schedule</span>
             }
@@ -727,7 +733,8 @@
     <ng-template pTemplate="footer">
       <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="closeDialog()"
         [disabled]="submitting()"></button>
-      <button pButton type="submit" form="po-form" [label]="editingPO() ? 'Update Purchase Order' : 'Submit Purchase Order'"
+      <button pButton type="submit" form="po-form"
+        [label]="editingPO() ? 'Update Purchase Order' : 'Submit Purchase Order'"
         [icon]="editingPO() ? 'pi pi-check' : 'pi pi-send'" class="submit-btn" [loading]="submitting()"
         [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
     </ng-template>

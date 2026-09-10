@@ -16,15 +16,15 @@
     </div>
 
     <div class="header-actions">
-      @if (customer(); as c) {
-      <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
-        <i class="pi pi-user" aria-hidden="true"></i>
-        {{ c.name }}
+      @if (supplier(); as s) {
+      <span class="header-partner-pill" pTooltip="Project Supplier" tooltipPosition="bottom">
+        <i class="pi pi-building" aria-hidden="true"></i>
+        {{ s.name }}
       </span>
-      } @else if (project()?.customer_name) {
-      <span class="header-partner-pill" pTooltip="Project Customer" tooltipPosition="bottom">
-        <i class="pi pi-user" aria-hidden="true"></i>
-        {{ project()?.customer_name }}
+      } @else if (project()?.supplier_name) {
+      <span class="header-partner-pill" pTooltip="Project Supplier" tooltipPosition="bottom">
+        <i class="pi pi-building" aria-hidden="true"></i>
+        {{ project()?.supplier_name }}
       </span>
       }
       <div class="header-step-pill" aria-hidden="true">
@@ -91,7 +91,7 @@
                 {{ (order.order_confirmation_date || order.confirmation_date || order.order_date) | date: 'dd-MM-yyyy' }}
               </span>
 
-              <h2 class="vsc-title">{{ order.ref_no ? ('Order Confirmation (' + order.ref_no + ')') : 'Supplier Order Confirmation' }}</h2>
+              <h2 class="vsc-title">{{ supplier()?.name || project()?.supplier_name || (order.ref_no ? ('Order Confirmation (' + order.ref_no + ')') : 'Supplier Order Confirmation') }}</h2>
             </div>
 
             <div class="vsc-header-right">
@@ -309,11 +309,11 @@
           <p class="dlg-section-label"><i class="pi pi-id-card"></i> 1. Order Reference & Confirmation Details</p>
           <div class="dlg-grid">
 
-            <!-- Customer (Readonly) -->
+            <!-- Supplier (Readonly) -->
             <div class="field span-two">
-              <label for="dlg-order-customer">Customer</label>
-              <input id="dlg-order-customer" pInputText type="text"
-                [value]="customer()?.name || project()?.customer_name || '—'" readonly class="readonly-input" />
+              <label for="dlg-order-supplier">Supplier</label>
+              <input id="dlg-order-supplier" pInputText type="text"
+                [value]="supplier()?.name || project()?.supplier_name || '—'" readonly class="readonly-input" />
             </div>
 
             <!-- Order Confirmation Date -->

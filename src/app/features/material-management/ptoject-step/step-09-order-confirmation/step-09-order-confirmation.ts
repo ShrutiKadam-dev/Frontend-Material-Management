@@ -26,7 +26,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { TableModule } from 'primeng/table';
 
 import { OrderConfirmationService } from '../../../../core/services/order-confirmation';
-import { CustomerService } from '../../../../core/services/customer';
+import { SupplierService } from '../../../../core/services/supplier';
 import { ProjectService } from '../../../../core/services/project';
 import { AttachmentService } from '../../../../core/services/attachment';
 import {
@@ -37,7 +37,7 @@ import {
   OrderConfirmationUpdateInput,
 } from '../../../../core/models/order-confirmation.model';
 import { Attachment } from '../../../../core/models/attachment.model';
-import { Customer } from '../../../../core/models/customer.model';
+import { Supplier } from '../../../../core/models/supplier.model';
 import { Project } from '../../../../core/models/project.model';
 import {
   INCOTERMS_OPTIONS,
@@ -69,7 +69,7 @@ export class Step09OrderConfirmation implements OnInit {
   private readonly router = inject(Router);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly orderConfirmationService = inject(OrderConfirmationService);
-  private readonly customerService = inject(CustomerService);
+  private readonly supplierService = inject(SupplierService);
   private readonly projectService = inject(ProjectService);
   private readonly attachmentService = inject(AttachmentService);
   private readonly messageService = inject(MessageService);
@@ -77,7 +77,7 @@ export class Step09OrderConfirmation implements OnInit {
   /* ── Core State Signals ─────────────────────────────────── */
   protected readonly projectId = signal(0);
   protected readonly project = signal<Project | null>(null);
-  protected readonly customer = signal<Customer | null>(null);
+  protected readonly supplier = signal<Supplier | null>(null);
   protected readonly orderConfirmations = signal<OrderConfirmation[]>([]);
   protected readonly latestQuotation = signal<LatestSupplierQuotation | null>(null);
   protected readonly loading = signal(true);
@@ -177,9 +177,9 @@ export class Step09OrderConfirmation implements OnInit {
     this.projectService.getProjectById(projectId).subscribe({
       next: (proj) => {
         this.project.set(proj);
-        if (proj?.customer_id) {
-          this.customerService.getCustomerById(proj.customer_id).subscribe({
-            next: (cust) => this.customer.set(cust),
+        if (proj?.supplier_id) {
+          this.supplierService.getSupplierById(proj.supplier_id).subscribe({
+            next: (s) => this.supplier.set(s),
             error: () => {/* non-fatal */ },
           });
         }

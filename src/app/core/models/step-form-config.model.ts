@@ -27,4 +27,5 @@ export interface StepFormFieldConfig {
   unitKey?: string;
   unitOptions?: SelectOption[];
   readonlyValueFn?: () => string;
+  helperText?: string;
 }

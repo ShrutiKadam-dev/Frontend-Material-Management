@@ -137,26 +137,30 @@
         <button pButton type="button" icon="pi pi-refresh" label="Retry" class="p-button-text p-button-sm"
           (click)="loadClearanceData()"></button>
       </div>
-      } @else if (clearances().length === 0) {
       <!-- Empty State -->
-      <div class="empty-state app-panel">
-        <div class="empty-icon-wrap" aria-hidden="true">
-          <i class="pi pi-id-card"></i>
+      } @else if (clearances().length === 0) {
+      <div class="version-sheet-card empty-card">
+        <div class="center-state empty-cta">
+          <span class="empty-icon" aria-hidden="true">
+            <i class="pi pi-shield"></i>
+          </span>
+          <h3>No customs clearance records found</h3>
+          <p>Record the Custom House Agent (CHA) details, BOE assessment, Duty challan, and clearance documents.</p>
+          <button pButton type="button" icon="pi pi-plus" label="Record Customs Clearance"
+            class="create-cost-sheet-btn" (click)="openCreateDialog()"></button>
         </div>
-        <h3>No Customs Clearance Records Found</h3>
-        <p>Record the Custom House Agent (CHA) details, BOE assessment, Duty challan, and clearance documents.</p>
-        <button pButton type="button" icon="pi pi-plus" label="Record First Customs Clearance"
-          class="create-cost-sheet-btn" (click)="openCreateDialog()"></button>
       </div>
       } @else if (filteredClearances().length === 0) {
-      <div class="empty-state app-panel">
-        <div class="empty-icon-wrap" aria-hidden="true">
-          <i class="pi pi-search"></i>
+      <div class="version-sheet-card empty-card">
+        <div class="center-state empty-cta">
+          <span class="empty-icon" aria-hidden="true">
+            <i class="pi pi-search"></i>
+          </span>
+          <h3>No matching records found</h3>
+          <p>No customs clearance records match your search query "{{ searchQuery() }}".</p>
+          <button pButton type="button" icon="pi pi-times" label="Clear Search" class="p-button-outlined"
+            (click)="clearSearch()"></button>
         </div>
-        <h3>No Matching Records Found</h3>
-        <p>No customs clearance records match your search query "{{ searchQuery() }}".</p>
-        <button pButton type="button" icon="pi pi-times" label="Clear Search" class="p-button-outlined"
-          (click)="clearSearch()"></button>
       </div>
       } @else {
 
@@ -265,7 +269,7 @@
               <!-- Tile 2: IGST -->
               <div class="duty-matrix-tile">
                 <span class="dmt-label">
-                  <i class="pi pi-percentage" aria-hidden="true"></i> Integrated GST (IGST)
+                  <i class="pi pi-receipt" aria-hidden="true"></i> Integrated GST (IGST)
                 </span>
                 <strong class="dmt-value">₹&nbsp;{{ (item.igst_amount || 0) | number:'1.2-2' }}</strong>
                 <span class="dmt-sub">Statutory import IGST</span>

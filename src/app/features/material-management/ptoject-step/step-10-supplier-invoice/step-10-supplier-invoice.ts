@@ -1124,6 +1124,15 @@ export class Step10SupplierInvoice implements OnInit {
     return 'Invalid value.';
   }
 
+  protected getCurrencyCode(currency?: string): string {
+    return currency || this.project()?.currency || 'INR';
+  }
+
+  protected getCurrencySymbol(currency?: string): string {
+    const code = this.getCurrencyCode(currency);
+    return this.dropdownService.getCurrencySymbol(code) || code;
+  }
+
   protected goBack(): void {
     this.router.navigate(['/projects', this.projectId(), 'steps']);
   }
