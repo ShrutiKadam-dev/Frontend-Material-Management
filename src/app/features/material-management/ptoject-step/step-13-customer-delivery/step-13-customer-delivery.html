@@ -604,9 +604,9 @@
                             <h2 class="vsc-title">Delivery Challan — {{ dc.delivery_challan_no }}</h2>
                         </div>
                         <div class="vsc-header-right">
-                            <span class="vsc-cost-pill">
-                                <i class="pi pi-check-circle" aria-hidden="true"></i>
-                                Dispatched
+                            <span class="vsc-cost-pill" [pTooltip]="'Net Total (Incl. GST): ₹ ' + ((dc.net_total || calculateChallanNetTotal(dc)) | number:'1.2-2')" tooltipPosition="bottom">
+                                <i class="pi pi-wallet" aria-hidden="true"></i>
+                                ₹ {{ (dc.net_total || calculateChallanNetTotal(dc)) | number:'1.2-2' }}
                             </span>
                             @if (dc.items && dc.items.length) {
                             <span class="vsc-count-pill">
@@ -633,6 +633,11 @@
                                 <i class="pi pi-building" aria-hidden="true"></i>
                                 <span class="p-lbl">Recipient:</span>
                                 <span class="p-val">{{ project()?.customer_name || 'Customer' }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-percentage" aria-hidden="true"></i>
+                                <span class="p-lbl">GST Rate:</span>
+                                <span class="p-val">{{ (dc.gst_rate !== undefined && dc.gst_rate !== null ? dc.gst_rate : 18) }}%</span>
                             </div>
                         </div>
 
@@ -664,17 +669,46 @@
                                     }
                                 </tbody>
                                 <tfoot>
+                                    <tr class="tfoot-subtotal-row">
+                                        <td colspan="5" style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
+                                            Taxable Amount (Subtotal):
+                                        </td>
+                                        <td style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
+                                            ₹ {{ calculateChallanSubtotal(dc) | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                    <tr class="tfoot-gst-row">
+                                        <td colspan="5" style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
+                                            <span style="display: inline-flex; align-items: center; gap: 5px;">
+                                                <i class="pi pi-percentage" style="color: #d97706; font-size: 0.74rem;"></i>
+                                                GST Amount ({{ (dc.gst_rate !== undefined && dc.gst_rate !== null ? dc.gst_rate : 18) | number:'1.2-2' }}%):
+                                            </span>
+                                        </td>
+                                        <td style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
+                                            ₹ {{ calculateChallanGstAmount(dc) | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                    @if (dc.round_off) {
+                                    <tr class="tfoot-round-row">
+                                        <td colspan="5" style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
+                                            Round Off:
+                                        </td>
+                                        <td style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
+                                            ₹ {{ dc.round_off | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                    }
                                     <tr class="tfoot-grand-total-row">
-                                        <td colspan="5" style="text-align: right; font-weight: 800; color: #1e3a8a; padding: 10px 14px; background: #eff6ff; border-top: 2px solid #bfdbfe;">
+                                        <td colspan="5" style="text-align: right; font-weight: 800; color: #991b1b; padding: 10px 14px; background: #fef2f2; border-top: 2px solid rgba(225, 77, 63, 0.25);">
                                             <div style="display: flex; align-items: center; justify-content: flex-end; gap: 7px;">
-                                                <span class="total-icon-badge" aria-hidden="true" style="background: #dbeafe; color: #1d4ed8; border-radius: 4px; padding: 2px 6px; font-size: 0.78rem;">
+                                                <span class="total-icon-badge" aria-hidden="true" style="background: rgba(225,77,63,0.12); color: #e14d3f; border-radius: 4px; padding: 2px 6px; font-size: 0.78rem;">
                                                     <i class="pi pi-calculator"></i>
                                                 </span>
-                                                <span>Total Dispatched Net Value:</span>
+                                                <span>Net Total (Incl. GST):</span>
                                             </div>
                                         </td>
-                                        <td style="text-align: right; font-family: monospace; font-size: 1.05rem; font-weight: 850; color: #1d4ed8; padding: 10px 14px; background: #eff6ff; border-top: 2px solid #bfdbfe; white-space: nowrap;">
-                                            ₹ {{ calculateChallanTotal(dc) | number:'1.2-2' }}
+                                        <td style="text-align: right; font-family: monospace; font-size: 1.05rem; font-weight: 850; color: #e14d3f; padding: 10px 14px; background: #fef2f2; border-top: 2px solid rgba(225, 77, 63, 0.25); white-space: nowrap;">
+                                            ₹ {{ calculateChallanNetTotal(dc) | number:'1.2-2' }}
                                         </td>
                                     </tr>
                                 </tfoot>
@@ -1015,6 +1049,39 @@
 
         <form [formGroup]="invoiceForm" (ngSubmit)="onSubmitInvoice()" novalidate id="invoice-form">
             <div class="dlg-body">
+
+                <!-- Auto-Sync Notice from Latest Purchase Order -->
+                @if (!editingInvoice() && latestPoTemplate(); as po) {
+                <div class="cost-sheet-sync-pill" role="status">
+                    <div class="sync-pill-header">
+                        <div class="sync-pill-title">
+                            <i class="pi pi-check-circle" aria-hidden="true"></i>
+                            <span>
+                                Auto-imported from <strong>Latest Purchase Order{{ (po.po_number || po.po_no) ? ' (' + (po.po_number || po.po_no) + ')' : '' }}</strong> · {{ po.items?.length || invoiceItemsList().length }} items loaded with pricing terms.
+                            </span>
+                        </div>
+                        <span class="sync-pill-badge">
+                            GST Rate: {{ po.gst_rate ?? invoiceForm.get('gst_rate')?.value ?? 18 }}%
+                        </span>
+                    </div>
+                    @if (invoiceSubtotal() > 0 || (invoiceForm.get('net_total')?.value || 0) > 0) {
+                    <div class="sync-financials-chips">
+                        <span class="sync-chip">
+                            <span class="sync-chip-label">Excl. GST:</span>
+                            <strong class="sync-chip-value">₹&nbsp;{{ invoiceSubtotal() | number:'1.2-2' }}</strong>
+                        </span>
+                        <span class="sync-chip">
+                            <span class="sync-chip-label">GST ({{ invoiceForm.get('gst_rate')?.value || 18 }}%):</span>
+                            <strong class="sync-chip-value">+ ₹&nbsp;{{ (invoiceForm.get('gst_amount')?.value || 0) | number:'1.2-2' }}</strong>
+                        </span>
+                        <span class="sync-chip">
+                            <span class="sync-chip-label">Incl. GST:</span>
+                            <strong class="sync-chip-value highlight">₹&nbsp;{{ (invoiceForm.get('net_total')?.value || invoiceSubtotal()) | number:'1.2-2' }}</strong>
+                        </span>
+                    </div>
+                    }
+                </div>
+                }
 
                 <!-- Section 1: Invoice Identification -->
                 <div class="dlg-section">
@@ -1373,6 +1440,25 @@
         <form [formGroup]="packingListForm" (ngSubmit)="onSubmitPackingList()" novalidate id="packing-form">
             <div class="dlg-body">
 
+                <!-- Auto-Sync Notice from Latest Purchase Order -->
+                @if (!editingPackingList() && latestPoTemplate(); as po) {
+                <div class="cost-sheet-sync-pill" role="status">
+                    <div class="sync-pill-header">
+                        <div class="sync-pill-title">
+                            <i class="pi pi-check-circle" aria-hidden="true"></i>
+                            <span>
+                                Auto-imported from <strong>Latest Purchase Order{{ (po.po_number || po.po_no) ? ' (' + (po.po_number || po.po_no) + ')' : '' }}</strong> · {{ po.items?.length || packingItemsList().length }} items pre-filled for box packaging.
+                            </span>
+                        </div>
+                        @if (po.po_date) {
+                        <span class="sync-pill-badge">
+                            PO Date: {{ po.po_date | date:'dd-MM-yyyy' }}
+                        </span>
+                        }
+                    </div>
+                </div>
+                }
+
                 <!-- Section 1: Packing Identification -->
                 <div class="dlg-section">
                     <p class="dlg-section-label">
@@ -1702,6 +1788,39 @@
         <form [formGroup]="challanForm" (ngSubmit)="onSubmitChallan()" novalidate id="challan-form">
             <div class="dlg-body">
 
+                <!-- Auto-Sync Notice from Latest Purchase Order -->
+                @if (!editingChallan() && latestPoTemplate(); as po) {
+                <div class="cost-sheet-sync-pill" role="status">
+                    <div class="sync-pill-header">
+                        <div class="sync-pill-title">
+                            <i class="pi pi-check-circle" aria-hidden="true"></i>
+                            <span>
+                                Auto-imported from <strong>Latest Purchase Order{{ (po.po_number || po.po_no) ? ' (' + (po.po_number || po.po_no) + ')' : '' }}</strong> · {{ po.items?.length || challanItemsList().length }} items loaded with pricing terms.
+                            </span>
+                        </div>
+                        <span class="sync-pill-badge">
+                            GST Rate: {{ po.gst_rate ?? challanForm.get('gst_rate')?.value ?? 18 }}%
+                        </span>
+                    </div>
+                    @if (challanSubtotal() > 0 || (challanForm.get('net_total')?.value || 0) > 0) {
+                    <div class="sync-financials-chips">
+                        <span class="sync-chip">
+                            <span class="sync-chip-label">Excl. GST:</span>
+                            <strong class="sync-chip-value">₹&nbsp;{{ challanSubtotal() | number:'1.2-2' }}</strong>
+                        </span>
+                        <span class="sync-chip">
+                            <span class="sync-chip-label">GST ({{ challanForm.get('gst_rate')?.value || 18 }}%):</span>
+                            <strong class="sync-chip-value">+ ₹&nbsp;{{ (challanForm.get('gst_amount')?.value || 0) | number:'1.2-2' }}</strong>
+                        </span>
+                        <span class="sync-chip">
+                            <span class="sync-chip-label">Incl. GST:</span>
+                            <strong class="sync-chip-value highlight">₹&nbsp;{{ (challanForm.get('net_total')?.value || challanSubtotal()) | number:'1.2-2' }}</strong>
+                        </span>
+                    </div>
+                    }
+                </div>
+                }
+
                 <!-- Section 1: Challan Details -->
                 <div class="dlg-section">
                     <p class="dlg-section-label">
@@ -1729,6 +1848,15 @@
                             <p class="field-error">{{ getFieldError(challanForm, 'delivery_challan_date') }}</p>
                             }
                         </div>
+
+                        <div class="field">
+                            <label for="dc-gst">GST Rate (%) <span class="req" aria-hidden="true">*</span></label>
+                            <input id="dc-gst" pInputText type="number" formControlName="gst_rate"
+                                placeholder="18" [class.ng-invalid]="isFieldInvalid(challanForm, 'gst_rate')" />
+                            @if (isFieldInvalid(challanForm, 'gst_rate')) {
+                            <p class="field-error">{{ getFieldError(challanForm, 'gst_rate') }}</p>
+                            }
+                        </div>
                     </div>
                 </div>
 
@@ -1742,11 +1870,16 @@
                                 1 ? 'item' : 'items' }})</span>
                             }
                         </p>
-                        @if (challanTotalNetValue() > 0) {
+                        @if (challanSubtotal() > 0) {
                         <div class="header-totals-group" style="display: inline-flex; align-items: center; gap: 8px;">
+                            <span class="vsc-cost-pill"
+                                style="background: var(--color-surface, #fff); border: 1px solid var(--color-border, #e2e8f0); color: #475569;">
+                                Net (Excl. GST): ₹&nbsp;{{ challanSubtotal() | number:'1.2-2' }}
+                            </span>
                             <span class="vsc-cost-pill">
                                 <i class="pi pi-indian-rupee" aria-hidden="true"></i>
-                                Total Value: ₹&nbsp;{{ challanTotalNetValue() | number:'1.2-2' }}
+                                Total (Incl. GST): ₹&nbsp;{{ (challanForm.get('net_total')?.value || challanSubtotal())
+                                | number:'1.2-2' }}
                             </span>
                         </div>
                         }
@@ -1860,23 +1993,78 @@
                             </ng-template>
 
                             <ng-template pTemplate="footer">
-                                <tr class="table-total-row table-grand-total-row">
+                                <!-- Subtotal row (Excl. GST) -->
+                                <tr class="table-total-row table-subtotal-row">
                                     <td colspan="5" class="total-label-cell">
                                         <div class="total-label-wrapper">
-                                            <span class="total-icon-badge" aria-hidden="true"><i
-                                                    class="pi pi-send"></i></span>
-                                            <span class="total-title"
-                                                style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total
-                                                Challan Value</span>
+                                            <span class="total-title">Total Challan Net Amount (Excl. GST)</span>
                                             <span class="total-items-badge">({{ challanItemsList().length }} {{
                                                 challanItemsList().length === 1 ? 'item' : 'items' }})</span>
                                         </div>
                                     </td>
                                     <td class="total-amount-cell"
                                         style="min-width: 120px; text-align: right; white-space: nowrap;">
+                                        <span class="total-amount-value" style="font-size: 0.92rem; font-weight: 600;">
+                                            ₹&nbsp;{{ challanSubtotal() | number:'1.2-2' }}
+                                        </span>
+                                    </td>
+                                    <td class="total-empty-cell" style="width: 80px;"></td>
+                                </tr>
+
+                                <!-- GST row -->
+                                <tr class="table-total-row table-tax-row">
+                                    <td colspan="5" class="total-label-cell">
+                                        <div class="total-label-wrapper">
+                                            <span class="total-title">GST Amount ({{ (challanForm.get('gst_rate')?.value !== null && challanForm.get('gst_rate')?.value !== undefined ? challanForm.get('gst_rate')?.value : 18) | number:'1.2-2' }}%):</span>
+                                        </div>
+                                    </td>
+                                    <td class="total-amount-cell"
+                                        style="min-width: 120px; text-align: right; white-space: nowrap;">
+                                        <span class="total-amount-value"
+                                            style="font-size: 0.92rem; font-weight: 600; color: #64748b;">
+                                            + ₹&nbsp;{{ (challanForm.get('gst_amount')?.value || 0) | number:'1.2-2' }}
+                                        </span>
+                                    </td>
+                                    <td class="total-empty-cell" style="width: 80px;"></td>
+                                </tr>
+
+                                <!-- Round Off row (if present) -->
+                                @if (challanForm.get('round_off')?.value) {
+                                <tr class="table-total-row table-tax-row" style="border-top: none;">
+                                    <td colspan="5" class="total-label-cell">
+                                        <div class="total-label-wrapper">
+                                            <span class="total-title">Round Off:</span>
+                                        </div>
+                                    </td>
+                                    <td class="total-amount-cell"
+                                        style="min-width: 120px; text-align: right; white-space: nowrap;">
+                                        <span class="total-amount-value"
+                                            style="font-size: 0.92rem; font-weight: 600; color: #64748b;">
+                                            {{ (challanForm.get('round_off')?.value || 0) >= 0 ? '+ ' : '' }}₹&nbsp;{{
+                                            challanForm.get('round_off')?.value | number:'1.2-2' }}
+                                        </span>
+                                    </td>
+                                    <td class="total-empty-cell" style="width: 80px;"></td>
+                                </tr>
+                                }
+
+                                <!-- Grand Total row (Incl. GST) -->
+                                <tr class="table-total-row table-grand-total-row">
+                                    <td colspan="5" class="total-label-cell">
+                                        <div class="total-label-wrapper">
+                                            <span class="total-icon-badge" aria-hidden="true"><i
+                                                    class="pi pi-calculator"></i></span>
+                                            <span class="total-title"
+                                                style="font-weight: 700; color: var(--color-primary, #e14d3f);">Net
+                                                Total (Incl. GST)</span>
+                                        </div>
+                                    </td>
+                                    <td class="total-amount-cell"
+                                        style="min-width: 120px; text-align: right; white-space: nowrap;">
                                         <span class="total-amount-value"
                                             style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
-                                            ₹&nbsp;{{ challanTotalNetValue() | number:'1.2-2' }}
+                                            ₹&nbsp;{{ (challanForm.get('net_total')?.value || challanSubtotal()) |
+                                            number:'1.2-2' }}
                                         </span>
                                     </td>
                                     <td class="total-empty-cell" style="width: 80px;"></td>
@@ -1989,6 +2177,42 @@
 
         <form [formGroup]="warrantyForm" (ngSubmit)="onSubmitWarranty()" novalidate id="warranty-form">
             <div class="dlg-body">
+
+                <!-- Auto-Sync Notice from Latest PO & Tax Invoice -->
+                @if (!editingWarranty() && (latestPoTemplate() || latestTaxInvoiceTemplate() || (taxInvoices().length > 0))) {
+                <div class="cost-sheet-sync-pill" role="status">
+                    <div class="sync-pill-header">
+                        <div class="sync-pill-title">
+                            <i class="pi pi-check-circle" aria-hidden="true"></i>
+                            <span>
+                                Auto-imported references from
+                                @if (latestPoTemplate(); as po) {
+                                <strong>Latest PO{{ (po.po_number || po.po_no) ? ' (' + (po.po_number || po.po_no) + ')' : '' }}</strong>
+                                }
+                                @if (latestPoTemplate() && (latestTaxInvoiceTemplate() || taxInvoices().length > 0)) {
+                                &amp;
+                                }
+                                @if (latestTaxInvoiceTemplate() || (taxInvoices().length ? taxInvoices()[0] : null); as inv) {
+                                <strong>Latest Customer Invoice{{ inv.invoice_no ? ' (' + inv.invoice_no + ')' : '' }}</strong>
+                                }
+                            </span>
+                        </div>
+                        <span class="sync-pill-badge">
+                            Warranty: {{ warrantyForm.get('warranty_period')?.value || '12 Months' }}
+                        </span>
+                    </div>
+                    <div class="sync-financials-chips">
+                        <span class="sync-chip">
+                            <span class="sync-chip-label">PO Ref:</span>
+                            <strong class="sync-chip-value">{{ warrantyForm.get('po_no')?.value || '—' }} ({{ warrantyForm.get('po_date')?.value ? (warrantyForm.get('po_date')?.value | date:'dd-MM-yyyy') : '—' }})</strong>
+                        </span>
+                        <span class="sync-chip">
+                            <span class="sync-chip-label">Invoice Ref:</span>
+                            <strong class="sync-chip-value">{{ warrantyForm.get('invoice_no')?.value || '—' }} ({{ warrantyForm.get('invoice_date')?.value ? (warrantyForm.get('invoice_date')?.value | date:'dd-MM-yyyy') : '—' }})</strong>
+                        </span>
+                    </div>
+                </div>
+                }
 
                 <!-- Section 1: Certificate Specs -->
                 <div class="dlg-section">

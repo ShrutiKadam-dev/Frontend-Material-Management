@@ -47,6 +47,7 @@ import {
   CustomerTransportDetailUpdateInput,
   DeliveryItem,
   LatestPurchaseOrderTemplate,
+  LatestCustomerTaxInvoiceTemplate,
   TransportMode,
 } from '../../../../core/models/customer-delivery.model';
 import { Attachment } from '../../../../core/models/attachment.model';
@@ -103,6 +104,8 @@ export class Step13CustomerDelivery implements OnInit {
   protected readonly transportDetails = signal<CustomerTransportDetail[]>([]);
 
   protected readonly latestPoTemplate = signal<LatestPurchaseOrderTemplate | null>(null);
+  protected readonly latestTaxInvoiceTemplate = signal<LatestCustomerTaxInvoiceTemplate | null>(null);
+  protected readonly loadingWarrantyReferences = signal(false);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -203,6 +206,10 @@ export class Step13CustomerDelivery implements OnInit {
   protected readonly challanForm = this.fb.group({
     delivery_challan_no: ['', [Validators.required]],
     delivery_challan_date: [null as Date | string | null, [Validators.required]],
+    gst_rate: [18, [Validators.required, Validators.min(0)]],
+    gst_amount: [0, [Validators.min(0)]],
+    round_off: [0],
+    net_total: [0, [Validators.required, Validators.min(0)]],
     remark: [''],
   });
 
@@ -215,12 +222,14 @@ export class Step13CustomerDelivery implements OnInit {
     unit_price: ['', [Validators.pattern(/^[0-9]+(\.[0-9]+)?$/)]],
   });
 
-  protected readonly challanTotalNetValue = computed(() => {
+  protected readonly challanSubtotal = computed(() => {
     return this.challanItemsList().reduce(
       (sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0),
       0
     );
   });
+
+  protected readonly challanTotalNetValue = this.challanSubtotal;
 
   // ── 4. Warranty Certificate Reactive Form ──────────────────────
   protected readonly warrantyForm = this.fb.group({
@@ -290,12 +299,14 @@ export class Step13CustomerDelivery implements OnInit {
       this.transportForm.get('awb_no')?.updateValueAndValidity();
     });
 
-    // Auto-calculate Tax Invoice totals when items or GST rate changes
+    // Auto-calculate Tax Invoice and Delivery Challan totals when items or GST rate changes
     this.invoiceForm.get('gst_rate')?.valueChanges.subscribe(() => this.recalculateInvoiceTotals());
+    this.challanForm.get('gst_rate')?.valueChanges.subscribe(() => this.recalculateChallanTotals());
 
     this.loadProject(id);
     this.loadAllStep13Data(id);
     this.loadLatestPurchaseOrderTemplate(id);
+    this.loadLatestCustomerTaxInvoiceTemplate(id);
   }
 
   protected goBack(): void {
@@ -331,6 +342,17 @@ export class Step13CustomerDelivery implements OnInit {
       next: (po) => {
         if (po) {
           this.latestPoTemplate.set(po);
+        }
+      },
+      error: () => { },
+    });
+  }
+
+  private loadLatestCustomerTaxInvoiceTemplate(projectId: number): void {
+    this.deliveryService.getLatestCustomerTaxInvoice(projectId).subscribe({
+      next: (inv) => {
+        if (inv) {
+          this.latestTaxInvoiceTemplate.set(inv);
         }
       },
       error: () => { },
@@ -597,7 +619,7 @@ export class Step13CustomerDelivery implements OnInit {
     );
   }
 
-  protected calculateChallanTotal(dc: CustomerDeliveryChallan): number {
+  protected calculateChallanSubtotal(dc: CustomerDeliveryChallan): number {
     if (!dc.items || !dc.items.length) return 0;
     return dc.items.reduce(
       (sum, it) =>
@@ -606,6 +628,29 @@ export class Step13CustomerDelivery implements OnInit {
           (Number(it.quantity) || 0) * (Number(it.unit_price) || 0)),
       0,
     );
+  }
+
+  protected calculateChallanGstAmount(dc: CustomerDeliveryChallan): number {
+    if (dc.gst_amount !== undefined && dc.gst_amount !== null && !isNaN(Number(dc.gst_amount))) {
+      return Number(dc.gst_amount);
+    }
+    const sub = this.calculateChallanSubtotal(dc);
+    const rate = Number(dc.gst_rate ?? 18);
+    return Number(((sub * rate) / 100).toFixed(2));
+  }
+
+  protected calculateChallanNetTotal(dc: CustomerDeliveryChallan): number {
+    if (dc.net_total !== undefined && dc.net_total !== null && !isNaN(Number(dc.net_total)) && dc.net_total > 0) {
+      return Number(dc.net_total);
+    }
+    const sub = this.calculateChallanSubtotal(dc);
+    const gst = this.calculateChallanGstAmount(dc);
+    const round = Number(dc.round_off || 0);
+    return Number((sub + gst + round).toFixed(2));
+  }
+
+  protected calculateChallanTotal(dc: CustomerDeliveryChallan): number {
+    return this.calculateChallanNetTotal(dc);
   }
 
   protected calculatePackingTotalQty(pl: CustomerPackingList): number {
@@ -826,10 +871,15 @@ export class Step13CustomerDelivery implements OnInit {
     this.challanRowForm.reset();
 
     const po = this.latestPoTemplate();
+    const defaultGstRate = po?.gst_rate !== undefined && po?.gst_rate !== null ? po.gst_rate : 18;
 
     this.challanForm.reset({
       delivery_challan_no: '',
       delivery_challan_date: '',
+      gst_rate: defaultGstRate,
+      gst_amount: 0,
+      round_off: 0,
+      net_total: 0,
       remark: '',
     });
 
@@ -846,6 +896,7 @@ export class Step13CustomerDelivery implements OnInit {
       this.challanItemsList.set([]);
     }
 
+    this.recalculateChallanTotals();
     this.challanDialogVisible.set(true);
   }
 
@@ -859,10 +910,15 @@ export class Step13CustomerDelivery implements OnInit {
     this.challanForm.patchValue({
       delivery_challan_no: dc.delivery_challan_no,
       delivery_challan_date: dc.delivery_challan_date ? new Date(dc.delivery_challan_date) : null,
+      gst_rate: dc.gst_rate ?? 18,
+      gst_amount: dc.gst_amount ?? 0,
+      round_off: dc.round_off ?? 0,
+      net_total: dc.net_total ?? 0,
       remark: dc.remark || '',
     });
 
     this.challanItemsList.set(dc.items || []);
+    this.recalculateChallanTotals();
     this.challanDialogVisible.set(true);
   }
 
@@ -919,6 +975,7 @@ export class Step13CustomerDelivery implements OnInit {
     }
 
     this.challanRowForm.reset();
+    this.recalculateChallanTotals();
     if (focusTarget) {
       setTimeout(() => focusTarget.focus(), 0);
     }
@@ -934,10 +991,29 @@ export class Step13CustomerDelivery implements OnInit {
     if (this.editingChallanItemIdx() === index) {
       this.cancelChallanRow();
     }
+    this.recalculateChallanTotals();
   }
 
   protected calculateChallanItemNet(item: DeliveryItem): number {
     return (Number(item.quantity) || 0) * (Number(item.unit_price) || 0);
+  }
+
+  protected recalculateChallanTotals(): void {
+    const subtotal = this.challanSubtotal();
+    const gstRate = Number(this.challanForm.get('gst_rate')?.value) || 0;
+    const gstAmount = (subtotal * gstRate) / 100;
+    const exactTotal = subtotal + gstAmount;
+    const roundedTotal = Math.round(exactTotal);
+    const roundOff = parseFloat((roundedTotal - exactTotal).toFixed(2));
+
+    this.challanForm.patchValue(
+      {
+        gst_amount: parseFloat(gstAmount.toFixed(2)),
+        round_off: roundOff,
+        net_total: roundedTotal,
+      },
+      { emitEvent: false },
+    );
   }
 
   protected onSubmitChallan(): void {
@@ -960,6 +1036,10 @@ export class Step13CustomerDelivery implements OnInit {
       project_id: pId,
       delivery_challan_no: formVal.delivery_challan_no || '',
       delivery_challan_date: dateStr,
+      gst_rate: Number(formVal.gst_rate) || 0,
+      gst_amount: Number(formVal.gst_amount) || 0,
+      round_off: Number(formVal.round_off) || 0,
+      net_total: Number(formVal.net_total) || 0,
       remark: formVal.remark || undefined,
       items: this.challanItemsList(),
     };
@@ -1009,19 +1089,77 @@ export class Step13CustomerDelivery implements OnInit {
     this.existingAttachments.set([]);
 
     const po = this.latestPoTemplate();
-    const latestInv = this.taxInvoices().length ? this.taxInvoices()[0] : null;
+    const latestInv = this.latestTaxInvoiceTemplate() || (this.taxInvoices().length ? this.taxInvoices()[0] : null);
+
+    const poNo = po?.po_number || po?.po_no || '';
+    const poDateVal = this.parseDateSafe(po?.po_date);
+    const invNo = latestInv?.invoice_no || '';
+    const invDateVal = this.parseDateSafe(latestInv?.invoice_date);
 
     this.warrantyForm.reset({
-      certificate_date: '',
+      certificate_date: new Date(),
       warranty_period: po?.warranty_period || '',
-      po_no: po?.po_no || '',
-      po_date: po?.po_date ? po.po_date : '',
-      invoice_no: latestInv?.invoice_no || '',
-      invoice_date: latestInv?.invoice_date ? latestInv.invoice_date : '',
+      po_no: poNo,
+      po_date: poDateVal,
+      invoice_no: invNo,
+      invoice_date: invDateVal,
       remark: '',
     });
 
+    const pId = this.projectId();
+    if (pId) {
+      this.fetchAndPatchLatestWarrantyReferences(pId);
+    }
+
     this.warrantyDialogVisible.set(true);
+  }
+
+  protected fetchAndPatchLatestWarrantyReferences(projectId: number): void {
+    this.loadingWarrantyReferences.set(true);
+
+    // 1. Fetch Latest Purchase Order (po_number, po_date, warranty_period)
+    this.deliveryService.getLatestPurchaseOrder(projectId).subscribe({
+      next: (po) => {
+        if (po) {
+          this.latestPoTemplate.set(po);
+          if (!this.editingWarranty()) {
+            const poNo = po.po_number || po.po_no || '';
+            const poDate = this.parseDateSafe(po.po_date);
+            const currentVal = this.warrantyForm.getRawValue();
+
+            this.warrantyForm.patchValue({
+              ...(poNo && !currentVal.po_no ? { po_no: poNo } : {}),
+              ...(poDate && !currentVal.po_date ? { po_date: poDate } : {}),
+              ...(po.warranty_period && !currentVal.warranty_period ? { warranty_period: po.warranty_period } : {}),
+            });
+          }
+        }
+      },
+      error: () => { },
+    });
+
+    // 2. Fetch Latest Customer Tax Invoice (invoice_no, invoice_date, net_total)
+    this.deliveryService
+      .getLatestCustomerTaxInvoice(projectId)
+      .pipe(finalize(() => this.loadingWarrantyReferences.set(false)))
+      .subscribe({
+        next: (inv) => {
+          if (inv) {
+            this.latestTaxInvoiceTemplate.set(inv);
+            if (!this.editingWarranty()) {
+              const invNo = inv.invoice_no || '';
+              const invDate = this.parseDateSafe(inv.invoice_date);
+              const currentVal = this.warrantyForm.getRawValue();
+
+              this.warrantyForm.patchValue({
+                ...(invNo && !currentVal.invoice_no ? { invoice_no: invNo } : {}),
+                ...(invDate && !currentVal.invoice_date ? { invoice_date: invDate } : {}),
+              });
+            }
+          }
+        },
+        error: () => { },
+      });
   }
 
   protected openEditWarrantyDialog(wc: CustomerWarrantyCertificate): void {
@@ -1030,12 +1168,12 @@ export class Step13CustomerDelivery implements OnInit {
     this.existingAttachments.set(wc.attachments || []);
 
     this.warrantyForm.patchValue({
-      certificate_date: wc.certificate_date ? new Date(wc.certificate_date) : null,
+      certificate_date: this.parseDateSafe(wc.certificate_date),
       warranty_period: wc.warranty_period,
       po_no: wc.po_no,
-      po_date: wc.po_date ? new Date(wc.po_date) : null,
+      po_date: this.parseDateSafe(wc.po_date),
       invoice_no: wc.invoice_no,
-      invoice_date: wc.invoice_date ? new Date(wc.invoice_date) : null,
+      invoice_date: this.parseDateSafe(wc.invoice_date),
       remark: wc.remark || '',
     });
 
@@ -1314,5 +1452,32 @@ export class Step13CustomerDelivery implements OnInit {
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  protected parseDateSafe(val: string | Date | null | undefined): Date | null {
+    if (!val) return null;
+    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+    if (typeof val === 'string') {
+      const trimmed = val.trim();
+      if (!trimmed) return null;
+      const parts = trimmed.split(/[-T/ ]/);
+      if (parts.length >= 3) {
+        if (parts[0].length === 4) {
+          const year = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10) - 1;
+          const day = parseInt(parts[2], 10);
+          return new Date(year, month, day);
+        }
+        if (parts[2].length === 4) {
+          const day = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10) - 1;
+          const year = parseInt(parts[2], 10);
+          return new Date(year, month, day);
+        }
+      }
+      const parsed = new Date(trimmed);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+    return null;
   }
 }

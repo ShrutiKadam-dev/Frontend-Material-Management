@@ -53,8 +53,8 @@ describe('Step03SupplierQuotation', () => {
 
     expect(customerQueryService.getLatest).toHaveBeenCalled();
     expect((component as any).items()).toEqual([
-      { material_name: 'MOTOR CONTROL CARD', quantity: 4 },
-      { material_name: 'RACK EUROPE 14 SLOTS', quantity: 2 },
+      { material_name: 'MOTOR CONTROL CARD', quantity: 4, hsn_code: '' },
+      { material_name: 'RACK EUROPE 14 SLOTS', quantity: 2, hsn_code: '' },
     ]);
   });
 });

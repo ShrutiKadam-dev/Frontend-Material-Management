@@ -79,6 +79,10 @@ export interface CustomerDeliveryChallan {
   project_id: number;
   delivery_challan_no: string;
   delivery_challan_date: string;
+  gst_rate?: number;
+  gst_amount?: number;
+  round_off?: number;
+  net_total?: number;
   remark?: string | null;
   items: DeliveryItem[];
   attachments?: Attachment[];
@@ -90,6 +94,10 @@ export interface CustomerDeliveryChallanCreateInput {
   project_id: number;
   delivery_challan_no: string;
   delivery_challan_date: string;
+  gst_rate?: number;
+  gst_amount?: number;
+  round_off?: number;
+  net_total?: number;
   remark?: string;
   items: DeliveryItem[];
 }
@@ -162,17 +170,29 @@ export interface CustomerTransportDetailUpdateInput extends Partial<CustomerTran
 
 // PO Latest Template for auto-patching
 export interface LatestPurchaseOrderTemplate {
-  gst_rate?: number;
-  gst_amount?: number;
-  total_net_amount?: number;
+  po_number?: string;
   po_no?: string;
   po_date?: string;
   warranty_period?: string;
-  items: Array<{
+  gst_rate?: number;
+  gst_amount?: number;
+  total_net_amount?: number;
+  items?: Array<{
     material_name: string;
     hsn_code: string;
     quantity: number;
     unit_price: number;
     net_amount: number;
   }>;
+}
+
+// Tax Invoice Latest Template for auto-patching
+export interface LatestCustomerTaxInvoiceTemplate {
+  invoice_no?: string;
+  invoice_date?: string;
+  net_total?: number;
+  gst_rate?: number;
+  gst_amount?: number;
+  round_off?: number;
+  items?: DeliveryItem[];
 }

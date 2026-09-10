@@ -289,39 +289,39 @@
 
         <!-- Cost Sheet Auto-Sync Notice -->
         @if (latestCostSheet(); as cs) {
-        <div class="cost-sheet-sync-pill" role="status" style="display: flex; flex-direction: column; gap: 8px; padding: 12px 16px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <i class="pi pi-check-circle" aria-hidden="true" style="color: #10b981; font-size: 1.1rem;"></i>
+        <div class="cost-sheet-sync-pill" role="status">
+          <div class="sync-pill-header">
+            <div class="sync-pill-title">
+              <i class="pi pi-check-circle" aria-hidden="true"></i>
               <span>
                 Auto-imported from <strong>{{ cs.title || ('Cost Sheet v' + (cs.versionNumber || 1) + '.0') }}</strong> · {{ items().length }} items loaded with selling rates.
               </span>
             </div>
             @if (costSheetGstRatePercent() !== null) {
-            <span class="vsc-badge" style="background: rgba(30, 41, 59, 0.08); color: var(--color-heading, #0f172a); font-weight: 700; font-size: 0.78rem; padding: 3px 10px; border-radius: 4px;">
+            <span class="sync-pill-badge">
               GST Rate: {{ costSheetGstRatePercent() | number:'1.0-2' }}%
             </span>
             }
           </div>
 
           @if (costSheetSellingExclGst() !== null || costSheetSellingInclGst() !== null) {
-          <div class="sync-financials-chips" style="display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.85rem; border-top: 1px solid rgba(0,0,0,0.06); padding-top: 8px;">
+          <div class="sync-financials-chips">
             @if (costSheetSellingExclGst() !== null) {
-            <span style="display: inline-flex; align-items: center; gap: 4px;">
-              <span style="color: #64748b;">Excl. GST:</span>
-              <strong style="color: var(--color-heading, #0f172a);">{{ selectedCurrencySymbol() }}&nbsp;{{ costSheetSellingExclGst() | number:'1.2-2' }}</strong>
+            <span class="sync-chip">
+              <span class="sync-chip-label">Excl. GST:</span>
+              <strong class="sync-chip-value">{{ selectedCurrencySymbol() }}&nbsp;{{ costSheetSellingExclGst() | number:'1.2-2' }}</strong>
             </span>
             }
             @if (costSheetGstAmount() !== null && costSheetGstRatePercent() !== null && costSheetGstRatePercent()! > 0) {
-            <span style="display: inline-flex; align-items: center; gap: 4px;">
-              <span style="color: #64748b;">GST ({{ costSheetGstRatePercent() | number:'1.0-2' }}%):</span>
-              <strong style="color: #64748b;">+ {{ selectedCurrencySymbol() }}&nbsp;{{ costSheetGstAmount() | number:'1.2-2' }}</strong>
+            <span class="sync-chip">
+              <span class="sync-chip-label">GST ({{ costSheetGstRatePercent() | number:'1.0-2' }}%):</span>
+              <strong class="sync-chip-value">+ {{ selectedCurrencySymbol() }}&nbsp;{{ costSheetGstAmount() | number:'1.2-2' }}</strong>
             </span>
             }
             @if (costSheetSellingInclGst() !== null) {
-            <span style="display: inline-flex; align-items: center; gap: 4px;">
-              <span style="color: #64748b;">Incl. GST:</span>
-              <strong style="color: var(--color-primary, #e14d3f);">{{ selectedCurrencySymbol() }}&nbsp;{{ costSheetSellingInclGst() | number:'1.2-2' }}</strong>
+            <span class="sync-chip">
+              <span class="sync-chip-label">Incl. GST:</span>
+              <strong class="sync-chip-value highlight">{{ selectedCurrencySymbol() }}&nbsp;{{ costSheetSellingInclGst() | number:'1.2-2' }}</strong>
             </span>
             }
           </div>

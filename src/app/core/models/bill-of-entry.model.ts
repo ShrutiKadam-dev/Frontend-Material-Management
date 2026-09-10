@@ -39,3 +39,21 @@ export interface BillOfEntryUpdateInput {
   total_duty?: number;
   remark?: string;
 }
+
+export interface LatestBillOfEntry {
+  id?: number;
+  project_id?: number;
+  bill_of_entry_no?: string;
+  bill_of_entry_number?: string;
+  date?: string;
+  boe_date?: string;
+  bcd?: number;
+  sws?: number;
+  igst?: number;
+  igst_amount?: number;
+  duty?: number;
+  total_duty?: number;
+  total_assessable_value?: number;
+  remark?: string;
+  [key: string]: unknown;
+}

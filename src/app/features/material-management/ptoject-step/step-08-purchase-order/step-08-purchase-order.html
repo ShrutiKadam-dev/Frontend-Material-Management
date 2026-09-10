@@ -337,11 +337,19 @@
         @if (latestBid(); as bid) {
         @if (!editingPO()) {
         <div class="cost-sheet-sync-pill" role="status">
-          <i class="pi pi-check-circle" aria-hidden="true"></i>
-          <span>
-            Auto-imported from <strong>Latest Bid Submission</strong> · {{ items().length }} items with commercial terms
-            pre-filled.
-          </span>
+          <div class="sync-pill-header">
+            <div class="sync-pill-title">
+              <i class="pi pi-check-circle" aria-hidden="true"></i>
+              <span>
+                Auto-imported from <strong>Latest Bid Submission</strong> · {{ items().length }} items with commercial terms pre-filled.
+              </span>
+            </div>
+            @if (bid.gst_rate !== undefined && bid.gst_rate !== null) {
+            <span class="sync-pill-badge">
+              GST Rate: {{ bid.gst_rate }}%
+            </span>
+            }
+          </div>
         </div>
         }
         }

@@ -23,6 +23,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { TableModule } from 'primeng/table';
 
 import { CustomsClearanceService } from '../../../../core/services/customs-clearance';
+import { BillOfEntryService } from '../../../../core/services/bill-of-entry';
 import { ProjectService } from '../../../../core/services/project';
 import { CustomerService } from '../../../../core/services/customer';
 import { AttachmentService } from '../../../../core/services/attachment';
@@ -31,6 +32,7 @@ import {
   CustomsClearanceCreateInput,
   CustomsClearanceUpdateInput,
 } from '../../../../core/models/customs-clearance.model';
+import { LatestBillOfEntry } from '../../../../core/models/bill-of-entry.model';
 import { Attachment } from '../../../../core/models/attachment.model';
 import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
@@ -58,6 +60,7 @@ export class Step12CustomsClearance implements OnInit {
   private readonly router = inject(Router);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly customsService = inject(CustomsClearanceService);
+  private readonly billOfEntryService = inject(BillOfEntryService);
   private readonly projectService = inject(ProjectService);
   private readonly customerService = inject(CustomerService);
   private readonly attachmentService = inject(AttachmentService);
@@ -76,6 +79,8 @@ export class Step12CustomsClearance implements OnInit {
   // ── Dialog States ──────────────────────────────────────────────
   protected readonly dialogVisible = signal(false);
   protected readonly editingClearance = signal<CustomsClearance | null>(null);
+  protected readonly latestBillOfEntry = signal<LatestBillOfEntry | null>(null);
+  protected readonly loadingLatestBoe = signal(false);
 
   // Separate document upload categories
   protected readonly selectedDutyChallanFiles = signal<File[]>([]);
@@ -234,6 +239,7 @@ export class Step12CustomsClearance implements OnInit {
   // ── Dialog Handlers ────────────────────────────────────────────
   protected openCreateDialog(): void {
     this.editingClearance.set(null);
+    this.latestBillOfEntry.set(null);
     this.selectedDutyChallanFiles.set([]);
     this.selectedBoeFiles.set([]);
     this.selectedOtherDocsFiles.set([]);
@@ -255,11 +261,66 @@ export class Step12CustomsClearance implements OnInit {
       remark: '',
     });
 
+    const pId = this.projectId();
+    if (pId) {
+      this.fetchAndPatchLatestBillOfEntry(pId);
+    }
+
     this.dialogVisible.set(true);
+  }
+
+  protected fetchAndPatchLatestBillOfEntry(projectId: number): void {
+    this.loadingLatestBoe.set(true);
+    this.billOfEntryService
+      .getLatest(projectId)
+      .pipe(finalize(() => this.loadingLatestBoe.set(false)))
+      .subscribe({
+        next: (latest) => {
+          if (!latest) return;
+          this.latestBillOfEntry.set(latest);
+
+          const duty =
+            latest.duty !== undefined && latest.duty !== null && !isNaN(Number(latest.duty))
+              ? Number(latest.duty)
+              : latest.total_duty !== undefined && latest.total_duty !== null && !isNaN(Number(latest.total_duty))
+              ? Number(latest.total_duty)
+              : latest.bcd !== undefined && latest.bcd !== null && !isNaN(Number(latest.bcd))
+              ? Number(latest.bcd)
+              : 0;
+
+          const igst =
+            latest.igst !== undefined && latest.igst !== null && !isNaN(Number(latest.igst))
+              ? Number(latest.igst)
+              : latest.igst_amount !== undefined && latest.igst_amount !== null && !isNaN(Number(latest.igst_amount))
+              ? Number(latest.igst_amount)
+              : 0;
+
+          const boeNo = latest.bill_of_entry_no || latest.bill_of_entry_number || '';
+          const rawDate = latest.boe_date || latest.date;
+          const boeDate = rawDate ? new Date(rawDate as string) : null;
+
+          const currentFormVal = this.clearanceForm.getRawValue();
+
+          this.clearanceForm.patchValue({
+            duty_amount: duty,
+            igst_amount: igst,
+            ...(boeNo && !currentFormVal.bill_of_entry_no ? { bill_of_entry_no: boeNo } : {}),
+            ...(boeDate && !currentFormVal.boe_date ? { boe_date: boeDate } : {}),
+          });
+
+          // Recompute live total remittance
+          const other = Number(this.clearanceForm.get('other_customs_charges')?.value) || 0;
+          this.liveTotalCustomsAmount.set(duty + igst + other);
+        },
+        error: () => {
+          /* non-fatal */
+        },
+      });
   }
 
   protected openEditDialog(record: CustomsClearance): void {
     this.editingClearance.set(record);
+    this.latestBillOfEntry.set(null);
     this.selectedDutyChallanFiles.set([]);
     this.selectedBoeFiles.set([]);
     this.selectedOtherDocsFiles.set([]);

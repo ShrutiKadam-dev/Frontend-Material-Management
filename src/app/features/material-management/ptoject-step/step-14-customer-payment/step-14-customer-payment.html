@@ -371,10 +371,25 @@
                 @if (latestTaxInvoice(); as inv) {
                 @if (!editingPayment()) {
                 <div class="cost-sheet-sync-pill" role="status">
-                    <i class="pi pi-check-circle" aria-hidden="true"></i>
-                    <span>
-                        Auto-imported from <strong>Latest Customer Tax Invoice ({{ inv.invoice_no }})</strong> · Invoice Date: {{ inv.invoice_date | date:'dd-MM-yyyy' }} · Value: ₹{{ inv.net_total | number:'1.2-2' }}.
-                    </span>
+                    <div class="sync-pill-header">
+                        <div class="sync-pill-title">
+                            <i class="pi pi-check-circle" aria-hidden="true"></i>
+                            <span>
+                                Auto-imported from <strong>Latest Customer Tax Invoice{{ inv.invoice_no ? ' (' + inv.invoice_no + ')' : '' }}</strong>
+                            </span>
+                        </div>
+                        @if (inv.invoice_date) {
+                        <span class="sync-pill-badge">
+                            Invoice Date: {{ inv.invoice_date | date:'dd-MM-yyyy' }}
+                        </span>
+                        }
+                    </div>
+                    <div class="sync-financials-chips">
+                        <span class="sync-chip">
+                            <span class="sync-chip-label">Invoice Value:</span>
+                            <strong class="sync-chip-value highlight">₹&nbsp;{{ inv.net_total | number:'1.2-2' }}</strong>
+                        </span>
+                    </div>
                 </div>
                 }
                 }

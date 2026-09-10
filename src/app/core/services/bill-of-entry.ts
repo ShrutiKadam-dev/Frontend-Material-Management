@@ -7,6 +7,7 @@ import {
   BillOfEntry,
   BillOfEntryCreateInput,
   BillOfEntryUpdateInput,
+  LatestBillOfEntry,
 } from '../models/bill-of-entry.model';
 
 @Injectable({
@@ -15,6 +16,24 @@ import {
 export class BillOfEntryService {
   private readonly http = inject(HttpClient);
   private readonly apiBaseUrl = inject(API_BASE_URL);
+
+  getLatest(projectId?: number): Observable<LatestBillOfEntry | null> {
+    const query = projectId ? `?project_id=${projectId}` : '';
+    return this.http
+      .get<LatestBillOfEntry | { data: LatestBillOfEntry }>(
+        `${this.apiBaseUrl}/api/v1/bills-of-entry/latest${query}`,
+      )
+      .pipe(
+        map((res) => {
+          if (!res) return null;
+          if (typeof res === 'object' && 'data' in res && res.data) {
+            return res.data as LatestBillOfEntry;
+          }
+          return res as LatestBillOfEntry;
+        }),
+        catchError(() => of(null)),
+      );
+  }
 
   getByProject(projectId: number): Observable<BillOfEntry[]> {
     return this.http

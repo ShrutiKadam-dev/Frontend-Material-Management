@@ -1405,8 +1405,8 @@
 
 .cost-sheet-sync-pill {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
   border-radius: var(--radius-control, 8px);
@@ -1424,6 +1424,65 @@
   strong {
     color: #14532d;
     font-weight: 700;
+  }
+
+  .sync-pill-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .sync-pill-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.84rem;
+  }
+
+  .sync-pill-badge {
+    background: rgba(22, 101, 52, 0.1);
+    color: #166534;
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 3px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .sync-financials-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    font-size: 0.84rem;
+    border-top: 1px solid rgba(22, 101, 52, 0.12);
+    padding-top: 8px;
+    margin-top: 2px;
+  }
+
+  .sync-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    .sync-chip-label {
+      color: #15803d;
+      font-size: 0.8rem;
+    }
+
+    .sync-chip-value {
+      color: #14532d;
+      font-weight: 700;
+
+      &.highlight {
+        color: var(--color-primary, #e14d3f);
+      }
+    }
   }
 }
 

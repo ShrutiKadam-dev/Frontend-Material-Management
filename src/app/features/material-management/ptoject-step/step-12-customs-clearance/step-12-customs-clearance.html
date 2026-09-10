@@ -146,8 +146,8 @@
           </span>
           <h3>No customs clearance records found</h3>
           <p>Record the Custom House Agent (CHA) details, BOE assessment, Duty challan, and clearance documents.</p>
-          <button pButton type="button" icon="pi pi-plus" label="Record Customs Clearance"
-            class="create-cost-sheet-btn" (click)="openCreateDialog()"></button>
+          <button pButton type="button" icon="pi pi-plus" label="Record Customs Clearance" class="create-cost-sheet-btn"
+            (click)="openCreateDialog()"></button>
         </div>
       </div>
       } @else if (filteredClearances().length === 0) {
@@ -193,7 +193,8 @@
             </div>
 
             <div class="vsc-header-right">
-              <span class="vsc-cost-pill" [pTooltip]="'Total Customs Remittance: ₹ ' + ((item.total_customs_amount || 0) | number:'1.2-2')"
+              <span class="vsc-cost-pill"
+                [pTooltip]="'Total Customs Remittance: ₹ ' + ((item.total_customs_amount || 0) | number:'1.2-2')"
                 tooltipPosition="bottom">
                 <i class="pi pi-wallet" aria-hidden="true"></i>
                 ₹&nbsp;{{ (item.total_customs_amount || 0) | number:'1.2-2' }}
@@ -207,8 +208,8 @@
 
               <div class="actions-cell">
                 <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
-                  [attr.aria-label]="'Edit clearance record ' + item.id" pTooltip="Edit record"
-                  tooltipPosition="top" (click)="openEditDialog(item)"></button>
+                  [attr.aria-label]="'Edit clearance record ' + item.id" pTooltip="Edit record" tooltipPosition="top"
+                  (click)="openEditDialog(item)"></button>
                 <button pButton type="button" icon="pi pi-trash"
                   class="p-button-text p-button-sm p-button-danger qe-delete"
                   [attr.aria-label]="'Delete clearance record ' + item.id" pTooltip="Delete record"
@@ -260,7 +261,7 @@
               <!-- Tile 1: Basic Duty -->
               <div class="duty-matrix-tile">
                 <span class="dmt-label">
-                  <i class="pi pi-receipt" aria-hidden="true"></i> Basic Customs Duty (BCD)
+                  <i class="pi pi-receipt" aria-hidden="true"></i>Duty Amount
                 </span>
                 <strong class="dmt-value">₹&nbsp;{{ (item.duty_amount || 0) | number:'1.2-2' }}</strong>
                 <span class="dmt-sub">Assessed customs duty</span>
@@ -278,7 +279,7 @@
               <!-- Tile 3: Other Charges -->
               <div class="duty-matrix-tile">
                 <span class="dmt-label">
-                  <i class="pi pi-box" aria-hidden="true"></i> Other Port & CFS Charges
+                  <i class="pi pi-box" aria-hidden="true"></i> Other Customs Charges
                 </span>
                 <strong class="dmt-value">₹&nbsp;{{ (item.other_customs_charges || 0) | number:'1.2-2' }}</strong>
                 <span class="dmt-sub">Demurrage / Handling</span>
@@ -288,11 +289,12 @@
               <div class="duty-matrix-tile duty-matrix-tile--total">
                 <div class="dmt-header-row">
                   <span class="dmt-label">
-                    <i class="pi pi-wallet" aria-hidden="true"></i> Total Customs Remittance
+                    <i class="pi pi-wallet" aria-hidden="true"></i> Total Customs Amount
                   </span>
                   <span class="dmt-badge">Duty + IGST + Other</span>
                 </div>
-                <strong class="dmt-value text-success">₹&nbsp;{{ (item.total_customs_amount || 0) | number:'1.2-2' }}</strong>
+                <strong class="dmt-value text-success">₹&nbsp;{{ (item.total_customs_amount || 0) | number:'1.2-2'
+                  }}</strong>
                 <span class="dmt-sub">Total statutory & port amount</span>
               </div>
             </div>
@@ -405,7 +407,8 @@
                 <div class="detail-cell-stack">
                   @if (item.duty_paid_date) {
                   <span class="cell-date-badge">
-                    <i class="pi pi-calendar-check" aria-hidden="true"></i> Paid: {{ item.duty_paid_date | date:'dd-MM-yyyy' }}
+                    <i class="pi pi-calendar-check" aria-hidden="true"></i> Paid: {{ item.duty_paid_date |
+                    date:'dd-MM-yyyy' }}
                   </span>
                   }
                   @if (item.challan_no) {
@@ -469,8 +472,8 @@
                     <i [class]="getFileIcon(att.content_type)" aria-hidden="true"></i>
                     <span class="tbl-att-name" [title]="att.file_name">{{ att.file_name }}</span>
                     <button type="button" class="tbl-att-dl" [attr.aria-label]="'Download ' + att.file_name"
-                      pTooltip="Download file" tooltipPosition="top"
-                      [disabled]="downloadingAttachmentId() === att.id" (click)="downloadAttachment(att)">
+                      pTooltip="Download file" tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                      (click)="downloadAttachment(att)">
                       @if (downloadingAttachmentId() === att.id) {
                       <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
                       } @else {
@@ -519,6 +522,47 @@
 
   <form [formGroup]="clearanceForm" (ngSubmit)="onSubmit()" novalidate id="clearance-form">
     <div class="dlg-body">
+
+      <!-- Auto-Sync Notice from Latest Bill of Entry -->
+      @if (latestBillOfEntry(); as boe) {
+      @if (!editingClearance()) {
+      <div class="cost-sheet-sync-pill" role="status">
+        <div class="sync-pill-header">
+          <div class="sync-pill-title">
+            <i class="pi pi-check-circle" aria-hidden="true"></i>
+            <span>
+              Auto-filled from <strong>Latest Bill of Entry{{ boe.bill_of_entry_no ? ' (' + boe.bill_of_entry_no + ')' : '' }}</strong>
+            </span>
+          </div>
+          @if (boe.boe_date || boe.date) {
+          <span class="sync-pill-badge">
+            BOE Date: {{ (boe.boe_date || boe.date) | date:'dd-MM-yyyy' }}
+          </span>
+          }
+        </div>
+        <div class="sync-financials-chips">
+          <span class="sync-chip">
+            <span class="sync-chip-label">Duty Amount:</span>
+            <strong class="sync-chip-value">₹&nbsp;{{ (boe.duty !== undefined && boe.duty !== null ? boe.duty : (boe.total_duty || 0)) | number:'1.2-2' }}</strong>
+          </span>
+          <span class="sync-chip">
+            <span class="sync-chip-label">IGST Amount:</span>
+            <strong class="sync-chip-value">₹&nbsp;{{ (boe.igst !== undefined && boe.igst !== null ? boe.igst : (boe.igst_amount || 0)) | number:'1.2-2' }}</strong>
+          </span>
+          @if (boe.sws !== undefined && boe.sws !== null && boe.sws > 0) {
+          <span class="sync-chip">
+            <span class="sync-chip-label">SWS:</span>
+            <strong class="sync-chip-value">₹&nbsp;{{ boe.sws | number:'1.2-2' }}</strong>
+          </span>
+          }
+          <span class="sync-chip">
+            <span class="sync-chip-label">Total Statutory Duty:</span>
+            <strong class="sync-chip-value highlight">₹&nbsp;{{ ((boe.duty !== undefined && boe.duty !== null ? boe.duty : (boe.total_duty || 0)) + (boe.igst !== undefined && boe.igst !== null ? boe.igst : (boe.igst_amount || 0)) + (boe.sws || 0)) | number:'1.2-2' }}</strong>
+          </span>
+        </div>
+      </div>
+      }
+      }
 
       <!-- Section 1: CHA, Port & BOE Details -->
       <div class="dlg-section">
@@ -588,8 +632,7 @@
 
           <div class="field">
             <label for="dlg-challan-no">Challan No.</label>
-            <input id="dlg-challan-no" pInputText formControlName="challan_no"
-              placeholder="e.g. ICEGATE-CHAL-49201" />
+            <input id="dlg-challan-no" pInputText formControlName="challan_no" placeholder="e.g. ICEGATE-CHAL-49201" />
           </div>
 
           <div class="field span-two">
@@ -675,9 +718,9 @@
             <span class="upload-cat-sub">ICEGATE duty paid challan / bank payment receipt</span>
           </div>
 
-          <div class="file-upload-zone" (click)="dutyChallanInput.click()"
-            (keydown.enter)="dutyChallanInput.click()" (keydown.space)="dutyChallanInput.click(); $event.preventDefault()"
-            tabindex="0" role="button" aria-label="Upload Duty Challan files">
+          <div class="file-upload-zone" (click)="dutyChallanInput.click()" (keydown.enter)="dutyChallanInput.click()"
+            (keydown.space)="dutyChallanInput.click(); $event.preventDefault()" tabindex="0" role="button"
+            aria-label="Upload Duty Challan files">
             <input #dutyChallanInput type="file" (change)="onDutyChallanFilesSelected($event)" multiple hidden />
             <i class="pi pi-cloud-upload upload-icon" aria-hidden="true"></i>
             <span class="upload-text">Drop files here or click to browse</span>
@@ -691,7 +734,8 @@
               <i [class]="getFileIcon(file.type)" aria-hidden="true"></i>
               <span class="file-chip-name" [title]="file.name">{{ file.name }}</span>
               <span class="file-chip-size">{{ formatFileSize(file.size) }}</span>
-              <button type="button" class="remove-file" (click)="removeSelectedDutyChallanFile($index)" aria-label="Remove file">
+              <button type="button" class="remove-file" (click)="removeSelectedDutyChallanFile($index)"
+                aria-label="Remove file">
                 <i class="pi pi-times" aria-hidden="true"></i>
               </button>
             </div>
@@ -709,9 +753,9 @@
             <span class="upload-cat-sub">Out of Charge (OOC) / Assessed Bill of Entry copy</span>
           </div>
 
-          <div class="file-upload-zone" (click)="boeInput.click()"
-            (keydown.enter)="boeInput.click()" (keydown.space)="boeInput.click(); $event.preventDefault()"
-            tabindex="0" role="button" aria-label="Upload Bill of Entry files">
+          <div class="file-upload-zone" (click)="boeInput.click()" (keydown.enter)="boeInput.click()"
+            (keydown.space)="boeInput.click(); $event.preventDefault()" tabindex="0" role="button"
+            aria-label="Upload Bill of Entry files">
             <input #boeInput type="file" (change)="onBoeFilesSelected($event)" multiple hidden />
             <i class="pi pi-cloud-upload upload-icon" aria-hidden="true"></i>
             <span class="upload-text">Drop files here or click to browse</span>
@@ -725,7 +769,8 @@
               <i [class]="getFileIcon(file.type)" aria-hidden="true"></i>
               <span class="file-chip-name" [title]="file.name">{{ file.name }}</span>
               <span class="file-chip-size">{{ formatFileSize(file.size) }}</span>
-              <button type="button" class="remove-file" (click)="removeSelectedBoeFile($index)" aria-label="Remove file">
+              <button type="button" class="remove-file" (click)="removeSelectedBoeFile($index)"
+                aria-label="Remove file">
                 <i class="pi pi-times" aria-hidden="true"></i>
               </button>
             </div>
@@ -743,9 +788,9 @@
             <span class="upload-cat-sub">CFS gate pass, examination report, delivery orders</span>
           </div>
 
-          <div class="file-upload-zone" (click)="otherDocsInput.click()"
-            (keydown.enter)="otherDocsInput.click()" (keydown.space)="otherDocsInput.click(); $event.preventDefault()"
-            tabindex="0" role="button" aria-label="Upload Supporting Document files">
+          <div class="file-upload-zone" (click)="otherDocsInput.click()" (keydown.enter)="otherDocsInput.click()"
+            (keydown.space)="otherDocsInput.click(); $event.preventDefault()" tabindex="0" role="button"
+            aria-label="Upload Supporting Document files">
             <input #otherDocsInput type="file" (change)="onOtherDocsFilesSelected($event)" multiple hidden />
             <i class="pi pi-cloud-upload upload-icon" aria-hidden="true"></i>
             <span class="upload-text">Drop files here or click to browse</span>
@@ -759,7 +804,8 @@
               <i [class]="getFileIcon(file.type)" aria-hidden="true"></i>
               <span class="file-chip-name" [title]="file.name">{{ file.name }}</span>
               <span class="file-chip-size">{{ formatFileSize(file.size) }}</span>
-              <button type="button" class="remove-file" (click)="removeSelectedOtherDocsFile($index)" aria-label="Remove file">
+              <button type="button" class="remove-file" (click)="removeSelectedOtherDocsFile($index)"
+                aria-label="Remove file">
                 <i class="pi pi-times" aria-hidden="true"></i>
               </button>
             </div>

@@ -20,6 +20,7 @@ import {
   CustomerTransportDetailCreateInput,
   CustomerTransportDetailUpdateInput,
   LatestPurchaseOrderTemplate,
+  LatestCustomerTaxInvoiceTemplate,
 } from '../models/customer-delivery.model';
 
 @Injectable({
@@ -40,13 +41,15 @@ export class CustomerDeliveryService {
           if (!res || typeof res !== 'object') return null;
           const data = ((res as Record<string, unknown>)['data'] || res) as Record<string, unknown>;
           const rawItems = (data['items'] as unknown[]) || [];
+          const poNumber = String(data['po_number'] ?? data['po_no'] ?? data['purchase_order_no'] ?? '');
           return {
+            po_number: poNumber,
+            po_no: poNumber,
+            po_date: String(data['po_date'] ?? data['date'] ?? ''),
+            warranty_period: String(data['warranty_period'] ?? ''),
             gst_rate: Number(data['gst_rate'] ?? 0),
             gst_amount: Number(data['gst_amount'] ?? 0),
             total_net_amount: Number(data['total_net_amount'] ?? data['total_amount'] ?? 0),
-            po_no: String(data['po_no'] ?? data['purchase_order_no'] ?? ''),
-            po_date: String(data['po_date'] ?? data['date'] ?? ''),
-            warranty_period: String(data['warranty_period'] ?? ''),
             items: rawItems.map((it: unknown) => {
               const item = it as Record<string, unknown>;
               return {
@@ -74,13 +77,15 @@ export class CustomerDeliveryService {
                 if (!list.length) return null;
                 const data = list[list.length - 1] as Record<string, unknown>;
                 const rawItems = (data['items'] as unknown[]) || [];
+                const poNumber = String(data['po_number'] ?? data['po_no'] ?? data['purchase_order_no'] ?? '');
                 return {
+                  po_number: poNumber,
+                  po_no: poNumber,
+                  po_date: String(data['po_date'] ?? data['date'] ?? ''),
+                  warranty_period: String(data['warranty_period'] ?? ''),
                   gst_rate: Number(data['gst_rate'] ?? 0),
                   gst_amount: Number(data['gst_amount'] ?? 0),
                   total_net_amount: Number(data['total_net_amount'] ?? data['total_amount'] ?? 0),
-                  po_no: String(data['po_no'] ?? data['purchase_order_no'] ?? ''),
-                  po_date: String(data['po_date'] ?? data['date'] ?? ''),
-                  warranty_period: String(data['warranty_period'] ?? ''),
                   items: rawItems.map((it: unknown) => {
                     const item = it as Record<string, unknown>;
                     return {
@@ -91,6 +96,50 @@ export class CustomerDeliveryService {
                       net_amount: Number(item['net_amount'] ?? item['total_price'] ?? 0),
                     };
                   }),
+                };
+              }),
+              catchError(() => of(null)),
+            );
+        }),
+      );
+  }
+
+  // ── 0.1 Fetch Latest Customer Tax Invoice for Auto-Patching ────
+  getLatestCustomerTaxInvoice(projectId: number): Observable<LatestCustomerTaxInvoiceTemplate | null> {
+    return this.http
+      .get<LatestCustomerTaxInvoiceTemplate | { data: LatestCustomerTaxInvoiceTemplate }>(
+        `${this.apiBaseUrl}/api/v1/customer-tax-invoices/latest?project_id=${projectId}`,
+      )
+      .pipe(
+        map((res: unknown) => {
+          if (!res || typeof res !== 'object') return null;
+          const data = ((res as Record<string, unknown>)['data'] || res) as Record<string, unknown>;
+          return {
+            invoice_no: String(data['invoice_no'] ?? data['tax_invoice_no'] ?? ''),
+            invoice_date: String(data['invoice_date'] ?? data['date'] ?? ''),
+            net_total: Number(data['net_total'] ?? data['total_amount'] ?? 0),
+            gst_rate: data['gst_rate'] !== undefined ? Number(data['gst_rate']) : undefined,
+            gst_amount: data['gst_amount'] !== undefined ? Number(data['gst_amount']) : undefined,
+            round_off: data['round_off'] !== undefined ? Number(data['round_off']) : undefined,
+          };
+        }),
+        catchError(() => {
+          // Fallback: try /api/v1/tax-invoices/latest
+          return this.http
+            .get<LatestCustomerTaxInvoiceTemplate | { data: LatestCustomerTaxInvoiceTemplate }>(
+              `${this.apiBaseUrl}/api/v1/tax-invoices/latest?project_id=${projectId}`,
+            )
+            .pipe(
+              map((res: unknown) => {
+                if (!res || typeof res !== 'object') return null;
+                const data = ((res as Record<string, unknown>)['data'] || res) as Record<string, unknown>;
+                return {
+                  invoice_no: String(data['invoice_no'] ?? data['tax_invoice_no'] ?? ''),
+                  invoice_date: String(data['invoice_date'] ?? data['date'] ?? ''),
+                  net_total: Number(data['net_total'] ?? data['total_amount'] ?? 0),
+                  gst_rate: data['gst_rate'] !== undefined ? Number(data['gst_rate']) : undefined,
+                  gst_amount: data['gst_amount'] !== undefined ? Number(data['gst_amount']) : undefined,
+                  round_off: data['round_off'] !== undefined ? Number(data['round_off']) : undefined,
                 };
               }),
               catchError(() => of(null)),
