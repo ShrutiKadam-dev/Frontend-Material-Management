@@ -264,12 +264,12 @@
             <div class="card-meta-row">
               <span class="meta-item">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                Added: {{ supplier.created_at | date:'dd MMM yyyy' }}
+                Added: {{ supplier.created_at | date:'dd-MM-yyyy' }}
               </span>
               @if (supplier.updated_at && supplier.updated_at !== supplier.created_at) {
                 <span class="meta-item meta-item--muted">
                   <i class="pi pi-clock" aria-hidden="true"></i>
-                  Updated: {{ supplier.updated_at | date:'dd MMM' }}
+                  Updated: {{ supplier.updated_at | date:'dd-MM-yyyy' }}
                 </span>
               }
             </div>
@@ -371,7 +371,7 @@
 
                 <!-- Created Date Column -->
                 <td class="td-date">
-                  <span class="date-text">{{ supplier.created_at | date:'dd MMM yyyy' }}</span>
+                  <span class="date-text">{{ supplier.created_at | date:'dd-MM-yyyy' }}</span>
                 </td>
 
                 <!-- Actions Column -->
@@ -637,11 +637,11 @@
       <div class="details-metadata-grid">
         <div class="meta-card">
           <span class="meta-label">Created At</span>
-          <strong class="meta-val">{{ supplier.created_at | date:'medium' }}</strong>
+          <strong class="meta-val">{{ supplier.created_at | date:'dd-MM-yyyy, HH:mm' }}</strong>
         </div>
         <div class="meta-card">
           <span class="meta-label">Last Updated</span>
-          <strong class="meta-val">{{ supplier.updated_at | date:'medium' }}</strong>
+          <strong class="meta-val">{{ supplier.updated_at | date:'dd-MM-yyyy, HH:mm' }}</strong>
         </div>
       </div>
     </div>

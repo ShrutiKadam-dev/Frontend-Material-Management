@@ -85,7 +85,7 @@
 
               <span class="vsc-date">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                {{ t.tender_date | date: 'dd MMM yyyy' }}
+                {{ t.tender_date | date: 'dd-MM-yyyy' }}
               </span>
 
               <h2 class="vsc-title">{{ t.tender_title }}</h2>
@@ -177,14 +177,14 @@
               <div class="param-chip">
                 <i class="pi pi-calendar-plus" aria-hidden="true"></i>
                 <span class="p-lbl">Opening:</span>
-                <span class="p-val">{{ t.opening_date_time | date: 'dd MMM yyyy, HH:mm' }}</span>
+                <span class="p-val">{{ t.opening_date_time | date: 'dd-MM-yyyy, HH:mm' }}</span>
               </div>
               }
               @if (t.closing_date_time) {
               <div class="param-chip param-chip--deadline">
                 <i class="pi pi-calendar-times" aria-hidden="true"></i>
                 <span class="p-lbl">Closing Deadline:</span>
-                <span class="p-val">{{ t.closing_date_time | date: 'dd MMM yyyy, HH:mm' }}</span>
+                <span class="p-val">{{ t.closing_date_time | date: 'dd-MM-yyyy, HH:mm' }}</span>
               </div>
               }
               @if (t.delivery_terms) {
@@ -358,8 +358,8 @@
               <label for="dlg-tnd-date">
                 Tender Date <span class="req" aria-hidden="true">*</span>
               </label>
-              <p-datepicker inputId="dlg-tnd-date" formControlName="tender_date" dateFormat="yy-mm-dd" [showIcon]="true"
-                [fluid]="true" placeholder="YYYY-MM-DD" [invalid]="isFieldInvalid('tender_date')" />
+              <p-datepicker inputId="dlg-tnd-date" formControlName="tender_date" dateFormat="dd-mm-yy" [showIcon]="true"
+                [fluid]="true" placeholder="DD-MM-YYYY" [invalid]="isFieldInvalid('tender_date')" />
               @if (isFieldInvalid('tender_date')) {
               <p class="field-error">{{ getFieldError('tender_date') }}</p>
               }
@@ -370,8 +370,8 @@
               <label for="dlg-tnd-closing">
                 Closing Date & Time
               </label>
-              <p-datepicker inputId="dlg-tnd-closing" formControlName="closing_date_time" dateFormat="yy-mm-dd"
-                [showTime]="true" [hourFormat]="'24'" [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD HH:mm" />
+              <p-datepicker inputId="dlg-tnd-closing" formControlName="closing_date_time" dateFormat="dd-mm-yy"
+                [showTime]="true" [hourFormat]="'24'" [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY HH:mm" />
             </div>
 
             <!-- Opening Date & Time (PrimeNG Date & Time picker) -->
@@ -379,8 +379,8 @@
               <label for="dlg-tnd-opening">
                 Opening Date & Time
               </label>
-              <p-datepicker inputId="dlg-tnd-opening" formControlName="opening_date_time" dateFormat="yy-mm-dd"
-                [showTime]="true" [hourFormat]="'24'" [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD HH:mm" />
+              <p-datepicker inputId="dlg-tnd-opening" formControlName="opening_date_time" dateFormat="dd-mm-yy"
+                [showTime]="true" [hourFormat]="'24'" [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY HH:mm" />
             </div>
 
             <!-- Tender Fee (₹) -->

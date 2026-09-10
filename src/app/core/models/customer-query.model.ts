@@ -3,7 +3,7 @@ import { Attachment } from './attachment.model';
 export interface CustomerQueryItem {
   id?: number;
   material_name: string;
-  quantity: string;
+  quantity: string | number;
 }
 
 export interface CustomerQuery {

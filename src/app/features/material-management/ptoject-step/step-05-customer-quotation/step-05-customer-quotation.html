@@ -85,7 +85,7 @@
 
               <span class="vsc-date">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                {{ q.quotation_date | date: 'dd MMM yyyy' }}
+                {{ q.quotation_date | date: 'dd-MM-yyyy' }}
               </span>
 
               @if (q.customer_name || customer()?.name || project()?.customer_name) {
@@ -135,7 +135,7 @@
               <div class="param-chip">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
                 <span class="p-lbl">Date:</span>
-                <span class="p-val">{{ q.quotation_date | date: 'dd MMM yyyy' }}</span>
+                <span class="p-val">{{ q.quotation_date | date: 'dd-MM-yyyy' }}</span>
               </div>
               @if (q.quotation_value) {
               <div class="param-chip param-chip--highlight">
@@ -335,8 +335,8 @@
               }
 
               @case ('date') {
-              <p-datepicker [inputId]="'dlg-cq-' + field.key" [formControlName]="field.key" dateFormat="yy-mm-dd"
-                [showIcon]="true" [fluid]="true" [placeholder]="field.placeholder || 'YYYY-MM-DD'"
+              <p-datepicker [inputId]="'dlg-cq-' + field.key" [formControlName]="field.key" dateFormat="dd-mm-yy"
+                [showIcon]="true" [fluid]="true" [placeholder]="field.placeholder || 'DD-MM-YYYY'"
                 [invalid]="isFieldInvalid(field.key)" />
               }
 

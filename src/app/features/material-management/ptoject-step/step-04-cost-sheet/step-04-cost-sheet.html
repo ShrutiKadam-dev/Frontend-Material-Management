@@ -138,7 +138,7 @@
 
                             <span class="vsc-date">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                                {{ sheet.createdAt | date: 'dd MMM yyyy' }}
+                                {{ sheet.createdAt | date: 'dd-MM-yyyy' }}
                             </span>
 
                             <h2 class="vsc-title">{{ sheet.title }}</h2>
@@ -668,7 +668,7 @@
                     <div class="iqc-info">
                         <div class="iqc-top">
                             <span class="iqc-ref">{{ sq.quotation_number || ('Quotation #' + sq.id) }}</span>
-                            <span class="iqc-date">{{ sq.quotation_date | date:'dd MMM yyyy' }}</span>
+                            <span class="iqc-date">{{ sq.quotation_date | date:'dd-MM-yyyy' }}</span>
                             @if (sq.quotation_value) {
                             <span class="iqc-val">{{ sq.currency_symbol || '$' }} {{ sq.quotation_value }}</span>
                             }

@@ -88,7 +88,7 @@
 
               <span class="vsc-date">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                {{ po.po_date | date: 'dd MMM yyyy' }}
+                {{ po.po_date | date: 'dd-MM-yyyy' }}
               </span>
 
               <h2 class="vsc-title">{{ po.po_title || 'Customer Purchase Order' }}</h2>
@@ -144,13 +144,13 @@
               <div class="param-chip">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
                 <span class="p-lbl">PO Date:</span>
-                <span class="p-val">{{ po.po_date | date: 'dd MMM yyyy' }}</span>
+                <span class="p-val">{{ po.po_date | date: 'dd-MM-yyyy' }}</span>
               </div>
               @if (po.delivery_date) {
               <div class="param-chip">
                 <i class="pi pi-calendar-plus" aria-hidden="true"></i>
                 <span class="p-lbl">Delivery Date:</span>
-                <span class="p-val">{{ po.delivery_date | date: 'dd MMM yyyy' }}</span>
+                <span class="p-val">{{ po.delivery_date | date: 'dd-MM-yyyy' }}</span>
               </div>
               }
               @if (po.delivery_term || po.delivery_terms) {
@@ -409,8 +409,8 @@
               <label for="dlg-po-date">
                 PO Date <span class="req" aria-hidden="true">*</span>
               </label>
-              <p-datepicker inputId="dlg-po-date" formControlName="po_date" dateFormat="yy-mm-dd"
-                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+              <p-datepicker inputId="dlg-po-date" formControlName="po_date" dateFormat="dd-mm-yy"
+                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                 [invalid]="isFieldInvalid('po_date')" />
               @if (isFieldInvalid('po_date')) {
               <p class="field-error">{{ getFieldError('po_date') }}</p>
@@ -422,8 +422,8 @@
               <label for="dlg-po-delivery-date">
                 Delivery Date <span class="req" aria-hidden="true">*</span>
               </label>
-              <p-datepicker inputId="dlg-po-delivery-date" formControlName="delivery_date" dateFormat="yy-mm-dd"
-                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+              <p-datepicker inputId="dlg-po-delivery-date" formControlName="delivery_date" dateFormat="dd-mm-yy"
+                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                 [invalid]="isFieldInvalid('delivery_date')" />
               @if (isFieldInvalid('delivery_date')) {
               <p class="field-error">{{ getFieldError('delivery_date') }}</p>

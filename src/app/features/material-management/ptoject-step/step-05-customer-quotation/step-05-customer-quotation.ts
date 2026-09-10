@@ -123,7 +123,7 @@ export class Step05CustomerQuotation implements OnInit {
       key: 'quotation_date',
       label: 'Quotation Date',
       type: 'date',
-      placeholder: 'Enter quotation date',
+      placeholder: 'DD-MM-YYYY',
       required: true,
       colSpan: 1,
     },

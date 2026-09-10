@@ -78,7 +78,7 @@
             <div class="query-entry-header">
               <span class="qe-date">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                {{ req.quotation_requested_date | date: 'dd MMM yyyy' }}
+                {{ req.quotation_requested_date | date: 'dd-MM-yyyy' }}
               </span>
               <div class="qe-badges">
                 <span class="qe-badge">
@@ -104,10 +104,10 @@
               </div>
               <div class="qe-actions">
                 <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
-                  [attr.aria-label]="'Edit quotation request from ' + (req.quotation_requested_date | date: 'dd MMM yyyy')"
+                  [attr.aria-label]="'Edit quotation request from ' + (req.quotation_requested_date | date: 'dd-MM-yyyy')"
                   pTooltip="Edit request" tooltipPosition="top" (click)="openEditDialog(req)"></button>
                 <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm qe-delete"
-                  [attr.aria-label]="'Delete quotation request from ' + (req.quotation_requested_date | date: 'dd MMM yyyy')"
+                  [attr.aria-label]="'Delete quotation request from ' + (req.quotation_requested_date | date: 'dd-MM-yyyy')"
                   pTooltip="Delete request" tooltipPosition="top" (click)="deleteRequest(req.id)"></button>
               </div>
             </div>
@@ -117,7 +117,7 @@
               <div class="param-chip">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
                 <span class="p-lbl">Requested:</span>
-                <span class="p-val">{{ req.quotation_requested_date | date: 'dd MMM yyyy' }}</span>
+                <span class="p-val">{{ req.quotation_requested_date | date: 'dd-MM-yyyy' }}</span>
               </div>
               <div class="param-chip">
                 <i class="pi pi-building" aria-hidden="true"></i>
@@ -284,8 +284,8 @@
             <label for="dlg-req-date">
               Request Date <span class="req" aria-hidden="true">*</span>
             </label>
-            <p-datepicker inputId="dlg-req-date" formControlName="quotation_requested_date" dateFormat="yy-mm-dd" [showIcon]="true"
-              [fluid]="true" placeholder="YYYY-MM-DD"
+            <p-datepicker inputId="dlg-req-date" formControlName="quotation_requested_date" dateFormat="dd-mm-yy" [showIcon]="true"
+              [fluid]="true" placeholder="DD-MM-YYYY"
               [invalid]="isFieldInvalid('quotation_requested_date')"
               aria-required="true" />
             @if (isFieldInvalid('quotation_requested_date')) {

@@ -71,67 +71,44 @@
 
             <!-- Card Header Bar -->
             <div class="query-entry-header">
-              <span class="qe-date">
-                <i class="pi pi-calendar" aria-hidden="true"></i>
-                {{ q.qo_date | date: 'dd MMM yyyy' }}
-              </span>
-              <div class="qe-badges">
-                @if (q.attachments && q.attachments.length) {
-                <span class="qe-badge">
-                  <i class="pi pi-paperclip" aria-hidden="true"></i>
-                  {{ q.attachments.length }} file{{ q.attachments.length === 1 ? '' : 's' }}
+              <div class="qe-header-left">
+                <span class="qe-date">
+                  <i class="pi pi-calendar" aria-hidden="true"></i>
+                  {{ q.qo_date | date: 'dd-MM-yyyy' }}
+                </span>
+                @if (customer(); as c) {
+                <span class="qe-customer-pill" pTooltip="Customer" tooltipPosition="top">
+                  <i class="pi pi-user" aria-hidden="true"></i>
+                  {{ c.name }}
+                </span>
+                } @else if (project()?.customer_name) {
+                <span class="qe-customer-pill" pTooltip="Customer" tooltipPosition="top">
+                  <i class="pi pi-user" aria-hidden="true"></i>
+                  {{ project()?.customer_name }}
                 </span>
                 }
                 @if (q.items && q.items.length) {
                 <span class="qe-badge">
                   <i class="pi pi-box" aria-hidden="true"></i>
-                  {{ q.items.length }} item{{ q.items.length === 1 ? '' : 's' }}
+                  {{ q.items.length }} {{ q.items.length === 1 ? 'item' : 'items' }}
+                </span>
+                }
+                @if (q.attachments && q.attachments.length) {
+                <span class="qe-badge">
+                  <i class="pi pi-paperclip" aria-hidden="true"></i>
+                  {{ q.attachments.length }} {{ q.attachments.length === 1 ? 'file' : 'files' }}
                 </span>
                 }
               </div>
               <div class="qe-actions">
                 <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
-                  [attr.aria-label]="'Edit query from ' + (q.qo_date | date: 'dd MMM yyyy')" pTooltip="Edit query"
+                  [attr.aria-label]="'Edit query from ' + (q.qo_date | date: 'dd-MM-yyyy')" pTooltip="Edit query"
                   tooltipPosition="top" (click)="openEditDialog(q)"></button>
                 <button pButton type="button" icon="pi pi-trash"
                   class="p-button-text p-button-danger p-button-sm qe-delete"
-                  [attr.aria-label]="'Delete query from ' + (q.qo_date | date: 'dd MMM yyyy')" pTooltip="Delete query"
+                  [attr.aria-label]="'Delete query from ' + (q.qo_date | date: 'dd-MM-yyyy')" pTooltip="Delete query"
                   tooltipPosition="top" (click)="deleteQuery(q.id)"></button>
               </div>
-            </div>
-
-            <!-- Refined Metadata Parameter Chips Strip -->
-            <div class="vsc-params-strip">
-              <div class="param-chip">
-                <i class="pi pi-calendar" aria-hidden="true"></i>
-                <span class="p-lbl">Query Date:</span>
-                <span class="p-val">{{ q.qo_date | date: 'dd MMM yyyy' }}</span>
-              </div>
-              @if (customer(); as c) {
-              <div class="param-chip">
-                <i class="pi pi-user" aria-hidden="true"></i>
-                <span class="p-lbl">Customer:</span>
-                <span class="p-val">{{ c.name }}</span>
-              </div>
-              } @else if (project()?.customer_name) {
-              <div class="param-chip">
-                <i class="pi pi-user" aria-hidden="true"></i>
-                <span class="p-lbl">Customer:</span>
-                <span class="p-val">{{ project()?.customer_name }}</span>
-              </div>
-              }
-              <div class="param-chip">
-                <i class="pi pi-box" aria-hidden="true"></i>
-                <span class="p-lbl">Items:</span>
-                <span class="p-val">{{ q.items.length }} line item{{ (q.items.length === 1) ? '' : 's' }}</span>
-              </div>
-              @if (q.attachments && q.attachments.length) {
-              <div class="param-chip">
-                <i class="pi pi-paperclip" aria-hidden="true"></i>
-                <span class="p-lbl">Documents:</span>
-                <span class="p-val">{{ q.attachments.length }} file{{ (q.attachments.length === 1) ? '' : 's' }}</span>
-              </div>
-              }
             </div>
 
             <!-- Card Body Grid (Left: Materials Table, Right: Notes & Files) -->
@@ -265,8 +242,8 @@
             <label for="dlg-qo-date">
               QO Date <span class="req" aria-hidden="true">*</span>
             </label>
-            <p-datepicker inputId="dlg-qo-date" formControlName="qo_date" dateFormat="yy-mm-dd" [showIcon]="true"
-              [fluid]="true" placeholder="YYYY-MM-DD" [invalid]="isFieldInvalid('qo_date')" aria-required="true" />
+            <p-datepicker inputId="dlg-qo-date" formControlName="qo_date" dateFormat="dd-mm-yy" [showIcon]="true"
+              [fluid]="true" placeholder="DD-MM-YYYY" [invalid]="isFieldInvalid('qo_date')" aria-required="true" />
             @if (isFieldInvalid('qo_date')) {
             <p class="field-error">QO date is required.</p>
             }
@@ -299,7 +276,7 @@
               <label for="dlg-quantity">Qty <span class="req">*</span></label>
               <input #qtyInput id="dlg-quantity" pInputText formControlName="quantity" placeholder="e.g. 10.500"
                 [class.ng-invalid]="isRowFieldInvalid('quantity')"
-                (keydown.enter)="$event.preventDefault(); saveRow(matInput)" />
+                (keydown.enter)="$event.preventDefault(); saveRow()" />
               @if (isRowFieldInvalid('quantity')) {
               <p class="field-error">{{ getRowFieldError('quantity') }}</p>
               }
@@ -308,7 +285,7 @@
             <div class="quick-add-actions">
               <button pButton type="button" [icon]="editingIndex() !== null ? 'pi pi-check' : 'pi pi-plus'"
                 [label]="editingIndex() !== null ? 'Update' : 'Add Item'" class="quick-submit-btn"
-                (click)="saveRow(matInput)" [disabled]="rowForm.invalid"></button>
+                (click)="saveRow()"></button>
               @if (editingIndex() !== null) {
               <button pButton type="button" icon="pi pi-times" class="p-button-text p-button-secondary cancel-edit-btn"
                 pTooltip="Cancel edit" (click)="cancelRow()"></button>
@@ -398,6 +375,7 @@
           <div class="file-chip">
             <i class="pi pi-paperclip" aria-hidden="true"></i>
             <span class="file-chip-name">{{ file.name }}</span>
+            <span class="file-chip-size">{{ formatFileSize(file.size) }}</span>
             <button type="button" class="remove-file" [attr.aria-label]="'Remove ' + file.name"
               (click)="removeAttachment($index)">
               <i class="pi pi-times" aria-hidden="true"></i>
@@ -408,25 +386,27 @@
         }
 
         <!-- Drop zone -->
-        <label class="file-drop-zone"
+        <div class="file-drop-zone"
           [class.file-drop-zone--compact]="attachments().length > 0 || existingAttachments().length > 0"
-          for="dlg-attachment-input" tabindex="0" role="button" aria-label="Upload attachments">
+          role="button" tabindex="0" (click)="fileInput.click()"
+          (keydown.enter)="fileInput.click()" (keydown.space)="$event.preventDefault(); fileInput.click()"
+          aria-label="Upload attachments">
           <i class="pi pi-upload" aria-hidden="true"></i>
           <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload files'
             }}</span>
           @if (!attachments().length && !existingAttachments().length) {
           <span class="file-hint">PDF, Image, Excel — specifications, drawings, etc.</span>
           }
-          <input id="dlg-attachment-input" type="file" multiple class="visually-hidden"
+          <input #fileInput id="dlg-attachment-input" type="file" multiple class="visually-hidden"
             (change)="onFilesSelected($event)" />
-        </label>
+        </div>
       </div>
 
       <!-- ── 4. Remark ──────────────────────────────────── -->
       <div class="dlg-section">
         <p class="dlg-section-label"><i class="pi pi-comment"></i> 4. Notes & Remarks</p>
         <div class="field">
-          <label for="dlg-remark" class="visually-hidden">Remark</label>
+          <label for="dlg-remark" class="visually-hidden">Notes & Remarks</label>
           <textarea id="dlg-remark" pTextarea formControlName="remark" rows="3"
             placeholder="Any notes or remarks about this query…" style="width: 100%; resize: vertical;"></textarea>
         </div>
@@ -434,15 +414,16 @@
 
     </div>
 
-    <!-- ── Dialog footer ──────────────────────────────── -->
-    <div class="dlg-footer">
-      <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary" [disabled]="submitting()"
-        (click)="closeDialog()"></button>
-      <button pButton type="submit" [icon]="editingQuery() ? 'pi pi-check' : 'pi pi-send'"
-        [label]="editingQuery() ? 'Update Query' : 'Submit Query'" form="cq-form" [loading]="submitting()"
-        [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
-    </div>
-
   </form>
+
+  <!-- ── Dialog footer (Pinned at bottom) ──────────────── -->
+  <ng-template pTemplate="footer">
+    <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary" [disabled]="submitting()"
+      (click)="closeDialog()"></button>
+    <button pButton type="submit" form="cq-form" [icon]="editingQuery() ? 'pi pi-check' : 'pi pi-send'"
+      [label]="editingQuery() ? 'Update Query' : 'Submit Query'" [loading]="submitting()"
+      [disabled]="submitting() || headerForm.invalid || items().length === 0"
+      (click)="submit()"></button>
+  </ng-template>
 
 </p-dialog>

@@ -182,7 +182,7 @@
 
               <span class="vsc-date">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                BOE Date: {{ item.boe_date | date: 'dd MMM yyyy' }}
+                BOE Date: {{ item.boe_date | date: 'dd-MM-yyyy' }}
               </span>
 
               <h2 class="vsc-title">{{ item.cha_name }}</h2>
@@ -236,7 +236,7 @@
               <div class="param-chip param-chip--paid">
                 <i class="pi pi-calendar-check" aria-hidden="true"></i>
                 <span class="p-lbl">Duty Paid:</span>
-                <span class="p-val">{{ item.duty_paid_date | date:'dd MMM yyyy' }}</span>
+                <span class="p-val">{{ item.duty_paid_date | date:'dd-MM-yyyy' }}</span>
               </div>
               }
 
@@ -383,7 +383,7 @@
                     <span class="meta-tag meta-tag--boe">
                       <i class="pi pi-file" aria-hidden="true"></i> BOE #{{ item.bill_of_entry_no }}
                     </span>
-                    <span class="meta-date">{{ item.boe_date | date:'dd MMM yyyy' }}</span>
+                    <span class="meta-date">{{ item.boe_date | date:'dd-MM-yyyy' }}</span>
                   </div>
                 </div>
               </td>
@@ -407,7 +407,7 @@
                 <div class="detail-cell-stack">
                   @if (item.duty_paid_date) {
                   <span class="cell-date-badge">
-                    <i class="pi pi-calendar-check" aria-hidden="true"></i> Paid: {{ item.duty_paid_date | date:'dd MMM yyyy' }}
+                    <i class="pi pi-calendar-check" aria-hidden="true"></i> Paid: {{ item.duty_paid_date | date:'dd-MM-yyyy' }}
                   </span>
                   }
                   @if (item.challan_no) {
@@ -550,8 +550,8 @@
 
           <div class="field">
             <label for="dlg-boe-date">BOE Date <span class="req" aria-hidden="true">*</span></label>
-            <p-datepicker inputId="dlg-boe-date" formControlName="boe_date" dateFormat="yy-mm-dd" [showIcon]="true"
-              [fluid]="true" placeholder="YYYY-MM-DD" [class.ng-invalid]="isFieldInvalid('boe_date')" />
+            <p-datepicker inputId="dlg-boe-date" formControlName="boe_date" dateFormat="dd-mm-yy" [showIcon]="true"
+              [fluid]="true" placeholder="DD-MM-YYYY" [class.ng-invalid]="isFieldInvalid('boe_date')" />
             @if (isFieldInvalid('boe_date')) {
             <p class="field-error">{{ getFieldError('boe_date') }}</p>
             }
@@ -584,8 +584,8 @@
         <div class="dlg-grid">
           <div class="field">
             <label for="dlg-duty-paid-date">Duty Paid Date</label>
-            <p-datepicker inputId="dlg-duty-paid-date" formControlName="duty_paid_date" dateFormat="yy-mm-dd"
-              [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD" />
+            <p-datepicker inputId="dlg-duty-paid-date" formControlName="duty_paid_date" dateFormat="dd-mm-yy"
+              [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY" />
           </div>
 
           <div class="field">

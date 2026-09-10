@@ -159,7 +159,7 @@
 
               <span class="vsc-date">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                {{ (item.proforma_invoice_date || item.date) | date: 'dd MMM yyyy' }}
+                {{ (item.proforma_invoice_date || item.date) | date: 'dd-MM-yyyy' }}
               </span>
 
               <h2 class="vsc-title">{{ item.proforma_invoice_no ? ('Proforma Invoice (' + item.proforma_invoice_no + ')') : 'Supplier Proforma Invoice' }}</h2>
@@ -380,7 +380,7 @@
 
               <span class="vsc-date">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                {{ (item.invoice_date || item.date) | date: 'dd MMM yyyy' }}
+                {{ (item.invoice_date || item.date) | date: 'dd-MM-yyyy' }}
               </span>
 
               <h2 class="vsc-title">{{ item.invoice_no ? ('Commercial Invoice (' + item.invoice_no + ')') : 'Supplier Commercial Invoice' }}</h2>
@@ -600,7 +600,7 @@
 
               <span class="vsc-date">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                {{ (item.packing_list_date || item.date) | date: 'dd MMM yyyy' }}
+                {{ (item.packing_list_date || item.date) | date: 'dd-MM-yyyy' }}
               </span>
 
               <h2 class="vsc-title">{{ item.packing_list_no ? ('Packing List (' + item.packing_list_no + ')') : 'Shipment Packing List' }}</h2>
@@ -806,8 +806,8 @@
               <label for="dlg-pi-date">
                 Proforma Invoice Date <span class="req" aria-hidden="true">*</span>
               </label>
-              <p-datepicker inputId="dlg-pi-date" formControlName="proforma_invoice_date" dateFormat="yy-mm-dd"
-                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+              <p-datepicker inputId="dlg-pi-date" formControlName="proforma_invoice_date" dateFormat="dd-mm-yy"
+                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                 [invalid]="isFieldInvalid('proforma', 'proforma_invoice_date')" />
               @if (isFieldInvalid('proforma', 'proforma_invoice_date')) {
               <p class="field-error">{{ getFieldError('proforma', 'proforma_invoice_date') }}</p>
@@ -1135,8 +1135,8 @@
               <label for="dlg-inv-date">
                 Invoice Date <span class="req" aria-hidden="true">*</span>
               </label>
-              <p-datepicker inputId="dlg-inv-date" formControlName="invoice_date" dateFormat="yy-mm-dd"
-                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+              <p-datepicker inputId="dlg-inv-date" formControlName="invoice_date" dateFormat="dd-mm-yy"
+                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                 [invalid]="isFieldInvalid('invoice', 'invoice_date')" />
               @if (isFieldInvalid('invoice', 'invoice_date')) {
               <p class="field-error">{{ getFieldError('invoice', 'invoice_date') }}</p>
@@ -1466,8 +1466,8 @@
               <label for="dlg-pkl-date">
                 Packing List Date <span class="req" aria-hidden="true">*</span>
               </label>
-              <p-datepicker inputId="dlg-pkl-date" formControlName="packing_list_date" dateFormat="yy-mm-dd"
-                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+              <p-datepicker inputId="dlg-pkl-date" formControlName="packing_list_date" dateFormat="dd-mm-yy"
+                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                 [invalid]="isFieldInvalid('packing', 'packing_list_date')" />
               @if (isFieldInvalid('packing', 'packing_list_date')) {
               <p class="field-error">{{ getFieldError('packing', 'packing_list_date') }}</p>

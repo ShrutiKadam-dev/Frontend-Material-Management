@@ -139,6 +139,7 @@ export class Step01CustomerQuery implements OnInit {
       qo_date: null,
       remark: '',
     });
+    this.rowForm.reset({ material_name: '', quantity: '' });
     this.items.set([]);
     this.existingAttachments.set([]);
     this.attachments.set([]);
@@ -154,6 +155,7 @@ export class Step01CustomerQuery implements OnInit {
       qo_date: this.parseDate(query.qo_date),
       remark: query.remark ?? '',
     });
+    this.rowForm.reset({ material_name: '', quantity: '' });
     this.items.set(query.items ? query.items.map((it) => ({ ...it })) : []);
     this.existingAttachments.set(query.attachments ?? []);
     this.attachments.set([]);
@@ -172,16 +174,21 @@ export class Step01CustomerQuery implements OnInit {
 
   protected openEditRow(index: number, focusTarget?: HTMLInputElement): void {
     const item = this.items()[index];
-    this.rowForm.setValue({ material_name: item.material_name, quantity: item.quantity });
+    this.rowForm.setValue({ material_name: item.material_name, quantity: String(item.quantity ?? '') });
+    this.rowForm.markAsPristine();
+    this.rowForm.markAsUntouched();
     this.editingIndex.set(index);
     if (focusTarget) {
       focusTarget.focus();
     }
   }
 
-  protected saveRow(focusTarget?: HTMLInputElement): void {
+  protected saveRow(): void {
     if (this.rowForm.invalid) {
-      this.rowForm.markAllAsTouched();
+      Object.values(this.rowForm.controls).forEach((ctrl) => {
+        ctrl.markAsDirty();
+        ctrl.markAsTouched();
+      });
       return;
     }
     const val = this.rowForm.getRawValue();
@@ -205,10 +212,7 @@ export class Step01CustomerQuery implements OnInit {
       this.items.update((list) => [...list, row]);
     }
 
-    this.rowForm.reset();
-    if (focusTarget) {
-      setTimeout(() => focusTarget.focus(), 0);
-    }
+    this.rowForm.reset({ material_name: '', quantity: '' });
   }
 
   protected deleteRow(index: number): void {
@@ -220,7 +224,7 @@ export class Step01CustomerQuery implements OnInit {
 
   protected cancelRow(): void {
     this.editingIndex.set(null);
-    this.rowForm.reset();
+    this.rowForm.reset({ material_name: '', quantity: '' });
   }
 
   /* ── Attachments (FormData) ─────────────────────────── */
@@ -240,12 +244,12 @@ export class Step01CustomerQuery implements OnInit {
 
   protected isRowFieldInvalid(key: string): boolean {
     const c = this.rowForm.get(key);
-    return !!(c && c.invalid && (c.touched || c.dirty));
+    return !!(c && c.invalid && c.dirty);
   }
 
   protected getRowFieldError(key: string): string | null {
     const c = this.rowForm.get(key);
-    if (!c || !c.invalid || !(c.touched || c.dirty)) return null;
+    if (!c || !c.invalid || !c.dirty) return null;
     if (c.hasError('required')) {
       if (key === 'material_name') return 'Material name is required.';
       if (key === 'quantity') return 'Quantity is required.';

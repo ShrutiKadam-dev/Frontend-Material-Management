@@ -88,7 +88,7 @@
 
               <span class="vsc-date">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                {{ (order.order_confirmation_date || order.confirmation_date || order.order_date) | date: 'dd MMM yyyy' }}
+                {{ (order.order_confirmation_date || order.confirmation_date || order.order_date) | date: 'dd-MM-yyyy' }}
               </span>
 
               <h2 class="vsc-title">{{ order.ref_no ? ('Order Confirmation (' + order.ref_no + ')') : 'Supplier Order Confirmation' }}</h2>
@@ -129,7 +129,7 @@
               <div class="param-chip">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
                 <span class="p-lbl">Order Date:</span>
-                <span class="p-val">{{ (order.order_confirmation_date || order.confirmation_date || order.order_date) | date: 'dd MMM yyyy' }}</span>
+                <span class="p-val">{{ (order.order_confirmation_date || order.confirmation_date || order.order_date) | date: 'dd-MM-yyyy' }}</span>
               </div>
 
               @if (order.ref_no || order.reference_number) {
@@ -335,8 +335,8 @@
               <label for="dlg-order-date">
                 Order Confirmation Date <span class="req" aria-hidden="true">*</span>
               </label>
-              <p-datepicker inputId="dlg-order-date" formControlName="order_confirmation_date" dateFormat="yy-mm-dd"
-                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+              <p-datepicker inputId="dlg-order-date" formControlName="order_confirmation_date" dateFormat="dd-mm-yy"
+                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                 [invalid]="isFieldInvalid('order_confirmation_date')" />
               @if (isFieldInvalid('order_confirmation_date')) {
               <p class="field-error">{{ getFieldError('order_confirmation_date') }}</p>

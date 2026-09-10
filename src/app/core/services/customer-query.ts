@@ -22,6 +22,13 @@ export class CustomerQueryService {
     );
   }
 
+  getLatest(projectId?: number): Observable<CustomerQuery> {
+    const query = projectId ? `?project_id=${projectId}` : '';
+    return this.http.get<CustomerQuery>(
+      `${this.apiBaseUrl}/api/v1/customer-queries/latest${query}`,
+    );
+  }
+
   /**
    * Single API call — sends JSON payload + files together as multipart/form-data.
    * - `data` part: JSON blob with application/json content-type

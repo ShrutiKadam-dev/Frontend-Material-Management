@@ -88,7 +88,7 @@
 
               <span class="vsc-date">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                {{ s.submission_date | date: 'dd MMM yyyy' }}
+                {{ s.submission_date | date: 'dd-MM-yyyy' }}
               </span>
 
               <h2 class="vsc-title">{{ s.tender_title || 'Bid Submission' }}</h2>
@@ -137,7 +137,7 @@
               <div class="param-chip">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
                 <span class="p-lbl">Submission Date:</span>
-                <span class="p-val">{{ s.submission_date | date: 'dd MMM yyyy' }}</span>
+                <span class="p-val">{{ s.submission_date | date: 'dd-MM-yyyy' }}</span>
               </div>
               @if (getSubmissionGstRate(s) !== undefined && getSubmissionGstRate(s) !== null) {
               <div class="param-chip">
@@ -383,8 +383,8 @@
               <label for="dlg-bid-sub-date">
                 Bid Submission Date <span class="req" aria-hidden="true">*</span>
               </label>
-              <p-datepicker inputId="dlg-bid-sub-date" formControlName="submission_date" dateFormat="yy-mm-dd"
-                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+              <p-datepicker inputId="dlg-bid-sub-date" formControlName="submission_date" dateFormat="dd-mm-yy"
+                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                 [invalid]="isFieldInvalid('submission_date')" />
               @if (isFieldInvalid('submission_date')) {
               <p class="field-error">{{ getFieldError('submission_date') }}</p>

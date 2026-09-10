@@ -246,7 +246,7 @@
                             }
                             <span class="vsc-date">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                                {{ inv.invoice_date | date:'dd MMM yyyy' }}
+                                {{ inv.invoice_date | date:'dd-MM-yyyy' }}
                             </span>
                             <h2 class="vsc-title">Tax Invoice — {{ inv.invoice_no }}</h2>
                         </div>
@@ -279,7 +279,7 @@
                             <div class="param-chip">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
                                 <span class="p-lbl">Invoice Date:</span>
-                                <span class="p-val">{{ inv.invoice_date | date:'mediumDate' }}</span>
+                                <span class="p-val">{{ inv.invoice_date | date:'dd-MM-yyyy' }}</span>
                             </div>
                             <div class="param-chip">
                                 <i class="pi pi-percentage" aria-hidden="true"></i>
@@ -450,7 +450,7 @@
                             }
                             <span class="vsc-date">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                                {{ pl.packing_list_date | date:'dd MMM yyyy' }}
+                                {{ pl.packing_list_date | date:'dd-MM-yyyy' }}
                             </span>
                             <h2 class="vsc-title">Packing List — {{ pl.packing_list_no }}</h2>
                         </div>
@@ -483,7 +483,7 @@
                             <div class="param-chip">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
                                 <span class="p-lbl">Date:</span>
-                                <span class="p-val">{{ pl.packing_list_date | date:'mediumDate' }}</span>
+                                <span class="p-val">{{ pl.packing_list_date | date:'dd-MM-yyyy' }}</span>
                             </div>
                             <div class="param-chip">
                                 <i class="pi pi-box" aria-hidden="true"></i>
@@ -621,7 +621,7 @@
                             }
                             <span class="vsc-date">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                                {{ dc.delivery_challan_date | date:'dd MMM yyyy' }}
+                                {{ dc.delivery_challan_date | date:'dd-MM-yyyy' }}
                             </span>
                             <h2 class="vsc-title">Delivery Challan — {{ dc.delivery_challan_no }}</h2>
                         </div>
@@ -654,7 +654,7 @@
                             <div class="param-chip">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
                                 <span class="p-lbl">Challan Date:</span>
-                                <span class="p-val">{{ dc.delivery_challan_date | date:'mediumDate' }}</span>
+                                <span class="p-val">{{ dc.delivery_challan_date | date:'dd-MM-yyyy' }}</span>
                             </div>
                             <div class="param-chip">
                                 <i class="pi pi-box" aria-hidden="true"></i>
@@ -794,7 +794,7 @@
                             }
                             <span class="vsc-date">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                                {{ wc.certificate_date | date:'dd MMM yyyy' }}
+                                {{ wc.certificate_date | date:'dd-MM-yyyy' }}
                             </span>
                             <h2 class="vsc-title">Warranty Certificate — {{ wc.warranty_period }}</h2>
                         </div>
@@ -831,7 +831,7 @@
                             <div class="param-chip">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
                                 <span class="p-lbl">PO Date:</span>
-                                <span class="p-val">{{ wc.po_date | date:'mediumDate' }}</span>
+                                <span class="p-val">{{ wc.po_date | date:'dd-MM-yyyy' }}</span>
                             </div>
                             <div class="param-chip">
                                 <i class="pi pi-receipt" aria-hidden="true"></i>
@@ -841,7 +841,7 @@
                             <div class="param-chip">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
                                 <span class="p-lbl">Invoice Date:</span>
-                                <span class="p-val">{{ wc.invoice_date | date:'mediumDate' }}</span>
+                                <span class="p-val">{{ wc.invoice_date | date:'dd-MM-yyyy' }}</span>
                             </div>
                         </div>
 
@@ -927,7 +927,7 @@
                             }
                             <span class="vsc-date">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                                {{ td.date | date:'dd MMM yyyy' }}
+                                {{ td.date | date:'dd-MM-yyyy' }}
                             </span>
                             <h2 class="vsc-title">
                                 @if (td.transport_mode === 'road') {
@@ -975,7 +975,7 @@
                             <div class="param-chip">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
                                 <span class="p-lbl">Dispatch Date:</span>
-                                <span class="p-val">{{ td.date | date:'mediumDate' }}</span>
+                                <span class="p-val">{{ td.date | date:'dd-MM-yyyy' }}</span>
                             </div>
                             <div class="param-chip">
                                 <i class="pi pi-map-marker" aria-hidden="true"></i>
@@ -1077,8 +1077,8 @@
 
                         <div class="field">
                             <label for="inv-date">Invoice Date <span class="req" aria-hidden="true">*</span></label>
-                            <p-datepicker inputId="inv-date" formControlName="invoice_date" dateFormat="yy-mm-dd"
-                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                            <p-datepicker inputId="inv-date" formControlName="invoice_date" dateFormat="dd-mm-yy"
+                                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                                 [invalid]="isFieldInvalid(invoiceForm, 'invoice_date')" />
                             @if (isFieldInvalid(invoiceForm, 'invoice_date')) {
                             <p class="field-error">{{ getFieldError(invoiceForm, 'invoice_date') }}</p>
@@ -1433,8 +1433,8 @@
 
                         <div class="field">
                             <label for="pl-date">Packing List Date <span class="req" aria-hidden="true">*</span></label>
-                            <p-datepicker inputId="pl-date" formControlName="packing_list_date" dateFormat="yy-mm-dd"
-                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                            <p-datepicker inputId="pl-date" formControlName="packing_list_date" dateFormat="dd-mm-yy"
+                                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                                 [invalid]="isFieldInvalid(packingListForm, 'packing_list_date')" />
                             @if (isFieldInvalid(packingListForm, 'packing_list_date')) {
                             <p class="field-error">{{ getFieldError(packingListForm, 'packing_list_date') }}</p>
@@ -1762,7 +1762,7 @@
                             <label for="dc-date">Delivery Challan Date <span class="req"
                                     aria-hidden="true">*</span></label>
                             <p-datepicker inputId="dc-date" formControlName="delivery_challan_date"
-                                dateFormat="yy-mm-dd" [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                                dateFormat="dd-mm-yy" [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                                 [invalid]="isFieldInvalid(challanForm, 'delivery_challan_date')" />
                             @if (isFieldInvalid(challanForm, 'delivery_challan_date')) {
                             <p class="field-error">{{ getFieldError(challanForm, 'delivery_challan_date') }}</p>
@@ -2034,8 +2034,8 @@
                     <div class="dlg-grid">
                         <div class="field">
                             <label for="wc-date">Certificate Date <span class="req" aria-hidden="true">*</span></label>
-                            <p-datepicker inputId="wc-date" formControlName="certificate_date" dateFormat="yy-mm-dd"
-                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                            <p-datepicker inputId="wc-date" formControlName="certificate_date" dateFormat="dd-mm-yy"
+                                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                                 [invalid]="isFieldInvalid(warrantyForm, 'certificate_date')" />
                             @if (isFieldInvalid(warrantyForm, 'certificate_date')) {
                             <p class="field-error">{{ getFieldError(warrantyForm, 'certificate_date') }}</p>
@@ -2071,8 +2071,8 @@
 
                         <div class="field">
                             <label for="wc-po-date">PO Date <span class="req" aria-hidden="true">*</span></label>
-                            <p-datepicker inputId="wc-po-date" formControlName="po_date" dateFormat="yy-mm-dd"
-                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                            <p-datepicker inputId="wc-po-date" formControlName="po_date" dateFormat="dd-mm-yy"
+                                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                                 [invalid]="isFieldInvalid(warrantyForm, 'po_date')" />
                             @if (isFieldInvalid(warrantyForm, 'po_date')) {
                             <p class="field-error">{{ getFieldError(warrantyForm, 'po_date') }}</p>
@@ -2091,8 +2091,8 @@
 
                         <div class="field">
                             <label for="wc-inv-date">Invoice Date <span class="req" aria-hidden="true">*</span></label>
-                            <p-datepicker inputId="wc-inv-date" formControlName="invoice_date" dateFormat="yy-mm-dd"
-                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                            <p-datepicker inputId="wc-inv-date" formControlName="invoice_date" dateFormat="dd-mm-yy"
+                                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                                 [invalid]="isFieldInvalid(warrantyForm, 'invoice_date')" />
                             @if (isFieldInvalid(warrantyForm, 'invoice_date')) {
                             <p class="field-error">{{ getFieldError(warrantyForm, 'invoice_date') }}</p>
@@ -2250,8 +2250,8 @@
 
                         <div class="field">
                             <label for="tr-date">Consignment Date <span class="req" aria-hidden="true">*</span></label>
-                            <p-datepicker inputId="tr-date" formControlName="date" dateFormat="yy-mm-dd"
-                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                            <p-datepicker inputId="tr-date" formControlName="date" dateFormat="dd-mm-yy"
+                                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                                 [invalid]="isFieldInvalid(transportForm, 'date')" />
                             @if (isFieldInvalid(transportForm, 'date')) {
                             <p class="field-error">{{ getFieldError(transportForm, 'date') }}</p>

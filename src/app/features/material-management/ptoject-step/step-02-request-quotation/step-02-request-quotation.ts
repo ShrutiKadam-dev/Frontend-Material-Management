@@ -168,19 +168,15 @@ export class Step02RequestQuotation implements OnInit {
     this.errorMessage.set(null);
     this.dialogVisible.set(true);
 
-    // Auto-fetch material items from Step 1 (Customer Queries)
-    this.customerQueryService.getByProject(this.projectId()).subscribe({
-      next: (queries) => {
-        const autoItems: QuotationRequestItem[] = [];
-        queries.forEach((q) => {
-          q.items?.forEach((item) => {
-            autoItems.push({
-              material_name: item.material_name,
-              quantity: item.quantity,
-            });
-          });
-        });
-        if (autoItems.length > 0) {
+    // Auto-fetch material items from latest Customer Query (Step 1)
+    this.customerQueryService.getLatest(this.projectId()).subscribe({
+      next: (res: any) => {
+        const query = Array.isArray(res) ? res[0] : res;
+        if (query?.items && Array.isArray(query.items) && query.items.length > 0) {
+          const autoItems: QuotationRequestItem[] = query.items.map((item: any) => ({
+            material_name: item.material_name ?? '',
+            quantity: String(item.quantity ?? ''),
+          }));
           this.items.set(autoItems);
         }
       },

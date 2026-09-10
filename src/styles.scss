@@ -281,11 +281,18 @@ a {
   }
 }
 
-/* Step Dialogs: Single smooth scrollbar on dialog content */
-.cq-dialog .p-dialog-content {
-  max-height: 75vh !important;
-  overflow-y: auto !important;
-  padding: 0 !important;
+/* Step Dialogs: Pinned header & footer with single smooth scrollbar on dialog content */
+.cq-dialog {
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: 88vh !important;
+
+  .p-dialog-content {
+    flex: 1 1 auto !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    padding: 0 !important;
+  }
 }
 
 /* Prevent background container from showing second scrollbar while dialog is open */

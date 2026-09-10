@@ -167,7 +167,7 @@
                             }
                             <span class="vsc-date">
                                 <i class="pi pi-calendar-check" aria-hidden="true"></i>
-                                Payment Date: {{ payment.payment_date | date:'dd MMM yyyy' }}
+                                Payment Date: {{ payment.payment_date | date:'dd-MM-yyyy' }}
                             </span>
                             <h2 class="vsc-title">Payment Voucher #{{ payment.id }} — {{ payment.invoice_no }}</h2>
                         </div>
@@ -215,12 +215,12 @@
                             <div class="param-chip">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
                                 <span class="p-lbl">Invoice Date:</span>
-                                <span class="p-val">{{ payment.invoice_date | date:'mediumDate' }}</span>
+                                <span class="p-val">{{ payment.invoice_date | date:'dd-MM-yyyy' }}</span>
                             </div>
                             <div class="param-chip">
                                 <i class="pi pi-calendar-check" aria-hidden="true"></i>
                                 <span class="p-lbl">Payment Date:</span>
-                                <span class="p-val">{{ payment.payment_date | date:'mediumDate' }}</span>
+                                <span class="p-val">{{ payment.payment_date | date:'dd-MM-yyyy' }}</span>
                             </div>
                             @if (payment.tds > 0) {
                             <div class="param-chip">
@@ -262,7 +262,7 @@
                                         <td style="text-align: center; color: var(--color-muted); font-weight: 700;">2</td>
                                         <td><strong style="color: #059669;">Direct Payment Realized</strong></td>
                                         <td><span class="ref-badge" style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;">Bank Receipt</span></td>
-                                        <td>Payment Date: {{ payment.payment_date | date:'dd MMM yyyy' }}</td>
+                                        <td>Payment Date: {{ payment.payment_date | date:'dd-MM-yyyy' }}</td>
                                         <td class="text-right font-mono font-bold" style="color: #059669;">₹ {{ payment.payment_amount | number:'1.2-2' }}</td>
                                     </tr>
                                     @if (payment.tds > 0) {
@@ -383,7 +383,7 @@
                 <div class="cost-sheet-sync-pill" role="status">
                     <i class="pi pi-check-circle" aria-hidden="true"></i>
                     <span>
-                        Auto-imported from <strong>Latest Customer Tax Invoice ({{ inv.invoice_no }})</strong> · Invoice Date: {{ inv.invoice_date | date:'dd MMM yyyy' }} · Value: ₹{{ inv.net_total | number:'1.2-2' }}.
+                        Auto-imported from <strong>Latest Customer Tax Invoice ({{ inv.invoice_no }})</strong> · Invoice Date: {{ inv.invoice_date | date:'dd-MM-yyyy' }} · Value: ₹{{ inv.net_total | number:'1.2-2' }}.
                     </span>
                 </div>
                 }
@@ -407,7 +407,7 @@
 
                         <div class="field">
                             <label for="inv-date">Invoice Date <span class="req" aria-hidden="true">*</span></label>
-                            <input id="inv-date" pInputText formControlName="invoice_date" placeholder="YYYY-MM-DD"
+                            <input id="inv-date" pInputText formControlName="invoice_date" placeholder="DD-MM-YYYY"
                                 [class.ng-invalid]="isFieldInvalid(paymentForm, 'invoice_date')" />
                             @if (isFieldInvalid(paymentForm, 'invoice_date')) {
                             <p class="field-error">{{ getFieldError(paymentForm, 'invoice_date') }}</p>
@@ -445,8 +445,8 @@
 
                         <div class="field">
                             <label for="pay-date">Payment Date <span class="req" aria-hidden="true">*</span></label>
-                            <p-datepicker inputId="pay-date" formControlName="payment_date" dateFormat="yy-mm-dd"
-                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                            <p-datepicker inputId="pay-date" formControlName="payment_date" dateFormat="dd-mm-yy"
+                                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                                 [invalid]="isFieldInvalid(paymentForm, 'payment_date')" />
                             @if (isFieldInvalid(paymentForm, 'payment_date')) {
                             <p class="field-error">{{ getFieldError(paymentForm, 'payment_date') }}</p>

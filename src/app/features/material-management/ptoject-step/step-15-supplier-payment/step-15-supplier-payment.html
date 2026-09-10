@@ -171,7 +171,7 @@
                             }
                             <span class="vsc-date">
                                 <i class="pi pi-calendar-check" aria-hidden="true"></i>
-                                {{ payment.payment_date | date:'mediumDate' }}
+                                {{ payment.payment_date | date:'dd-MM-yyyy' }}
                             </span>
                             <span class="vsc-title font-mono">
                                 {{ payment.transaction_details }}
@@ -214,7 +214,7 @@
                             <div class="param-chip">
                                 <i class="pi pi-calendar-check" aria-hidden="true"></i>
                                 <span class="p-lbl">Payment Date:</span>
-                                <span class="p-val">{{ payment.payment_date | date:'mediumDate' }}</span>
+                                <span class="p-val">{{ payment.payment_date | date:'dd-MM-yyyy' }}</span>
                             </div>
                             @if (payment.payment_percentage != null) {
                             <div class="param-chip">
@@ -416,8 +416,8 @@
 
                         <div class="field">
                             <label for="dlg-pay-date">Payment Date <span class="req" aria-hidden="true">*</span></label>
-                            <p-datepicker inputId="dlg-pay-date" formControlName="payment_date" dateFormat="yy-mm-dd"
-                                [showIcon]="true" [fluid]="true" placeholder="YYYY-MM-DD"
+                            <p-datepicker inputId="dlg-pay-date" formControlName="payment_date" dateFormat="dd-mm-yy"
+                                [showIcon]="true" [fluid]="true" placeholder="DD-MM-YYYY"
                                 [invalid]="isFieldInvalid(paymentForm, 'payment_date')" />
                             @if (isFieldInvalid(paymentForm, 'payment_date')) {
                             <p class="field-error">{{ getFieldError(paymentForm, 'payment_date') }}</p>
