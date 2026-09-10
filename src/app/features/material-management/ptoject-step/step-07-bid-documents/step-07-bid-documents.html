@@ -127,18 +127,6 @@
 
             <!-- Refined Metadata Parameter Chips Strip -->
             <div class="vsc-params-strip">
-              @if (s.tender_title) {
-              <div class="param-chip">
-                <i class="pi pi-bookmark" aria-hidden="true"></i>
-                <span class="p-lbl">Tender:</span>
-                <span class="p-val">{{ s.tender_title }}</span>
-              </div>
-              }
-              <div class="param-chip">
-                <i class="pi pi-calendar" aria-hidden="true"></i>
-                <span class="p-lbl">Submission Date:</span>
-                <span class="p-val">{{ s.submission_date | date: 'dd-MM-yyyy' }}</span>
-              </div>
               @if (getSubmissionGstRate(s) !== undefined && getSubmissionGstRate(s) !== null) {
               <div class="param-chip">
                 <i class="pi pi-percentage" aria-hidden="true"></i>

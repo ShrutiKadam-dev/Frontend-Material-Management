@@ -182,6 +182,7 @@ export class Suppliers implements OnInit {
 
   // Actions
   protected onSubmit(): void {
+    if (this.submitting()) return;
     if (this.supplierForm.invalid) {
       this.supplierForm.markAllAsTouched();
       return;

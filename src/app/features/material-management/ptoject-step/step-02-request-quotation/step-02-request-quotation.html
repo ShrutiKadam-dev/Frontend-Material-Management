@@ -112,37 +112,6 @@
               </div>
             </div>
 
-            <!-- Refined Metadata Parameter Chips Strip -->
-            <div class="vsc-params-strip">
-              <div class="param-chip">
-                <i class="pi pi-calendar" aria-hidden="true"></i>
-                <span class="p-lbl">Requested:</span>
-                <span class="p-val">{{ req.quotation_requested_date | date: 'dd-MM-yyyy' }}</span>
-              </div>
-              <div class="param-chip">
-                <i class="pi pi-building" aria-hidden="true"></i>
-                <span class="p-lbl">Supplier:</span>
-                <span class="p-val">{{ req.supplier_name || getSupplierName(req.supplier_id) }}</span>
-              </div>
-              <div class="param-chip" [class.param-chip--contacted]="req.supplier_contacted" [class.param-chip--pending]="!req.supplier_contacted">
-                <i [class]="req.supplier_contacted ? 'pi pi-check-circle' : 'pi pi-clock'" aria-hidden="true"></i>
-                <span class="p-lbl">Status:</span>
-                <span class="p-val">{{ req.supplier_contacted ? 'Contacted' : 'Pending' }}</span>
-              </div>
-              <div class="param-chip">
-                <i class="pi pi-box" aria-hidden="true"></i>
-                <span class="p-lbl">Items:</span>
-                <span class="p-val">{{ req.items.length }} line item{{ (req.items.length === 1) ? '' : 's' }}</span>
-              </div>
-              @if (req.attachments && req.attachments.length) {
-              <div class="param-chip">
-                <i class="pi pi-paperclip" aria-hidden="true"></i>
-                <span class="p-lbl">Documents:</span>
-                <span class="p-val">{{ req.attachments.length }} file{{ (req.attachments.length === 1) ? '' : 's' }}</span>
-              </div>
-              }
-            </div>
-
             <!-- Card Body Grid (Left: Materials Table, Right: Remarks & Files) -->
             <div class="qe-body" [class.qe-body--full-table]="!req.remarks && (!req.attachments || !req.attachments.length)">
 

@@ -117,20 +117,9 @@
               </div>
             </div>
 
-            <!-- Refined Metadata Parameter Chips Strip -->
+            <!-- Refined Metadata Parameter Chips Strip (Non-redundant) -->
+            @if (supplier() || project()?.supplier_name || q.incoterms || q.validity) {
             <div class="vsc-params-strip">
-              @if (q.quotation_number) {
-              <div class="param-chip">
-                <i class="pi pi-tag" aria-hidden="true"></i>
-                <span class="p-lbl">Quote #:</span>
-                <span class="p-val">{{ q.quotation_number }}</span>
-              </div>
-              }
-              <div class="param-chip">
-                <i class="pi pi-calendar" aria-hidden="true"></i>
-                <span class="p-lbl">Date:</span>
-                <span class="p-val">{{ q.quotation_date | date: 'dd-MM-yyyy' }}</span>
-              </div>
               @if (supplier(); as s) {
               <div class="param-chip">
                 <i class="pi pi-building" aria-hidden="true"></i>
@@ -151,20 +140,6 @@
                 <span class="p-val">{{ q.incoterms }}</span>
               </div>
               }
-              @if (q.payment_terms) {
-              <div class="param-chip">
-                <i class="pi pi-credit-card" aria-hidden="true"></i>
-                <span class="p-lbl">Payment:</span>
-                <span class="p-val">{{ q.payment_terms }}</span>
-              </div>
-              }
-              @if (q.delivery_period) {
-              <div class="param-chip">
-                <i class="pi pi-truck" aria-hidden="true"></i>
-                <span class="p-lbl">Delivery:</span>
-                <span class="p-val">{{ q.delivery_period }}</span>
-              </div>
-              }
               @if (q.validity) {
               <div class="param-chip">
                 <i class="pi pi-clock" aria-hidden="true"></i>
@@ -173,6 +148,7 @@
               </div>
               }
             </div>
+            }
 
             <!-- Card Body Grid (Left: Materials Table, Right: Commercial Terms & Notes & Files) -->
             <div class="qe-body"

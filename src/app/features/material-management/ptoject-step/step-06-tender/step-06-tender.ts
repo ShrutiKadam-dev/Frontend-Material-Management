@@ -319,6 +319,8 @@ export class Step06Tender implements OnInit {
 
   /* ── Submit (Create / Update) ──────────────────────────── */
   protected submit(): void {
+    if (this.submitting()) return;
+
     if (this.headerForm.invalid) {
       this.headerForm.markAllAsTouched();
       this.messageService.add({

@@ -205,37 +205,15 @@
                     <!-- Card Body -->
                     <div class="vsc-body">
                         <!-- Operational Parameters Strip -->
+                        @if (payment.pending_amount != null) {
                         <div class="vsc-params-strip">
-                            <div class="param-chip">
-                                <i class="pi pi-money-bill" aria-hidden="true"></i>
-                                <span class="p-lbl">Currency:</span>
-                                <span class="p-val font-mono font-bold">{{ payment.currency }}</span>
-                            </div>
-                            <div class="param-chip">
-                                <i class="pi pi-calendar-check" aria-hidden="true"></i>
-                                <span class="p-lbl">Payment Date:</span>
-                                <span class="p-val">{{ payment.payment_date | date:'dd-MM-yyyy' }}</span>
-                            </div>
-                            @if (payment.payment_percentage != null) {
-                            <div class="param-chip">
-                                <i class="pi pi-percentage" aria-hidden="true"></i>
-                                <span class="p-lbl">Payment %:</span>
-                                <span class="p-val font-mono font-bold">{{ payment.payment_percentage }}%</span>
-                            </div>
-                            }
                             <div class="param-chip param-chip--highlight">
-                                <i class="pi pi-check-circle" aria-hidden="true"></i>
-                                <span class="p-lbl">Amount Paid:</span>
-                                <span class="p-val font-mono font-bold">{{ payment.currency }} {{ payment.amount_paid | number:'1.2-2' }}</span>
-                            </div>
-                            @if (payment.pending_amount != null) {
-                            <div class="param-chip">
                                 <i class="pi pi-hourglass" aria-hidden="true"></i>
-                                <span class="p-lbl">Pending Amount:</span>
+                                <span class="p-lbl">Pending Balance:</span>
                                 <span class="p-val font-mono">{{ payment.currency }} {{ payment.pending_amount | number:'1.2-2' }}</span>
                             </div>
-                            }
                         </div>
+                        }
 
                         <!-- Financial Settlement Table -->
                         <div class="items-table-wrap">

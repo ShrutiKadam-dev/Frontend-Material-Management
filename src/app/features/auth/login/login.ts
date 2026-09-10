@@ -30,6 +30,7 @@ export class Login {
   });
 
   protected submit(): void {
+    if (this.isSubmitting()) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;

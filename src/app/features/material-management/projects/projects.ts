@@ -211,6 +211,7 @@ export class Projects implements OnInit {
   }
 
   protected onSubmit(): void {
+    if (this.submitting()) return;
     if (this.projectForm.invalid) {
       this.projectForm.markAllAsTouched();
       return;

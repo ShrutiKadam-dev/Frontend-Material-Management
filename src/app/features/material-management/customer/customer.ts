@@ -182,6 +182,7 @@ export class Customer implements OnInit {
 
   // Actions
   protected onSubmit(): void {
+    if (this.submitting()) return;
     if (this.customerForm.invalid) {
       this.customerForm.markAllAsTouched();
       return;

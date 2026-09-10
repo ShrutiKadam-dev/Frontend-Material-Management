@@ -208,19 +208,9 @@
                         <!-- Operational Parameters Strip -->
                         <div class="vsc-params-strip">
                             <div class="param-chip">
-                                <i class="pi pi-receipt" aria-hidden="true"></i>
-                                <span class="p-lbl">Invoice No:</span>
-                                <span class="p-val font-mono font-bold">{{ payment.invoice_no }}</span>
-                            </div>
-                            <div class="param-chip">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
                                 <span class="p-lbl">Invoice Date:</span>
                                 <span class="p-val">{{ payment.invoice_date | date:'dd-MM-yyyy' }}</span>
-                            </div>
-                            <div class="param-chip">
-                                <i class="pi pi-calendar-check" aria-hidden="true"></i>
-                                <span class="p-lbl">Payment Date:</span>
-                                <span class="p-val">{{ payment.payment_date | date:'dd-MM-yyyy' }}</span>
                             </div>
                             @if (payment.tds > 0) {
                             <div class="param-chip">

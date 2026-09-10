@@ -123,27 +123,9 @@
           <!-- Card Body -->
           <div class="vsc-body">
 
-            <!-- Refined Metadata Parameter Chips Strip -->
+            <!-- Refined Metadata Parameter Chips Strip (Non-redundant) -->
+            @if (q.incoterms || q.payment_terms || q.delivery_period || q.validity) {
             <div class="vsc-params-strip">
-              @if (q.customer_name || customer()?.name || project()?.customer_name) {
-              <div class="param-chip">
-                <i class="pi pi-user" aria-hidden="true"></i>
-                <span class="p-lbl">Customer:</span>
-                <span class="p-val">{{ q.customer_name || customer()?.name || project()?.customer_name }}</span>
-              </div>
-              }
-              <div class="param-chip">
-                <i class="pi pi-calendar" aria-hidden="true"></i>
-                <span class="p-lbl">Date:</span>
-                <span class="p-val">{{ q.quotation_date | date: 'dd-MM-yyyy' }}</span>
-              </div>
-              @if (q.quotation_value) {
-              <div class="param-chip param-chip--highlight">
-                <i class="pi pi-wallet" aria-hidden="true"></i>
-                <span class="p-lbl">Total Value:</span>
-                <span class="p-val">{{ q.currency_symbol || '₹' }} {{ (q.total_net_amount || q.quotation_value) | number:'1.2-2' }}</span>
-              </div>
-              }
               @if (q.incoterms) {
               <div class="param-chip">
                 <i class="pi pi-globe" aria-hidden="true"></i>
@@ -173,6 +155,7 @@
               </div>
               }
             </div>
+            }
 
             <!-- Materials Table -->
             @if (q.items && q.items.length) {
@@ -294,7 +277,7 @@
     [visible]="dialogVisible()" (visibleChange)="dialogVisible.set($event)" [modal]="true" [blockScroll]="true"
     [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '1100px' }"
     styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
-    <form [formGroup]="headerForm" (ngSubmit)="submit()" id="cq-form" novalidate>
+    <form [formGroup]="headerForm" (ngSubmit)="submit()" id="cust-quotation-form" novalidate>
       <div class="dlg-body">
 
         @if (errorMessage()) {
@@ -602,7 +585,7 @@
     <ng-template pTemplate="footer">
       <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="closeDialog()"
         [disabled]="submitting()"></button>
-      <button pButton type="submit" form="cq-form" label="Save Customer Quotation" icon="pi pi-check" class="submit-btn"
+      <button pButton type="submit" form="cust-quotation-form" label="Save Customer Quotation" icon="pi pi-check" class="submit-btn"
         [loading]="submitting()" [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
     </ng-template>
   </p-dialog>

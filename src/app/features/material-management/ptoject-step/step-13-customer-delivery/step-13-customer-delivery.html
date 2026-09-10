@@ -277,22 +277,10 @@
                         <!-- Parameters Strip -->
                         <div class="vsc-params-strip">
                             <div class="param-chip">
-                                <i class="pi pi-calendar" aria-hidden="true"></i>
-                                <span class="p-lbl">Invoice Date:</span>
-                                <span class="p-val">{{ inv.invoice_date | date:'dd-MM-yyyy' }}</span>
-                            </div>
-                            <div class="param-chip">
                                 <i class="pi pi-percentage" aria-hidden="true"></i>
                                 <span class="p-lbl">GST Rate:</span>
                                 <span class="p-val">{{ inv.gst_rate }}%</span>
                             </div>
-                            @if (inv.items && inv.items.length) {
-                            <div class="param-chip">
-                                <i class="pi pi-box" aria-hidden="true"></i>
-                                <span class="p-lbl">Line Items:</span>
-                                <span class="p-val font-bold">{{ inv.items.length }} Item{{ inv.items.length === 1 ? '' : 's' }}</span>
-                            </div>
-                            }
                         </div>
 
                         <!-- Material Items Table -->
@@ -481,16 +469,6 @@
                         <!-- Parameters Strip -->
                         <div class="vsc-params-strip">
                             <div class="param-chip">
-                                <i class="pi pi-calendar" aria-hidden="true"></i>
-                                <span class="p-lbl">Date:</span>
-                                <span class="p-val">{{ pl.packing_list_date | date:'dd-MM-yyyy' }}</span>
-                            </div>
-                            <div class="param-chip">
-                                <i class="pi pi-box" aria-hidden="true"></i>
-                                <span class="p-lbl">Total Packs:</span>
-                                <span class="p-val font-bold">{{ pl.total_no_of_packs }}</span>
-                            </div>
-                            <div class="param-chip">
                                 <i class="pi pi-check-circle" aria-hidden="true"></i>
                                 <span class="p-lbl">Condition:</span>
                                 <span class="p-val">{{ pl.packing_condition || 'Standard Packaging' }}</span>
@@ -651,16 +629,6 @@
                     <div class="vsc-body">
                         <!-- Parameters Strip -->
                         <div class="vsc-params-strip">
-                            <div class="param-chip">
-                                <i class="pi pi-calendar" aria-hidden="true"></i>
-                                <span class="p-lbl">Challan Date:</span>
-                                <span class="p-val">{{ dc.delivery_challan_date | date:'dd-MM-yyyy' }}</span>
-                            </div>
-                            <div class="param-chip">
-                                <i class="pi pi-box" aria-hidden="true"></i>
-                                <span class="p-lbl">Total Items:</span>
-                                <span class="p-val font-bold">{{ dc.items.length || 0 }} Items</span>
-                            </div>
                             <div class="param-chip">
                                 <i class="pi pi-building" aria-hidden="true"></i>
                                 <span class="p-lbl">Recipient:</span>
@@ -973,11 +941,6 @@
                                 </span>
                             </div>
                             <div class="param-chip">
-                                <i class="pi pi-calendar" aria-hidden="true"></i>
-                                <span class="p-lbl">Dispatch Date:</span>
-                                <span class="p-val">{{ td.date | date:'dd-MM-yyyy' }}</span>
-                            </div>
-                            <div class="param-chip">
                                 <i class="pi pi-map-marker" aria-hidden="true"></i>
                                 <span class="p-lbl">From:</span>
                                 <span class="p-val">{{ td.from_location }}</span>
@@ -987,13 +950,6 @@
                                 <span class="p-lbl">To:</span>
                                 <span class="p-val">{{ td.to_location }}</span>
                             </div>
-                            @if (td.transport_charges) {
-                            <div class="param-chip param-chip--highlight">
-                                <i class="pi pi-wallet" aria-hidden="true"></i>
-                                <span class="p-lbl">Transport Charges:</span>
-                                <span class="p-val font-mono font-bold">₹ {{ (td.transport_charges || 0) | number:'1.2-2' }}</span>
-                            </div>
-                            }
                         </div>
 
                         <!-- Remarks -->

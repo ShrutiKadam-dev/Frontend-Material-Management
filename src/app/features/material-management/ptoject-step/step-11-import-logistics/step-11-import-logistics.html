@@ -233,22 +233,6 @@
               </div>
               }
               }
-
-              <!-- Common Chips -->
-              @if (item.port_of_discharge) {
-              <div class="param-chip">
-                <i class="pi pi-building" aria-hidden="true"></i>
-                <span class="p-lbl">Port of Discharge:</span>
-                <span class="p-val">{{ item.port_of_discharge }}</span>
-              </div>
-              }
-              @if (item.date) {
-              <div class="param-chip">
-                <i class="pi pi-calendar" aria-hidden="true"></i>
-                <span class="p-lbl">Date:</span>
-                <span class="p-val">{{ item.date | date: 'dd-MM-yyyy' }}</span>
-              </div>
-              }
             </div>
 
             <!-- Remarks FIRST -->
@@ -372,18 +356,6 @@
 
             <!-- Refined Duty Breakdown Parameters Strip -->
             <div class="vsc-params-strip">
-              <div class="param-chip param-chip--highlight">
-                <i class="pi pi-tag" aria-hidden="true"></i>
-                <span class="p-lbl">BOE No:</span>
-                <span class="p-val">{{ item.bill_of_entry_no }}</span>
-              </div>
-
-              <div class="param-chip">
-                <i class="pi pi-wallet" aria-hidden="true"></i>
-                <span class="p-lbl">Total Assessable Value:</span>
-                <span class="p-val">₹&nbsp;{{ item.total_assessable_value | number:'1.2-2' }}</span>
-              </div>
-
               <div class="param-chip">
                 <i class="pi pi-percentage" aria-hidden="true"></i>
                 <span class="p-lbl">BCD:</span>
@@ -400,12 +372,6 @@
                 <i class="pi pi-percentage" aria-hidden="true"></i>
                 <span class="p-lbl">IGST:</span>
                 <span class="p-val">₹&nbsp;{{ item.igst | number:'1.2-2' }}</span>
-              </div>
-
-              <div class="param-chip param-chip--highlight">
-                <i class="pi pi-calculator" aria-hidden="true"></i>
-                <span class="p-lbl">Total Duty (BCD + SWS + IGST):</span>
-                <span class="p-val">₹&nbsp;{{ calculateBoeTotalDuty(item) | number:'1.2-2' }}</span>
               </div>
             </div>
 
