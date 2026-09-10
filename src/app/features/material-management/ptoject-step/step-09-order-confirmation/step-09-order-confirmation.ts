@@ -316,7 +316,10 @@ export class Step09OrderConfirmation implements OnInit {
 
   protected saveRow(focusTarget?: HTMLInputElement): void {
     if (this.rowForm.invalid) {
-      this.rowForm.markAllAsTouched();
+      Object.values(this.rowForm.controls).forEach((ctrl) => {
+        ctrl.markAsDirty();
+        ctrl.markAsTouched();
+      });
       return;
     }
 
@@ -408,6 +411,8 @@ export class Step09OrderConfirmation implements OnInit {
 
   /* ── Submit Form Handler ───────────────────────────────── */
   protected submit(): void {
+    if (this.submitting()) return;
+
     if (this.headerForm.invalid) {
       this.headerForm.markAllAsTouched();
       this.messageService.add({
@@ -575,12 +580,12 @@ export class Step09OrderConfirmation implements OnInit {
 
   protected isRowFieldInvalid(key: string): boolean {
     const c = this.rowForm.get(key);
-    return !!(c && c.invalid && (c.touched || c.dirty));
+    return !!(c && c.invalid && c.dirty);
   }
 
   protected getRowFieldError(key: string): string | null {
     const c = this.rowForm.get(key);
-    if (!c || !c.invalid || !(c.touched || c.dirty)) return null;
+    if (!c || !c.invalid || !c.dirty) return null;
     if (c.hasError('required')) return 'Required.';
     if (c.hasError('pattern')) return 'Must be a positive number.';
     return 'Invalid value.';

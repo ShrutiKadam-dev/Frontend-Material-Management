@@ -320,6 +320,7 @@ export class Step11ImportLogistics implements OnInit {
   }
 
   protected submitLogistics(): void {
+    if (this.saving()) return;
     if (this.logisticsForm.invalid) {
       this.logisticsForm.markAllAsTouched();
       return;
@@ -473,6 +474,7 @@ export class Step11ImportLogistics implements OnInit {
   }
 
   protected submitBoe(): void {
+    if (this.saving()) return;
     if (this.boeForm.invalid) {
       this.boeForm.markAllAsTouched();
       return;

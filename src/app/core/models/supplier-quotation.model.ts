@@ -3,6 +3,7 @@ import { Attachment } from './attachment.model';
 export interface SupplierQuotationItem {
   id?: number;
   material_name: string;
+  hsn_code?: string;
   quantity: string | number;
   unit_price?: string | number;
   net_amount?: string | number;

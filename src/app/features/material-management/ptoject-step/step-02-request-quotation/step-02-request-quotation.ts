@@ -218,7 +218,10 @@ export class Step02RequestQuotation implements OnInit {
 
   protected saveRow(focusTarget?: HTMLInputElement): void {
     if (this.rowForm.invalid) {
-      this.rowForm.markAllAsTouched();
+      Object.values(this.rowForm.controls).forEach((ctrl) => {
+        ctrl.markAsDirty();
+        ctrl.markAsTouched();
+      });
       return;
     }
     const val = this.rowForm.getRawValue();
@@ -227,18 +230,22 @@ export class Step02RequestQuotation implements OnInit {
 
     if (!name || !qty) return;
 
-    const row: QuotationRequestItem = {
-      material_name: name,
-      quantity: qty,
-    };
-
     const idx = this.editingIndex();
     if (idx !== null) {
+      const existing = this.items()[idx];
       const updated = [...this.items()];
-      updated[idx] = row;
+      updated[idx] = {
+        ...existing,
+        material_name: name,
+        quantity: qty,
+      };
       this.items.set(updated);
       this.editingIndex.set(null);
     } else {
+      const row: QuotationRequestItem = {
+        material_name: name,
+        quantity: qty,
+      };
       this.items.update((list) => [...list, row]);
     }
 
@@ -277,12 +284,12 @@ export class Step02RequestQuotation implements OnInit {
 
   protected isRowFieldInvalid(key: string): boolean {
     const c = this.rowForm.get(key);
-    return !!(c && c.invalid && (c.touched || c.dirty));
+    return !!(c && c.invalid && c.dirty);
   }
 
   protected getRowFieldError(key: string): string | null {
     const c = this.rowForm.get(key);
-    if (!c || !c.invalid || !(c.touched || c.dirty)) return null;
+    if (!c || !c.invalid || !c.dirty) return null;
     if (c.hasError('required')) {
       if (key === 'material_name') return 'Material name is required.';
       if (key === 'quantity') return 'Quantity is required.';
@@ -300,6 +307,8 @@ export class Step02RequestQuotation implements OnInit {
   /* ── Submit (Handles both Create and Update) ──────────── */
 
   protected submit(): void {
+    if (this.submitting()) return;
+
     if (this.headerForm.invalid) {
       this.headerForm.markAllAsTouched();
       this.messageService.add({
@@ -454,8 +463,8 @@ export class Step02RequestQuotation implements OnInit {
       });
   }
 
-  protected formatFileSize(bytes: number): string {
-    if (!bytes || bytes === 0) return '0 B';
+  protected formatFileSize(bytes?: number): string {
+    if (!bytes || bytes <= 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));

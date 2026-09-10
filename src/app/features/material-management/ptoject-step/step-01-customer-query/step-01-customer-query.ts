@@ -197,18 +197,22 @@ export class Step01CustomerQuery implements OnInit {
 
     if (!name || !qty) return;
 
-    const row: CustomerQueryItem = {
-      material_name: name,
-      quantity: qty,
-    };
-
     const idx = this.editingIndex();
     if (idx !== null) {
+      const existing = this.items()[idx];
       const updated = [...this.items()];
-      updated[idx] = row;
+      updated[idx] = {
+        ...existing,
+        material_name: name,
+        quantity: qty,
+      };
       this.items.set(updated);
       this.editingIndex.set(null);
     } else {
+      const row: CustomerQueryItem = {
+        material_name: name,
+        quantity: qty,
+      };
       this.items.update((list) => [...list, row]);
     }
 
@@ -267,6 +271,8 @@ export class Step01CustomerQuery implements OnInit {
   /* ── Submit (Handles both Create and Update) ──────────── */
 
   protected submit(): void {
+    if (this.submitting()) return;
+
     if (this.headerForm.invalid) {
       this.headerForm.markAllAsTouched();
       this.messageService.add({

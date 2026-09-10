@@ -353,7 +353,7 @@
         [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '880px' }"
         styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
 
-        <form [formGroup]="paymentForm" (ngSubmit)="onSubmitPayment()" novalidate>
+        <form [formGroup]="paymentForm" (ngSubmit)="onSubmitPayment()" novalidate id="supplier-payment-form">
             <div class="dlg-body">
 
                 <!-- Section 1: Supplier Commitment & Currency -->
@@ -505,7 +505,8 @@
                     <!-- Drop zone -->
                     <div class="file-drop-zone"
                         [class.file-drop-zone--compact]="selectedFiles().length > 0 || existingAttachments().length > 0"
-                        (click)="fileInput.click()" (keydown.enter)="fileInput.click()" (drop)="onFileDropped($event)"
+                        (click)="fileInput.click()" (keydown.enter)="fileInput.click()"
+                        (keydown.space)="fileInput.click(); $event.preventDefault()" (drop)="onFileDropped($event)"
                         (dragover)="onDragOver($event)" role="button" tabindex="0"
                         aria-label="Upload payment advice documents">
                         <i class="pi pi-upload" aria-hidden="true"></i>
@@ -531,16 +532,17 @@
                 </div>
 
             </div>
+        </form>
 
-            <!-- Dialog Footer -->
+        <ng-template pTemplate="footer">
             <div class="dlg-footer">
                 <button pButton type="button" label="Cancel" class="p-button-text"
                     (click)="paymentDialogVisible.set(false)" [disabled]="saving()"></button>
-                <button pButton type="submit" [icon]="saving() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
+                <button pButton type="submit" form="supplier-payment-form" [icon]="saving() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
                     [label]="saving() ? 'Saving…' : (editingPayment() ? 'Update Payment Record' : 'Record Supplier Payment')"
                     class="create-cost-sheet-btn" [disabled]="saving() || paymentForm.invalid"></button>
             </div>
-        </form>
+        </ng-template>
     </p-dialog>
 
 </main>

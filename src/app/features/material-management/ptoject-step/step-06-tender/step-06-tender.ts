@@ -257,7 +257,10 @@ export class Step06Tender implements OnInit {
   /* ── Line Item Operations ──────────────────────────────── */
   protected saveRow(matInputEl?: HTMLInputElement): void {
     if (this.rowForm.invalid) {
-      this.rowForm.markAllAsTouched();
+      Object.values(this.rowForm.controls).forEach((ctrl) => {
+        ctrl.markAsDirty();
+        ctrl.markAsTouched();
+      });
       return;
     }
 
@@ -303,8 +306,8 @@ export class Step06Tender implements OnInit {
   }
 
   protected cancelRow(): void {
-    this.editingItemIndex.set(null);
     this.rowForm.reset();
+    this.editingItemIndex.set(null);
   }
 
   protected deleteRow(index: number): void {
@@ -468,11 +471,6 @@ export class Step06Tender implements OnInit {
     return !!(c && c.invalid && (c.touched || c.dirty));
   }
 
-  protected isRowFieldInvalid(key: string): boolean {
-    const c = this.rowForm.get(key);
-    return !!(c && c.invalid && (c.touched || c.dirty));
-  }
-
   protected getFieldError(key: string): string | null {
     const c = this.headerForm.get(key);
     if (!c || !c.invalid || !(c.touched || c.dirty)) return null;
@@ -498,9 +496,14 @@ export class Step06Tender implements OnInit {
     return 'Invalid field value.';
   }
 
+  protected isRowFieldInvalid(key: string): boolean {
+    const c = this.rowForm.get(key);
+    return !!(c && c.invalid && c.dirty);
+  }
+
   protected getRowFieldError(key: string): string | null {
     const c = this.rowForm.get(key);
-    if (!c || !c.invalid || !(c.touched || c.dirty)) return null;
+    if (!c || !c.invalid || !c.dirty) return null;
     if (c.hasError('required')) {
       if (key === 'material_name') return 'Material description is required.';
       if (key === 'quantity') return 'Quantity is required.';

@@ -1057,7 +1057,7 @@
         [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '1000px' }"
         styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
 
-        <form [formGroup]="invoiceForm" (ngSubmit)="onSubmitInvoice()" novalidate>
+        <form [formGroup]="invoiceForm" (ngSubmit)="onSubmitInvoice()" novalidate id="invoice-form">
             <div class="dlg-body">
 
                 <!-- Section 1: Invoice Identification -->
@@ -1169,8 +1169,7 @@
                                 <button pButton type="button"
                                     [icon]="editingInvoiceItemIdx() !== null ? 'pi pi-check' : 'pi pi-plus'"
                                     [label]="editingInvoiceItemIdx() !== null ? 'Update' : 'Add Item'"
-                                    class="quick-submit-btn" (click)="saveInvoiceRow(invMatInput)"
-                                    [disabled]="invoiceRowForm.invalid"></button>
+                                    class="quick-submit-btn" (click)="saveInvoiceRow(invMatInput)"></button>
                                 @if (editingInvoiceItemIdx() !== null) {
                                 <button pButton type="button" icon="pi pi-times"
                                     class="p-button-text p-button-secondary cancel-edit-btn" pTooltip="Cancel edit"
@@ -1367,7 +1366,8 @@
                     <!-- Drop zone -->
                     <div class="file-drop-zone"
                         [class.file-drop-zone--compact]="selectedFiles().length > 0 || existingAttachments().length > 0"
-                        (click)="invFileInput.click()" (keydown.enter)="invFileInput.click()" tabindex="0" role="button"
+                        (click)="invFileInput.click()" (keydown.enter)="invFileInput.click()"
+                        (keydown.space)="invFileInput.click(); $event.preventDefault()" tabindex="0" role="button"
                         aria-label="Upload invoice documents">
                         <i class="pi pi-upload" aria-hidden="true"></i>
                         <span>{{ (selectedFiles().length || existingAttachments().length) ? 'Add more files' : 'Click to
@@ -1393,15 +1393,17 @@
                 </div>
 
             </div>
+        </form>
 
-            <!-- Standard Global Dialog Footer -->
+        <ng-template pTemplate="footer">
             <div class="dlg-footer">
                 <button pButton type="button" label="Cancel" class="p-button-outlined p-button-secondary cancel-btn"
-                    (click)="invoiceDialogVisible.set(false)"></button>
-                <button pButton type="submit" [label]="editingInvoice() ? 'Update Invoice' : 'Save Invoice'"
-                    icon="pi pi-check" class="create-cost-sheet-btn save-btn" [loading]="saving()"></button>
+                    (click)="invoiceDialogVisible.set(false)" [disabled]="saving()"></button>
+                <button pButton type="submit" form="invoice-form" [label]="editingInvoice() ? 'Update Invoice' : 'Save Invoice'"
+                    icon="pi pi-check" class="create-cost-sheet-btn save-btn" [loading]="saving()"
+                    [disabled]="saving() || invoiceForm.invalid || invoiceItemsList().length === 0"></button>
             </div>
-        </form>
+        </ng-template>
     </p-dialog>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -1412,7 +1414,7 @@
         [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '1000px' }"
         styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
 
-        <form [formGroup]="packingListForm" (ngSubmit)="onSubmitPackingList()" novalidate>
+        <form [formGroup]="packingListForm" (ngSubmit)="onSubmitPackingList()" novalidate id="packing-form">
             <div class="dlg-body">
 
                 <!-- Section 1: Packing Identification -->
@@ -1548,8 +1550,7 @@
                                 <button pButton type="button"
                                     [icon]="editingPackingItemIdx() !== null ? 'pi pi-check' : 'pi pi-plus'"
                                     [label]="editingPackingItemIdx() !== null ? 'Update' : 'Add Item'"
-                                    class="quick-submit-btn" (click)="savePackingRow(plPkgInput)"
-                                    [disabled]="packingRowForm.invalid"></button>
+                                    class="quick-submit-btn" (click)="savePackingRow(plPkgInput)"></button>
                                 @if (editingPackingItemIdx() !== null) {
                                 <button pButton type="button" icon="pi pi-times"
                                     class="p-button-text p-button-secondary cancel-edit-btn" pTooltip="Cancel edit"
@@ -1693,7 +1694,8 @@
 
                     <div class="file-drop-zone"
                         [class.file-drop-zone--compact]="selectedFiles().length > 0 || existingAttachments().length > 0"
-                        (click)="plFileInput.click()" (keydown.enter)="plFileInput.click()" tabindex="0" role="button"
+                        (click)="plFileInput.click()" (keydown.enter)="plFileInput.click()"
+                        (keydown.space)="plFileInput.click(); $event.preventDefault()" tabindex="0" role="button"
                         aria-label="Upload packing list documents">
                         <i class="pi pi-upload" aria-hidden="true"></i>
                         <span>{{ (selectedFiles().length || existingAttachments().length) ? 'Add more files' : 'Click to
@@ -1719,15 +1721,18 @@
                 </div>
 
             </div>
+        </form>
 
+        <ng-template pTemplate="footer">
             <div class="dlg-footer">
                 <button pButton type="button" label="Cancel" class="p-button-outlined p-button-secondary cancel-btn"
-                    (click)="packingListDialogVisible.set(false)"></button>
-                <button pButton type="submit"
+                    (click)="packingListDialogVisible.set(false)" [disabled]="saving()"></button>
+                <button pButton type="submit" form="packing-form"
                     [label]="editingPackingList() ? 'Update Packing List' : 'Save Packing List'" icon="pi pi-check"
-                    class="create-cost-sheet-btn save-btn" [loading]="saving()"></button>
+                    class="create-cost-sheet-btn save-btn" [loading]="saving()"
+                    [disabled]="saving() || packingListForm.invalid || packingItemsList().length === 0"></button>
             </div>
-        </form>
+        </ng-template>
     </p-dialog>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -1738,7 +1743,7 @@
         [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '1000px' }"
         styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
 
-        <form [formGroup]="challanForm" (ngSubmit)="onSubmitChallan()" novalidate>
+        <form [formGroup]="challanForm" (ngSubmit)="onSubmitChallan()" novalidate id="challan-form">
             <div class="dlg-body">
 
                 <!-- Section 1: Challan Details -->
@@ -1839,8 +1844,7 @@
                                 <button pButton type="button"
                                     [icon]="editingChallanItemIdx() !== null ? 'pi pi-check' : 'pi pi-plus'"
                                     [label]="editingChallanItemIdx() !== null ? 'Update' : 'Add Item'"
-                                    class="quick-submit-btn" (click)="saveChallanRow(dcMatInput)"
-                                    [disabled]="challanRowForm.invalid"></button>
+                                    class="quick-submit-btn" (click)="saveChallanRow(dcMatInput)"></button>
                                 @if (editingChallanItemIdx() !== null) {
                                 <button pButton type="button" icon="pi pi-times"
                                     class="p-button-text p-button-secondary cancel-edit-btn" pTooltip="Cancel edit"
@@ -1978,7 +1982,8 @@
 
                     <div class="file-drop-zone"
                         [class.file-drop-zone--compact]="selectedFiles().length > 0 || existingAttachments().length > 0"
-                        (click)="dcFileInput.click()" (keydown.enter)="dcFileInput.click()" tabindex="0" role="button"
+                        (click)="dcFileInput.click()" (keydown.enter)="dcFileInput.click()"
+                        (keydown.space)="dcFileInput.click(); $event.preventDefault()" tabindex="0" role="button"
                         aria-label="Upload delivery challan documents">
                         <i class="pi pi-upload" aria-hidden="true"></i>
                         <span>{{ (selectedFiles().length || existingAttachments().length) ? 'Add more files' : 'Click to
@@ -2004,15 +2009,18 @@
                 </div>
 
             </div>
+        </form>
 
+        <ng-template pTemplate="footer">
             <div class="dlg-footer">
                 <button pButton type="button" label="Cancel" class="p-button-outlined p-button-secondary cancel-btn"
-                    (click)="challanDialogVisible.set(false)"></button>
-                <button pButton type="submit"
+                    (click)="challanDialogVisible.set(false)" [disabled]="saving()"></button>
+                <button pButton type="submit" form="challan-form"
                     [label]="editingChallan() ? 'Update Delivery Challan' : 'Save Delivery Challan'" icon="pi pi-check"
-                    class="create-cost-sheet-btn save-btn" [loading]="saving()"></button>
+                    class="create-cost-sheet-btn save-btn" [loading]="saving()"
+                    [disabled]="saving() || challanForm.invalid || challanItemsList().length === 0"></button>
             </div>
-        </form>
+        </ng-template>
     </p-dialog>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -2023,7 +2031,7 @@
         [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '850px' }"
         styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
 
-        <form [formGroup]="warrantyForm" (ngSubmit)="onSubmitWarranty()" novalidate>
+        <form [formGroup]="warrantyForm" (ngSubmit)="onSubmitWarranty()" novalidate id="warranty-form">
             <div class="dlg-body">
 
                 <!-- Section 1: Certificate Specs -->
@@ -2147,7 +2155,8 @@
 
                     <div class="file-drop-zone"
                         [class.file-drop-zone--compact]="selectedFiles().length > 0 || existingAttachments().length > 0"
-                        (click)="wcFileInput.click()" (keydown.enter)="wcFileInput.click()" tabindex="0" role="button"
+                        (click)="wcFileInput.click()" (keydown.enter)="wcFileInput.click()"
+                        (keydown.space)="wcFileInput.click(); $event.preventDefault()" tabindex="0" role="button"
                         aria-label="Upload warranty certificate documents">
                         <i class="pi pi-upload" aria-hidden="true"></i>
                         <span>{{ (selectedFiles().length || existingAttachments().length) ? 'Add more files' : 'Click to
@@ -2174,14 +2183,17 @@
                 </div>
 
             </div>
+        </form>
 
+        <ng-template pTemplate="footer">
             <div class="dlg-footer">
                 <button pButton type="button" label="Cancel" class="p-button-outlined p-button-secondary cancel-btn"
-                    (click)="warrantyDialogVisible.set(false)"></button>
-                <button pButton type="submit" [label]="editingWarranty() ? 'Update Certificate' : 'Issue Certificate'"
-                    icon="pi pi-check" class="create-cost-sheet-btn save-btn" [loading]="saving()"></button>
+                    (click)="warrantyDialogVisible.set(false)" [disabled]="saving()"></button>
+                <button pButton type="submit" form="warranty-form" [label]="editingWarranty() ? 'Update Certificate' : 'Issue Certificate'"
+                    icon="pi pi-check" class="create-cost-sheet-btn save-btn" [loading]="saving()"
+                    [disabled]="saving() || warrantyForm.invalid"></button>
             </div>
-        </form>
+        </ng-template>
     </p-dialog>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -2192,7 +2204,7 @@
         [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '850px' }"
         styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
 
-        <form [formGroup]="transportForm" (ngSubmit)="onSubmitTransport()" novalidate>
+        <form [formGroup]="transportForm" (ngSubmit)="onSubmitTransport()" novalidate id="transport-form">
             <div class="dlg-body">
 
                 <!-- Section 1: Mode & Identification -->
@@ -2340,7 +2352,8 @@
 
                     <div class="file-drop-zone"
                         [class.file-drop-zone--compact]="selectedFiles().length > 0 || existingAttachments().length > 0"
-                        (click)="trFileInput.click()" (keydown.enter)="trFileInput.click()" tabindex="0" role="button"
+                        (click)="trFileInput.click()" (keydown.enter)="trFileInput.click()"
+                        (keydown.space)="trFileInput.click(); $event.preventDefault()" tabindex="0" role="button"
                         aria-label="Upload transport documents">
                         <i class="pi pi-upload" aria-hidden="true"></i>
                         <span>{{ (selectedFiles().length || existingAttachments().length) ? 'Add more files' : 'Click to
@@ -2367,15 +2380,18 @@
                 </div>
 
             </div>
+        </form>
 
+        <ng-template pTemplate="footer">
             <div class="dlg-footer">
                 <button pButton type="button" label="Cancel" class="p-button-outlined p-button-secondary cancel-btn"
-                    (click)="transportDialogVisible.set(false)"></button>
-                <button pButton type="submit"
+                    (click)="transportDialogVisible.set(false)" [disabled]="saving()"></button>
+                <button pButton type="submit" form="transport-form"
                     [label]="editingTransport() ? 'Update Transport Record' : 'Save Transport Record'"
-                    icon="pi pi-check" class="create-cost-sheet-btn save-btn" [loading]="saving()"></button>
+                    icon="pi pi-check" class="create-cost-sheet-btn save-btn" [loading]="saving()"
+                    [disabled]="saving() || transportForm.invalid"></button>
             </div>
-        </form>
+        </ng-template>
     </p-dialog>
 
 </section>

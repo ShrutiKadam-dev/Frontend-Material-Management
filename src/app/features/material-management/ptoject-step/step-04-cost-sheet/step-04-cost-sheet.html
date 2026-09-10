@@ -637,14 +637,14 @@
 
         </div>
 
-        <!-- Dialog Footer Actions -->
-        <div class="dlg-footer">
+        <!-- Dialog Footer Actions (Pinned at bottom) -->
+        <ng-template pTemplate="footer">
             <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="closeDialog()"
                 [disabled]="submitting()"></button>
             <button pButton type="button" label="Save Cost Sheet" icon="pi pi-check" class="submit-btn"
                 (click)="submit()" [loading]="submitting()"
                 [disabled]="submitting() || globalParamsForm.invalid || items().length === 0"></button>
-        </div>
+        </ng-template>
     </p-dialog>
 
     <!-- ── 4. Import from Supplier Quotations Sub-Dialog ───── -->

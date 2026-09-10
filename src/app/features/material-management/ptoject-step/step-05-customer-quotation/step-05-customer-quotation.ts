@@ -366,7 +366,10 @@ export class Step05CustomerQuotation implements OnInit {
   /* ── Item Operations ─────────────────────────────────── */
   protected saveRow(matInputEl?: HTMLInputElement): void {
     if (this.rowForm.invalid) {
-      this.rowForm.markAllAsTouched();
+      Object.values(this.rowForm.controls).forEach((ctrl) => {
+        ctrl.markAsDirty();
+        ctrl.markAsTouched();
+      });
       return;
     }
 
@@ -431,6 +434,8 @@ export class Step05CustomerQuotation implements OnInit {
 
   /* ── Form Submit & Mutation ──────────────────────────── */
   protected submit(): void {
+    if (this.submitting()) return;
+
     if (this.headerForm.invalid) {
       this.headerForm.markAllAsTouched();
       return;

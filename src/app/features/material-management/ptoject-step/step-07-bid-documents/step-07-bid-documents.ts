@@ -343,7 +343,10 @@ export class Step07BidDocuments implements OnInit {
 
   protected saveRow(matInput: HTMLInputElement): void {
     if (this.rowForm.invalid) {
-      this.rowForm.markAllAsTouched();
+      Object.values(this.rowForm.controls).forEach((ctrl) => {
+        ctrl.markAsDirty();
+        ctrl.markAsTouched();
+      });
       return;
     }
 
@@ -452,6 +455,8 @@ export class Step07BidDocuments implements OnInit {
 
   /* ── Submission ────────────────────────────────────────── */
   protected submit(): void {
+    if (this.submitting()) return;
+
     if (this.headerForm.invalid) {
       this.headerForm.markAllAsTouched();
       return;
@@ -608,12 +613,12 @@ export class Step07BidDocuments implements OnInit {
 
   protected isRowFieldInvalid(fieldName: string): boolean {
     const ctrl = this.rowForm.get(fieldName);
-    return !!ctrl && ctrl.invalid && (ctrl.dirty || ctrl.touched);
+    return !!ctrl && ctrl.invalid && ctrl.dirty;
   }
 
   protected getRowFieldError(fieldName: string): string {
     const ctrl = this.rowForm.get(fieldName);
-    if (!ctrl || !ctrl.errors) return '';
+    if (!ctrl || !ctrl.errors || !ctrl.dirty) return '';
     if (ctrl.errors['required']) {
       if (fieldName === 'material_name') return 'Description is required';
       if (fieldName === 'quantity') return 'Quantity is required';

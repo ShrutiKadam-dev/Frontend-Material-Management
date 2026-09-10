@@ -211,6 +211,7 @@ export class Step03SupplierQuotation implements OnInit {
 
   protected readonly rowForm = this.fb.group({
     material_name: ['', Validators.required],
+    hsn_code: [''],
     quantity: ['', [Validators.required, Validators.pattern(/^\d+(\.\d{1,3})?$/)]],
     unit_price: ['', [Validators.pattern(/^\d+(\.\d{1,2})?$/)]],
   });
@@ -291,6 +292,7 @@ export class Step03SupplierQuotation implements OnInit {
         if (query?.items && Array.isArray(query.items) && query.items.length > 0) {
           const autoItems: SupplierQuotationItem[] = query.items.map((item: any) => ({
             material_name: item.material_name ?? '',
+            hsn_code: item.hsn_code ?? '',
             quantity: item.quantity ?? '',
           }));
           this.items.set(autoItems);
@@ -391,6 +393,7 @@ export class Step03SupplierQuotation implements OnInit {
     const item = this.items()[index];
     this.rowForm.setValue({
       material_name: item.material_name,
+      hsn_code: item.hsn_code ?? '',
       quantity: String(item.quantity ?? ''),
       unit_price: item.unit_price !== undefined && item.unit_price !== null ? String(item.unit_price) : '',
     });
@@ -402,11 +405,15 @@ export class Step03SupplierQuotation implements OnInit {
 
   protected saveRow(focusTarget?: HTMLInputElement): void {
     if (this.rowForm.invalid) {
-      this.rowForm.markAllAsTouched();
+      Object.values(this.rowForm.controls).forEach((ctrl) => {
+        ctrl.markAsDirty();
+        ctrl.markAsTouched();
+      });
       return;
     }
     const val = this.rowForm.getRawValue();
     const name = val.material_name?.trim();
+    const hsn = val.hsn_code?.trim() || undefined;
     const qty = val.quantity?.trim();
     const price = val.unit_price?.trim();
 
@@ -416,20 +423,28 @@ export class Step03SupplierQuotation implements OnInit {
       ? Number((Number(qty) * Number(price)).toFixed(2))
       : undefined;
 
-    const row: SupplierQuotationItem = {
-      material_name: name,
-      quantity: qty,
-      unit_price: price ? price : undefined,
-      net_amount: net,
-    };
-
     const idx = this.editingIndex();
     if (idx !== null) {
+      const existing = this.items()[idx];
       const updated = [...this.items()];
-      updated[idx] = row;
+      updated[idx] = {
+        ...existing,
+        material_name: name,
+        hsn_code: hsn,
+        quantity: qty,
+        unit_price: price ? price : undefined,
+        net_amount: net,
+      };
       this.items.set(updated);
       this.editingIndex.set(null);
     } else {
+      const row: SupplierQuotationItem = {
+        material_name: name,
+        hsn_code: hsn,
+        quantity: qty,
+        unit_price: price ? price : undefined,
+        net_amount: net,
+      };
       this.items.update((list) => [...list, row]);
     }
 
@@ -463,12 +478,12 @@ export class Step03SupplierQuotation implements OnInit {
 
   protected isRowFieldInvalid(key: string): boolean {
     const c = this.rowForm.get(key);
-    return !!(c && c.invalid && (c.touched || c.dirty));
+    return !!(c && c.invalid && c.dirty);
   }
 
   protected getRowFieldError(key: string): string | null {
     const c = this.rowForm.get(key);
-    if (!c || !c.invalid || !(c.touched || c.dirty)) return null;
+    if (!c || !c.invalid || !c.dirty) return null;
     if (c.hasError('required')) {
       if (key === 'material_name') return 'Material name is required.';
       if (key === 'quantity') return 'Quantity is required.';
@@ -486,6 +501,8 @@ export class Step03SupplierQuotation implements OnInit {
   /* ── Submit (Handles both Create and Update) ──────────── */
 
   protected submit(): void {
+    if (this.submitting()) return;
+
     if (this.headerForm.invalid) {
       this.headerForm.markAllAsTouched();
       this.messageService.add({
@@ -531,7 +548,9 @@ export class Step03SupplierQuotation implements OnInit {
     this.errorMessage.set(null);
 
     const formattedItems = this.items().map((it) => ({
+      id: it.id,
       material_name: it.material_name,
+      hsn_code: it.hsn_code || undefined,
       quantity: !isNaN(Number(it.quantity)) ? Number(it.quantity) : it.quantity,
       unit_price: it.unit_price !== undefined && it.unit_price !== '' && !isNaN(Number(it.unit_price)) ? Number(it.unit_price) : it.unit_price,
       net_amount: it.net_amount !== undefined && it.net_amount !== '' && !isNaN(Number(it.net_amount)) ? Number(it.net_amount) : it.net_amount,

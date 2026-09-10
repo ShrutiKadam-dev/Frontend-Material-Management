@@ -247,8 +247,8 @@ export class Step14CustomerPayment implements OnInit {
     this.paymentDialogVisible.set(true);
   }
 
-  // ── Form Submission ────────────────────────────────────────────
   protected onSubmitPayment(): void {
+    if (this.saving()) return;
     if (this.paymentForm.invalid) {
       this.paymentForm.markAllAsTouched();
       return;

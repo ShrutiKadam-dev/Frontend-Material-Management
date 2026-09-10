@@ -452,7 +452,10 @@ export class Step13CustomerDelivery implements OnInit {
 
   protected saveInvoiceRow(focusTarget?: HTMLInputElement): void {
     if (this.invoiceRowForm.invalid) {
-      this.invoiceRowForm.markAllAsTouched();
+      Object.values(this.invoiceRowForm.controls).forEach((ctrl) => {
+        ctrl.markAsDirty();
+        ctrl.markAsTouched();
+      });
       return;
     }
 
@@ -528,6 +531,7 @@ export class Step13CustomerDelivery implements OnInit {
   }
 
   protected onSubmitInvoice(): void {
+    if (this.saving()) return;
     if (this.invoiceForm.invalid || this.invoiceItemsList().length === 0) {
       this.invoiceForm.markAllAsTouched();
       return;
@@ -693,7 +697,10 @@ export class Step13CustomerDelivery implements OnInit {
 
   protected savePackingRow(focusTarget?: HTMLInputElement): void {
     if (this.packingRowForm.invalid) {
-      this.packingRowForm.markAllAsTouched();
+      Object.values(this.packingRowForm.controls).forEach((ctrl) => {
+        ctrl.markAsDirty();
+        ctrl.markAsTouched();
+      });
       return;
     }
 
@@ -745,6 +752,7 @@ export class Step13CustomerDelivery implements OnInit {
   }
 
   protected onSubmitPackingList(): void {
+    if (this.saving()) return;
     if (this.packingListForm.invalid || this.packingItemsList().length === 0) {
       this.packingListForm.markAllAsTouched();
       return;
@@ -874,7 +882,10 @@ export class Step13CustomerDelivery implements OnInit {
 
   protected saveChallanRow(focusTarget?: HTMLInputElement): void {
     if (this.challanRowForm.invalid) {
-      this.challanRowForm.markAllAsTouched();
+      Object.values(this.challanRowForm.controls).forEach((ctrl) => {
+        ctrl.markAsDirty();
+        ctrl.markAsTouched();
+      });
       return;
     }
 
@@ -930,6 +941,7 @@ export class Step13CustomerDelivery implements OnInit {
   }
 
   protected onSubmitChallan(): void {
+    if (this.saving()) return;
     if (this.challanForm.invalid || this.challanItemsList().length === 0) {
       this.challanForm.markAllAsTouched();
       return;
@@ -1031,6 +1043,7 @@ export class Step13CustomerDelivery implements OnInit {
   }
 
   protected onSubmitWarranty(): void {
+    if (this.saving()) return;
     if (this.warrantyForm.invalid) {
       this.warrantyForm.markAllAsTouched();
       return;
@@ -1143,6 +1156,7 @@ export class Step13CustomerDelivery implements OnInit {
   }
 
   protected onSubmitTransport(): void {
+    if (this.saving()) return;
     if (this.transportForm.invalid) {
       this.transportForm.markAllAsTouched();
       return;
@@ -1284,7 +1298,7 @@ export class Step13CustomerDelivery implements OnInit {
 
   protected isRowFieldInvalid(form: FormGroup, controlName: string): boolean {
     const c = form.get(controlName);
-    return !!(c && c.invalid && (c.dirty || c.touched));
+    return !!(c && c.invalid && c.dirty);
   }
 
   protected getRowFieldError(form: FormGroup, controlName: string): string | null {

@@ -341,6 +341,8 @@ export class Step10SupplierInvoice implements OnInit {
   }
 
   protected submitProforma(): void {
+    if (this.submitting()) return;
+
     if (this.proformaForm.invalid) {
       this.proformaForm.markAllAsTouched();
       this.messageService.add({
@@ -545,6 +547,8 @@ export class Step10SupplierInvoice implements OnInit {
   }
 
   protected submitInvoice(): void {
+    if (this.submitting()) return;
+
     if (this.invoiceForm.invalid) {
       this.invoiceForm.markAllAsTouched();
       this.messageService.add({
@@ -761,6 +765,8 @@ export class Step10SupplierInvoice implements OnInit {
   }
 
   protected submitPackingList(): void {
+    if (this.submitting()) return;
+
     if (this.packingListForm.invalid) {
       this.packingListForm.markAllAsTouched();
       this.messageService.add({
@@ -779,12 +785,14 @@ export class Step10SupplierInvoice implements OnInit {
       const w = Number(it.weight || it.unit_weight) || 0;
       const totW = this.calculateRowWeight(it);
       return {
-        material_name: it.material_name || it.description || '',
+        id: it.id,
+        material_name: it.material_name || it.description || 'Material Item',
         description: it.description || it.material_name || '',
         hsn_code: it.hsn_code || '',
         quantity: q,
         unit_price: Number(it.unit_price || 0),
         net_amount: q * Number(it.unit_price || 0),
+        package_type: it.package_type || '',
         weight: w,
         unit_weight: w,
         total_weight: totW,
@@ -927,19 +935,31 @@ export class Step10SupplierInvoice implements OnInit {
   }
 
   protected saveRow(tab: SubStepType, focusTarget?: HTMLInputElement): void {
+    if (this.rowForm.invalid) {
+      Object.values(this.rowForm.controls).forEach((ctrl) => {
+        ctrl.markAsDirty();
+        ctrl.markAsTouched();
+      });
+      return;
+    }
+
     const val = this.rowForm.getRawValue();
     const name = val.material_name?.trim() || '';
     const hsn = val.hsn_code?.trim() || '';
     const qty = parseFloat(val.quantity);
 
     if (!name || isNaN(qty) || qty <= 0) {
-      this.rowForm.markAllAsTouched();
+      Object.values(this.rowForm.controls).forEach((ctrl) => {
+        ctrl.markAsDirty();
+        ctrl.markAsTouched();
+      });
       return;
     }
 
     if (tab === 'proforma' || tab === 'invoice') {
       const unitPrice = parseFloat(val.unit_price);
       if (isNaN(unitPrice) || unitPrice < 0) {
+        this.rowForm.get('unit_price')?.markAsDirty();
         this.rowForm.get('unit_price')?.markAsTouched();
         return;
       }
@@ -1093,12 +1113,12 @@ export class Step10SupplierInvoice implements OnInit {
 
   protected isRowFieldInvalid(key: string): boolean {
     const c = this.rowForm.get(key);
-    return !!(c && c.invalid && (c.touched || c.dirty));
+    return !!(c && c.invalid && c.dirty);
   }
 
   protected getRowFieldError(key: string): string | null {
     const c = this.rowForm.get(key);
-    if (!c || !c.invalid || !(c.touched || c.dirty)) return null;
+    if (!c || !c.invalid || !c.dirty) return null;
     if (c.hasError('required')) return 'Required.';
     if (c.hasError('pattern')) return 'Must be a valid positive number.';
     return 'Invalid value.';

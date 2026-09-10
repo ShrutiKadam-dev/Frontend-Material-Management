@@ -677,7 +677,9 @@
             <span class="upload-cat-sub">ICEGATE duty paid challan / bank payment receipt</span>
           </div>
 
-          <div class="file-upload-zone" (click)="dutyChallanInput.click()">
+          <div class="file-upload-zone" (click)="dutyChallanInput.click()"
+            (keydown.enter)="dutyChallanInput.click()" (keydown.space)="dutyChallanInput.click(); $event.preventDefault()"
+            tabindex="0" role="button" aria-label="Upload Duty Challan files">
             <input #dutyChallanInput type="file" (change)="onDutyChallanFilesSelected($event)" multiple hidden />
             <i class="pi pi-cloud-upload upload-icon" aria-hidden="true"></i>
             <span class="upload-text">Drop files here or click to browse</span>
@@ -709,7 +711,9 @@
             <span class="upload-cat-sub">Out of Charge (OOC) / Assessed Bill of Entry copy</span>
           </div>
 
-          <div class="file-upload-zone" (click)="boeInput.click()">
+          <div class="file-upload-zone" (click)="boeInput.click()"
+            (keydown.enter)="boeInput.click()" (keydown.space)="boeInput.click(); $event.preventDefault()"
+            tabindex="0" role="button" aria-label="Upload Bill of Entry files">
             <input #boeInput type="file" (change)="onBoeFilesSelected($event)" multiple hidden />
             <i class="pi pi-cloud-upload upload-icon" aria-hidden="true"></i>
             <span class="upload-text">Drop files here or click to browse</span>
@@ -741,7 +745,9 @@
             <span class="upload-cat-sub">CFS gate pass, examination report, delivery orders</span>
           </div>
 
-          <div class="file-upload-zone" (click)="otherDocsInput.click()">
+          <div class="file-upload-zone" (click)="otherDocsInput.click()"
+            (keydown.enter)="otherDocsInput.click()" (keydown.space)="otherDocsInput.click(); $event.preventDefault()"
+            tabindex="0" role="button" aria-label="Upload Supporting Document files">
             <input #otherDocsInput type="file" (change)="onOtherDocsFilesSelected($event)" multiple hidden />
             <i class="pi pi-cloud-upload upload-icon" aria-hidden="true"></i>
             <span class="upload-text">Drop files here or click to browse</span>
@@ -796,14 +802,15 @@
       </div>
 
     </div>
+  </form>
 
-    <!-- Dialog Footer -->
+  <ng-template pTemplate="footer">
     <div class="dlg-footer">
       <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="closeDialog()"
         [disabled]="saving()"></button>
-      <button pButton type="submit" [label]="editingClearance() ? 'Update Clearance Entry' : 'Save Clearance Entry'"
-        icon="pi pi-check" class="submit-btn" [loading]="saving()"
-        [disabled]="saving() || clearanceForm.invalid"></button>
+      <button pButton type="submit" form="clearance-form"
+        [label]="editingClearance() ? 'Update Clearance Entry' : 'Save Clearance Entry'" icon="pi pi-check"
+        class="submit-btn" [loading]="saving()" [disabled]="saving() || clearanceForm.invalid"></button>
     </div>
-  </form>
+  </ng-template>
 </p-dialog>

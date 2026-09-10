@@ -655,7 +655,9 @@
           <!-- Drop zone -->
           <div class="file-drop-zone"
             [class.file-drop-zone--compact]="selectedLogisticsFiles().length > 0 || existingLogisticsAttachments().length > 0"
-            (click)="logisticsFileInput.click()" tabindex="0" role="button">
+            (click)="logisticsFileInput.click()" (keydown.enter)="logisticsFileInput.click()"
+            (keydown.space)="logisticsFileInput.click(); $event.preventDefault()" tabindex="0" role="button"
+            aria-label="Upload AWB / BL shipping documents">
             <i class="pi pi-upload" aria-hidden="true"></i>
             <span>{{ (selectedLogisticsFiles().length || existingLogisticsAttachments().length) ? 'Add more files' : 'Click to upload AWB / BL shipping documents' }}</span>
             @if (!selectedLogisticsFiles().length && !existingLogisticsAttachments().length) {
@@ -676,15 +678,16 @@
         </div>
 
       </div>
+    </form>
 
-      <!-- Footer Buttons -->
+    <ng-template pTemplate="footer">
       <div class="dlg-footer">
         <button pButton type="button" label="Cancel" class="p-button-text cancel-btn"
           (click)="closeLogisticsDialog()" [disabled]="saving()"></button>
-        <button pButton type="submit" [label]="editingLogistics() ? 'Update Record' : 'Submit Record'"
+        <button pButton type="submit" form="logistics-form" [label]="editingLogistics() ? 'Update Record' : 'Submit Record'"
           icon="pi pi-check" class="submit-btn" [loading]="saving()" [disabled]="saving() || logisticsForm.invalid"></button>
       </div>
-    </form>
+    </ng-template>
   </p-dialog>
 
   <!-- ══════════════════════════════════════════════════════════════════════
@@ -824,7 +827,9 @@
           <!-- Drop zone -->
           <div class="file-drop-zone"
             [class.file-drop-zone--compact]="selectedBoeFiles().length > 0 || existingBoeAttachments().length > 0"
-            (click)="boeFileInput.click()" tabindex="0" role="button">
+            (click)="boeFileInput.click()" (keydown.enter)="boeFileInput.click()"
+            (keydown.space)="boeFileInput.click(); $event.preventDefault()" tabindex="0" role="button"
+            aria-label="Upload Bill of Entry documents & Duty challans">
             <i class="pi pi-upload" aria-hidden="true"></i>
             <span>{{ (selectedBoeFiles().length || existingBoeAttachments().length) ? 'Add more files' : 'Click to upload Bill of Entry documents & Duty challans' }}</span>
             @if (!selectedBoeFiles().length && !existingBoeAttachments().length) {
@@ -845,15 +850,16 @@
         </div>
 
       </div>
+    </form>
 
-      <!-- Footer Buttons -->
+    <ng-template pTemplate="footer">
       <div class="dlg-footer">
         <button pButton type="button" label="Cancel" class="p-button-text cancel-btn"
           (click)="closeBoeDialog()" [disabled]="saving()"></button>
-        <button pButton type="submit" [label]="editingBoe() ? 'Update Bill of Entry' : 'Submit Bill of Entry'"
+        <button pButton type="submit" form="boe-form" [label]="editingBoe() ? 'Update Bill of Entry' : 'Submit Bill of Entry'"
           icon="pi pi-check" class="submit-btn" [loading]="saving()" [disabled]="saving() || boeForm.invalid"></button>
       </div>
-    </form>
+    </ng-template>
   </p-dialog>
 
 </section>

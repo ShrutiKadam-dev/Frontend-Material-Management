@@ -357,7 +357,6 @@
                 [label]="editingIndex() !== null ? 'Update' : 'Add Item'"
                 class="quick-submit-btn"
                 (click)="saveRow(matInput)"
-                [disabled]="rowForm.invalid"
               ></button>
               @if (editingIndex() !== null) {
               <button
@@ -474,6 +473,7 @@
           <div class="file-chip">
             <i class="pi pi-paperclip" aria-hidden="true"></i>
             <span class="file-chip-name">{{ file.name }}</span>
+            <span class="file-chip-size">{{ formatFileSize(file.size) }}</span>
             <button type="button" class="remove-file" [attr.aria-label]="'Remove ' + file.name"
               (click)="removeAttachment($index)">
               <i class="pi pi-times" aria-hidden="true"></i>
@@ -484,16 +484,18 @@
         }
 
         <!-- Drop zone -->
-        <label class="file-drop-zone" [class.file-drop-zone--compact]="attachments().length > 0 || existingAttachments().length > 0"
-          for="dlg-attachment-input" tabindex="0" role="button" aria-label="Upload more attachments">
+        <div class="file-drop-zone" [class.file-drop-zone--compact]="attachments().length > 0 || existingAttachments().length > 0"
+          role="button" tabindex="0" (click)="fileInput.click()"
+          (keydown.enter)="fileInput.click()" (keydown.space)="$event.preventDefault(); fileInput.click()"
+          aria-label="Upload attachments">
           <i class="pi pi-upload" aria-hidden="true"></i>
           <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload files' }}</span>
           @if (!attachments().length && !existingAttachments().length) {
           <span class="file-hint">PDF, Image, Excel — specifications, drawings, etc.</span>
           }
-          <input id="dlg-attachment-input" type="file" multiple class="visually-hidden"
+          <input #fileInput id="dlg-attachment-input" type="file" multiple class="visually-hidden"
             (change)="onFilesSelected($event)" />
-        </label>
+        </div>
       </div>
 
       <!-- ── 4. Remarks ─────────────────────────────────── -->
@@ -508,15 +510,15 @@
 
     </div>
 
-    <!-- ── Dialog footer ──────────────────────────────── -->
-    <div class="dlg-footer">
-      <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary" [disabled]="submitting()"
-        (click)="closeDialog()"></button>
-      <button pButton type="submit" [icon]="editingRequest() ? 'pi pi-check' : 'pi pi-send'"
-        [label]="editingRequest() ? 'Update Request' : 'Submit Request'" form="rq-form" [loading]="submitting()"
-        [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
-    </div>
-
   </form>
+
+  <!-- ── Dialog footer (Pinned at bottom) ──────────────── -->
+  <ng-template pTemplate="footer">
+    <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary" [disabled]="submitting()"
+      (click)="closeDialog()"></button>
+    <button pButton type="submit" form="rq-form" [icon]="editingRequest() ? 'pi pi-check' : 'pi pi-send'"
+      [label]="editingRequest() ? 'Update Request' : 'Submit Request'" [loading]="submitting()"
+      [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
+  </ng-template>
 
 </p-dialog>

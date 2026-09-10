@@ -307,7 +307,7 @@
     (visibleChange)="dialogVisible.set($event)" [modal]="true" [blockScroll]="true" [draggable]="false"
     [resizable]="false" [style]="{ width: '92vw', maxWidth: '1100px' }" styleClass="cq-dialog cost-sheet-dialog"
     appendTo="body">
-    <form [formGroup]="headerForm" (ngSubmit)="submit()" novalidate>
+    <form [formGroup]="headerForm" (ngSubmit)="submit()" id="tender-form" novalidate>
       <div class="dlg-body">
 
         @if (errorMessage()) {
@@ -542,7 +542,7 @@
               <div class="quick-add-actions">
                 <button pButton type="button" [icon]="editingItemIndex() !== null ? 'pi pi-check' : 'pi pi-plus'"
                   [label]="editingItemIndex() !== null ? 'Update' : 'Add Item'" class="quick-submit-btn"
-                  (click)="saveRow(matInput)" [disabled]="rowForm.invalid"></button>
+                  (click)="saveRow(matInput)"></button>
                 @if (editingItemIndex() !== null) {
                 <button pButton type="button" icon="pi pi-times"
                   class="p-button-text p-button-secondary cancel-edit-btn" pTooltip="Cancel edit"
@@ -651,7 +651,8 @@
           <!-- Drop zone -->
           <div class="file-drop-zone"
             [class.file-drop-zone--compact]="attachments().length > 0 || existingAttachments().length > 0"
-            (click)="tndFileInput.click()" (keydown.enter)="tndFileInput.click()" tabindex="0" role="button"
+            (click)="tndFileInput.click()" (keydown.enter)="tndFileInput.click()"
+            (keydown.space)="$event.preventDefault(); tndFileInput.click()" tabindex="0" role="button"
             aria-label="Upload tender documents">
             <i class="pi pi-upload" aria-hidden="true"></i>
             <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload tender documents' }}</span>
@@ -675,14 +676,15 @@
 
       </div>
 
-      <!-- Dialog Footer Actions -->
-      <div class="dlg-footer">
-        <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="closeDialog()"
-          [disabled]="submitting()"></button>
-        <button pButton type="submit" label="Save Customer Tender" icon="pi pi-check" class="submit-btn"
-          [loading]="submitting()" [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
-      </div>
     </form>
+
+    <!-- Dialog Footer Actions (Pinned at bottom) -->
+    <ng-template pTemplate="footer">
+      <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="closeDialog()"
+        [disabled]="submitting()"></button>
+      <button pButton type="submit" form="tender-form" label="Save Customer Tender" icon="pi pi-check" class="submit-btn"
+        [loading]="submitting()" [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
+    </ng-template>
   </p-dialog>
 
 </section>

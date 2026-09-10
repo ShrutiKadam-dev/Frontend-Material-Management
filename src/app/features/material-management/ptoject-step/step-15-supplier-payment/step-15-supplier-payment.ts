@@ -316,8 +316,8 @@ export class Step15SupplierPayment implements OnInit {
     }
   }
 
-  // ── Form Submission ────────────────────────────────────────────
   protected onSubmitPayment(): void {
+    if (this.saving()) return;
     if (this.paymentForm.invalid) {
       this.paymentForm.markAllAsTouched();
       return;

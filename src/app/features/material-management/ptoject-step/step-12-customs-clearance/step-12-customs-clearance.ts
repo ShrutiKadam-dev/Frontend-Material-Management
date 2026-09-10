@@ -294,6 +294,7 @@ export class Step12CustomsClearance implements OnInit {
 
   // ── Form Submission ────────────────────────────────────────────
   protected onSubmit(): void {
+    if (this.saving()) return;
     if (this.clearanceForm.invalid) {
       this.clearanceForm.markAllAsTouched();
       return;

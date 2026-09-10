@@ -422,8 +422,7 @@
       (click)="closeDialog()"></button>
     <button pButton type="submit" form="cq-form" [icon]="editingQuery() ? 'pi pi-check' : 'pi pi-send'"
       [label]="editingQuery() ? 'Update Query' : 'Submit Query'" [loading]="submitting()"
-      [disabled]="submitting() || headerForm.invalid || items().length === 0"
-      (click)="submit()"></button>
+      [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
   </ng-template>
 
 </p-dialog>
