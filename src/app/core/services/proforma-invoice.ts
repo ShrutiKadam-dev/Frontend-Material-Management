@@ -27,6 +27,18 @@ export class ProformaInvoiceService {
       );
   }
 
+  getLatest(projectId?: number): Observable<ProformaInvoice | null> {
+    const query = projectId ? `?project_id=${projectId}` : '';
+    return this.http
+      .get<ProformaInvoice | { data: ProformaInvoice }>(
+        `${this.apiBaseUrl}/api/v1/proforma-invoices/latest${query}`,
+      )
+      .pipe(
+        map((res: any) => (res && res.data ? res.data : res || null)),
+        catchError(() => of(null)),
+      );
+  }
+
   getById(id: number): Observable<ProformaInvoice> {
     return this.http.get<ProformaInvoice>(
       `${this.apiBaseUrl}/api/v1/proforma-invoices/${id}`,

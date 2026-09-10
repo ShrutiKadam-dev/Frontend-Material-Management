@@ -493,10 +493,8 @@ export class Step04CostSheet implements OnInit {
     }
 
     const raw = this.itemForm.getRawValue();
-    const defaultDuty = this.globalParamsForm.controls.defaultCustomsDutyRate.value || 0;
-    const dutyRate = raw.customsDutyRate !== null && raw.customsDutyRate !== undefined && !isNaN(Number(raw.customsDutyRate))
-      ? Number(raw.customsDutyRate)
-      : defaultDuty;
+    const hasCustomDuty = raw.customsDutyRate !== null && raw.customsDutyRate !== undefined && (raw.customsDutyRate as unknown) !== '' && !isNaN(Number(raw.customsDutyRate));
+    const dutyRate = hasCustomDuty ? Number(raw.customsDutyRate) : undefined;
 
     const newItem: CostSheetItemInput = {
       quotationNumber: raw.quotationNumber.trim() || `QN-${this.items().length + 1}`,
@@ -554,7 +552,6 @@ export class Step04CostSheet implements OnInit {
   protected importAllQuotationItems(quotation: SupplierQuotation): void {
     if (!quotation.items || quotation.items.length === 0) return;
 
-    const defaultDuty = this.globalParamsForm.controls.defaultCustomsDutyRate.value || 7.5;
     const newItems: CostSheetItemInput[] = quotation.items.map((it, idx) => ({
       quotationNumber: quotation.quotation_number || `SQ-${quotation.id}`,
       quotationIndex: String(idx + 1),
@@ -562,7 +559,7 @@ export class Step04CostSheet implements OnInit {
       itemCode: `MAT-${idx + 1}`,
       pricePerUnitEur: Number(it.unit_price) || 0,
       quantity: Number(it.quantity) || 1,
-      customsDutyRate: defaultDuty,
+      customsDutyRate: undefined,
     }));
 
     this.items.update((list) => [...list, ...newItems]);
@@ -615,7 +612,9 @@ export class Step04CostSheet implements OnInit {
         itemCode: it.itemCode,
         pricePerUnitEur: Number(it.pricePerUnitEur) || 0,
         quantity: Number(it.quantity) || 1,
-        customsDutyRate: Number(it.customsDutyRate) || globalParams.defaultCustomsDutyRate,
+        customsDutyRate: it.customsDutyRate !== null && it.customsDutyRate !== undefined && !isNaN(Number(it.customsDutyRate))
+          ? Number(it.customsDutyRate)
+          : globalParams.defaultCustomsDutyRate,
       })),
     };
 

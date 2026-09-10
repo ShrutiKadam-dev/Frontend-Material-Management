@@ -10,13 +10,16 @@ export interface CostSheetGlobalParams {
 }
 
 export interface CostSheetItemInput {
-  quotationNumber: string;
-  quotationIndex: string;
-  itemDescription: string;
-  itemCode: string;
-  pricePerUnitEur: number;
+  quotationNumber?: string;
+  quotationIndex?: string;
+  itemDescription?: string;
+  itemCode?: string;
+  pricePerUnitEur?: number;
   quantity: number;
-  customsDutyRate: number;
+  customsDutyRate?: number;
+  pricePeeUnitInrExclGst?: number;
+  pricePerUnitInrExclGst?: number;
+  sellingPriceExclGst?: number;
 }
 
 export interface CostSheetPriceChange {
@@ -75,6 +78,9 @@ export interface CostSheet {
   product_id?: number;
   versionNumber?: number;
   title: string;
+  gstRate?: number;
+  sellingPriceExclGst?: number;
+  sellingPriceInclGst?: number;
   globalParams?: CostSheetGlobalParams;
   output?: Record<string, unknown>;
   status?: string;

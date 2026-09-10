@@ -107,6 +107,7 @@ export class Step10SupplierInvoice implements OnInit {
   protected readonly supplierInvoices = signal<SupplierInvoice[]>([]);
   protected readonly packingLists = signal<PackingList[]>([]);
   protected readonly latestOrderConfirmation = signal<LatestOrderConfirmation | null>(null);
+  protected readonly latestProformaInvoice = signal<ProformaInvoice | null>(null);
   protected readonly loading = signal(true);
   protected readonly submitting = signal(false);
   protected readonly downloadingAttachmentId = signal<number | null>(null);
@@ -163,6 +164,7 @@ export class Step10SupplierInvoice implements OnInit {
     packing_list_no: ['', [Validators.required, Validators.minLength(2)]],
     packing_list_date: [null as Date | null, [Validators.required]],
     packing_condition: ['', [Validators.required, Validators.minLength(2)]],
+    gross_weight: ['', [Validators.pattern(/^[0-9]+(\.[0-9]+)?$/)]],
     remark: [''],
   });
 
@@ -238,19 +240,25 @@ export class Step10SupplierInvoice implements OnInit {
       error: () => {/* non-fatal */ },
     });
 
-    // 2. Load Proforma Invoices
+    // 2. Load latest Proforma Invoice
+    this.proformaService.getLatest(projectId).subscribe({
+      next: (latest) => this.latestProformaInvoice.set(latest),
+      error: () => {/* non-fatal */ },
+    });
+
+    // 3. Load Proforma Invoices list
     this.proformaService.getByProject(projectId).subscribe({
       next: (list) => this.proformaInvoices.set(list || []),
       error: () => {/* non-fatal */ },
     });
 
-    // 3. Load Supplier Invoices
+    // 4. Load Supplier Invoices
     this.supplierInvoiceService.getByProject(projectId).subscribe({
       next: (list) => this.supplierInvoices.set(list || []),
       error: () => {/* non-fatal */ },
     });
 
-    // 4. Load Packing Lists
+    // 5. Load Packing Lists
     this.packingListService.getByProject(projectId).pipe(
       finalize(() => this.loading.set(false))
     ).subscribe({
@@ -680,23 +688,34 @@ export class Step10SupplierInvoice implements OnInit {
      3] PACKING LIST DIALOG & SUBMIT
   ════════════════════════════════════════════════════════════ */
   protected openCreatePackingListDialog(): void {
-    const latest = this.latestOrderConfirmation();
+    const latestProforma = this.latestProformaInvoice();
+    const latestOrder = this.latestOrderConfirmation();
     this.editingPackingList.set(null);
     this.errorMessage.set(null);
 
-    const defaultItems: PackingListItem[] = (latest?.items || []).map((it) => {
+    const sourceItems = (latestProforma?.items && latestProforma.items.length > 0)
+      ? latestProforma.items
+      : (latestOrder?.items || []);
+
+    const defaultItems: PackingListItem[] = sourceItems.map((it: any) => {
       const q = Number(it.quantity) || 1;
-      const w = Number((it as any).weight || (it as any).unit_weight) || 0;
+      const w = Number(it.weight || it.unit_weight) || 0;
+      const p = Number(it.unit_price) || 0;
       return {
         material_name: it.material_name || it.description || 'Material Item',
         description: it.description || it.material_name || '',
-        hsn_code: it.hsn_code || (it as any).hsn_sac || '',
+        hsn_code: it.hsn_code || it.hsn_sac || '',
         quantity: q,
-        unit_price: it.unit_price || 0,
-        net_amount: q * (Number(it.unit_price) || 0),
+        unit_price: p,
+        net_amount: it.net_amount !== undefined && it.net_amount !== null && !isNaN(Number(it.net_amount)) && Number(it.net_amount) > 0
+          ? Number(it.net_amount)
+          : q * p,
+        package_type: it.package_type || '',
         weight: w,
         unit_weight: w,
-        total_weight: q * w,
+        total_weight: it.total_weight !== undefined && it.total_weight !== null && Number(it.total_weight) > 0
+          ? Number(it.total_weight)
+          : q * w,
       };
     });
 
@@ -704,6 +723,7 @@ export class Step10SupplierInvoice implements OnInit {
       packing_list_no: '',
       packing_list_date: null,
       packing_condition: '',
+      gross_weight: '',
       remark: '',
     });
 
@@ -723,6 +743,9 @@ export class Step10SupplierInvoice implements OnInit {
       packing_list_no: item.packing_list_no || '',
       packing_list_date: this.parseDate(item.packing_list_date || item.date),
       packing_condition: item.packing_condition || '',
+      gross_weight: item.gross_weight !== undefined && item.gross_weight !== null && item.gross_weight !== ''
+        ? String(item.gross_weight)
+        : (item.total_weight !== undefined && item.total_weight !== null ? String(item.total_weight) : ''),
       remark: item.remark || '',
     });
 
@@ -779,6 +802,10 @@ export class Step10SupplierInvoice implements OnInit {
 
     const val = this.packingListForm.getRawValue();
     const dateStr = val.packing_list_date ? this.formatDate(val.packing_list_date) : '';
+    const netWeight = this.packingListTotalWeight();
+    const grossWeight = val.gross_weight !== '' && val.gross_weight !== null && !isNaN(Number(val.gross_weight))
+      ? Number(val.gross_weight)
+      : netWeight;
 
     const itemsPayload: PackingListItem[] = this.packingListItems().map((it) => {
       const q = Number(it.quantity) || 0;
@@ -810,8 +837,10 @@ export class Step10SupplierInvoice implements OnInit {
         packing_list_no: val.packing_list_no,
         packing_list_date: dateStr,
         packing_condition: val.packing_condition,
-        weight: this.packingListTotalWeight(),
-        total_weight: this.packingListTotalWeight(),
+        weight: netWeight,
+        net_weight: netWeight,
+        total_weight: grossWeight,
+        gross_weight: grossWeight,
         remark: val.remark || '',
         items: itemsPayload,
       };
@@ -839,8 +868,10 @@ export class Step10SupplierInvoice implements OnInit {
         packing_list_no: val.packing_list_no,
         packing_list_date: dateStr,
         packing_condition: val.packing_condition,
-        weight: this.packingListTotalWeight(),
-        total_weight: this.packingListTotalWeight(),
+        weight: netWeight,
+        net_weight: netWeight,
+        total_weight: grossWeight,
+        gross_weight: grossWeight,
         remark: val.remark || '',
         items: itemsPayload,
       };
@@ -899,12 +930,26 @@ export class Step10SupplierInvoice implements OnInit {
     return q * w;
   }
 
+  protected calculatePackingListNetWeight(pl: PackingList | null | undefined): number {
+    if (!pl) return 0;
+    if (pl.net_weight !== undefined && pl.net_weight !== null && Number(pl.net_weight) > 0) {
+      return Number(pl.net_weight);
+    }
+    if (pl.weight !== undefined && pl.weight !== null && Number(pl.weight) > 0) {
+      return Number(pl.weight);
+    }
+    return (pl.items || []).reduce((sum, it) => sum + this.calculateRowWeight(it), 0);
+  }
+
   protected calculatePackingListTotalWeight(pl: PackingList | null | undefined): number {
     if (!pl) return 0;
+    if (pl.gross_weight !== undefined && pl.gross_weight !== null && Number(pl.gross_weight) > 0) {
+      return Number(pl.gross_weight);
+    }
     if (pl.total_weight !== undefined && pl.total_weight !== null && Number(pl.total_weight) > 0) {
       return Number(pl.total_weight);
     }
-    return (pl.items || []).reduce((sum, it) => sum + this.calculateRowWeight(it), 0);
+    return this.calculatePackingListNetWeight(pl);
   }
 
   protected isPackingListRowInvalid(): boolean {
@@ -964,6 +1009,7 @@ export class Step10SupplierInvoice implements OnInit {
         return;
       }
       const net = qty * unitPrice;
+      const wt = parseFloat(val.weight) || 0;
       const newItem = {
         material_name: name,
         description: name,
@@ -971,6 +1017,8 @@ export class Step10SupplierInvoice implements OnInit {
         quantity: qty,
         unit_price: unitPrice,
         net_amount: net,
+        weight: wt > 0 ? wt : undefined,
+        gross_weight: wt > 0 ? wt : undefined,
       };
 
       const idx = this.editingItemIndex();

@@ -9,6 +9,8 @@ export interface ProformaInvoiceItem {
   quantity: number | string;
   unit_price?: number | string;
   net_amount?: number | string;
+  weight?: number | string;
+  gross_weight?: number | string;
 }
 
 export interface ProformaInvoice {
@@ -25,6 +27,8 @@ export interface ProformaInvoice {
   payment_terms?: string;
   warranty_period?: string;
   delivery_period?: string;
+  gross_weight?: number | string;
+  weight?: number | string;
   total_amount?: number;
   total_net_amount?: number;
   remark?: string;
@@ -44,6 +48,8 @@ export interface ProformaInvoiceCreateInput {
   payment_terms?: string;
   warranty_period?: string;
   delivery_period?: string;
+  gross_weight?: number | string;
+  weight?: number | string;
   total_amount?: number;
   total_net_amount?: number;
   remark?: string;
@@ -59,6 +65,8 @@ export interface ProformaInvoiceUpdateInput {
   payment_terms?: string;
   warranty_period?: string;
   delivery_period?: string;
+  gross_weight?: number | string;
+  weight?: number | string;
   total_amount?: number;
   total_net_amount?: number;
   remark?: string;

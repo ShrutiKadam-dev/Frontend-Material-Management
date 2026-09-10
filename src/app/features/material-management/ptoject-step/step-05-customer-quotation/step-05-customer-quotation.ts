@@ -193,6 +193,56 @@ export class Step05CustomerQuotation implements OnInit {
 
   protected readonly totalItemCount = computed(() => this.items().length);
 
+  protected readonly costSheetGstRatePercent = computed<number | null>(() => {
+    const cs: any = this.latestCostSheet();
+    const rate = cs?.gstRate ?? cs?.globalParams?.gstRate;
+    if (rate === undefined || rate === null || isNaN(Number(rate))) return null;
+    const num = Number(rate);
+    return num <= 1 && num > 0 ? Number((num * 100).toFixed(2)) : Number(num.toFixed(2));
+  });
+
+  protected readonly costSheetSellingExclGst = computed<number | null>(() => {
+    const cs: any = this.latestCostSheet();
+    const val = cs?.sellingPriceExclGst ?? cs?.cumulativeProjectCostInr ?? cs?.totalPriceInr;
+    return val !== undefined && val !== null && !isNaN(Number(val)) ? Number(Number(val).toFixed(2)) : null;
+  });
+
+  protected readonly costSheetSellingInclGst = computed<number | null>(() => {
+    const cs: any = this.latestCostSheet();
+    const val = cs?.sellingPriceInclGst;
+    if (val !== undefined && val !== null && !isNaN(Number(val))) return Number(Number(val).toFixed(2));
+    const excl = this.costSheetSellingExclGst();
+    const gstPct = this.costSheetGstRatePercent();
+    if (excl !== null && gstPct !== null && gstPct > 0) {
+      return Number((excl * (1 + gstPct / 100)).toFixed(2));
+    }
+    return null;
+  });
+
+  protected readonly costSheetGstAmount = computed<number | null>(() => {
+    const incl = this.costSheetSellingInclGst();
+    const excl = this.costSheetSellingExclGst();
+    if (incl !== null && excl !== null && incl >= excl) {
+      return Number((incl - excl).toFixed(2));
+    }
+    return null;
+  });
+
+  protected readonly totalGstAmount = computed<number>(() => {
+    const net = this.totalNetAmount();
+    const gstPct = this.costSheetGstRatePercent();
+    if (gstPct !== null && gstPct > 0) {
+      return Number((net * (gstPct / 100)).toFixed(2));
+    }
+    return 0;
+  });
+
+  protected readonly totalGrossInclGst = computed<number>(() => {
+    const net = this.totalNetAmount();
+    const gst = this.totalGstAmount();
+    return Number((net + gst).toFixed(2));
+  });
+
   constructor() {
     effect(() => {
       const total = this.totalNetAmount();
@@ -278,7 +328,7 @@ export class Step05CustomerQuotation implements OnInit {
     const cust = this.customer();
     const costSheet = this.latestCostSheet();
 
-    // Map items from latest cost sheet (supporting direct items with pricePerUnitInr/totalPriceInr)
+    // Map items from latest cost sheet (supporting direct items with pricePeeUnitInrExclGst/pricePerUnitInr/sellingPriceExclGst)
     const outputObj = costSheet?.output as { items?: any[] } | undefined;
     const sourceItems: any[] = (costSheet?.items && costSheet.items.length)
       ? costSheet.items
@@ -288,14 +338,19 @@ export class Step05CustomerQuotation implements OnInit {
 
     const mappedItems: CustomerQuotationItem[] = sourceItems.map((it: any, index: number) => {
       const qty = Number(it.quantity) || 1;
-      const unitPrice = it.pricePerUnitInr
-        ?? (it.totalPriceInr ? Number((it.totalPriceInr / qty).toFixed(2)) : undefined)
-        ?? (it.totalCostInr ? Number((it.totalCostInr / qty).toFixed(2)) : undefined)
-        ?? (it.totalLineInr ? Number((it.totalLineInr / qty).toFixed(2)) : undefined)
+      const unitPrice = it.pricePeeUnitInrExclGst
+        ?? it.pricePerUnitInrExclGst
+        ?? it.pricePerUnitInr
+        ?? it.sellingPricePerUnitInr
+        ?? (it.sellingPriceExclGst ? Number((Number(it.sellingPriceExclGst) / qty).toFixed(2)) : undefined)
+        ?? (it.totalPriceInr ? Number((Number(it.totalPriceInr) / qty).toFixed(2)) : undefined)
+        ?? (it.totalCostInr ? Number((Number(it.totalCostInr) / qty).toFixed(2)) : undefined)
+        ?? (it.totalLineInr ? Number((Number(it.totalLineInr) / qty).toFixed(2)) : undefined)
         ?? it.pricePerUnitEur
         ?? 0;
 
-      const lineTotal = it.totalPriceInr
+      const lineTotal = it.sellingPriceExclGst
+        ?? it.totalPriceInr
         ?? it.totalCostInr
         ?? it.totalLineInr
         ?? (qty * Number(unitPrice));
@@ -303,7 +358,7 @@ export class Step05CustomerQuotation implements OnInit {
       return {
         cost_sheet_item_id: it.id || (costSheet?.items?.[index]?.id),
         quotation_number: it.quotationNumber || costSheet?.items?.[index]?.quotationNumber || '',
-        material_name: it.itemDescription || it.material_name || '',
+        material_name: it.itemDescription || it.material_name || it.description || '',
         item_code: it.itemCode || it.item_code || '',
         quantity: it.quantity,
         unit_price: Number(unitPrice) ? Number(Number(unitPrice).toFixed(2)) : '',
@@ -312,15 +367,17 @@ export class Step05CustomerQuotation implements OnInit {
       };
     });
 
-    const defaultQuoteVal = costSheet?.cumulativeProjectCostInr
-      ? Number(costSheet.cumulativeProjectCostInr).toFixed(2)
-      : mappedItems.length
-        ? mappedItems.reduce((acc, it) => {
-            const calculated = this.calculateNet(it.quantity, it.unit_price);
-            const net = calculated !== null ? calculated : (Number(it.net_amount) > 0 ? Number(it.net_amount) : 0);
-            return acc + net;
-          }, 0).toFixed(2)
-        : '';
+    const defaultQuoteVal = costSheet?.sellingPriceExclGst
+      ? Number(costSheet.sellingPriceExclGst).toFixed(2)
+      : costSheet?.cumulativeProjectCostInr
+        ? Number(costSheet.cumulativeProjectCostInr).toFixed(2)
+        : mappedItems.length
+          ? mappedItems.reduce((acc, it) => {
+              const calculated = this.calculateNet(it.quantity, it.unit_price);
+              const net = calculated !== null ? calculated : (Number(it.net_amount) > 0 ? Number(it.net_amount) : 0);
+              return acc + net;
+            }, 0).toFixed(2)
+          : '';
 
     this.headerForm.reset({
       customer_id: proj?.customer_id || cust?.id || 0,

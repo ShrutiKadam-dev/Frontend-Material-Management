@@ -249,7 +249,8 @@
                                     <tr>
                                         <th scope="col" style="width: 45px; text-align: center;">#</th>
                                         <th scope="col" style="min-width: 110px;">Quotation Number</th>
-                                        <th scope="col" style="min-width: 200px;">Material Description</th>
+                                        <th scope="col" style="min-width: 220px;">Material Description</th>
+                                        <th scope="col" style="min-width: 110px;">Item Code</th>
                                         <th scope="col" style="min-width: 70px; text-align: right;">Qty</th>
                                         <th scope="col" style="min-width: 110px; text-align: right;">Unit Price (€)</th>
                                         <th scope="col" style="min-width: 115px; text-align: right;">Total (€)</th>
@@ -271,15 +272,15 @@
                                         </td>
                                         <td>
                                             <strong class="item-desc-text">{{ item.itemDescription }}</strong>
-                                            @if (item.itemCode) {
-                                            <span class="item-sub-code">Code: {{ item.itemCode }}</span>
-                                            }
                                             @if (item.hasRateIncrease) {
                                             <span class="rate-up-tag" pTooltip="Price increased from last quotation"
                                                 tooltipPosition="top">
                                                 <i class="pi pi-arrow-up"></i> Increased
                                             </span>
                                             }
+                                        </td>
+                                        <td>
+                                            <span class="ref-badge">{{ item.itemCode || '—' }}</span>
                                         </td>
                                         <td class="num-cell" style="font-weight: 700;">
                                             <span class="qty-badge">{{ item.quantity }}</span>
@@ -307,7 +308,7 @@
 
                                 <ng-template pTemplate="footer">
                                     <tr class="table-total-row">
-                                        <td colspan="9" class="total-label-cell">
+                                        <td colspan="10" class="total-label-cell">
                                             <div class="total-label-wrapper">
                                                 <span class="total-icon-badge" aria-hidden="true"><i
                                                         class="pi pi-calculator"></i></span>
@@ -576,7 +577,7 @@
                                     <strong>{{ item.itemDescription }}</strong>
                                 </td>
                                 <td>
-                                    <span class="item-sub-code">{{ item.itemCode || '—' }}</span>
+                                    <span class="ref-badge">{{ item.itemCode || '—' }}</span>
                                 </td>
                                 <td class="num-cell" style="font-weight: 700;">
                                     <span class="qty-badge">{{ item.quantity }}</span>

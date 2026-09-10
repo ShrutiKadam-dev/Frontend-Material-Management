@@ -22,6 +22,8 @@ export interface PackingList {
   packing_list_date: string;
   date?: string;
   packing_condition: string;
+  gross_weight?: number | string;
+  net_weight?: number | string;
   weight?: number | string;
   total_weight?: number | string;
   remark?: string;
@@ -37,6 +39,8 @@ export interface PackingListCreateInput {
   packing_list_no: string;
   packing_list_date: string;
   packing_condition: string;
+  gross_weight?: number | string;
+  net_weight?: number | string;
   weight?: number | string;
   total_weight?: number | string;
   remark?: string;
@@ -48,6 +52,8 @@ export interface PackingListUpdateInput {
   packing_list_no?: string;
   packing_list_date?: string;
   packing_condition?: string;
+  gross_weight?: number | string;
+  net_weight?: number | string;
   weight?: number | string;
   total_weight?: number | string;
   remark?: string;
