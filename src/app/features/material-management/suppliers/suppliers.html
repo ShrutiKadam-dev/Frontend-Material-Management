@@ -204,16 +204,6 @@
       <div class="entity-cards-grid" role="feed" aria-label="Suppliers list">
         @for (supplier of filteredSuppliers(); track supplier.id) {
           <article class="modern-entity-card app-panel">
-            <!-- Card Header Strip -->
-            <div class="card-top-bar">
-              <div class="badge-cluster">
-                <span class="id-pill">#{{ supplier.id < 10 ? '0' + supplier.id : supplier.id }}</span>
-                <span class="status-chip status-chip--verified">
-                  <span class="dot-indicator" aria-hidden="true"></span>
-                  Verified Vendor
-                </span>
-              </div>
-            </div>
 
             <!-- Profile Info Hero -->
             <div class="card-profile-row">

@@ -322,12 +322,28 @@
 
         <!-- Auto-Sync Notice from Step 06 Customer Tender -->
         @if (latestTender(); as t) {
+        @if (!editingSubmission()) {
         <div class="cost-sheet-sync-pill" role="status">
-          <i class="pi pi-check-circle" aria-hidden="true"></i>
-          <span>
-            Auto-imported from <strong>Customer Tender ({{ t.tender_number }})</strong> · {{ items().length }} items with commercial terms pre-filled.
-          </span>
+          <div class="sync-pill-header">
+            <div class="sync-pill-title">
+              <i class="pi pi-check-circle" aria-hidden="true"></i>
+              <div class="sync-pill-meta">
+                <span class="sync-pill-source">
+                  Auto-imported from <strong>Customer Tender ({{ t.tender_number }})</strong>
+                </span>
+                <span class="sync-pill-subtext">
+                  {{ items().length }} {{ items().length === 1 ? 'item' : 'items' }} loaded with commercial terms pre-filled
+                </span>
+              </div>
+            </div>
+            @if (t.tender_date) {
+            <span class="sync-pill-badge">
+              Tender Date: {{ t.tender_date | date:'dd-MM-yyyy' }}
+            </span>
+            }
+          </div>
         </div>
+        }
         }
 
         <!-- ── 1. Tender Reference & Submission Date ────────── -->

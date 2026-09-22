@@ -153,14 +153,7 @@ export const routes: Routes = [
         path: 'suppliers',
         loadComponent: () =>
           import('./features/material-management/suppliers/suppliers').then((m) => m.Suppliers),
-      },
-      {
-        path: 'project-steps/:stepId',
-        loadComponent: () =>
-          import('./features/material-management/ptoject-step/step-detail/step-detail').then(
-            (m) => m.StepDetail,
-          ),
-      },
+      }
     ],
   },
   {
