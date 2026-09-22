@@ -204,10 +204,7 @@ export class Step04CostSheet implements OnInit {
       return '0%';
     }
     const num = Number(rate);
-    if (num > 0 && num <= 1) {
-      return `${Number((num * 100).toFixed(2))}%`;
-    }
-    return `${num}%`;
+    return `${Number(num.toFixed(2))}%`;
   }
 
   protected loadCostSheets(projectId: number): void {
