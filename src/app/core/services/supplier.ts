@@ -27,4 +27,8 @@ export class SupplierService {
   updateSupplier(id: number, supplier: SupplierUpdateInput): Observable<Supplier> {
     return this.http.put<Supplier>(`${this.apiBaseUrl}/api/v1/suppliers/${id}`, supplier);
   }
+
+  deleteSupplier(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiBaseUrl}/api/v1/suppliers/${id}`);
+  }
 }

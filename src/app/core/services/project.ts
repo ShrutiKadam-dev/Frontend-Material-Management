@@ -39,4 +39,8 @@ export class ProjectService {
       .put<Project | { data: Project }>(`${this.apiBaseUrl}/api/v1/projects/${id}`, project)
       .pipe(map((res) => (res && 'data' in res && res.data ? res.data : (res as Project))));
   }
+
+  deleteProject(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiBaseUrl}/api/v1/projects/${id}`);
+  }
 }

@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -9,8 +9,23 @@ import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { TooltipModule } from 'primeng/tooltip';
 
-import { Supplier as SupplierModel } from '../../../core/models/supplier.model';
+import { Supplier as SupplierModel, SupplierCreateInput } from '../../../core/models/supplier.model';
 import { SupplierService } from '../../../core/services/supplier';
+import {
+  formatStructuredAddress,
+  lookupCityLocation,
+  parseAddressString,
+  POPULAR_CITIES,
+  StructuredAddress,
+} from '../../../core/models/address.model';
+import {
+  extractEntityPocs,
+  extractNameAndNickname,
+  formatAddressWithPocs,
+  formatNameWithNickname,
+  getCleanAddress,
+  PointOfContact,
+} from '../../../core/models/contact.model';
 
 export type ViewModeType = 'grid' | 'table';
 
@@ -47,14 +62,25 @@ export class Suppliers implements OnInit {
   // Search & View controls
   protected readonly searchQuery = signal<string>('');
   protected readonly viewMode = signal<ViewModeType>('grid');
+  protected readonly popularCities = POPULAR_CITIES;
 
   // Form definition
   protected readonly supplierForm = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
-    email: ['', [Validators.required, Validators.email]],
-    contact_number: ['', [Validators.required, Validators.pattern(/^\+?[0-9\s\-()]{7,20}$/)]],
-    address: ['', [Validators.required, Validators.minLength(3)]],
+    nickname: [''],
+    pocs: this.fb.array<FormGroup>([]),
+    street: ['', [Validators.required, Validators.minLength(3)]],
+    area: [''],
+    city: ['', [Validators.required, Validators.minLength(2)]],
+    state: ['', [Validators.required, Validators.minLength(2)]],
+    pincode: ['', [Validators.required, Validators.pattern(/^[0-9A-Za-z\s\-]{3,10}$/)]],
+    country: ['', [Validators.required, Validators.minLength(2)]],
   });
+
+  // Getter for POC controls
+  get pocControls(): FormGroup[] {
+    return (this.supplierForm.get('pocs') as FormArray).controls as FormGroup[];
+  }
 
   // KPI Metrics Computed
   protected readonly totalCount = computed(() => this.suppliers().length);
@@ -83,15 +109,28 @@ export class Suppliers implements OnInit {
 
     if (query) {
       list = list.filter((supplier) => {
+        const parsed = extractNameAndNickname(supplier.name);
         const name = (supplier.name || '').toLowerCase();
+        const nick = (supplier.nickname || parsed.nickname).toLowerCase();
         const email = (supplier.email || '').toLowerCase();
         const phone = (supplier.contact_number || '').toLowerCase();
-        const address = (supplier.address || '').toLowerCase();
+        const address = getCleanAddress(supplier.address).toLowerCase();
+        const pocs = this.getSupplierPocs(supplier);
+        const pocMatches = pocs.some(
+          (p) =>
+            p.name.toLowerCase().includes(query) ||
+            p.email.toLowerCase().includes(query) ||
+            p.contact_number.toLowerCase().includes(query) ||
+            (p.designation || '').toLowerCase().includes(query),
+        );
+
         return (
           name.includes(query) ||
+          nick.includes(query) ||
           email.includes(query) ||
           phone.includes(query) ||
-          address.includes(query)
+          address.includes(query) ||
+          pocMatches
         );
       });
     }
@@ -101,6 +140,9 @@ export class Suppliers implements OnInit {
 
   ngOnInit(): void {
     this.loadSuppliers();
+    this.supplierForm.get('city')?.valueChanges.subscribe((cityVal) => {
+      this.onCityChanged(cityVal);
+    });
   }
 
   protected loadSuppliers(): void {
@@ -119,6 +161,33 @@ export class Suppliers implements OnInit {
     });
   }
 
+  // POC FormArray Helpers
+  protected createPocGroup(data?: Partial<PointOfContact>): FormGroup {
+    return this.fb.group({
+      name: [data?.name || '', [Validators.required, Validators.minLength(2)]],
+      email: [data?.email || '', [Validators.required, Validators.email]],
+      contact_number: [
+        data?.contact_number || '',
+        [Validators.required, Validators.pattern(/^\+?[0-9\s\-()]{7,20}$/)],
+      ],
+      designation: [data?.designation || ''],
+    });
+  }
+
+  protected addPoc(data?: Partial<PointOfContact>): void {
+    const pocs = this.supplierForm.get('pocs') as FormArray;
+    pocs.push(this.createPocGroup(data));
+  }
+
+  protected removePoc(index: number): void {
+    const pocs = this.supplierForm.get('pocs') as FormArray;
+    if (pocs.length > 1) {
+      pocs.removeAt(index);
+    } else {
+      pocs.at(0).reset({ name: '', email: '', contact_number: '', designation: '' });
+    }
+  }
+
   // Filter & Search Handlers
   protected onSearchInput(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -135,7 +204,21 @@ export class Suppliers implements OnInit {
 
   // Dialog Openers
   protected openAddDialog(): void {
-    this.supplierForm.reset();
+    this.supplierForm.reset({
+      name: '',
+      nickname: '',
+      street: '',
+      area: '',
+      city: '',
+      state: '',
+      pincode: '',
+      country: '',
+    });
+
+    const pocs = this.supplierForm.get('pocs') as FormArray;
+    pocs.clear();
+    pocs.push(this.createPocGroup({ designation: 'Primary Representative' }));
+
     this.isEditMode.set(false);
     this.selectedSupplier.set(null);
     this.dialogVisible.set(true);
@@ -146,11 +229,43 @@ export class Suppliers implements OnInit {
     this.supplierService.getSupplierById(supplier.id).subscribe({
       next: (freshSupplier) => {
         this.selectedSupplier.set(freshSupplier);
+        const parsedName = extractNameAndNickname(freshSupplier.name);
+        const displayName = freshSupplier.nickname ? freshSupplier.name : parsedName.name;
+        const nickname = freshSupplier.nickname || parsedName.nickname;
+        const parsedAddr = parseAddressString(freshSupplier.address);
+        const pocList = freshSupplier.pocs && freshSupplier.pocs.length > 0
+          ? freshSupplier.pocs
+          : extractEntityPocs(
+              freshSupplier.address,
+              freshSupplier.email,
+              freshSupplier.contact_number,
+              freshSupplier.name,
+            );
+
+        const pocs = this.supplierForm.get('pocs') as FormArray;
+        pocs.clear();
+        if (pocList.length > 0) {
+          pocList.forEach((poc) => pocs.push(this.createPocGroup(poc)));
+        } else {
+          pocs.push(
+            this.createPocGroup({
+              name: displayName ? `${displayName} Contact` : '',
+              email: freshSupplier.email || '',
+              contact_number: freshSupplier.contact_number || '',
+              designation: 'Primary Representative',
+            }),
+          );
+        }
+
         this.supplierForm.patchValue({
-          name: freshSupplier.name,
-          email: freshSupplier.email,
-          contact_number: freshSupplier.contact_number,
-          address: freshSupplier.address,
+          name: displayName,
+          nickname: nickname || '',
+          street: freshSupplier.street || parsedAddr.street,
+          area: freshSupplier.area || parsedAddr.area || '',
+          city: freshSupplier.city || parsedAddr.city,
+          state: freshSupplier.state || parsedAddr.state,
+          pincode: freshSupplier.pincode || parsedAddr.pincode,
+          country: freshSupplier.country || parsedAddr.country || '',
         });
         this.isEditMode.set(true);
         this.dialogVisible.set(true);
@@ -190,12 +305,30 @@ export class Suppliers implements OnInit {
 
     this.submitting.set(true);
     const formValue = this.supplierForm.value;
+    const pocsVal: PointOfContact[] = (this.supplierForm.get('pocs') as FormArray).value || [];
+    const cleanName = (formValue.name || '').trim();
+    const nickname = (formValue.nickname || '').trim() || undefined;
 
-    const payload = {
-      name: (formValue.name || '').trim(),
-      email: (formValue.email || '').trim(),
-      contact_number: (formValue.contact_number || '').trim(),
-      address: (formValue.address || '').trim(),
+    const validPocs: PointOfContact[] = pocsVal
+      .map((p) => ({
+        name: (p.name || '').trim(),
+        email: (p.email || '').trim(),
+        contact_number: (p.contact_number || '').trim(),
+        designation: (p.designation || '').trim() || undefined,
+      }))
+      .filter((p) => Boolean(p.name && p.email && p.contact_number));
+
+    // Production-grade payload: structured address only, contact details in pocs only
+    const payload: SupplierCreateInput = {
+      name: cleanName,
+      nickname,
+      street: (formValue.street || '').trim(),
+      area: (formValue.area || '').trim() || undefined,
+      city: (formValue.city || '').trim(),
+      state: (formValue.state || '').trim(),
+      pincode: (formValue.pincode || '').trim(),
+      country: (formValue.country || '').trim(),
+      pocs: validPocs,
     };
 
     if (this.isEditMode()) {
@@ -211,7 +344,7 @@ export class Suppliers implements OnInit {
           this.messageService.add({
             severity: 'success',
             summary: 'Supplier Updated',
-            detail: `${payload.name} has been successfully updated.`,
+            detail: `${this.getDisplayName(payload.name)} has been successfully updated.`,
           });
           this.loadSuppliers();
         },
@@ -233,7 +366,7 @@ export class Suppliers implements OnInit {
           this.messageService.add({
             severity: 'success',
             summary: 'Supplier Added',
-            detail: `${payload.name} has been added to your suppliers.`,
+            detail: `${this.getDisplayName(payload.name)} has been added to your suppliers.`,
           });
           this.loadSuppliers();
         },
@@ -250,13 +383,94 @@ export class Suppliers implements OnInit {
     }
   }
 
+  protected deleteSupplier(supplier: SupplierModel): void {
+    const name = this.getDisplayName(supplier.name) || `Supplier #${supplier.id}`;
+    if (!confirm(`Are you sure you want to remove supplier "${name}"? This action cannot be undone.`)) {
+      return;
+    }
+    this.supplierService.deleteSupplier(supplier.id).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Supplier Removed',
+          detail: `${name} has been successfully removed.`,
+        });
+        if (this.detailsVisible() && this.selectedSupplier()?.id === supplier.id) {
+          this.detailsVisible.set(false);
+        }
+        this.loadSuppliers();
+      },
+      error: (err: unknown) => {
+        console.error('Failed to delete supplier', err);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Remove Failed',
+          detail: 'Failed to remove supplier. It may be linked to active projects.',
+        });
+      },
+    });
+  }
+
+  // Display and format helpers
+  protected getDisplayName(fullName: string | null | undefined): string {
+    return extractNameAndNickname(fullName).name;
+  }
+
+  protected getNickname(fullName: string | null | undefined): string {
+    return extractNameAndNickname(fullName).nickname;
+  }
+
+  protected getCleanAddr(rawAddr: string | null | undefined): string {
+    return getCleanAddress(rawAddr);
+  }
+
+  protected getSupplierPocs(supplier: SupplierModel): PointOfContact[] {
+    if (supplier.pocs && supplier.pocs.length > 0) {
+      return supplier.pocs;
+    }
+    return extractEntityPocs(
+      supplier.address,
+      supplier.email,
+      supplier.contact_number,
+      supplier.name,
+    );
+  }
+
+  protected getPrimaryPoc(supplier: SupplierModel): PointOfContact | null {
+    const list = this.getSupplierPocs(supplier);
+    return list.length > 0 ? list[0] : null;
+  }
+
   protected initials(name: string): string {
-    if (!name) return 'SP';
-    return name
+    const clean = this.getDisplayName(name);
+    if (!clean) return 'SU';
+    return clean
       .split(' ')
       .filter(Boolean)
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase())
       .join('');
+  }
+
+  protected parseAddress(addr: string | null | undefined): StructuredAddress {
+    return parseAddressString(addr);
+  }
+
+  protected onCityChanged(cityInput: string | null | undefined): void {
+    const match = lookupCityLocation(cityInput);
+    if (match) {
+      this.supplierForm.patchValue(
+        {
+          state: match.state,
+          country: match.country,
+        },
+        { emitEvent: false },
+      );
+    }
+  }
+
+  protected onCityInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.onCityChanged(input.value);
   }
 }

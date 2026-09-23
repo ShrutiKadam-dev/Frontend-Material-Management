@@ -9,32 +9,16 @@
       <div class="header-title-group">
         <span class="eyebrow">Client Accounts · Procurement Partners</span>
         <h1 id="customers-title">Customers</h1>
-        <p class="header-desc">
-          Track customer profiles, linked tenders, quotation records, and delivery milestones.
-        </p>
       </div>
     </div>
 
     <div class="header-actions">
-      <button
-        pButton
-        type="button"
-        icon="pi pi-refresh"
-        class="p-button-text p-button-secondary refresh-btn"
-        (click)="loadCustomers()"
-        pTooltip="Refresh customers"
-        tooltipPosition="bottom"
-        aria-label="Refresh customers"
-      ></button>
+      <button pButton type="button" icon="pi pi-refresh" class="p-button-text p-button-secondary refresh-btn"
+        (click)="loadCustomers()" pTooltip="Refresh customers" tooltipPosition="bottom"
+        aria-label="Refresh customers"></button>
 
-      <button
-        pButton
-        type="button"
-        icon="pi pi-plus"
-        label="Add Customer"
-        class="create-entity-btn"
-        (click)="openAddDialog()"
-      ></button>
+      <button pButton type="button" icon="pi pi-plus" label="Add Customer" class="create-entity-btn"
+        (click)="openAddDialog()"></button>
     </div>
   </header>
 
@@ -90,50 +74,25 @@
     <!-- Search Bar -->
     <div class="search-input-wrapper">
       <i class="pi pi-search search-icon" aria-hidden="true"></i>
-      <input
-        type="text"
-        class="search-input"
-        [value]="searchQuery()"
-        (input)="onSearchInput($event)"
-        placeholder="Search customers by name, email, phone, or location…"
-        aria-label="Search customers"
-      />
+      <input type="text" class="search-input" [value]="searchQuery()" (input)="onSearchInput($event)"
+        placeholder="Search customers by name, nickname, POC, email, phone, or location…"
+        aria-label="Search customers" />
       @if (searchQuery()) {
-        <button
-          type="button"
-          class="clear-search-btn"
-          (click)="clearSearch()"
-          aria-label="Clear search input"
-          pTooltip="Clear search"
-          tooltipPosition="top"
-        >
-          <i class="pi pi-times" aria-hidden="true"></i>
-        </button>
+      <button type="button" class="clear-search-btn" (click)="clearSearch()" aria-label="Clear search input"
+        pTooltip="Clear search" tooltipPosition="top">
+        <i class="pi pi-times" aria-hidden="true"></i>
+      </button>
       }
     </div>
 
     <!-- View Mode Toggle -->
     <div class="view-mode-toggle" role="group" aria-label="View mode toggle">
-      <button
-        type="button"
-        class="view-btn"
-        [class.view-btn--active]="viewMode() === 'grid'"
-        (click)="setViewMode('grid')"
-        pTooltip="Grid View"
-        tooltipPosition="top"
-        aria-label="Switch to grid view"
-      >
+      <button type="button" class="view-btn" [class.view-btn--active]="viewMode() === 'grid'"
+        (click)="setViewMode('grid')" pTooltip="Grid View" tooltipPosition="top" aria-label="Switch to grid view">
         <i class="pi pi-th-large" aria-hidden="true"></i>
       </button>
-      <button
-        type="button"
-        class="view-btn"
-        [class.view-btn--active]="viewMode() === 'table'"
-        (click)="setViewMode('table')"
-        pTooltip="Table View"
-        tooltipPosition="top"
-        aria-label="Switch to table view"
-      >
+      <button type="button" class="view-btn" [class.view-btn--active]="viewMode() === 'table'"
+        (click)="setViewMode('table')" pTooltip="Table View" tooltipPosition="top" aria-label="Switch to table view">
         <i class="pi pi-list" aria-hidden="true"></i>
       </button>
     </div>
@@ -141,519 +100,695 @@
 
   <!-- ── 4. Main Customers Content ──────────────────────────────────────── -->
   @if (loading() && customers().length === 0) {
-    <div class="center-state loading-state">
-      <div class="loading-ring" aria-hidden="true">
-        <i class="pi pi-spin pi-spinner"></i>
-      </div>
-      <p>Loading customer profiles & active accounts…</p>
+  <div class="center-state loading-state">
+    <div class="loading-ring" aria-hidden="true">
+      <i class="pi pi-spin pi-spinner"></i>
     </div>
+    <p>Loading customer profiles & active accounts…</p>
+  </div>
   } @else if (error()) {
-    <div class="error-state app-panel">
-      <i class="pi pi-exclamation-circle error-icon" aria-hidden="true"></i>
-      <h2>Failed to Load Customers</h2>
-      <p>{{ error() }}</p>
-      <button
-        pButton
-        type="button"
-        icon="pi pi-refresh"
-        label="Retry Connection"
-        class="create-entity-btn"
-        (click)="loadCustomers()"
-      ></button>
-    </div>
+  <div class="error-state app-panel">
+    <i class="pi pi-exclamation-circle error-icon" aria-hidden="true"></i>
+    <h2>Failed to Load Customers</h2>
+    <p>{{ error() }}</p>
+    <button pButton type="button" icon="pi pi-refresh" label="Retry Connection" class="create-entity-btn"
+      (click)="loadCustomers()"></button>
+  </div>
   } @else if (filteredCustomers().length === 0) {
-    <div class="empty-state app-panel">
-      <div class="empty-icon-wrap" aria-hidden="true">
-        <i class="pi pi-search"></i>
-      </div>
-      <h2>No Matching Customers Found</h2>
-      <p>
-        @if (searchQuery()) {
-          No customers matched "{{ searchQuery() }}". Try adjusting your search keywords.
-        } @else {
-          Get started by onboarding your first customer account.
-        }
-      </p>
-      <div class="empty-actions">
-        @if (searchQuery()) {
-          <button
-            pButton
-            type="button"
-            icon="pi pi-times"
-            label="Clear Search"
-            class="p-button-outlined"
-            (click)="clearSearch()"
-          ></button>
-        }
-        <button
-          pButton
-          type="button"
-          icon="pi pi-plus"
-          label="Add Customer"
-          class="create-entity-btn"
-          (click)="openAddDialog()"
-        ></button>
-      </div>
+  <div class="empty-state app-panel">
+    <div class="empty-icon-wrap" aria-hidden="true">
+      <i class="pi pi-search"></i>
     </div>
+    <h2>No Matching Customers Found</h2>
+    <p>
+      @if (searchQuery()) {
+      No customers matched "{{ searchQuery() }}". Try adjusting your search keywords.
+      } @else {
+      Get started by onboarding your first customer account.
+      }
+    </p>
+    <div class="empty-actions">
+      @if (searchQuery()) {
+      <button pButton type="button" icon="pi pi-times" label="Clear Search" class="p-button-outlined"
+        (click)="clearSearch()"></button>
+      }
+      <button pButton type="button" icon="pi pi-plus" label="Add Customer" class="create-entity-btn"
+        (click)="openAddDialog()"></button>
+    </div>
+  </div>
   } @else {
 
-    <!-- ══════════════════════════════════════════════════════════════════
+  <!-- ══════════════════════════════════════════════════════════════════
          VIEW 1: MODERN GRID CARDS
     ══════════════════════════════════════════════════════════════════ -->
-    @if (viewMode() === 'grid') {
-      <div class="entity-cards-grid" role="feed" aria-label="Customers list">
-        @for (customer of filteredCustomers(); track customer.id) {
-          <article class="modern-entity-card app-panel">
+  @if (viewMode() === 'grid') {
+  <div class="entity-cards-grid" role="feed" aria-label="Customers list">
+    @for (customer of filteredCustomers(); track customer.id) {
+    <article class="modern-entity-card app-panel">
 
-            <!-- Profile Info Hero -->
-            <div class="card-profile-row">
-              <div class="entity-avatar-box" aria-hidden="true">
-                {{ initials(customer.name) }}
-              </div>
-              <div class="profile-meta">
-                <h2
-                  class="profile-name"
-                  (click)="openDetailsDialog(customer)"
-                  [title]="customer.name"
-                  tabindex="0"
-                  (keydown.enter)="openDetailsDialog(customer)"
-                >
-                  {{ customer.name }}
-                </h2>
-                <div class="profile-location" [title]="customer.address">
-                  <i class="pi pi-map-marker location-icon" aria-hidden="true"></i>
-                  <span>{{ customer.address }}</span>
-                </div>
-              </div>
+      <!-- Profile Info Hero -->
+      <div class="card-profile-row">
+        <div class="entity-avatar-box" aria-hidden="true">
+          {{ initials(customer.name) }}
+        </div>
+        <div class="profile-meta">
+          <div class="profile-title-line">
+            <h2 class="profile-name" (click)="openDetailsDialog(customer)" [title]="customer.name" tabindex="0"
+              (keydown.enter)="openDetailsDialog(customer)">
+              {{ getDisplayName(customer.name) }}
+            </h2>
+            @if (getNickname(customer.name); as nick) {
+            <span class="nickname-pill" [title]="'Nickname: ' + nick">{{ nick }}</span>
+            }
+          </div>
+          @if (getCleanAddr(customer.address); as cleanAddr) {
+          <div class="profile-location" [title]="cleanAddr">
+            <i class="pi pi-map-marker location-icon" aria-hidden="true"></i>
+            <span>{{ cleanAddr }}</span>
+          </div>
+          }
+        </div>
+      </div>
+
+      <!-- Unified Contact & POC Box -->
+      <div class="card-contact-box" aria-label="Customer contact info">
+        <!-- POC Header Line -->
+        @if (getPrimaryPoc(customer); as primaryPoc) {
+        <div class="poc-header-row">
+          <div class="poc-lead">
+            <i class="pi pi-user poc-icon" aria-hidden="true"></i>
+            <div class="poc-info">
+              <strong class="poc-name">{{ primaryPoc.name }}</strong>
+              <span class="poc-badge">{{ primaryPoc.designation || 'POC' }}</span>
             </div>
+          </div>
+          @if (getCustomerPocs(customer).length > 1) {
+          <span class="poc-count-badge" pTooltip="Multiple contacts available" tooltipPosition="top">
+            +{{ getCustomerPocs(customer).length - 1 }} more
+          </span>
+          }
+        </div>
+        }
 
-            <!-- Contact Information Box -->
-            <div class="card-contact-box" aria-label="Customer contact info">
-              <!-- Email Row -->
-              <div class="contact-row">
-                <div class="contact-lead">
-                  <i class="pi pi-envelope contact-icon" aria-hidden="true"></i>
-                  <a [href]="'mailto:' + customer.email" class="contact-link" [title]="'Send email to ' + customer.email">
-                    {{ customer.email }}
-                  </a>
-                </div>
-              </div>
+        <!-- Direct communication channels -->
+        <div class="contact-channels-list">
+          <div class="contact-channel-item">
+            <i class="pi pi-envelope contact-icon" aria-hidden="true"></i>
+            <a [href]="'mailto:' + customer.email" class="contact-link" [title]="customer.email">
+              {{ customer.email }}
+            </a>
+          </div>
 
-              <!-- Phone Row -->
-              <div class="contact-row">
-                <div class="contact-lead">
-                  <i class="pi pi-phone contact-icon" aria-hidden="true"></i>
-                  <a [href]="'tel:' + customer.contact_number" class="contact-link" [title]="'Call ' + customer.contact_number">
-                    {{ customer.contact_number }}
-                  </a>
-                </div>
-              </div>
-            </div>
+          <div class="contact-channel-item">
+            <i class="pi pi-phone contact-icon" aria-hidden="true"></i>
+            <a [href]="'tel:' + customer.contact_number" class="contact-link" [title]="customer.contact_number">
+              {{ customer.contact_number }}
+            </a>
+          </div>
+        </div>
+      </div>
 
-            <!-- Timestamps Meta -->
-            <div class="card-meta-row">
-              <span class="meta-item">
-                <i class="pi pi-calendar" aria-hidden="true"></i>
-                Added: {{ customer.created_at | date:'dd-MM-yyyy' }}
-              </span>
-              @if (customer.updated_at && customer.updated_at !== customer.created_at) {
-                <span class="meta-item meta-item--muted">
-                  <i class="pi pi-clock" aria-hidden="true"></i>
-                  Updated: {{ customer.updated_at | date:'dd-MM-yyyy' }}
-                </span>
-              }
-            </div>
-
-            <!-- Card Actions Footer -->
-            <div class="card-footer-actions">
-              <button
-                pButton
-                type="button"
-                icon="pi pi-pencil"
-                label="Edit"
-                class="p-button-outlined p-button-sm edit-card-btn"
-                (click)="openEditDialog(customer)"
-                aria-label="Edit customer details"
-              ></button>
-
-              <button
-                pButton
-                type="button"
-                icon="pi pi-arrow-up-right"
-                iconPos="right"
-                label="View Profile"
-                class="p-button-sm view-profile-btn"
-                (click)="openDetailsDialog(customer)"
-                aria-label="View customer profile"
-              ></button>
-            </div>
-          </article>
+      <!-- Timestamps Meta -->
+      <div class="card-meta-row">
+        <span class="meta-item">
+          <i class="pi pi-calendar" aria-hidden="true"></i>
+          Added: {{ customer.created_at | date:'dd-MM-yyyy' }}
+        </span>
+        @if (customer.updated_at && customer.updated_at !== customer.created_at) {
+        <span class="meta-item meta-item--muted">
+          <i class="pi pi-clock" aria-hidden="true"></i>
+          Updated: {{ customer.updated_at | date:'dd-MM-yyyy' }}
+        </span>
         }
       </div>
-    }
 
-    <!-- ══════════════════════════════════════════════════════════════════
+      <!-- Card Actions Footer -->
+      <div class="card-footer-actions">
+        <button pButton type="button" icon="pi pi-pencil" label="Edit"
+          class="p-button-outlined p-button-sm edit-card-btn" (click)="openEditDialog(customer)"
+          aria-label="Edit customer details"></button>
+
+        <button pButton type="button" icon="pi pi-arrow-up-right" iconPos="right" label="View Profile"
+          class="p-button-sm view-profile-btn" (click)="openDetailsDialog(customer)"
+          aria-label="View customer profile"></button>
+
+        <button pButton type="button" icon="pi pi-trash"
+          class="p-button-outlined p-button-danger p-button-sm remove-card-btn" (click)="deleteCustomer(customer)"
+          pTooltip="Remove customer" tooltipPosition="top" aria-label="Remove customer"></button>
+      </div>
+    </article>
+    }
+  </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════
          VIEW 2: MODERN DATA TABLE
     ══════════════════════════════════════════════════════════════════ -->
-    @if (viewMode() === 'table') {
-      <div class="table-container app-panel" role="region" aria-label="Customers table view">
-        <table class="modern-table">
-          <thead>
-            <tr>
-              <th scope="col" class="th-id">ID</th>
-              <th scope="col" class="th-supplier">Customer / Client</th>
-              <th scope="col" class="th-email">Email</th>
-              <th scope="col" class="th-phone">Contact Number</th>
-              <th scope="col" class="th-address">Address</th>
-              <th scope="col" class="th-date">Created</th>
-              <th scope="col" class="th-actions text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (customer of filteredCustomers(); track customer.id) {
-              <tr class="table-row">
-                <!-- ID Column -->
-                <td class="td-id">
-                  <span class="id-pill">#{{ customer.id < 10 ? '0' + customer.id : customer.id }}</span>
-                </td>
+  @if (viewMode() === 'table') {
+  <div class="table-container app-panel" role="region" aria-label="Customers table view">
+    <table class="modern-table">
+      <thead>
+        <tr>
+          <th scope="col" class="th-id">ID</th>
+          <th scope="col" class="th-supplier">Customer / Client</th>
+          <th scope="col" class="th-poc">Primary POC</th>
+          <th scope="col" class="th-email">Email</th>
+          <th scope="col" class="th-phone">Contact Number</th>
+          <th scope="col" class="th-address">Address</th>
+          <th scope="col" class="th-date">Created</th>
+          <th scope="col" class="th-actions text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (customer of filteredCustomers(); track customer.id) {
+        <tr class="table-row">
+          <!-- ID Column -->
+          <td class="td-id">
+            <span class="id-pill">#{{ customer.id < 10 ? '0' + customer.id : customer.id }}</span>
+          </td>
 
-                <!-- Customer Name + Avatar Column -->
-                <td class="td-supplier">
-                  <div class="table-supplier-cell">
-                    <span class="table-avatar" aria-hidden="true">{{ initials(customer.name) }}</span>
-                    <div class="table-supplier-info">
-                      <strong
-                        class="table-supplier-name"
-                        (click)="openDetailsDialog(customer)"
-                        tabindex="0"
-                        (keydown.enter)="openDetailsDialog(customer)"
-                      >
-                        {{ customer.name }}
-                      </strong>
-                      <span class="status-chip status-chip--verified-sm">Client</span>
-                    </div>
-                  </div>
-                </td>
+          <!-- Customer Name + Nickname + Avatar Column -->
+          <td class="td-supplier">
+            <div class="table-supplier-cell">
+              <span class="table-avatar" aria-hidden="true">{{ initials(customer.name) }}</span>
+              <div class="table-supplier-info">
+                <div class="table-name-row">
+                  <strong class="table-supplier-name" (click)="openDetailsDialog(customer)" tabindex="0"
+                    (keydown.enter)="openDetailsDialog(customer)">
+                    {{ getDisplayName(customer.name) }}
+                  </strong>
+                  @if (getNickname(customer.name); as nick) {
+                  <span class="nickname-pill-sm">{{ nick }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+          </td>
 
-                <!-- Email Column -->
-                <td class="td-email">
-                  <div class="contact-table-cell">
-                    <i class="pi pi-envelope cell-icon" aria-hidden="true"></i>
-                    <a [href]="'mailto:' + customer.email" class="table-link">{{ customer.email }}</a>
-                  </div>
-                </td>
-
-                <!-- Contact Number Column -->
-                <td class="td-phone">
-                  <div class="contact-table-cell">
-                    <i class="pi pi-phone cell-icon" aria-hidden="true"></i>
-                    <a [href]="'tel:' + customer.contact_number" class="table-link">{{ customer.contact_number }}</a>
-                  </div>
-                </td>
-
-                <!-- Address Column -->
-                <td class="td-address">
-                  <div class="address-cell" [title]="customer.address">
-                    <i class="pi pi-map-marker cell-icon" aria-hidden="true"></i>
-                    <span>{{ customer.address }}</span>
-                  </div>
-                </td>
-
-                <!-- Created Date Column -->
-                <td class="td-date">
-                  <span class="date-text">{{ customer.created_at | date:'dd-MM-yyyy' }}</span>
-                </td>
-
-                <!-- Actions Column -->
-                <td class="td-actions text-right">
-                  <div class="table-actions-group">
-                    <button
-                      pButton
-                      type="button"
-                      icon="pi pi-eye"
-                      class="p-button-text p-button-sm table-action-btn"
-                      (click)="openDetailsDialog(customer)"
-                      pTooltip="View details"
-                      tooltipPosition="top"
-                      aria-label="View customer details"
-                    ></button>
-                    <button
-                      pButton
-                      type="button"
-                      icon="pi pi-pencil"
-                      class="p-button-text p-button-sm table-action-btn"
-                      (click)="openEditDialog(customer)"
-                      pTooltip="Edit customer"
-                      tooltipPosition="top"
-                      aria-label="Edit customer details"
-                    ></button>
-                  </div>
-                </td>
-              </tr>
+          <!-- Primary POC Column -->
+          <td class="td-poc">
+            @if (getPrimaryPoc(customer); as poc) {
+            <div class="table-poc-cell">
+              <span class="table-poc-name">{{ poc.name }}</span>
+              @if (getCustomerPocs(customer).length > 1) {
+              <span class="poc-mini-count">+{{ getCustomerPocs(customer).length - 1 }}</span>
+              }
+            </div>
+            } @else {
+            <span class="cell-muted">—</span>
             }
-          </tbody>
-        </table>
-      </div>
-    }
+          </td>
+
+          <!-- Email Column -->
+          <td class="td-email">
+            <div class="contact-table-cell">
+              <i class="pi pi-envelope cell-icon" aria-hidden="true"></i>
+              <a [href]="'mailto:' + customer.email" class="table-link">{{ customer.email }}</a>
+            </div>
+          </td>
+
+          <!-- Contact Number Column -->
+          <td class="td-phone">
+            <div class="contact-table-cell">
+              <i class="pi pi-phone cell-icon" aria-hidden="true"></i>
+              <a [href]="'tel:' + customer.contact_number" class="table-link">{{ customer.contact_number }}</a>
+            </div>
+          </td>
+
+          <!-- Address Column -->
+          <td class="td-address">
+            <div class="address-cell" [title]="getCleanAddr(customer.address)">
+              <i class="pi pi-map-marker cell-icon" aria-hidden="true"></i>
+              <span>{{ getCleanAddr(customer.address) }}</span>
+            </div>
+          </td>
+
+          <!-- Created Date Column -->
+          <td class="td-date">
+            <span class="date-text">{{ customer.created_at | date:'dd-MM-yyyy' }}</span>
+          </td>
+
+          <!-- Actions Column -->
+          <td class="td-actions text-right">
+            <div class="table-actions-group">
+              <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-sm table-action-btn"
+                (click)="openDetailsDialog(customer)" pTooltip="View details" tooltipPosition="top"
+                aria-label="View customer details"></button>
+              <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm table-action-btn"
+                (click)="openEditDialog(customer)" pTooltip="Edit customer" tooltipPosition="top"
+                aria-label="Edit customer details"></button>
+              <button pButton type="button" icon="pi pi-trash"
+                class="p-button-text p-button-sm p-button-danger table-action-btn table-action-btn--delete"
+                (click)="deleteCustomer(customer)" pTooltip="Remove customer" tooltipPosition="top"
+                aria-label="Remove customer"></button>
+            </div>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
 
   }
 
 </section>
 
 <!-- ── 5. Add / Edit Customer Modal ───────────────────────────────────── -->
-<p-dialog
-  [visible]="dialogVisible()"
-  (visibleChange)="dialogVisible.set($event)"
-  [modal]="true"
-  [style]="{ width: '92vw', maxWidth: '520px' }"
-  [draggable]="false"
-  [resizable]="false"
-  [dismissableMask]="true"
-  [focusOnShow]="true"
-  styleClass="modern-dialog"
->
+<p-dialog [visible]="dialogVisible()" (visibleChange)="dialogVisible.set($event)" [modal]="true"
+  [style]="{ width: '95vw', maxWidth: '680px' }" [draggable]="false" [resizable]="false" [dismissableMask]="true"
+  [focusOnShow]="true" styleClass="modern-dialog">
   <ng-template pTemplate="header">
-    <div class="dialog-header-box">
-      <div class="dialog-header-icon" aria-hidden="true">
-        <i [class]="isEditMode() ? 'pi pi-user-edit' : 'pi pi-user-plus'"></i>
+    <div class="dialog-header-custom">
+      <div class="dialog-header-icon-box" aria-hidden="true">
+        <i [class]="isEditMode() ? 'pi pi-pencil' : 'pi pi-user-plus'"></i>
       </div>
       <div class="dialog-header-titles">
         <h2 class="dialog-title">{{ isEditMode() ? 'Edit Customer' : 'Add New Customer' }}</h2>
-        <p class="dialog-subtitle">
-          {{ isEditMode() ? 'Update client details and communication channels.' : 'Register a new customer account to link to projects & orders.' }}
-        </p>
+
       </div>
     </div>
   </ng-template>
 
   <form [formGroup]="customerForm" (ngSubmit)="onSubmit()" novalidate class="modern-form">
-    <!-- Customer Name -->
+    <!-- Customer Name & Nickname (Weighted 2 Columns) -->
+    <div class="form-grid-name-nick">
+      <!-- Customer / Company Name -->
+      <div class="form-field-group">
+        <label for="customer-name" class="form-label">
+          Customer Name <span class="required-star">*</span>
+        </label>
+        <p-iconfield>
+          <p-inputicon class="pi pi-building" />
+          <input pInputText id="customer-name" formControlName="name" placeholder="Enter customer name"
+            class="dialog-input"
+            [attr.aria-invalid]="customerForm.get('name')?.invalid && customerForm.get('name')?.touched" />
+        </p-iconfield>
+        @if (customerForm.get('name')?.invalid && (customerForm.get('name')?.dirty ||
+        customerForm.get('name')?.touched)) {
+        <p class="field-error-msg" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          Customer name is required (min 2 characters).
+        </p>
+        }
+      </div>
+
+      <!-- Customer Nickname -->
+      <div class="form-field-group">
+        <label for="customer-nickname" class="form-label">
+          Nickname
+        </label>
+        <p-iconfield>
+          <p-inputicon class="pi pi-tag" />
+          <input pInputText id="customer-nickname" formControlName="nickname" placeholder="Enter nickname"
+            class="dialog-input" />
+        </p-iconfield>
+      </div>
+    </div>
+
+    <!-- ── Points of Contact (POC) Section ────────────────────────────── -->
+    <div class="form-section-divider">
+      <div class="form-section-header">
+        <div class="section-title-wrap">
+          <i class="pi pi-users" aria-hidden="true"></i>
+          <span>Points of Contact (POC)</span>
+        </div>
+      </div>
+    </div>
+
+    <div formArrayName="pocs" class="pocs-form-container">
+      @for (poc of pocControls; track $index; let idx = $index) {
+      <div [formGroupName]="idx" class="poc-card">
+        <div class="poc-card-header">
+          <div class="poc-badge-label">
+            <span class="poc-number-chip">{{ idx + 1 }}</span>
+            <span>{{ idx === 0 ? 'Primary Point of Contact' : 'Alternate Point of Contact' }}</span>
+          </div>
+
+          @if (pocControls.length > 1) {
+          <button type="button" class="remove-poc-btn" (click)="removePoc(idx)" pTooltip="Remove this contact"
+            tooltipPosition="left" aria-label="Remove contact">
+            <i class="pi pi-trash" aria-hidden="true"></i>
+          </button>
+          }
+        </div>
+
+        <div class="poc-fields-grid">
+          <!-- Row 1: Name & Phone Number (50% / 50%) -->
+          <div class="poc-row-2col">
+            <!-- POC Name -->
+            <div class="form-field-group">
+              <label [for]="'poc-name-' + idx" class="form-label">
+                POC Name <span class="required-star">*</span>
+              </label>
+              <p-iconfield>
+                <p-inputicon class="pi pi-user" />
+                <input pInputText [id]="'poc-name-' + idx" formControlName="name" placeholder="Enter POC name"
+                  class="dialog-input" [attr.aria-invalid]="poc.get('name')?.invalid && poc.get('name')?.touched" />
+              </p-iconfield>
+              @if (poc.get('name')?.invalid && (poc.get('name')?.dirty || poc.get('name')?.touched)) {
+              <p class="field-error-msg" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                POC name required.
+              </p>
+              }
+            </div>
+
+            <!-- POC Contact Number -->
+            <div class="form-field-group">
+              <label [for]="'poc-phone-' + idx" class="form-label">
+                Contact Number <span class="required-star">*</span>
+              </label>
+              <p-iconfield>
+                <p-inputicon class="pi pi-phone" />
+                <input pInputText [id]="'poc-phone-' + idx" formControlName="contact_number"
+                  placeholder="Enter contact number" class="dialog-input"
+                  [attr.aria-invalid]="poc.get('contact_number')?.invalid && poc.get('contact_number')?.touched" />
+              </p-iconfield>
+              @if (poc.get('contact_number')?.invalid && (poc.get('contact_number')?.dirty ||
+              poc.get('contact_number')?.touched)) {
+              <p class="field-error-msg" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                Valid phone required.
+              </p>
+              }
+            </div>
+          </div>
+
+          <!-- Row 2: Email Address (Full Width for spaciousness) -->
+          <div class="form-field-group">
+            <label [for]="'poc-email-' + idx" class="form-label">
+              Email Address <span class="required-star">*</span>
+            </label>
+            <p-iconfield>
+              <p-inputicon class="pi pi-envelope" />
+              <input pInputText [id]="'poc-email-' + idx" type="email" formControlName="email"
+                placeholder="Enter email address" class="dialog-input"
+                [attr.aria-invalid]="poc.get('email')?.invalid && poc.get('email')?.touched" />
+            </p-iconfield>
+            @if (poc.get('email')?.invalid && (poc.get('email')?.dirty || poc.get('email')?.touched)) {
+            <p class="field-error-msg" role="alert">
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+              Valid email required.
+            </p>
+            }
+          </div>
+        </div>
+      </div>
+      }
+
+      <!-- Clean Dashed Add Another Contact Button -->
+      <button type="button" class="add-poc-dashed-btn" (click)="addPoc()">
+        <i class="pi pi-plus" aria-hidden="true"></i>
+        <span>Add Another Point of Contact</span>
+      </button>
+    </div>
+
+    <!-- ── Address & Operational Hub Section ───────────────────────────── -->
+    <div class="form-section-divider">
+      <div class="form-section-header">
+        <div class="section-title-wrap">
+          <i class="pi pi-map-marker" aria-hidden="true"></i>
+          <span>Registered Address & Location</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Street Address (Full Width) -->
     <div class="form-field-group">
-      <label for="customer-name" class="form-label">
-        Customer / Client Name <span class="required-star">*</span>
+      <label for="customer-street" class="form-label">
+        Street Address / Unit <span class="required-star">*</span>
       </label>
       <p-iconfield>
         <p-inputicon class="pi pi-building" />
-        <input
-          pInputText
-          id="customer-name"
-          formControlName="name"
-          placeholder="e.g. Zenith Infrastructure Ltd"
+        <input pInputText id="customer-street" formControlName="street" placeholder="Enter street address"
           class="dialog-input"
-          [attr.aria-invalid]="customerForm.get('name')?.invalid && customerForm.get('name')?.touched"
-        />
+          [attr.aria-invalid]="customerForm.get('street')?.invalid && customerForm.get('street')?.touched" />
       </p-iconfield>
-      @if (customerForm.get('name')?.invalid && (customerForm.get('name')?.dirty || customerForm.get('name')?.touched)) {
-        <p class="field-error-msg" role="alert">
-          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-          Client or customer name is required (min 2 characters).
-        </p>
+      @if (customerForm.get('street')?.invalid && (customerForm.get('street')?.dirty ||
+      customerForm.get('street')?.touched)) {
+      <p class="field-error-msg" role="alert">
+        <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+        Street address is required.
+      </p>
       }
     </div>
 
-    <!-- Email Address -->
+    <!-- Area / Landmark (Full Width) -->
     <div class="form-field-group">
-      <label for="customer-email" class="form-label">
-        Email Address <span class="required-star">*</span>
+      <label for="customer-area" class="form-label">
+        Area / Landmark
       </label>
       <p-iconfield>
-        <p-inputicon class="pi pi-envelope" />
-        <input
-          pInputText
-          id="customer-email"
-          type="email"
-          formControlName="email"
-          placeholder="e.g. contact@zenithinfratech.com"
-          class="dialog-input"
-          [attr.aria-invalid]="customerForm.get('email')?.invalid && customerForm.get('email')?.touched"
-        />
+        <p-inputicon class="pi pi-compass" />
+        <input pInputText id="customer-area" formControlName="area" placeholder="Enter area / landmark"
+          class="dialog-input" />
       </p-iconfield>
-      @if (customerForm.get('email')?.invalid && (customerForm.get('email')?.dirty || customerForm.get('email')?.touched)) {
-        <p class="field-error-msg" role="alert">
-          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-          Please enter a valid email address.
-        </p>
-      }
     </div>
 
-    <!-- Contact Number -->
-    <div class="form-field-group">
-      <label for="customer-phone" class="form-label">
-        Contact Phone Number <span class="required-star">*</span>
-      </label>
-      <p-iconfield>
-        <p-inputicon class="pi pi-phone" />
-        <input
-          pInputText
-          id="customer-phone"
-          formControlName="contact_number"
-          placeholder="e.g. +91 91234 56789"
-          class="dialog-input"
-          [attr.aria-invalid]="customerForm.get('contact_number')?.invalid && customerForm.get('contact_number')?.touched"
-        />
-      </p-iconfield>
-      @if (customerForm.get('contact_number')?.invalid && (customerForm.get('contact_number')?.dirty || customerForm.get('contact_number')?.touched)) {
+    <!-- City & State (Two Columns) -->
+    <div class="form-grid-2col">
+      <!-- City / District -->
+      <div class="form-field-group">
+        <label for="customer-city" class="form-label">
+          City / District <span class="required-star">*</span>
+        </label>
+        <p-iconfield>
+          <p-inputicon class="pi pi-map" />
+          <input pInputText id="customer-city" formControlName="city" list="customer-city-list"
+            (input)="onCityInput($event)" (change)="onCityInput($event)" placeholder="Enter city" class="dialog-input"
+            [attr.aria-invalid]="customerForm.get('city')?.invalid && customerForm.get('city')?.touched" />
+        </p-iconfield>
+        <datalist id="customer-city-list">
+          @for (c of popularCities; track c) {
+          <option [value]="c"></option>
+          }
+        </datalist>
+        @if (customerForm.get('city')?.invalid && (customerForm.get('city')?.dirty ||
+        customerForm.get('city')?.touched)) {
         <p class="field-error-msg" role="alert">
           <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-          Valid phone number format required (7 to 20 digits).
+          City is required.
         </p>
-      }
+        }
+      </div>
+
+      <!-- State / Province -->
+      <div class="form-field-group">
+        <label for="customer-state" class="form-label">
+          State / Province <span class="required-star">*</span>
+        </label>
+        <p-iconfield>
+          <p-inputicon class="pi pi-flag" />
+          <input pInputText id="customer-state" formControlName="state" placeholder="Enter state" class="dialog-input"
+            [attr.aria-invalid]="customerForm.get('state')?.invalid && customerForm.get('state')?.touched" />
+        </p-iconfield>
+        @if (customerForm.get('state')?.invalid && (customerForm.get('state')?.dirty ||
+        customerForm.get('state')?.touched)) {
+        <p class="field-error-msg" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          State is required.
+        </p>
+        }
+      </div>
     </div>
 
-    <!-- Billing / Office Address -->
-    <div class="form-field-group">
-      <label for="customer-address" class="form-label">
-        Registered Address <span class="required-star">*</span>
-      </label>
-      <p-iconfield>
-        <p-inputicon class="pi pi-map-marker" />
-        <input
-          pInputText
-          id="customer-address"
-          formControlName="address"
-          placeholder="e.g. Floor 8, Tower B, Cyber City, Gurgaon"
-          class="dialog-input"
-          [attr.aria-invalid]="customerForm.get('address')?.invalid && customerForm.get('address')?.touched"
-        />
-      </p-iconfield>
-      @if (customerForm.get('address')?.invalid && (customerForm.get('address')?.dirty || customerForm.get('address')?.touched)) {
+    <!-- PIN Code & Country (Two Columns) -->
+    <div class="form-grid-2col">
+      <!-- PIN Code / Postal Code -->
+      <div class="form-field-group">
+        <label for="customer-pin" class="form-label">
+          PIN / Postal Code <span class="required-star">*</span>
+        </label>
+        <p-iconfield>
+          <p-inputicon class="pi pi-hashtag" />
+          <input pInputText id="customer-pin" formControlName="pincode" placeholder="Enter PIN code"
+            class="dialog-input"
+            [attr.aria-invalid]="customerForm.get('pincode')?.invalid && customerForm.get('pincode')?.touched" />
+        </p-iconfield>
+        @if (customerForm.get('pincode')?.invalid && (customerForm.get('pincode')?.dirty ||
+        customerForm.get('pincode')?.touched)) {
         <p class="field-error-msg" role="alert">
           <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-          Registered address is required.
+          Postal / PIN code required.
         </p>
-      }
+        }
+      </div>
+
+      <!-- Country -->
+      <div class="form-field-group">
+        <label for="customer-country" class="form-label">
+          Country <span class="required-star">*</span>
+        </label>
+        <p-iconfield>
+          <p-inputicon class="pi pi-globe" />
+          <input pInputText id="customer-country" formControlName="country" placeholder="Enter country"
+            class="dialog-input"
+            [attr.aria-invalid]="customerForm.get('country')?.invalid && customerForm.get('country')?.touched" />
+        </p-iconfield>
+        @if (customerForm.get('country')?.invalid && (customerForm.get('country')?.dirty ||
+        customerForm.get('country')?.touched)) {
+        <p class="field-error-msg" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          Country is required.
+        </p>
+        }
+      </div>
     </div>
 
     <!-- Form Footer Actions -->
     <div class="dialog-actions-footer">
-      <button
-        pButton
-        type="button"
-        label="Cancel"
-        class="p-button-text p-button-secondary cancel-dialog-btn"
-        (click)="dialogVisible.set(false)"
-      ></button>
+      <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary cancel-dialog-btn"
+        (click)="dialogVisible.set(false)"></button>
 
-      <button
-        pButton
-        type="submit"
+      <button pButton type="submit"
         [label]="submitting() ? 'Saving...' : (isEditMode() ? 'Save Changes' : 'Create Customer')"
         [icon]="submitting() ? 'pi pi-spin pi-spinner' : (isEditMode() ? 'pi pi-check' : 'pi pi-plus')"
-        [disabled]="customerForm.invalid || submitting()"
-        class="submit-dialog-btn"
-      ></button>
+        [disabled]="submitting()" class="submit-dialog-btn"></button>
     </div>
   </form>
 </p-dialog>
 
 <!-- ── 6. Rich Customer Details Modal ──────────────────────────────────── -->
-<p-dialog
-  [visible]="detailsVisible()"
-  (visibleChange)="detailsVisible.set($event)"
-  [modal]="true"
-  [style]="{ width: '92vw', maxWidth: '540px' }"
-  [draggable]="false"
-  [resizable]="false"
-  [dismissableMask]="true"
-  styleClass="modern-dialog details-dialog"
->
+<p-dialog [visible]="detailsVisible()" (visibleChange)="detailsVisible.set($event)" [modal]="true"
+  [style]="{ width: '92vw', maxWidth: '580px' }" [draggable]="false" [resizable]="false" [dismissableMask]="true"
+  styleClass="modern-dialog details-dialog">
   @if (selectedCustomer(); as customer) {
-    <!-- Hero Profile Box -->
-    <div class="details-hero">
-      <div class="details-avatar" aria-hidden="true">
-        {{ initials(customer.name) }}
+  <!-- Hero Profile Box -->
+  <div class="details-hero">
+    <div class="details-avatar" aria-hidden="true">
+      {{ initials(customer.name) }}
+    </div>
+    <div class="details-hero-body">
+      <div class="hero-tag-row">
+        <span class="id-pill">Client ID #{{ customer.id }}</span>
+        @if (getNickname(customer.name); as nick) {
+        <span class="hero-nickname-chip">Nickname: <strong>{{ nick }}</strong></span>
+        }
+        <span class="status-chip status-chip--verified">Active Account</span>
       </div>
-      <div class="details-hero-body">
-        <div class="hero-tag-row">
-          <span class="id-pill">Client ID #{{ customer.id }}</span>
-          <span class="status-chip status-chip--verified">Active Account</span>
+      <h2 class="details-hero-name">{{ getDisplayName(customer.name) }}</h2>
+      @if (getCleanAddr(customer.address); as cleanAddr) {
+      <p class="details-hero-location">
+        <i class="pi pi-map-marker" aria-hidden="true"></i>
+        {{ cleanAddr }}
+      </p>
+      }
+    </div>
+  </div>
+
+  <!-- Details Body Cards -->
+  <div class="details-body">
+    <!-- Points of Contact (POCs) List -->
+    <div class="details-card">
+      <div class="details-card-header-row">
+        <h3 class="details-card-title">Points of Contact (POC)</h3>
+        <span class="poc-total-count-chip">{{ getCustomerPocs(customer).length }} {{ getCustomerPocs(customer).length
+          === 1 ? 'Contact' : 'Contacts' }}</span>
+      </div>
+
+      <div class="details-pocs-list">
+        @for (poc of getCustomerPocs(customer); track $index; let idx = $index) {
+        <div class="details-poc-item">
+          <div class="poc-avatar" aria-hidden="true">
+            {{ poc.name ? poc.name.charAt(0).toUpperCase() : 'P' }}
+          </div>
+          <div class="poc-details-content">
+            <div class="poc-header-row">
+              <strong class="poc-person-name">{{ poc.name }}</strong>
+              <span class="poc-type-tag">{{ idx === 0 ? 'Primary POC' : (poc.designation || 'Alternate POC') }}</span>
+            </div>
+            <div class="poc-channels-grid">
+              @if (poc.email) {
+              <div class="poc-channel-item">
+                <i class="pi pi-envelope" aria-hidden="true"></i>
+                <a [href]="'mailto:' + poc.email" class="channel-link">{{ poc.email }}</a>
+              </div>
+              }
+              @if (poc.contact_number) {
+              <div class="poc-channel-item">
+                <i class="pi pi-phone" aria-hidden="true"></i>
+                <a [href]="'tel:' + poc.contact_number" class="channel-link">{{ poc.contact_number }}</a>
+              </div>
+              }
+            </div>
+          </div>
         </div>
-        <h2 class="details-hero-name">{{ customer.name }}</h2>
-        <p class="details-hero-location">
+        }
+      </div>
+    </div>
+
+    <!-- Address & Operational Hub -->
+    <div class="details-card">
+      <h3 class="details-card-title">Location & Operational Hub</h3>
+      <div class="details-row">
+        <div class="details-channel-lead">
+          <span class="channel-icon-wrap channel-icon-wrap--map" aria-hidden="true">
+            <i class="pi pi-building"></i>
+          </span>
+          <div class="channel-info">
+            <span class="channel-label">Registered Address</span>
+            <span class="channel-value">{{ getCleanAddr(customer.address) }}</span>
+          </div>
+        </div>
+      </div>
+
+      @if (parseAddress(customer.address); as parsedAddr) {
+      @if (parsedAddr.city || parsedAddr.state || parsedAddr.pincode) {
+      <div class="location-breakdown-chips">
+        @if (parsedAddr.city) {
+        <span class="location-chip">
           <i class="pi pi-map-marker" aria-hidden="true"></i>
-          {{ customer.address }}
-        </p>
+          <span>City: <strong>{{ parsedAddr.city }}</strong></span>
+        </span>
+        }
+        @if (parsedAddr.state) {
+        <span class="location-chip">
+          <i class="pi pi-flag" aria-hidden="true"></i>
+          <span>State: <strong>{{ parsedAddr.state }}</strong></span>
+        </span>
+        }
+        @if (parsedAddr.pincode) {
+        <span class="location-chip">
+          <i class="pi pi-hashtag" aria-hidden="true"></i>
+          <span>PIN: <strong>{{ parsedAddr.pincode }}</strong></span>
+        </span>
+        }
+        @if (parsedAddr.country) {
+        <span class="location-chip">
+          <i class="pi pi-globe" aria-hidden="true"></i>
+          <span><strong>{{ parsedAddr.country }}</strong></span>
+        </span>
+        }
       </div>
+      }
+      }
     </div>
 
-    <!-- Details Body Cards -->
-    <div class="details-body">
-      <!-- Direct Contact Channels -->
-      <div class="details-card">
-        <h3 class="details-card-title">Communication Channels</h3>
-
-        <div class="details-row">
-          <div class="details-channel-lead">
-            <span class="channel-icon-wrap channel-icon-wrap--email" aria-hidden="true">
-              <i class="pi pi-envelope"></i>
-            </span>
-            <div class="channel-info">
-              <span class="channel-label">Email Address</span>
-              <a [href]="'mailto:' + customer.email" class="channel-value channel-link">{{ customer.email }}</a>
-            </div>
-          </div>
-        </div>
-
-        <div class="details-row">
-          <div class="details-channel-lead">
-            <span class="channel-icon-wrap channel-icon-wrap--phone" aria-hidden="true">
-              <i class="pi pi-phone"></i>
-            </span>
-            <div class="channel-info">
-              <span class="channel-label">Primary Phone</span>
-              <a [href]="'tel:' + customer.contact_number" class="channel-value channel-link">{{ customer.contact_number }}</a>
-            </div>
-          </div>
-        </div>
+    <!-- System Metadata -->
+    <div class="details-metadata-grid">
+      <div class="meta-card">
+        <span class="meta-label">Created At</span>
+        <strong class="meta-val">{{ customer.created_at | date:'dd-MM-yyyy, HH:mm' }}</strong>
       </div>
-
-      <!-- Address & Operational Hub -->
-      <div class="details-card">
-        <h3 class="details-card-title">Location & Hub</h3>
-        <div class="details-row">
-          <div class="details-channel-lead">
-            <span class="channel-icon-wrap channel-icon-wrap--map" aria-hidden="true">
-              <i class="pi pi-building"></i>
-            </span>
-            <div class="channel-info">
-              <span class="channel-label">Registered Address</span>
-              <span class="channel-value">{{ customer.address }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- System Metadata -->
-      <div class="details-metadata-grid">
-        <div class="meta-card">
-          <span class="meta-label">Created At</span>
-          <strong class="meta-val">{{ customer.created_at | date:'dd-MM-yyyy, HH:mm' }}</strong>
-        </div>
-        <div class="meta-card">
-          <span class="meta-label">Last Updated</span>
-          <strong class="meta-val">{{ customer.updated_at | date:'dd-MM-yyyy, HH:mm' }}</strong>
-        </div>
+      <div class="meta-card">
+        <span class="meta-label">Last Updated</span>
+        <strong class="meta-val">{{ customer.updated_at | date:'dd-MM-yyyy, HH:mm' }}</strong>
       </div>
     </div>
+  </div>
 
-    <!-- Details Footer Actions -->
-    <div class="details-footer">
-      <button
-        pButton
-        type="button"
-        icon="pi pi-pencil"
-        label="Edit Customer"
-        class="p-button-outlined edit-details-btn"
-        (click)="detailsVisible.set(false); openEditDialog(customer)"
-      ></button>
+  <!-- Details Footer Actions -->
+  <div class="details-footer">
+    <button pButton type="button" icon="pi pi-trash" label="Remove Customer"
+      class="p-button-outlined p-button-danger remove-details-btn"
+      (click)="deleteCustomer(customer)"></button>
 
-      <button
-        pButton
-        type="button"
-        label="Close"
-        class="create-entity-btn close-details-btn"
-        (click)="detailsVisible.set(false)"
-      ></button>
-    </div>
+    <button pButton type="button" icon="pi pi-pencil" label="Edit Customer" class="p-button-outlined edit-details-btn"
+      (click)="detailsVisible.set(false); openEditDialog(customer)"></button>
+
+    <button pButton type="button" label="Close" class="create-entity-btn close-details-btn"
+      (click)="detailsVisible.set(false)"></button>
+  </div>
   }
 </p-dialog>

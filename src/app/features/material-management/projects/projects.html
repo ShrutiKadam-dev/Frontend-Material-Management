@@ -9,9 +9,6 @@
       <div class="header-title-group">
         <span class="eyebrow">Project Management · 15-Step Pipelines</span>
         <h1 id="projects-title">Projects</h1>
-        <p class="header-desc">
-          Manage and track active procurement pipelines linking customers to suppliers.
-        </p>
       </div>
     </div>
 
@@ -131,13 +128,16 @@
       <div class="mpc-topbar">
         <div class="mpc-badge-group">
           <span class="mpc-id-pill">#{{ project.id < 10 ? '0' + project.id : project.id }}</span>
-              <span class="health-pill" [class]="'health-pill ' + getHealthBadgeClass(project.health_status)">
-                <span class="pulse-dot" aria-hidden="true"></span>
-                {{ getHealthLabel(project.health_status) }}
-              </span>
-              <span class="status-badge" [class]="'status-badge ' + getStatusBadgeClass(project.status)">
-                {{ getStatusLabel(project.status) }}
-              </span>
+          @if (project.project_code) {
+          <span class="mpc-code-pill" [title]="'Project Code: ' + project.project_code">{{ project.project_code }}</span>
+          }
+          <span class="health-pill" [class]="'health-pill ' + getHealthBadgeClass(project.health_status)">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            {{ getHealthLabel(project.health_status) }}
+          </span>
+          <span class="status-badge" [class]="'status-badge ' + getStatusBadgeClass(project.status)">
+            {{ getStatusLabel(project.status) }}
+          </span>
         </div>
 
         <div class="mpc-value-badge" pTooltip="Contract Total Value" tooltipPosition="left">
@@ -159,11 +159,7 @@
         <div class="party-box party-box--customer">
           <div class="party-header">
             <span class="party-label">
-              <i class="pi pi-building" aria-hidden="true"></i> Client / Customer
-            </span>
-            <span class="payment-chip" [class]="'payment-chip ' + getPaymentBadgeClass(project.customer_payment_status)"
-              [pTooltip]="'Customer Payment: ' + (project.customer_payment_status || 'pending')" tooltipPosition="top">
-              {{ project.customer_payment_status || 'pending' }}
+              <i class="pi pi-building" aria-hidden="true"></i> Customer
             </span>
           </div>
           <p class="party-name" [title]="project.customer_name || getCustomerName(project.customer_id)">
@@ -175,12 +171,9 @@
         <div class="party-box party-box--supplier">
           <div class="party-header">
             <span class="party-label">
-              <i class="pi pi-truck" aria-hidden="true"></i> Vendor / Supplier
+              <i class="pi pi-truck" aria-hidden="true"></i> Supplier
             </span>
-            <span class="payment-chip" [class]="'payment-chip ' + getPaymentBadgeClass(project.supplier_payment_status)"
-              [pTooltip]="'Supplier Payment: ' + (project.supplier_payment_status || 'pending')" tooltipPosition="top">
-              {{ project.supplier_payment_status || 'pending' }}
-            </span>
+
           </div>
           <p class="party-name" [title]="project.supplier_name || getSupplierName(project.supplier_id)">
             {{ project.supplier_name || getSupplierName(project.supplier_id) }}
@@ -243,6 +236,10 @@
           pTooltip="Edit Project Info" tooltipPosition="top" (click)="openEditDialog(project)"
           aria-label="Edit project"></button>
 
+        <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger remove-card-btn"
+          pTooltip="Remove Project" tooltipPosition="top" (click)="deleteProject(project)"
+          aria-label="Remove project"></button>
+
         <button pButton type="button" label="Open 15-Step Pipeline" icon="pi pi-arrow-right" iconPos="right"
           class="launch-pipeline-btn" (click)="openDetailsDialog(project)"></button>
       </div>
@@ -277,7 +274,12 @@
           <td style="text-align: center; font-weight: 700; color: #64748b;">
             #{{ p.id < 10 ? '0' + p.id : p.id }} </td>
           <td>
-            <strong class="tbl-project-title" (click)="openDetailsDialog(p)">{{ p.project_title }}</strong>
+            <div class="tbl-title-row">
+              <strong class="tbl-project-title" (click)="openDetailsDialog(p)">{{ p.project_title }}</strong>
+              @if (p.project_code) {
+              <span class="tbl-code-pill" [title]="'Project Code: ' + p.project_code">{{ p.project_code }}</span>
+              }
+            </div>
             <span class="tbl-date-sub">{{ p.created_at | date:'dd-MM-yyyy' }}</span>
           </td>
           <td>
@@ -325,6 +327,9 @@
               <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
                 pTooltip="Edit Project" tooltipPosition="top" (click)="openEditDialog(p)"
                 aria-label="Edit project"></button>
+              <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger qe-delete"
+                pTooltip="Remove Project" tooltipPosition="top" (click)="deleteProject(p)"
+                aria-label="Remove project"></button>
             </div>
           </td>
         </tr>
@@ -355,7 +360,7 @@
         </p>
 
         <div class="dlg-grid">
-          <div class="field span-two">
+          <div class="field">
             <label for="dlg-project-title">Project Title <span class="req" aria-hidden="true">*</span></label>
             <input id="dlg-project-title" pInputText formControlName="project_title"
               placeholder="e.g. Cold Storage Refrigeration Units"
@@ -365,6 +370,11 @@
             }
           </div>
 
+          <div class="field">
+            <label for="dlg-project-code">Project Code</label>
+            <input id="dlg-project-code" pInputText formControlName="project_code"
+              placeholder="e.g. PRJ-2026-001" />
+          </div>
         </div>
       </div>
 

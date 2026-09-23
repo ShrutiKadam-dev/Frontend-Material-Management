@@ -27,4 +27,8 @@ export class CustomerService {
   updateCustomer(id: number, customer: CustomerUpdateInput): Observable<Customer> {
     return this.http.put<Customer>(`${this.apiBaseUrl}/api/v1/customers/${id}`, customer);
   }
+
+  deleteCustomer(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiBaseUrl}/api/v1/customers/${id}`);
+  }
 }

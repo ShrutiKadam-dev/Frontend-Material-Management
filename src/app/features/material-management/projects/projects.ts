@@ -10,6 +10,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { finalize } from 'rxjs';
+import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
@@ -52,6 +53,7 @@ export class Projects implements OnInit {
   private readonly supplierService = inject(SupplierService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly messageService = inject(MessageService);
 
   // ── State Signals ──────────────────────────────────────────────
   protected readonly projects = signal<Project[]>([]);
@@ -74,6 +76,7 @@ export class Projects implements OnInit {
   // ── Form Definition ────────────────────────────────────────────
   protected readonly projectForm = this.fb.group({
     project_title: ['', [Validators.required]],
+    project_code: [''],
     customer_id: [null as number | null, [Validators.required]],
     supplier_id: [null as number | null, [Validators.required]],
   });
@@ -108,6 +111,7 @@ export class Projects implements OnInit {
     if (query) {
       list = list.filter((p) => {
         const titleMatch = p.project_title?.toLowerCase().includes(query);
+        const codeMatch = p.project_code?.toLowerCase().includes(query);
         const custMatch = (p.customer_name || this.getCustomerName(p.customer_id))
           .toLowerCase()
           .includes(query);
@@ -116,7 +120,7 @@ export class Projects implements OnInit {
           .includes(query);
         const nextActionMatch = p.next_action?.toLowerCase().includes(query);
         const stepMatch = p.current_step_name?.toLowerCase().includes(query);
-        return titleMatch || custMatch || suppMatch || nextActionMatch || stepMatch;
+        return titleMatch || codeMatch || custMatch || suppMatch || nextActionMatch || stepMatch;
       });
     }
 
@@ -181,6 +185,7 @@ export class Projects implements OnInit {
   protected openAddDialog(): void {
     this.projectForm.reset({
       project_title: '',
+      project_code: '',
       customer_id: null,
       supplier_id: null,
     });
@@ -195,6 +200,7 @@ export class Projects implements OnInit {
         this.selectedProject.set(fresh);
         this.projectForm.patchValue({
           project_title: fresh.project_title,
+          project_code: fresh.project_code || '',
           customer_id: fresh.customer_id,
           supplier_id: fresh.supplier_id,
         });
@@ -222,6 +228,7 @@ export class Projects implements OnInit {
 
     const payload: ProjectCreateInput = {
       project_title: formValue.project_title ?? '',
+      project_code: (formValue.project_code || '').trim() || undefined,
       customer_id: formValue.customer_id as number,
       supplier_id: formValue.supplier_id as number,
     };
@@ -238,10 +245,20 @@ export class Projects implements OnInit {
         .subscribe({
           next: () => {
             this.dialogVisible.set(false);
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Project Updated',
+              detail: `${payload.project_title} has been successfully updated.`,
+            });
             this.loadProjects();
           },
           error: (err: unknown) => {
             console.error('Failed to update project', err);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Update Failed',
+              detail: 'Failed to update project. Please try again.',
+            });
           },
         });
     } else {
@@ -251,13 +268,48 @@ export class Projects implements OnInit {
         .subscribe({
           next: () => {
             this.dialogVisible.set(false);
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Project Created',
+              detail: `${payload.project_title} has been successfully initiated.`,
+            });
             this.loadProjects();
           },
           error: (err: unknown) => {
             console.error('Failed to create project', err);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Creation Failed',
+              detail: 'Failed to create project. Please try again.',
+            });
           },
         });
     }
+  }
+
+  protected deleteProject(project: Project): void {
+    const title = project.project_title || `Project #${project.id}`;
+    if (!confirm(`Are you sure you want to remove project "${title}"? This action cannot be undone.`)) {
+      return;
+    }
+    this.projectService.deleteProject(project.id).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Project Removed',
+          detail: `${title} has been successfully removed.`,
+        });
+        this.loadProjects();
+      },
+      error: (err: unknown) => {
+        console.error('Failed to delete project', err);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Remove Failed',
+          detail: 'Failed to remove project. Please try again.',
+        });
+      },
+    });
   }
 
   // ── Helper Resolvers ───────────────────────────────────────────
