@@ -9,33 +9,35 @@
   --app-font-family: var(--font-body);
   --app-display-font: var(--font-display);
 
-  /* Primary Brand Palette (Warm Coral Red) */
-  --color-primary: #e14d3f;
-  --color-primary-hover: #b7392c;
-  --color-primary-strong: #7a2419;
-  --color-primary-soft: #fbeae6;
-  --color-primary-muted: #f7d9d3;
+  /* Primary Brand Palette (Warm Terracotta Accent) */
+  --color-primary: #c0522f;
+  --color-primary-hover: #aa4525;
+  --color-primary-strong: #8a3317;
+  --color-primary-soft: #fdf1ec;
+  --color-primary-muted: #e9c9be;
 
-  /* Neutrals & Page Surfaces (Warm Tinted) */
-  --color-background: #fbf6f2;
+  /* Neutrals & Page Surfaces (Paper-Stone Aesthetic) */
+  --color-background: #f3f1ec;
   --color-surface: #ffffff;
-  --color-surface-glass: rgba(255, 255, 255, 0.72);
-  --color-surface-panel: rgba(255, 255, 255, 0.94);
-  --color-surface-muted: #fdfbf9;
+  --color-surface-glass: rgba(255, 255, 255, 0.82);
+  --color-surface-panel: #ffffff;
+  --color-surface-muted: #faf9f6;
   --color-on-primary: #ffffff;
-  --color-text: #4a3e38;
-  --color-heading: #241b18;
-  --color-muted: #6e6259;
-  --color-muted-light: #9c9088;
-  --color-border: #ece0d8;
-  --color-border-soft: #f3eae4;
+  --color-text: #2d2b29;
+  --color-heading: #1c1b1a;
+  --color-muted: #6b6864;
+  --color-muted-light: #8c8984;
+  --color-border: #e7e4de;
+  --color-border-soft: #edeae4;
 
   /* Semantic Alerts */
   --color-danger: #b42318;
-  --color-success: #2f8f5b;
-  --color-success-soft: #e4f3ea;
+  --color-success: #2f7a4f;
+  --color-success-soft: #e6f2ea;
   --color-warning: #c97f1e;
   --color-warning-soft: #faeedc;
+  --color-info: #2f5f9e;
+  --color-info-soft: #e9eff9;
 
   /* Layout Spacing Constants */
   --layout-max-width: 1180px;
@@ -44,16 +46,16 @@
 
   /* Borders & Corner Radii */
   --radius-control: 10px;
-  --radius-card: 14px;
+  --radius-card: 16px;
   --radius-panel: 16px;
   --radius-pill: 999px;
 
   /* Elevation & Shadows */
-  --shadow-card: 0 1px 2px rgba(36, 27, 24, 0.06);
-  --shadow-card-hover: 0 8px 24px rgba(36, 27, 24, 0.08);
-  --shadow-control: 0 10px 20px rgba(183, 57, 44, 0.13);
-  --shadow-modal: 0 20px 60px rgba(36, 27, 24, 0.18);
-  --focus-ring: 0 0 0 3px rgba(225, 77, 63, 0.18);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-control: 0 4px 12px rgba(192, 82, 47, 0.15);
+  --shadow-modal: 0 20px 60px rgba(28, 27, 26, 0.16);
+  --focus-ring: 0 0 0 3px rgba(192, 82, 47, 0.2);
 
   /* Assets */
   --auth-hero-image: url("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80");
@@ -73,13 +75,13 @@
     inset: 0;
     z-index: -1;
     background:
-      radial-gradient(circle at -140px -140px, transparent 0, transparent 338px, rgba(225, 77, 63, 0.04) 339px, rgba(225, 77, 63, 0.04) 340px, transparent 341px),
-      radial-gradient(circle at -140px -140px, transparent 0, transparent 458px, rgba(225, 77, 63, 0.03) 459px, rgba(225, 77, 63, 0.03) 460px, transparent 461px),
-      radial-gradient(circle at 120px -40px, transparent 0, transparent 258px, rgba(247, 217, 211, 0.25) 259px, rgba(247, 217, 211, 0.25) 260px, transparent 261px),
-      radial-gradient(circle at calc(100% + 60px) calc(100% + 100px), transparent 0, transparent 218px, rgba(251, 234, 230, 0.3) 219px, rgba(251, 234, 230, 0.3) 220px, transparent 221px),
-      radial-gradient(circle at -140px -140px, rgba(225, 77, 63, 0.05) 0%, transparent 65%),
-      radial-gradient(circle at 120px -40px, rgba(247, 217, 211, 0.15) 0%, transparent 55%),
-      radial-gradient(circle at calc(100% + 60px) calc(100% + 100px), rgba(251, 234, 230, 0.2) 0%, transparent 60%),
+      radial-gradient(circle at -140px -140px, transparent 0, transparent 338px, rgba(192, 82, 47, 0.03) 339px, rgba(192, 82, 47, 0.03) 340px, transparent 341px),
+      radial-gradient(circle at -140px -140px, transparent 0, transparent 458px, rgba(192, 82, 47, 0.02) 459px, rgba(192, 82, 47, 0.02) 460px, transparent 461px),
+      radial-gradient(circle at 120px -40px, transparent 0, transparent 258px, rgba(233, 201, 190, 0.25) 259px, rgba(233, 201, 190, 0.25) 260px, transparent 261px),
+      radial-gradient(circle at calc(100% + 60px) calc(100% + 100px), transparent 0, transparent 218px, rgba(253, 241, 236, 0.3) 219px, rgba(253, 241, 236, 0.3) 220px, transparent 221px),
+      radial-gradient(circle at -140px -140px, rgba(192, 82, 47, 0.04) 0%, transparent 65%),
+      radial-gradient(circle at 120px -40px, rgba(233, 201, 190, 0.15) 0%, transparent 55%),
+      radial-gradient(circle at calc(100% + 60px) calc(100% + 100px), rgba(253, 241, 236, 0.2) 0%, transparent 60%),
       var(--color-background);
     pointer-events: none;
   }
@@ -95,8 +97,8 @@
     inset: 0;
     z-index: -1;
     background:
-      radial-gradient(circle at 10% 10%, rgba(225, 77, 63, 0.03) 0%, transparent 50%),
-      radial-gradient(circle at 90% 90%, rgba(247, 217, 211, 0.2) 0%, transparent 50%),
+      radial-gradient(circle at 10% 10%, rgba(192, 82, 47, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 90% 90%, rgba(233, 201, 190, 0.2) 0%, transparent 50%),
       var(--color-background);
     pointer-events: none;
   }

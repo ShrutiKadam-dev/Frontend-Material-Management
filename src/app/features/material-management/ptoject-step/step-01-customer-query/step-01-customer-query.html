@@ -28,23 +28,37 @@
       <div class="header-step-pill" aria-hidden="true">
         Step <strong>01</strong> of 15
       </div>
+      @if (!currentQuery()) {
       <button pButton type="button" icon="pi pi-plus" label="New Customer Query" class="header-primary-btn"
         (click)="openDialog()"></button>
+      } @else {
+      <button pButton type="button" icon="pi pi-pencil" label="Edit Query" class="header-primary-btn"
+        (click)="openEditDialog(currentQuery()!)"></button>
+      }
     </div>
   </div>
 
   <!-- ── Full-Width Layout ────────────────────────────────── -->
   <div class="step-layout--fullwidth">
 
-    <!-- ── Main Panel (Submitted Queries Stream & Table) ───── -->
+    <!-- ── Main Panel (Single Customer Query & Materials Table) ───── -->
     <div class="step-main step-main--fullwidth">
-      <div class="existing-card" aria-label="Submitted queries">
+      <div class="existing-card" aria-label="Customer query view">
         <div class="card-title-row">
-          <span class="card-icon" aria-hidden="true"><i class="pi pi-list"></i></span>
-          <h2>Submitted Queries</h2>
-          @if (queries().length > 0) {
-          <span class="card-count-badge">{{ queries().length }} {{ queries().length === 1 ? 'record' : 'records'
-            }}</span>
+          <div class="card-title-left">
+            <span class="card-icon" aria-hidden="true"><i class="pi pi-file-edit"></i></span>
+            <h2>Customer Query Details</h2>
+            @if (currentQuery()) {
+            <span class="card-count-badge">Active Query</span>
+            }
+          </div>
+          @if (currentQuery(); as q) {
+          <div class="card-actions-right">
+            <button pButton type="button" icon="pi pi-pencil" label="Edit Query" class="p-button-outlined p-button-sm"
+              (click)="openEditDialog(q)"></button>
+            <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm"
+              pTooltip="Delete Query" tooltipPosition="top" (click)="deleteQuery(q.id)"></button>
+          </div>
           }
         </div>
 
@@ -53,20 +67,20 @@
           <div class="loading-ring" aria-hidden="true">
             <i class="pi pi-spin pi-spinner"></i>
           </div>
-          <p>Loading queries…</p>
+          <p>Loading query…</p>
         </div>
-        } @else if (queries().length === 0) {
+        } @else if (!currentQuery()) {
         <div class="center-state empty-cta">
           <span class="empty-icon" aria-hidden="true">
             <i class="pi pi-file-edit"></i>
           </span>
-          <h3>No queries yet</h3>
-          <p>Submit the first customer query to kick off this project step.</p>
-          <button pButton type="button" icon="pi pi-plus" label="New Query" (click)="openDialog()"></button>
+          <h3>No customer query yet</h3>
+          <p>Submit the customer query to kick off this project step.</p>
+          <button pButton type="button" icon="pi pi-plus" label="Create Customer Query" (click)="openDialog()"></button>
         </div>
         } @else {
+        @let q = currentQuery()!;
         <div class="query-list">
-          @for (q of queries(); track q.id) {
           <div class="query-entry">
 
             <!-- Card Header Bar -->
@@ -99,20 +113,15 @@
                   {{ q.attachments.length }} {{ q.attachments.length === 1 ? 'file' : 'files' }}
                 </span>
                 }
-              </div>
-              <div class="qe-actions">
-                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
-                  [attr.aria-label]="'Edit query from ' + (q.qo_date | date: 'dd-MM-yyyy')" pTooltip="Edit query"
-                  tooltipPosition="top" (click)="openEditDialog(q)"></button>
-                <button pButton type="button" icon="pi pi-trash"
-                  class="p-button-text p-button-danger p-button-sm qe-delete"
-                  [attr.aria-label]="'Delete query from ' + (q.qo_date | date: 'dd-MM-yyyy')" pTooltip="Delete query"
-                  tooltipPosition="top" (click)="deleteQuery(q.id)"></button>
+                <span class="qe-badge qe-badge--remarks">
+                  <i class="pi pi-comments" aria-hidden="true"></i>
+                  {{ currentQueryRemarks().length }} {{ currentQueryRemarks().length === 1 ? 'remark' : 'remarks' }}
+                </span>
               </div>
             </div>
 
-            <!-- Card Body Grid (Left: Materials Table, Right: Notes & Files) -->
-            <div class="qe-body" [class.qe-body--full-table]="!q.remark && (!q.attachments || !q.attachments.length)">
+            <!-- Card Body Grid (Left: Materials Table, Right: Remarks Stream & Attachments) -->
+            <div class="qe-body">
 
               <!-- Left: Materials Table (Main Content) -->
               @if (q.items && q.items.length) {
@@ -148,21 +157,59 @@
               </div>
               }
 
-              <!-- Right: Remarks & Attachments -->
-              @if (q.remark || (q.attachments && q.attachments.length)) {
+              <!-- Right: Multiple Remarks Stream & Attachments -->
               <div class="qe-col-details">
-                @if (q.remark) {
-                <div class="vsc-remark-box" style="margin-bottom: 8px;">
-                  <i class="pi pi-info-circle" aria-hidden="true"></i>
-                  <div class="vsc-remark-content">
-                    <span class="vsc-remark-label">Remarks:</span>
-                    <span class="vsc-remark-text">{{ q.remark }}</span>
+
+                <!-- ── Multiple Remarks Section ── -->
+                <div class="remarks-card-section" aria-label="Customer query remarks">
+                  <p class="qe-section-title">
+                    <i class="pi pi-comments" aria-hidden="true"></i>
+                    Remarks & Notes ({{ currentQueryRemarks().length }})
+                  </p>
+
+                  <!-- Remarks Stream / History -->
+                  <div class="remarks-stream">
+                    @if (currentQueryRemarks().length === 0) {
+                    <div class="empty-remarks-hint">
+                      <i class="pi pi-comment" aria-hidden="true"></i>
+                      <span>No remarks recorded yet. Add an initial remark below.</span>
+                    </div>
+                    } @else {
+                    @for (rmk of currentQueryRemarks(); track rmk.id) {
+                    <div class="remark-entry-card">
+                      <div class="remark-entry-top">
+                        <span class="remark-time">
+                          <i class="pi pi-clock" aria-hidden="true"></i>
+                          {{ rmk.created_at | date: 'dd-MM-yyyy, hh:mm a' }}
+                        </span>
+                        <button type="button" class="remark-del-btn" pTooltip="Delete remark" tooltipPosition="left"
+                          [attr.aria-label]="'Delete remark from ' + (rmk.created_at | date: 'dd-MM-yyyy')"
+                          (click)="deleteRemarkFromQuery(rmk.id)">
+                          <i class="pi pi-trash" aria-hidden="true"></i>
+                        </button>
+                      </div>
+                      <div class="remark-entry-body">
+                        {{ rmk.text }}
+                      </div>
+                    </div>
+                    }
+                    }
+                  </div>
+
+                  <!-- Quick Add Remark Box -->
+                  <div class="quick-remark-bar">
+                    <input pInputText type="text" [(ngModel)]="quickRemarkText" placeholder="Add a new remark or note…"
+                      class="quick-remark-input" (keydown.enter)="$event.preventDefault(); quickAddRemark()" />
+                    <button pButton type="button" icon="pi pi-plus" label="Add Remark"
+                      class="p-button-sm quick-remark-btn" [loading]="quickAddingRemark()"
+                      [disabled]="!quickRemarkText().trim() || quickAddingRemark()"
+                      (click)="quickAddRemark()"></button>
                   </div>
                 </div>
-                }
 
+                <!-- ── Attachments Section ── -->
                 @if (q.attachments && q.attachments.length) {
-                <div class="qe-attachments" aria-label="Query attachments">
+                <div class="qe-attachments" aria-label="Query attachments" style="margin-top: 14px;">
                   <p class="qe-section-title">
                     <i class="pi pi-paperclip" aria-hidden="true"></i>
                     Attachments ({{ q.attachments.length }})
@@ -189,13 +236,12 @@
                   </div>
                 </div>
                 }
+
               </div>
-              }
 
             </div>
 
           </div>
-          }
         </div>
         }
       </div>
@@ -402,13 +448,36 @@
         </div>
       </div>
 
-      <!-- ── 4. Remark ──────────────────────────────────── -->
+      <!-- ── 4. Multiple Remarks ────────────────────────── -->
       <div class="dlg-section">
-        <p class="dlg-section-label"><i class="pi pi-comment"></i> 4. Notes & Remarks</p>
-        <div class="field">
-          <label for="dlg-remark" class="visually-hidden">Notes & Remarks</label>
-          <textarea id="dlg-remark" pTextarea formControlName="remark" rows="3"
-            placeholder="Any notes or remarks about this query…" style="width: 100%; resize: vertical;"></textarea>
+        <div class="dlg-section-header">
+          <p class="dlg-section-label"><i class="pi pi-comments"></i> 4. Notes & Remarks</p>
+          <span class="card-count-badge">{{ dialogRemarks().length }} {{ dialogRemarks().length === 1 ? 'remark' : 'remarks' }}</span>
+        </div>
+
+        @if (dialogRemarks().length > 0) {
+        <div class="dlg-remarks-list">
+          @for (rmk of dialogRemarks(); track rmk.id; let i = $index) {
+          <div class="dlg-remark-item">
+            <div class="dlg-remark-item-content">
+              <span class="dlg-remark-text">{{ rmk.text }}</span>
+              <span class="dlg-remark-meta"><i class="pi pi-clock" aria-hidden="true"></i> {{ rmk.created_at | date: 'dd-MM-yyyy, hh:mm a' }}</span>
+            </div>
+            <button type="button" class="dlg-remark-remove" [attr.aria-label]="'Remove remark ' + (i + 1)"
+              pTooltip="Remove remark" tooltipPosition="top" (click)="removeDialogRemark(i)">
+              <i class="pi pi-times" aria-hidden="true"></i>
+            </button>
+          </div>
+          }
+        </div>
+        }
+
+        <div class="dlg-add-remark-row">
+          <input pInputText type="text" [(ngModel)]="newRemarkInput" [ngModelOptions]="{ standalone: true }"
+            placeholder="Type note or remark and press Enter or click Add…" class="dlg-remark-input"
+            (keydown.enter)="$event.preventDefault(); addDialogRemark()" />
+          <button pButton type="button" icon="pi pi-plus" label="Add" class="p-button-sm dlg-add-remark-btn"
+            [disabled]="!newRemarkInput().trim()" (click)="addDialogRemark()"></button>
         </div>
       </div>
 

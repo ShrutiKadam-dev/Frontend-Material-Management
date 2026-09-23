@@ -1,1 +1,257 @@
 // Step 01 Customer Query styles are inherited from global step-common design system
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.card-title-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.card-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qe-badge--remarks {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: #fde68a !important;
+
+  .pi {
+    color: #d97706 !important;
+  }
+}
+
+/* ── Multiple Remarks Section on Card ── */
+.remarks-card-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--color-surface-muted, #faf9f6);
+  border: 1px solid var(--color-border-soft, #e7e4de);
+  border-radius: var(--radius-control, 8px);
+  padding: 14px;
+}
+
+.remarks-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+
+  /* Custom subtle scrollbar */
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #d8d4cd;
+    border-radius: 4px;
+  }
+}
+
+.empty-remarks-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #ffffff;
+  border: 1px dashed var(--color-border, #d8d4cd);
+  border-radius: var(--radius-control, 8px);
+  color: var(--color-muted, #6b6864);
+  font-size: 0.8rem;
+
+  .pi {
+    color: var(--color-primary, #c0522f);
+    font-size: 0.9rem;
+  }
+}
+
+.remark-entry-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #ffffff;
+  border: 1px solid var(--color-border-soft, #e7e4de);
+  border-left: 3px solid var(--color-primary, #c0522f);
+  border-radius: 0 var(--radius-control, 8px) var(--radius-control, 8px) 0;
+  padding: 8px 12px;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  }
+}
+
+.remark-entry-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.remark-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.73rem;
+  color: var(--color-muted, #6b6864);
+  font-weight: 600;
+
+  .pi {
+    font-size: 0.72rem;
+    color: #94a3b8;
+  }
+}
+
+.remark-del-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    color: #ef4444;
+    background: #fee2e2;
+  }
+
+  .pi {
+    font-size: 0.75rem;
+  }
+}
+
+.remark-entry-body {
+  font-size: 0.82rem;
+  color: var(--color-heading, #1c1b1a);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Quick Add Remark Row on Card */
+.quick-remark-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+
+  .quick-remark-input {
+    flex: 1;
+    font-size: 0.82rem;
+    padding: 7px 11px;
+    border-radius: var(--radius-control, 8px);
+    background: #ffffff;
+  }
+
+  .quick-remark-btn {
+    white-space: nowrap;
+    padding: 7px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+/* ── Dialog Multiple Remarks Section ── */
+.dlg-remarks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.dlg-remark-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--color-surface-muted, #faf9f6);
+  border: 1px solid var(--color-border-soft, #e7e4de);
+  border-radius: var(--radius-control, 8px);
+  padding: 8px 12px;
+}
+
+.dlg-remark-item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.dlg-remark-text {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-heading, #1c1b1a);
+  word-break: break-word;
+}
+
+.dlg-remark-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--color-muted, #6b6864);
+
+  .pi {
+    font-size: 0.7rem;
+  }
+}
+
+.dlg-remark-remove {
+  background: transparent;
+  border: none;
+  color: var(--color-muted, #6b6864);
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    color: #ef4444;
+    background: #fee2e2;
+  }
+
+  .pi {
+    font-size: 0.8rem;
+  }
+}
+
+.dlg-add-remark-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .dlg-remark-input {
+    flex: 1;
+    font-size: 0.84rem;
+  }
+
+  .dlg-add-remark-btn {
+    white-space: nowrap;
+    padding: 6px 14px;
+  }
+}

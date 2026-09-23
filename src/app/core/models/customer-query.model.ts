@@ -6,6 +6,12 @@ export interface CustomerQueryItem {
   quantity: string | number;
 }
 
+export interface CustomerQueryRemark {
+  id: string;
+  text: string;
+  created_at: string;
+}
+
 export interface CustomerQuery {
   id: number;
   project_id: number;

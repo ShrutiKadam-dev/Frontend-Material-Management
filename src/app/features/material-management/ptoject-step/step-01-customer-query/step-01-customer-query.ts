@@ -7,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormsModule, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { finalize } from 'rxjs';
 import { MessageService } from 'primeng/api';
@@ -27,6 +27,7 @@ import {
   CustomerQuery,
   CustomerQueryCreateInput,
   CustomerQueryItem,
+  CustomerQueryRemark,
   CustomerQueryUpdateInput,
 } from '../../../../core/models/customer-query.model';
 import { Attachment } from '../../../../core/models/attachment.model';
@@ -37,6 +38,7 @@ import { Project } from '../../../../core/models/project.model';
   selector: 'app-step-01-customer-query',
   imports: [
     ReactiveFormsModule,
+    FormsModule,
     ButtonModule,
     DialogModule,
     InputTextModule,
@@ -69,6 +71,9 @@ export class Step01CustomerQuery implements OnInit {
   protected readonly downloadingAttachmentId = signal<number | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
 
+  /** The single customer query for this project (enforcing single query constraint) */
+  protected readonly currentQuery = computed(() => this.queries()[0] ?? null);
+
   /** Holds the active query being edited, or null for create mode */
   protected readonly editingQuery = signal<CustomerQuery | null>(null);
 
@@ -90,9 +95,24 @@ export class Step01CustomerQuery implements OnInit {
 
   protected readonly totalItems = computed(() => this.items().length);
 
+  /** Multiple Remarks Support: draft remarks in dialog */
+  protected readonly dialogRemarks = signal<CustomerQueryRemark[]>([]);
+  /** Input model for adding a remark in dialog */
+  protected readonly newRemarkInput = signal('');
+
+  /** Input model for quick-adding a remark directly from main card */
+  protected readonly quickRemarkText = signal('');
+  protected readonly quickAddingRemark = signal(false);
+
+  /** Chronological parsed remarks for the single active customer query */
+  protected readonly currentQueryRemarks = computed(() => {
+    const q = this.currentQuery();
+    if (!q) return [];
+    return this.parseRemarks(q.remark, q.created_at || q.qo_date);
+  });
+
   protected readonly headerForm = this.fb.group({
     qo_date: [null as Date | null, Validators.required],
-    remark: [''],
   });
 
   protected readonly rowForm = this.fb.group({
@@ -131,18 +151,157 @@ export class Step01CustomerQuery implements OnInit {
     });
   }
 
+  /* ── Multiple Remarks Helpers ─────────────────────────── */
+
+  protected parseRemarks(rawRemark?: string | null, defaultDate?: string): CustomerQueryRemark[] {
+    if (!rawRemark || !rawRemark.trim()) {
+      return [];
+    }
+    const trimmed = rawRemark.trim();
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .map((item, idx) => ({
+              id: item.id || `rmk-${idx + 1}-${Date.now()}`,
+              text: typeof item === 'string' ? item : item.text || '',
+              created_at: item.created_at || defaultDate || new Date().toISOString(),
+            }))
+            .filter((r) => !!r.text.trim());
+        }
+      } catch {
+        // Fallback to legacy plain text handling below
+      }
+    }
+    return [
+      {
+        id: 'legacy-1',
+        text: trimmed,
+        created_at: defaultDate || new Date().toISOString(),
+      },
+    ];
+  }
+
+  protected serializeRemarks(remarks: CustomerQueryRemark[]): string {
+    const valid = remarks.filter((r) => !!r.text.trim());
+    if (valid.length === 0) return '';
+    return JSON.stringify(valid);
+  }
+
+  protected addDialogRemark(): void {
+    const text = this.newRemarkInput().trim();
+    if (!text) return;
+    const remark: CustomerQueryRemark = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    this.dialogRemarks.update((list) => [...list, remark]);
+    this.newRemarkInput.set('');
+  }
+
+  protected removeDialogRemark(index: number): void {
+    this.dialogRemarks.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  protected quickAddRemark(): void {
+    const query = this.currentQuery();
+    const text = this.quickRemarkText().trim();
+    if (!query || !text || this.quickAddingRemark()) return;
+
+    const newRemark: CustomerQueryRemark = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+
+    const existingRemarks = this.currentQueryRemarks();
+    const updatedRemarks = [...existingRemarks, newRemark];
+    const serialized = this.serializeRemarks(updatedRemarks);
+
+    this.quickAddingRemark.set(true);
+    const updatePayload: CustomerQueryUpdateInput = {
+      project_id: query.project_id,
+      customer_id: query.customer_id,
+      qo_date: query.qo_date,
+      remark: serialized,
+      items: query.items,
+    };
+
+    this.customerQueryService
+      .update(query.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingRemark.set(false)))
+      .subscribe({
+        next: () => {
+          this.quickRemarkText.set('');
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to customer query.',
+            life: 3000,
+          });
+          this.loadQueries(this.projectId());
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromQuery(remarkId: string): void {
+    const query = this.currentQuery();
+    if (!query) return;
+
+    const existingRemarks = this.currentQueryRemarks();
+    const updatedRemarks = existingRemarks.filter((r) => r.id !== remarkId);
+    const serialized = this.serializeRemarks(updatedRemarks);
+
+    const updatePayload: CustomerQueryUpdateInput = {
+      project_id: query.project_id,
+      customer_id: query.customer_id,
+      qo_date: query.qo_date,
+      remark: serialized,
+      items: query.items,
+    };
+
+    this.customerQueryService.update(query.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed successfully.',
+          life: 2500,
+        });
+        this.loadQueries(this.projectId());
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
+  }
+
   /* ── Dialog (Shared for Add and Edit) ─────────────────── */
 
   protected openDialog(): void {
     this.editingQuery.set(null);
     this.headerForm.reset({
       qo_date: null,
-      remark: '',
     });
     this.rowForm.reset({ material_name: '', quantity: '' });
     this.items.set([]);
     this.existingAttachments.set([]);
     this.attachments.set([]);
+    this.dialogRemarks.set([]);
+    this.newRemarkInput.set('');
     this.addRowVisible.set(false);
     this.editingIndex.set(null);
     this.errorMessage.set(null);
@@ -153,12 +312,13 @@ export class Step01CustomerQuery implements OnInit {
     this.editingQuery.set(query);
     this.headerForm.setValue({
       qo_date: this.parseDate(query.qo_date),
-      remark: query.remark ?? '',
     });
     this.rowForm.reset({ material_name: '', quantity: '' });
     this.items.set(query.items ? query.items.map((it) => ({ ...it })) : []);
     this.existingAttachments.set(query.attachments ?? []);
     this.attachments.set([]);
+    this.dialogRemarks.set(this.parseRemarks(query.remark, query.created_at || query.qo_date));
+    this.newRemarkInput.set('');
     this.addRowVisible.set(false);
     this.editingIndex.set(null);
     this.errorMessage.set(null);
@@ -307,6 +467,11 @@ export class Step01CustomerQuery implements OnInit {
     const files = this.attachments();
     const currentQuery = this.editingQuery();
 
+    if (this.newRemarkInput().trim()) {
+      this.addDialogRemark();
+    }
+    const remarksSerialized = this.serializeRemarks(this.dialogRemarks());
+
     this.submitting.set(true);
     this.errorMessage.set(null);
 
@@ -315,7 +480,7 @@ export class Step01CustomerQuery implements OnInit {
         project_id: projectId,
         customer_id: customerId,
         qo_date: this.formatDate(qoDate),
-        remark: raw.remark ?? '',
+        remark: remarksSerialized,
         items: this.items(),
       };
 
@@ -348,7 +513,7 @@ export class Step01CustomerQuery implements OnInit {
         project_id: projectId,
         customer_id: customerId,
         qo_date: this.formatDate(qoDate),
-        remark: raw.remark ?? '',
+        remark: remarksSerialized,
         items: this.items(),
       };
 

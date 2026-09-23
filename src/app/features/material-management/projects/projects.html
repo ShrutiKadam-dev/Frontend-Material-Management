@@ -124,75 +124,76 @@
     @for (project of filteredProjects(); track project.id) {
     <article class="modern-project-card" [class.modern-project-card--delayed]="project.health_status === 'delayed'">
 
-      <!-- Card Top Bar -->
-      <div class="mpc-topbar">
-        <div class="mpc-badge-group">
-          <span class="mpc-id-pill">#{{ project.id < 10 ? '0' + project.id : project.id }}</span>
-          @if (project.project_code) {
-          <span class="mpc-code-pill" [title]="'Project Code: ' + project.project_code">{{ project.project_code }}</span>
-          }
-          <span class="health-pill" [class]="'health-pill ' + getHealthBadgeClass(project.health_status)">
-            <span class="pulse-dot" aria-hidden="true"></span>
+      <!-- 1. Top Row: Chip Group (Left) & Price Block (Right) -->
+      <div class="mpc-top-row">
+        <div class="mpc-chip-group">
+          <span class="mpc-chip mpc-chip--id" pTooltip="Project Code" tooltipPosition="top">
+            {{ project.project_code || ('PRJ-' + (project.id < 10 ? '0' + project.id : project.id)) }}
+          </span>
+          <span class="mpc-chip mpc-chip--status" [class]="'mpc-chip mpc-chip--status ' + getHealthBadgeClass(project.health_status)">
+            <span class="status-dot" aria-hidden="true"></span>
             {{ getHealthLabel(project.health_status) }}
           </span>
-          <span class="status-badge" [class]="'status-badge ' + getStatusBadgeClass(project.status)">
+          <span class="mpc-chip mpc-chip--phase" [class]="'mpc-chip mpc-chip--phase ' + getStatusBadgeClass(project.status)">
             {{ getStatusLabel(project.status) }}
           </span>
         </div>
 
-        <div class="mpc-value-badge" pTooltip="Contract Total Value" tooltipPosition="left">
-          <span class="curr-symbol">{{ project.currency || 'INR' }}</span>
-          <strong>₹&nbsp;{{ (project.total_value || 0) | number:'1.2-2' }}</strong>
+        <div class="mpc-price-block">
+          <div class="price-amount-row">
+            <span class="price-currency">{{ project.currency || 'INR' }}</span>
+            <span class="price-value">₹{{ (project.total_value || 0) | number:'1.2-2' }}</span>
+          </div>
+          <span class="price-date">
+            {{ project.target_delivery_date ? ('Target delivery ' + (project.target_delivery_date | date:'d MMMM yyyy')) : ('Last updated ' + ((project.updated_at || project.created_at) | date:'d MMMM yyyy')) }}
+          </span>
         </div>
       </div>
 
-      <!-- Card Title & Link -->
-      <div class="mpc-title-box">
-        <h2 class="mpc-title" (click)="openDetailsDialog(project)" [title]="project.project_title">
-          {{ project.project_title }}
-        </h2>
-      </div>
+      <!-- 2. Title -->
+      <h2 class="mpc-title" (click)="openDetailsDialog(project)" [title]="project.project_title">
+        {{ project.project_title }}
+      </h2>
 
-      <!-- Parties Strip (Customer & Supplier) -->
+      <!-- 3. Customer / Supplier 2-Column Grid -->
       <div class="mpc-parties-grid">
-        <!-- Customer Box -->
-        <div class="party-box party-box--customer">
-          <div class="party-header">
-            <span class="party-label">
-              <i class="pi pi-building" aria-hidden="true"></i> Customer
+        <div class="party-cell party-cell--customer">
+          <div class="party-icon-box" aria-hidden="true">
+            <i class="pi pi-building"></i>
+          </div>
+          <div class="party-text-stack">
+            <span class="party-label">Customer</span>
+            <span class="party-value" [title]="project.customer_name || getCustomerName(project.customer_id)">
+              {{ project.customer_name || getCustomerName(project.customer_id) }}
             </span>
           </div>
-          <p class="party-name" [title]="project.customer_name || getCustomerName(project.customer_id)">
-            {{ project.customer_name || getCustomerName(project.customer_id) }}
-          </p>
         </div>
 
-        <!-- Supplier Box -->
-        <div class="party-box party-box--supplier">
-          <div class="party-header">
-            <span class="party-label">
-              <i class="pi pi-truck" aria-hidden="true"></i> Supplier
-            </span>
-
+        <div class="party-cell party-cell--supplier">
+          <div class="party-icon-box" aria-hidden="true">
+            <i class="pi pi-truck"></i>
           </div>
-          <p class="party-name" [title]="project.supplier_name || getSupplierName(project.supplier_id)">
-            {{ project.supplier_name || getSupplierName(project.supplier_id) }}
-          </p>
+          <div class="party-text-stack">
+            <span class="party-label">Supplier</span>
+            <span class="party-value" [title]="project.supplier_name || getSupplierName(project.supplier_id)">
+              {{ project.supplier_name || getSupplierName(project.supplier_id) }}
+            </span>
+          </div>
         </div>
       </div>
 
-      <!-- Active Milestone & Progress Bar -->
-      <div class="mpc-progress-box">
+      <!-- 4. Progress Section -->
+      <div class="mpc-progress-section">
         <div class="progress-info-row">
-          <div class="active-step-meta">
-            <span class="step-num-pill">
+          <div class="progress-stage-group">
+            <span class="step-chip">
               Step {{ project.current_step_number || 1 }} of {{ project.total_steps || 15 }}
             </span>
-            <span class="step-name-text">
+            <span class="stage-name">
               {{ project.current_step_name || 'Customer Query Initiated' }}
             </span>
           </div>
-          <span class="percent-text">{{ getProgressPercent(project) }}%</span>
+          <span class="progress-percent">{{ getProgressPercent(project) }}%</span>
         </div>
 
         <div class="progress-track" role="progressbar" [attr.aria-valuenow]="getProgressPercent(project)"
@@ -202,45 +203,32 @@
         </div>
       </div>
 
-      <!-- Next Action Spotlight -->
+      <!-- 5. Next Action Spotlight -->
       @if (project.next_action) {
-      <div class="next-action-spotlight">
-        <div class="action-icon-wrap" aria-hidden="true">
+      <div class="mpc-next-action">
+        <div class="next-action-icon-chip" aria-hidden="true">
           <i class="pi pi-bolt"></i>
         </div>
-        <div class="action-details">
-          <span class="action-caption">Next Operational Action:</span>
-          <p class="action-text" [title]="project.next_action">{{ project.next_action }}</p>
+        <div class="next-action-text-stack">
+          <span class="next-action-label">Next action</span>
+          <p class="next-action-value" [title]="project.next_action">{{ project.next_action }}</p>
         </div>
       </div>
       }
 
-      <!-- Target Delivery Date & Meta -->
-      <div class="mpc-meta-row">
-        @if (project.target_delivery_date) {
-        <span class="delivery-pill" [class.delivery-pill--overdue]="project.health_status === 'delayed'">
-          <i class="pi pi-calendar" aria-hidden="true"></i>
-          Target Delivery: {{ project.target_delivery_date | date:'dd-MM-yyyy' }}
-        </span>
-        } @else {
-        <span class="delivery-pill delivery-pill--muted">
-          <i class="pi pi-clock" aria-hidden="true"></i>
-          Updated: {{ project.updated_at | date:'dd-MM-yyyy' }}
-        </span>
-        }
-      </div>
-
-      <!-- Card Action Footer -->
+      <!-- 6. Bottom Row: Edit/Delete (Left), Primary CTA (Right) -->
       <div class="mpc-footer">
-        <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm edit-card-btn"
-          pTooltip="Edit Project Info" tooltipPosition="top" (click)="openEditDialog(project)"
-          aria-label="Edit project"></button>
+        <div class="mpc-footer-actions">
+          <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm edit-card-btn"
+            pTooltip="Edit Project" tooltipPosition="top" (click)="openEditDialog(project)"
+            aria-label="Edit project"></button>
 
-        <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger remove-card-btn"
-          pTooltip="Remove Project" tooltipPosition="top" (click)="deleteProject(project)"
-          aria-label="Remove project"></button>
+          <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger remove-card-btn"
+            pTooltip="Remove Project" tooltipPosition="top" (click)="deleteProject(project)"
+            aria-label="Remove project"></button>
+        </div>
 
-        <button pButton type="button" label="Open 15-Step Pipeline" icon="pi pi-arrow-right" iconPos="right"
+        <button pButton type="button" label="Open 15-step pipeline" icon="pi pi-arrow-right" iconPos="right"
           class="launch-pipeline-btn" (click)="openDetailsDialog(project)"></button>
       </div>
     </article>
@@ -257,7 +245,7 @@
       styleClass="p-datatable-sm items-table-wrap" responsiveLayout="scroll">
       <ng-template pTemplate="header">
         <tr>
-          <th scope="col" style="width: 60px; text-align: center;">#</th>
+          <th scope="col" style="min-width: 120px; text-align: center;">Project Code</th>
           <th scope="col" style="min-width: 220px;">Project Title</th>
           <th scope="col" style="min-width: 180px;">Customer</th>
           <th scope="col" style="min-width: 180px;">Supplier</th>
@@ -271,15 +259,11 @@
 
       <ng-template pTemplate="body" let-p let-i="rowIndex">
         <tr class="table-project-row">
-          <td style="text-align: center; font-weight: 700; color: #64748b;">
-            #{{ p.id < 10 ? '0' + p.id : p.id }} </td>
+          <td style="text-align: center;">
+            <span class="tbl-code-pill">{{ p.project_code || ('PRJ-' + (p.id < 10 ? '0' + p.id : p.id)) }}</span>
+          </td>
           <td>
-            <div class="tbl-title-row">
-              <strong class="tbl-project-title" (click)="openDetailsDialog(p)">{{ p.project_title }}</strong>
-              @if (p.project_code) {
-              <span class="tbl-code-pill" [title]="'Project Code: ' + p.project_code">{{ p.project_code }}</span>
-              }
-            </div>
+            <strong class="tbl-project-title" (click)="openDetailsDialog(p)">{{ p.project_title }}</strong>
             <span class="tbl-date-sub">{{ p.created_at | date:'dd-MM-yyyy' }}</span>
           </td>
           <td>
