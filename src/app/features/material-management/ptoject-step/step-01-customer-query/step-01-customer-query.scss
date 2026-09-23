@@ -45,13 +45,11 @@
   padding: 14px;
 }
 
-.remarks-stream {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+/* ── Connected Timeline Sequence (No repeated card chrome) ── */
+.remarks-timeline {
   max-height: 280px;
   overflow-y: auto;
-  padding-right: 4px;
+  padding: 4px 6px 4px 2px;
 
   /* Custom subtle scrollbar */
   &::-webkit-scrollbar {
@@ -61,6 +59,125 @@
     background: #d8d4cd;
     border-radius: 4px;
   }
+}
+
+.timeline-sequence,
+.dlg-timeline-sequence {
+  display: flex;
+  flex-direction: column;
+}
+
+.dlg-timeline-sequence {
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 4px 6px 4px 2px;
+  margin-bottom: 12px;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  position: relative;
+  padding-bottom: 16px;
+
+  &--last {
+    padding-bottom: 4px;
+  }
+}
+
+.timeline-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.timeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary, #c0522f);
+  margin-top: 5px;
+  box-shadow: 0 0 0 3px rgba(192, 82, 47, 0.16);
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.timeline-stem {
+  position: absolute;
+  top: 13px;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-border-soft, #e7e4de);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.timeline-entry {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: transparent;
+  padding: 0;
+}
+
+.timeline-meta-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.timeline-timestamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--color-heading, #1c1b1a);
+
+  .pi {
+    font-size: 0.72rem;
+    color: var(--color-muted, #6b6864);
+  }
+}
+
+.timeline-delete-btn,
+.dlg-remark-remove {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: all 0.15s ease;
+
+  &:hover {
+    opacity: 1;
+    color: #ef4444;
+    background: #fee2e2;
+  }
+
+  .pi {
+    font-size: 0.75rem;
+  }
+}
+
+.timeline-text {
+  font-size: 0.83rem;
+  color: var(--color-heading, #1c1b1a);
+  line-height: 1.48;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .empty-remarks-hint {
@@ -78,73 +195,6 @@
     color: var(--color-primary, #c0522f);
     font-size: 0.9rem;
   }
-}
-
-.remark-entry-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: #ffffff;
-  border: 1px solid var(--color-border-soft, #e7e4de);
-  border-left: 3px solid var(--color-primary, #c0522f);
-  border-radius: 0 var(--radius-control, 8px) var(--radius-control, 8px) 0;
-  padding: 8px 12px;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
-
-  &:hover {
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-  }
-}
-
-.remark-entry-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.remark-time {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.73rem;
-  color: var(--color-muted, #6b6864);
-  font-weight: 600;
-
-  .pi {
-    font-size: 0.72rem;
-    color: #94a3b8;
-  }
-}
-
-.remark-del-btn {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.15s ease, background-color 0.15s ease;
-
-  &:hover {
-    color: #ef4444;
-    background: #fee2e2;
-  }
-
-  .pi {
-    font-size: 0.75rem;
-  }
-}
-
-.remark-entry-body {
-  font-size: 0.82rem;
-  color: var(--color-heading, #1c1b1a);
-  line-height: 1.45;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 
 /* Quick Add Remark Row on Card */
@@ -170,76 +220,6 @@
 }
 
 /* ── Dialog Multiple Remarks Section ── */
-.dlg-remarks-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
-  max-height: 180px;
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-.dlg-remark-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  background: var(--color-surface-muted, #faf9f6);
-  border: 1px solid var(--color-border-soft, #e7e4de);
-  border-radius: var(--radius-control, 8px);
-  padding: 8px 12px;
-}
-
-.dlg-remark-item-content {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.dlg-remark-text {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--color-heading, #1c1b1a);
-  word-break: break-word;
-}
-
-.dlg-remark-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.72rem;
-  color: var(--color-muted, #6b6864);
-
-  .pi {
-    font-size: 0.7rem;
-  }
-}
-
-.dlg-remark-remove {
-  background: transparent;
-  border: none;
-  color: var(--color-muted, #6b6864);
-  cursor: pointer;
-  padding: 3px 6px;
-  border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.15s ease, background-color 0.15s ease;
-
-  &:hover {
-    color: #ef4444;
-    background: #fee2e2;
-  }
-
-  .pi {
-    font-size: 0.8rem;
-  }
-}
-
 .dlg-add-remark-row {
   display: flex;
   align-items: center;
