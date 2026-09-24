@@ -251,7 +251,8 @@
                             <h2 class="vsc-title">Tax Invoice — {{ inv.invoice_no }}</h2>
                         </div>
                         <div class="vsc-header-right">
-                            <span class="vsc-cost-pill" [pTooltip]="'Net Total: ₹ ' + (inv.net_total | number:'1.2-2')" tooltipPosition="bottom">
+                            <span class="vsc-cost-pill" [pTooltip]="'Net Total: ₹ ' + (inv.net_total | number:'1.2-2')"
+                                tooltipPosition="bottom">
                                 <i class="pi pi-wallet" aria-hidden="true"></i>
                                 ₹ {{ inv.net_total | number:'1.2-2' }}
                             </span>
@@ -262,7 +263,8 @@
                             </span>
                             }
                             <div class="actions-cell">
-                                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                                <button pButton type="button" icon="pi pi-pencil"
+                                    class="p-button-text p-button-sm qe-edit"
                                     [attr.aria-label]="'Edit invoice ' + inv.invoice_no" pTooltip="Edit invoice"
                                     tooltipPosition="top" (click)="openEditInvoiceDialog(inv)"></button>
                                 <button pButton type="button" icon="pi pi-trash"
@@ -300,56 +302,69 @@
                                 <tbody>
                                     @for (item of inv.items; track $index; let i = $index) {
                                     <tr>
-                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{ i + 1 }}</td>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{
+                                            i + 1 }}</td>
                                         <td class="font-medium">{{ item.material_name }}</td>
                                         <td><span class="hsn-pill">{{ item.hsn_code || '—' }}</span></td>
                                         <td class="text-right">{{ item.quantity }}</td>
                                         <td class="text-right font-mono">₹ {{ item.unit_price | number:'1.2-2' }}</td>
-                                        <td class="text-right font-mono font-bold">₹ {{ (item.net_amount || (item.quantity *
+                                        <td class="text-right font-mono font-bold">₹ {{ (item.net_amount ||
+                                            (item.quantity *
                                             (item.unit_price || 0))) | number:'1.2-2' }}</td>
                                     </tr>
                                     }
                                 </tbody>
                                 <tfoot>
                                     <tr class="tfoot-subtotal-row">
-                                        <td colspan="5" style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
+                                        <td colspan="5"
+                                            style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
                                             Taxable Amount (Subtotal):
                                         </td>
-                                        <td style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
+                                        <td
+                                            style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
                                             ₹ {{ calculateInvoiceSubtotal(inv) | number:'1.2-2' }}
                                         </td>
                                     </tr>
                                     <tr class="tfoot-gst-row">
-                                        <td colspan="5" style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
+                                        <td colspan="5"
+                                            style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
                                             <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                                <i class="pi pi-percentage" style="color: #d97706; font-size: 0.74rem;"></i>
+                                                <i class="pi pi-percentage"
+                                                    style="color: #d97706; font-size: 0.74rem;"></i>
                                                 GST Amount ({{ inv.gst_rate }}%):
                                             </span>
                                         </td>
-                                        <td style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
+                                        <td
+                                            style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
                                             ₹ {{ (inv.gst_amount || 0) | number:'1.2-2' }}
                                         </td>
                                     </tr>
                                     @if (inv.round_off) {
                                     <tr class="tfoot-round-row">
-                                        <td colspan="5" style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
+                                        <td colspan="5"
+                                            style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
                                             Round Off:
                                         </td>
-                                        <td style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
+                                        <td
+                                            style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
                                             ₹ {{ inv.round_off | number:'1.2-2' }}
                                         </td>
                                     </tr>
                                     }
                                     <tr class="tfoot-grand-total-row">
-                                        <td colspan="5" style="text-align: right; font-weight: 800; color: #991b1b; padding: 10px 14px; background: #fef2f2; border-top: 2px solid rgba(225, 77, 63, 0.25);">
-                                            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 7px;">
-                                                <span class="total-icon-badge" aria-hidden="true" style="background: rgba(225,77,63,0.12); color: #e14d3f; border-radius: 4px; padding: 2px 6px; font-size: 0.78rem;">
+                                        <td colspan="5"
+                                            style="text-align: right; font-weight: 800; color: #991b1b; padding: 10px 14px; background: #fef2f2; border-top: 2px solid rgba(225, 77, 63, 0.25);">
+                                            <div
+                                                style="display: flex; align-items: center; justify-content: flex-end; gap: 7px;">
+                                                <span class="total-icon-badge" aria-hidden="true"
+                                                    style="background: rgba(225,77,63,0.12); color: #e14d3f; border-radius: 4px; padding: 2px 6px; font-size: 0.78rem;">
                                                     <i class="pi pi-calculator"></i>
                                                 </span>
                                                 <span>Net Total (Incl. GST):</span>
                                             </div>
                                         </td>
-                                        <td style="text-align: right; font-family: monospace; font-size: 1.05rem; font-weight: 850; color: #e14d3f; padding: 10px 14px; background: #fef2f2; border-top: 2px solid rgba(225, 77, 63, 0.25); white-space: nowrap;">
+                                        <td
+                                            style="text-align: right; font-family: monospace; font-size: 1.05rem; font-weight: 850; color: #e14d3f; padding: 10px 14px; background: #fef2f2; border-top: 2px solid rgba(225, 77, 63, 0.25); white-space: nowrap;">
                                             ₹ {{ inv.net_total | number:'1.2-2' }}
                                         </td>
                                     </tr>
@@ -359,11 +374,8 @@
                         }
 
                         <!-- Remarks & Notes -->
-                        <app-step-remarks
-                            [remarks]="inv.remarks || inv.remark"
-                            [defaultDate]="inv.invoice_date"
-                            [loading]="quickAddingId() === inv.id"
-                            (quickAdd)="quickAddInvoiceRemark(inv, $event)"
+                        <app-step-remarks [remarks]="inv.remarks || inv.remark" [defaultDate]="inv.invoice_date"
+                            [loading]="quickAddingId() === inv.id" (quickAdd)="quickAddInvoiceRemark(inv, $event)"
                             (deleteRemark)="deleteRemarkFromInvoice(inv, $event)" />
 
                         <!-- Attachments -->
@@ -383,9 +395,10 @@
                                         <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
                                         }
                                     </div>
-                                    <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
-                                        pTooltip="Download attachment" tooltipPosition="top"
-                                        [disabled]="downloadingAttachmentId() === att.id" (click)="downloadAttachment(att)">
+                                    <button type="button" class="qe-att-download"
+                                        [attr.aria-label]="'Download ' + att.file_name" pTooltip="Download attachment"
+                                        tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                                        (click)="downloadAttachment(att)">
                                         @if (downloadingAttachmentId() === att.id) {
                                         <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
                                         } @else {
@@ -451,13 +464,16 @@
                             </span>
                             }
                             <div class="actions-cell">
-                                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
-                                    [attr.aria-label]="'Edit packing list ' + pl.packing_list_no" pTooltip="Edit packing list"
-                                    tooltipPosition="top" (click)="openEditPackingListDialog(pl)"></button>
+                                <button pButton type="button" icon="pi pi-pencil"
+                                    class="p-button-text p-button-sm qe-edit"
+                                    [attr.aria-label]="'Edit packing list ' + pl.packing_list_no"
+                                    pTooltip="Edit packing list" tooltipPosition="top"
+                                    (click)="openEditPackingListDialog(pl)"></button>
                                 <button pButton type="button" icon="pi pi-trash"
                                     class="p-button-text p-button-sm p-button-danger qe-delete"
-                                    [attr.aria-label]="'Delete packing list ' + pl.packing_list_no" pTooltip="Delete packing list"
-                                    tooltipPosition="top" (click)="deletePackingList(pl)"></button>
+                                    [attr.aria-label]="'Delete packing list ' + pl.packing_list_no"
+                                    pTooltip="Delete packing list" tooltipPosition="top"
+                                    (click)="deletePackingList(pl)"></button>
                             </div>
                         </div>
                     </div>
@@ -503,8 +519,10 @@
                                 <tbody>
                                     @for (item of pl.items; track $index; let i = $index) {
                                     <tr>
-                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{ i + 1 }}</td>
-                                        <td><span class="box-pill">{{ item.package_no || 'Box #' + (i + 1) }}</span></td>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{
+                                            i + 1 }}</td>
+                                        <td><span class="box-pill">{{ item.package_no || 'Box #' + (i + 1) }}</span>
+                                        </td>
                                         <td class="font-medium">{{ item.material_name }}</td>
                                         <td><span class="hsn-pill">{{ item.hsn_code || '—' }}</span></td>
                                         <td class="text-right">{{ item.quantity }}</td>
@@ -517,11 +535,8 @@
                         }
 
                         <!-- Remarks & Notes -->
-                        <app-step-remarks
-                            [remarks]="pl.remarks || pl.remark"
-                            [defaultDate]="pl.packing_list_date"
-                            [loading]="quickAddingId() === pl.id"
-                            (quickAdd)="quickAddPackingListRemark(pl, $event)"
+                        <app-step-remarks [remarks]="pl.remarks || pl.remark" [defaultDate]="pl.packing_list_date"
+                            [loading]="quickAddingId() === pl.id" (quickAdd)="quickAddPackingListRemark(pl, $event)"
                             (deleteRemark)="deleteRemarkFromPackingList(pl, $event)" />
 
                         <!-- Attachments -->
@@ -541,9 +556,10 @@
                                         <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
                                         }
                                     </div>
-                                    <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
-                                        pTooltip="Download attachment" tooltipPosition="top"
-                                        [disabled]="downloadingAttachmentId() === att.id" (click)="downloadAttachment(att)">
+                                    <button type="button" class="qe-att-download"
+                                        [attr.aria-label]="'Download ' + att.file_name" pTooltip="Download attachment"
+                                        tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                                        (click)="downloadAttachment(att)">
                                         @if (downloadingAttachmentId() === att.id) {
                                         <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
                                         } @else {
@@ -598,7 +614,9 @@
                             <h2 class="vsc-title">Delivery Challan — {{ dc.delivery_challan_no }}</h2>
                         </div>
                         <div class="vsc-header-right">
-                            <span class="vsc-cost-pill" [pTooltip]="'Net Total (Incl. GST): ₹ ' + ((dc.net_total || calculateChallanNetTotal(dc)) | number:'1.2-2')" tooltipPosition="bottom">
+                            <span class="vsc-cost-pill"
+                                [pTooltip]="'Net Total (Incl. GST): ₹ ' + ((dc.net_total || calculateChallanNetTotal(dc)) | number:'1.2-2')"
+                                tooltipPosition="bottom">
                                 <i class="pi pi-wallet" aria-hidden="true"></i>
                                 ₹ {{ (dc.net_total || calculateChallanNetTotal(dc)) | number:'1.2-2' }}
                             </span>
@@ -609,13 +627,16 @@
                             </span>
                             }
                             <div class="actions-cell">
-                                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
-                                    [attr.aria-label]="'Edit challan ' + dc.delivery_challan_no" pTooltip="Edit delivery challan"
-                                    tooltipPosition="top" (click)="openEditChallanDialog(dc)"></button>
+                                <button pButton type="button" icon="pi pi-pencil"
+                                    class="p-button-text p-button-sm qe-edit"
+                                    [attr.aria-label]="'Edit challan ' + dc.delivery_challan_no"
+                                    pTooltip="Edit delivery challan" tooltipPosition="top"
+                                    (click)="openEditChallanDialog(dc)"></button>
                                 <button pButton type="button" icon="pi pi-trash"
                                     class="p-button-text p-button-sm p-button-danger qe-delete"
-                                    [attr.aria-label]="'Delete challan ' + dc.delivery_challan_no" pTooltip="Delete delivery challan"
-                                    tooltipPosition="top" (click)="deleteChallan(dc)"></button>
+                                    [attr.aria-label]="'Delete challan ' + dc.delivery_challan_no"
+                                    pTooltip="Delete delivery challan" tooltipPosition="top"
+                                    (click)="deleteChallan(dc)"></button>
                             </div>
                         </div>
                     </div>
@@ -631,7 +652,8 @@
                             <div class="param-chip">
                                 <i class="pi pi-percentage" aria-hidden="true"></i>
                                 <span class="p-lbl">GST Rate:</span>
-                                <span class="p-val">{{ (dc.gst_rate !== undefined && dc.gst_rate !== null ? dc.gst_rate : 18) }}%</span>
+                                <span class="p-val">{{ (dc.gst_rate !== undefined && dc.gst_rate !== null ? dc.gst_rate
+                                    : 18) }}%</span>
                             </div>
                         </div>
 
@@ -652,56 +674,70 @@
                                 <tbody>
                                     @for (item of dc.items; track $index; let i = $index) {
                                     <tr>
-                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{ i + 1 }}</td>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{
+                                            i + 1 }}</td>
                                         <td class="font-medium">{{ item.material_name }}</td>
                                         <td><span class="hsn-pill">{{ item.hsn_code || '—' }}</span></td>
                                         <td class="text-right font-bold">{{ item.quantity }}</td>
                                         <td class="text-right font-mono">₹ {{ item.unit_price | number:'1.2-2' }}</td>
-                                        <td class="text-right font-mono font-bold">₹ {{ (item.net_amount || (item.quantity *
+                                        <td class="text-right font-mono font-bold">₹ {{ (item.net_amount ||
+                                            (item.quantity *
                                             (item.unit_price || 0))) | number:'1.2-2' }}</td>
                                     </tr>
                                     }
                                 </tbody>
                                 <tfoot>
                                     <tr class="tfoot-subtotal-row">
-                                        <td colspan="5" style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
+                                        <td colspan="5"
+                                            style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
                                             Taxable Amount (Subtotal):
                                         </td>
-                                        <td style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
+                                        <td
+                                            style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
                                             ₹ {{ calculateChallanSubtotal(dc) | number:'1.2-2' }}
                                         </td>
                                     </tr>
                                     <tr class="tfoot-gst-row">
-                                        <td colspan="5" style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
+                                        <td colspan="5"
+                                            style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
                                             <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                                <i class="pi pi-percentage" style="color: #d97706; font-size: 0.74rem;"></i>
-                                                GST Amount ({{ (dc.gst_rate !== undefined && dc.gst_rate !== null ? dc.gst_rate : 18) | number:'1.2-2' }}%):
+                                                <i class="pi pi-percentage"
+                                                    style="color: #d97706; font-size: 0.74rem;"></i>
+                                                GST Amount ({{ (dc.gst_rate !== undefined && dc.gst_rate !== null ?
+                                                dc.gst_rate : 18) | number:'1.2-2' }}%):
                                             </span>
                                         </td>
-                                        <td style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
+                                        <td
+                                            style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
                                             ₹ {{ calculateChallanGstAmount(dc) | number:'1.2-2' }}
                                         </td>
                                     </tr>
                                     @if (dc.round_off) {
                                     <tr class="tfoot-round-row">
-                                        <td colspan="5" style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
+                                        <td colspan="5"
+                                            style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
                                             Round Off:
                                         </td>
-                                        <td style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
+                                        <td
+                                            style="text-align: right; font-family: monospace; font-weight: 700; color: var(--color-heading); padding: 8px 14px;">
                                             ₹ {{ dc.round_off | number:'1.2-2' }}
                                         </td>
                                     </tr>
                                     }
                                     <tr class="tfoot-grand-total-row">
-                                        <td colspan="5" style="text-align: right; font-weight: 800; color: #991b1b; padding: 10px 14px; background: #fef2f2; border-top: 2px solid rgba(225, 77, 63, 0.25);">
-                                            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 7px;">
-                                                <span class="total-icon-badge" aria-hidden="true" style="background: rgba(225,77,63,0.12); color: #e14d3f; border-radius: 4px; padding: 2px 6px; font-size: 0.78rem;">
+                                        <td colspan="5"
+                                            style="text-align: right; font-weight: 800; color: #991b1b; padding: 10px 14px; background: #fef2f2; border-top: 2px solid rgba(225, 77, 63, 0.25);">
+                                            <div
+                                                style="display: flex; align-items: center; justify-content: flex-end; gap: 7px;">
+                                                <span class="total-icon-badge" aria-hidden="true"
+                                                    style="background: rgba(225,77,63,0.12); color: #e14d3f; border-radius: 4px; padding: 2px 6px; font-size: 0.78rem;">
                                                     <i class="pi pi-calculator"></i>
                                                 </span>
                                                 <span>Net Total (Incl. GST):</span>
                                             </div>
                                         </td>
-                                        <td style="text-align: right; font-family: monospace; font-size: 1.05rem; font-weight: 850; color: #e14d3f; padding: 10px 14px; background: #fef2f2; border-top: 2px solid rgba(225, 77, 63, 0.25); white-space: nowrap;">
+                                        <td
+                                            style="text-align: right; font-family: monospace; font-size: 1.05rem; font-weight: 850; color: #e14d3f; padding: 10px 14px; background: #fef2f2; border-top: 2px solid rgba(225, 77, 63, 0.25); white-space: nowrap;">
                                             ₹ {{ calculateChallanNetTotal(dc) | number:'1.2-2' }}
                                         </td>
                                     </tr>
@@ -711,11 +747,8 @@
                         }
 
                         <!-- Remarks & Notes -->
-                        <app-step-remarks
-                            [remarks]="dc.remarks || dc.remark"
-                            [defaultDate]="dc.delivery_challan_date"
-                            [loading]="quickAddingId() === dc.id"
-                            (quickAdd)="quickAddChallanRemark(dc, $event)"
+                        <app-step-remarks [remarks]="dc.remarks || dc.remark" [defaultDate]="dc.delivery_challan_date"
+                            [loading]="quickAddingId() === dc.id" (quickAdd)="quickAddChallanRemark(dc, $event)"
                             (deleteRemark)="deleteRemarkFromChallan(dc, $event)" />
 
                         <!-- Attachments -->
@@ -735,9 +768,10 @@
                                         <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
                                         }
                                     </div>
-                                    <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
-                                        pTooltip="Download attachment" tooltipPosition="top"
-                                        [disabled]="downloadingAttachmentId() === att.id" (click)="downloadAttachment(att)">
+                                    <button type="button" class="qe-att-download"
+                                        [attr.aria-label]="'Download ' + att.file_name" pTooltip="Download attachment"
+                                        tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                                        (click)="downloadAttachment(att)">
                                         @if (downloadingAttachmentId() === att.id) {
                                         <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
                                         } @else {
@@ -797,13 +831,16 @@
                                 Active Guarantee
                             </span>
                             <div class="actions-cell">
-                                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
-                                    [attr.aria-label]="'Edit warranty certificate ' + wc.id" pTooltip="Edit warranty certificate"
-                                    tooltipPosition="top" (click)="openEditWarrantyDialog(wc)"></button>
+                                <button pButton type="button" icon="pi pi-pencil"
+                                    class="p-button-text p-button-sm qe-edit"
+                                    [attr.aria-label]="'Edit warranty certificate ' + wc.id"
+                                    pTooltip="Edit warranty certificate" tooltipPosition="top"
+                                    (click)="openEditWarrantyDialog(wc)"></button>
                                 <button pButton type="button" icon="pi pi-trash"
                                     class="p-button-text p-button-sm p-button-danger qe-delete"
-                                    [attr.aria-label]="'Delete warranty certificate ' + wc.id" pTooltip="Delete warranty certificate"
-                                    tooltipPosition="top" (click)="deleteWarranty(wc)"></button>
+                                    [attr.aria-label]="'Delete warranty certificate ' + wc.id"
+                                    pTooltip="Delete warranty certificate" tooltipPosition="top"
+                                    (click)="deleteWarranty(wc)"></button>
                             </div>
                         </div>
                     </div>
@@ -839,11 +876,8 @@
                         </div>
 
                         <!-- Remarks & Notes -->
-                        <app-step-remarks
-                            [remarks]="wc.remarks || wc.remark"
-                            [defaultDate]="wc.certificate_date"
-                            [loading]="quickAddingId() === wc.id"
-                            (quickAdd)="quickAddWarrantyRemark(wc, $event)"
+                        <app-step-remarks [remarks]="wc.remarks || wc.remark" [defaultDate]="wc.certificate_date"
+                            [loading]="quickAddingId() === wc.id" (quickAdd)="quickAddWarrantyRemark(wc, $event)"
                             (deleteRemark)="deleteRemarkFromWarranty(wc, $event)" />
 
                         <!-- Attachments -->
@@ -863,9 +897,10 @@
                                         <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
                                         }
                                     </div>
-                                    <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
-                                        pTooltip="Download attachment" tooltipPosition="top"
-                                        [disabled]="downloadingAttachmentId() === att.id" (click)="downloadAttachment(att)">
+                                    <button type="button" class="qe-att-download"
+                                        [attr.aria-label]="'Download ' + att.file_name" pTooltip="Download attachment"
+                                        tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                                        (click)="downloadAttachment(att)">
                                         @if (downloadingAttachmentId() === att.id) {
                                         <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
                                         } @else {
@@ -931,17 +966,21 @@
                         </div>
                         <div class="vsc-header-right">
                             @if (td.transport_charges) {
-                            <span class="vsc-cost-pill" [pTooltip]="'Transport Charges: ₹ ' + (td.transport_charges | number:'1.2-2')" tooltipPosition="bottom">
+                            <span class="vsc-cost-pill"
+                                [pTooltip]="'Transport Charges: ₹ ' + (td.transport_charges | number:'1.2-2')"
+                                tooltipPosition="bottom">
                                 <i class="pi pi-wallet" aria-hidden="true"></i>
                                 ₹ {{ (td.transport_charges || 0) | number:'1.2-2' }}
                             </span>
                             }
-                            <span class="vsc-count-pill" [pTooltip]="td.from_location + ' → ' + td.to_location" tooltipPosition="bottom">
+                            <span class="vsc-count-pill" [pTooltip]="td.from_location + ' → ' + td.to_location"
+                                tooltipPosition="bottom">
                                 <i class="pi pi-map-marker" aria-hidden="true"></i>
                                 {{ td.from_location }} &rarr; {{ td.to_location }}
                             </span>
                             <div class="actions-cell">
-                                <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                                <button pButton type="button" icon="pi pi-pencil"
+                                    class="p-button-text p-button-sm qe-edit"
                                     [attr.aria-label]="'Edit consignment ' + td.id" pTooltip="Edit consignment"
                                     tooltipPosition="top" (click)="openEditTransportDialog(td)"></button>
                                 <button pButton type="button" icon="pi pi-trash"
@@ -959,7 +998,8 @@
                                 <i class="pi pi-ticket" aria-hidden="true"></i>
                                 <span class="p-lbl">Tracking No:</span>
                                 <span class="p-val font-mono font-bold">
-                                    {{ td.transport_mode === 'road' ? td.lr_no : (td.transport_mode === 'train' ? td.rr_no : td.awb_no) }}
+                                    {{ td.transport_mode === 'road' ? td.lr_no : (td.transport_mode === 'train' ?
+                                    td.rr_no : td.awb_no) }}
                                 </span>
                             </div>
                             <div class="param-chip">
@@ -975,11 +1015,8 @@
                         </div>
 
                         <!-- Remarks & Notes -->
-                        <app-step-remarks
-                            [remarks]="td.remarks || td.remark"
-                            [defaultDate]="td.date"
-                            [loading]="quickAddingId() === td.id"
-                            (quickAdd)="quickAddTransportRemark(td, $event)"
+                        <app-step-remarks [remarks]="td.remarks || td.remark" [defaultDate]="td.date"
+                            [loading]="quickAddingId() === td.id" (quickAdd)="quickAddTransportRemark(td, $event)"
                             (deleteRemark)="deleteRemarkFromTransport(td, $event)" />
 
                         <!-- Attachments -->
@@ -999,9 +1036,10 @@
                                         <span class="qe-att-size">{{ formatFileSize(att.file_size) }}</span>
                                         }
                                     </div>
-                                    <button type="button" class="qe-att-download" [attr.aria-label]="'Download ' + att.file_name"
-                                        pTooltip="Download attachment" tooltipPosition="top"
-                                        [disabled]="downloadingAttachmentId() === att.id" (click)="downloadAttachment(att)">
+                                    <button type="button" class="qe-att-download"
+                                        [attr.aria-label]="'Download ' + att.file_name" pTooltip="Download attachment"
+                                        tooltipPosition="top" [disabled]="downloadingAttachmentId() === att.id"
+                                        (click)="downloadAttachment(att)">
                                         @if (downloadingAttachmentId() === att.id) {
                                         <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
                                         } @else {
@@ -1042,7 +1080,9 @@
                         <div class="sync-pill-title">
                             <i class="pi pi-check-circle" aria-hidden="true"></i>
                             <span>
-                                Auto-imported from <strong>Latest Purchase Order{{ (po.po_number || po.po_no) ? ' (' + (po.po_number || po.po_no) + ')' : '' }}</strong> · {{ po.items?.length || invoiceItemsList().length }} items loaded with pricing terms.
+                                Auto-imported from <strong>Latest Purchase Order{{ (po.po_number || po.po_no) ? ' (' +
+                                    (po.po_number || po.po_no) + ')' : '' }}</strong> · {{ po.items?.length ||
+                                invoiceItemsList().length }} items loaded with pricing terms.
                             </span>
                         </div>
                         <span class="sync-pill-badge">
@@ -1057,11 +1097,13 @@
                         </span>
                         <span class="sync-chip">
                             <span class="sync-chip-label">GST ({{ invoiceForm.get('gst_rate')?.value || 18 }}%):</span>
-                            <strong class="sync-chip-value">+ ₹&nbsp;{{ (invoiceForm.get('gst_amount')?.value || 0) | number:'1.2-2' }}</strong>
+                            <strong class="sync-chip-value">+ ₹&nbsp;{{ (invoiceForm.get('gst_amount')?.value || 0) |
+                                number:'1.2-2' }}</strong>
                         </span>
                         <span class="sync-chip">
                             <span class="sync-chip-label">Incl. GST:</span>
-                            <strong class="sync-chip-value highlight">₹&nbsp;{{ (invoiceForm.get('net_total')?.value || invoiceSubtotal()) | number:'1.2-2' }}</strong>
+                            <strong class="sync-chip-value highlight">₹&nbsp;{{ (invoiceForm.get('net_total')?.value ||
+                                invoiceSubtotal()) | number:'1.2-2' }}</strong>
                         </span>
                     </div>
                     }
@@ -1190,7 +1232,7 @@
                     <!-- Items Table -->
                     @if (invoiceItemsList().length > 0) {
                     <div class="cost-items-table-container">
-                        <p-table [value]="invoiceItemsList()" [paginator]="invoiceItemsList().length > 5" [rows]="5"
+                        <p-table [value]="invoiceItemsList()" [paginator]="invoiceItemsList().length > 5" [rows]="10"
                             [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
                             aria-label="Tax invoice materials list">
                             <ng-template pTemplate="header">
@@ -1389,10 +1431,7 @@
                 </div>
 
                 <!-- Section 4: Remarks & Notes -->
-                <app-step-remarks
-                    mode="dialog"
-                    [remarks]="dialogRemarks()"
-                    (remarksChange)="dialogRemarks.set($event)"
+                <app-step-remarks mode="dialog" [remarks]="dialogRemarks()" (remarksChange)="dialogRemarks.set($event)"
                     sectionNumber="4" />
 
             </div>
@@ -1402,8 +1441,9 @@
             <div class="dlg-footer">
                 <button pButton type="button" label="Cancel" class="p-button-outlined p-button-secondary cancel-btn"
                     (click)="invoiceDialogVisible.set(false)" [disabled]="saving()"></button>
-                <button pButton type="submit" form="invoice-form" [label]="editingInvoice() ? 'Update Invoice' : 'Save Invoice'"
-                    icon="pi pi-check" class="create-cost-sheet-btn save-btn" [loading]="saving()"
+                <button pButton type="submit" form="invoice-form"
+                    [label]="editingInvoice() ? 'Update Invoice' : 'Save Invoice'" icon="pi pi-check"
+                    class="create-cost-sheet-btn save-btn" [loading]="saving()"
                     [disabled]="saving() || invoiceForm.invalid || invoiceItemsList().length === 0"></button>
             </div>
         </ng-template>
@@ -1427,7 +1467,9 @@
                         <div class="sync-pill-title">
                             <i class="pi pi-check-circle" aria-hidden="true"></i>
                             <span>
-                                Auto-imported from <strong>Latest Purchase Order{{ (po.po_number || po.po_no) ? ' (' + (po.po_number || po.po_no) + ')' : '' }}</strong> · {{ po.items?.length || packingItemsList().length }} items pre-filled for box packaging.
+                                Auto-imported from <strong>Latest Purchase Order{{ (po.po_number || po.po_no) ? ' (' +
+                                    (po.po_number || po.po_no) + ')' : '' }}</strong> · {{ po.items?.length ||
+                                packingItemsList().length }} items pre-filled for box packaging.
                             </span>
                         </div>
                         @if (po.po_date) {
@@ -1585,7 +1627,7 @@
                     <!-- Items Table -->
                     @if (packingItemsList().length > 0) {
                     <div class="cost-items-table-container">
-                        <p-table [value]="packingItemsList()" [paginator]="packingItemsList().length > 5" [rows]="5"
+                        <p-table [value]="packingItemsList()" [paginator]="packingItemsList().length > 5" [rows]="10"
                             [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
                             aria-label="Packing list items table">
                             <ng-template pTemplate="header">
@@ -1731,10 +1773,7 @@
                 </div>
 
                 <!-- Section 4: Remarks & Notes -->
-                <app-step-remarks
-                    mode="dialog"
-                    [remarks]="dialogRemarks()"
-                    (remarksChange)="dialogRemarks.set($event)"
+                <app-step-remarks mode="dialog" [remarks]="dialogRemarks()" (remarksChange)="dialogRemarks.set($event)"
                     sectionNumber="4" />
 
             </div>
@@ -1770,7 +1809,9 @@
                         <div class="sync-pill-title">
                             <i class="pi pi-check-circle" aria-hidden="true"></i>
                             <span>
-                                Auto-imported from <strong>Latest Purchase Order{{ (po.po_number || po.po_no) ? ' (' + (po.po_number || po.po_no) + ')' : '' }}</strong> · {{ po.items?.length || challanItemsList().length }} items loaded with pricing terms.
+                                Auto-imported from <strong>Latest Purchase Order{{ (po.po_number || po.po_no) ? ' (' +
+                                    (po.po_number || po.po_no) + ')' : '' }}</strong> · {{ po.items?.length ||
+                                challanItemsList().length }} items loaded with pricing terms.
                             </span>
                         </div>
                         <span class="sync-pill-badge">
@@ -1785,11 +1826,13 @@
                         </span>
                         <span class="sync-chip">
                             <span class="sync-chip-label">GST ({{ challanForm.get('gst_rate')?.value || 18 }}%):</span>
-                            <strong class="sync-chip-value">+ ₹&nbsp;{{ (challanForm.get('gst_amount')?.value || 0) | number:'1.2-2' }}</strong>
+                            <strong class="sync-chip-value">+ ₹&nbsp;{{ (challanForm.get('gst_amount')?.value || 0) |
+                                number:'1.2-2' }}</strong>
                         </span>
                         <span class="sync-chip">
                             <span class="sync-chip-label">Incl. GST:</span>
-                            <strong class="sync-chip-value highlight">₹&nbsp;{{ (challanForm.get('net_total')?.value || challanSubtotal()) | number:'1.2-2' }}</strong>
+                            <strong class="sync-chip-value highlight">₹&nbsp;{{ (challanForm.get('net_total')?.value ||
+                                challanSubtotal()) | number:'1.2-2' }}</strong>
                         </span>
                     </div>
                     }
@@ -1826,8 +1869,8 @@
 
                         <div class="field">
                             <label for="dc-gst">GST Rate (%) <span class="req" aria-hidden="true">*</span></label>
-                            <input id="dc-gst" pInputText type="number" formControlName="gst_rate"
-                                placeholder="18" [class.ng-invalid]="isFieldInvalid(challanForm, 'gst_rate')" />
+                            <input id="dc-gst" pInputText type="number" formControlName="gst_rate" placeholder="18"
+                                [class.ng-invalid]="isFieldInvalid(challanForm, 'gst_rate')" />
                             @if (isFieldInvalid(challanForm, 'gst_rate')) {
                             <p class="field-error">{{ getFieldError(challanForm, 'gst_rate') }}</p>
                             }
@@ -1921,7 +1964,7 @@
                     <!-- Items Table -->
                     @if (challanItemsList().length > 0) {
                     <div class="cost-items-table-container">
-                        <p-table [value]="challanItemsList()" [paginator]="challanItemsList().length > 5" [rows]="5"
+                        <p-table [value]="challanItemsList()" [paginator]="challanItemsList().length > 5" [rows]="10"
                             [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
                             aria-label="Delivery challan items table">
                             <ng-template pTemplate="header">
@@ -1990,7 +2033,9 @@
                                 <tr class="table-total-row table-tax-row">
                                     <td colspan="5" class="total-label-cell">
                                         <div class="total-label-wrapper">
-                                            <span class="total-title">GST Amount ({{ (challanForm.get('gst_rate')?.value !== null && challanForm.get('gst_rate')?.value !== undefined ? challanForm.get('gst_rate')?.value : 18) | number:'1.2-2' }}%):</span>
+                                            <span class="total-title">GST Amount ({{ (challanForm.get('gst_rate')?.value
+                                                !== null && challanForm.get('gst_rate')?.value !== undefined ?
+                                                challanForm.get('gst_rate')?.value : 18) | number:'1.2-2' }}%):</span>
                                         </div>
                                     </td>
                                     <td class="total-amount-cell"
@@ -2116,10 +2161,7 @@
                 </div>
 
                 <!-- Section 4: Remarks & Notes -->
-                <app-step-remarks
-                    mode="dialog"
-                    [remarks]="dialogRemarks()"
-                    (remarksChange)="dialogRemarks.set($event)"
+                <app-step-remarks mode="dialog" [remarks]="dialogRemarks()" (remarksChange)="dialogRemarks.set($event)"
                     sectionNumber="4" />
 
             </div>
@@ -2149,7 +2191,8 @@
             <div class="dlg-body">
 
                 <!-- Auto-Sync Notice from Latest PO & Tax Invoice -->
-                @if (!editingWarranty() && (latestPoTemplate() || latestTaxInvoiceTemplate() || (taxInvoices().length > 0))) {
+                @if (!editingWarranty() && (latestPoTemplate() || latestTaxInvoiceTemplate() || (taxInvoices().length >
+                0))) {
                 <div class="cost-sheet-sync-pill" role="status">
                     <div class="sync-pill-header">
                         <div class="sync-pill-title">
@@ -2157,13 +2200,16 @@
                             <span>
                                 Auto-imported references from
                                 @if (latestPoTemplate(); as po) {
-                                <strong>Latest PO{{ (po.po_number || po.po_no) ? ' (' + (po.po_number || po.po_no) + ')' : '' }}</strong>
+                                <strong>Latest PO{{ (po.po_number || po.po_no) ? ' (' + (po.po_number || po.po_no) + ')'
+                                    : '' }}</strong>
                                 }
                                 @if (latestPoTemplate() && (latestTaxInvoiceTemplate() || taxInvoices().length > 0)) {
                                 &amp;
                                 }
-                                @if (latestTaxInvoiceTemplate() || (taxInvoices().length ? taxInvoices()[0] : null); as inv) {
-                                <strong>Latest Customer Invoice{{ inv.invoice_no ? ' (' + inv.invoice_no + ')' : '' }}</strong>
+                                @if (latestTaxInvoiceTemplate() || (taxInvoices().length ? taxInvoices()[0] : null); as
+                                inv) {
+                                <strong>Latest Customer Invoice{{ inv.invoice_no ? ' (' + inv.invoice_no + ')' : ''
+                                    }}</strong>
                                 }
                             </span>
                         </div>
@@ -2174,11 +2220,15 @@
                     <div class="sync-financials-chips">
                         <span class="sync-chip">
                             <span class="sync-chip-label">PO Ref:</span>
-                            <strong class="sync-chip-value">{{ warrantyForm.get('po_no')?.value || '—' }} ({{ warrantyForm.get('po_date')?.value ? (warrantyForm.get('po_date')?.value | date:'dd-MM-yyyy') : '—' }})</strong>
+                            <strong class="sync-chip-value">{{ warrantyForm.get('po_no')?.value || '—' }} ({{
+                                warrantyForm.get('po_date')?.value ? (warrantyForm.get('po_date')?.value |
+                                date:'dd-MM-yyyy') : '—' }})</strong>
                         </span>
                         <span class="sync-chip">
                             <span class="sync-chip-label">Invoice Ref:</span>
-                            <strong class="sync-chip-value">{{ warrantyForm.get('invoice_no')?.value || '—' }} ({{ warrantyForm.get('invoice_date')?.value ? (warrantyForm.get('invoice_date')?.value | date:'dd-MM-yyyy') : '—' }})</strong>
+                            <strong class="sync-chip-value">{{ warrantyForm.get('invoice_no')?.value || '—' }} ({{
+                                warrantyForm.get('invoice_date')?.value ? (warrantyForm.get('invoice_date')?.value |
+                                date:'dd-MM-yyyy') : '—' }})</strong>
                         </span>
                     </div>
                 </div>
@@ -2203,8 +2253,9 @@
                         <div class="field">
                             <label for="wc-period">Warranty Period <span class="req" aria-hidden="true">*</span></label>
                             <p-select id="wc-period" formControlName="warranty_period" [options]="warrantyPeriodOptions"
-                                optionLabel="label" optionValue="value" placeholder="Select Warranty Period" [fluid]="true"
-                                appendTo="body" [invalid]="isFieldInvalid(warrantyForm, 'warranty_period')" />
+                                optionLabel="label" optionValue="value" placeholder="Select Warranty Period"
+                                [fluid]="true" appendTo="body"
+                                [invalid]="isFieldInvalid(warrantyForm, 'warranty_period')" />
                             @if (isFieldInvalid(warrantyForm, 'warranty_period')) {
                             <p class="field-error">{{ getFieldError(warrantyForm, 'warranty_period') }}</p>
                             }
@@ -2321,10 +2372,7 @@
                 </div>
 
                 <!-- Section 4: Remarks & Notes -->
-                <app-step-remarks
-                    mode="dialog"
-                    [remarks]="dialogRemarks()"
-                    (remarksChange)="dialogRemarks.set($event)"
+                <app-step-remarks mode="dialog" [remarks]="dialogRemarks()" (remarksChange)="dialogRemarks.set($event)"
                     sectionNumber="4" />
 
             </div>
@@ -2334,8 +2382,9 @@
             <div class="dlg-footer">
                 <button pButton type="button" label="Cancel" class="p-button-outlined p-button-secondary cancel-btn"
                     (click)="warrantyDialogVisible.set(false)" [disabled]="saving()"></button>
-                <button pButton type="submit" form="warranty-form" [label]="editingWarranty() ? 'Update Certificate' : 'Issue Certificate'"
-                    icon="pi pi-check" class="create-cost-sheet-btn save-btn" [loading]="saving()"
+                <button pButton type="submit" form="warranty-form"
+                    [label]="editingWarranty() ? 'Update Certificate' : 'Issue Certificate'" icon="pi pi-check"
+                    class="create-cost-sheet-btn save-btn" [loading]="saving()"
                     [disabled]="saving() || warrantyForm.invalid"></button>
             </div>
         </ng-template>
@@ -2513,10 +2562,7 @@
                 </div>
 
                 <!-- Section 4: Remarks & Notes -->
-                <app-step-remarks
-                    mode="dialog"
-                    [remarks]="dialogRemarks()"
-                    (remarksChange)="dialogRemarks.set($event)"
+                <app-step-remarks mode="dialog" [remarks]="dialogRemarks()" (remarksChange)="dialogRemarks.set($event)"
                     sectionNumber="4" />
 
             </div>

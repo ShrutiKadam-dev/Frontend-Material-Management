@@ -220,7 +220,7 @@
             <!-- Material Requirements Table -->
             @if (t.items && t.items.length) {
             <div class="cost-items-table-container">
-              <p-table [value]="t.items" [paginator]="t.items.length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
+              <p-table [value]="t.items" [paginator]="t.items.length > 5" [rows]="10" [rowsPerPageOptions]="[5, 10, 20]"
                 styleClass="p-datatable-sm items-table-wrap" aria-label="Tender required materials">
                 <ng-template pTemplate="header">
                   <tr>
@@ -250,11 +250,8 @@
             }
 
             <!-- Remarks & Notes Timeline Sequence -->
-            <app-step-remarks
-              [remarks]="t.remarks || t.remark"
-              [defaultDate]="t.tender_date"
-              [loading]="quickAddingId() === t.id"
-              (quickAdd)="quickAddRemark(t, $event)"
+            <app-step-remarks [remarks]="t.remarks || t.remark" [defaultDate]="t.tender_date"
+              [loading]="quickAddingId() === t.id" (quickAdd)="quickAddRemark(t, $event)"
               (deleteRemark)="deleteRemarkFromTender(t, $event)" />
 
             <!-- Attachments List -->
@@ -432,8 +429,8 @@
             <!-- Contact Number -->
             <div class="field">
               <label for="dlg-tnd-phone">Contact Number</label>
-              <input id="dlg-tnd-phone" pInputText formControlName="contact_number"
-                placeholder="Enter contact number" [class.ng-invalid]="isFieldInvalid('contact_number')" />
+              <input id="dlg-tnd-phone" pInputText formControlName="contact_number" placeholder="Enter contact number"
+                [class.ng-invalid]="isFieldInvalid('contact_number')" />
               @if (isFieldInvalid('contact_number')) {
               <p class="field-error">{{ getFieldError('contact_number') }}</p>
               }
@@ -442,8 +439,8 @@
             <!-- Website / Portal -->
             <div class="field">
               <label for="dlg-tnd-website">E-Procurement Portal / Website</label>
-              <input id="dlg-tnd-website" pInputText formControlName="website"
-                placeholder="Enter website or portal URL" [class.ng-invalid]="isFieldInvalid('website')" />
+              <input id="dlg-tnd-website" pInputText formControlName="website" placeholder="Enter website or portal URL"
+                [class.ng-invalid]="isFieldInvalid('website')" />
               @if (isFieldInvalid('website')) {
               <p class="field-error">{{ getFieldError('website') }}</p>
               }
@@ -552,7 +549,7 @@
           <!-- Items Table -->
           @if (items().length > 0) {
           <div class="cost-items-table-container">
-            <p-table [value]="items()" [paginator]="items().length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
+            <p-table [value]="items()" [paginator]="items().length > 5" [rows]="10" [rowsPerPageOptions]="[5, 10, 20]"
               styleClass="p-datatable-sm items-table-wrap" aria-label="Tender materials list">
               <ng-template pTemplate="header">
                 <tr>
@@ -652,7 +649,8 @@
             (keydown.space)="$event.preventDefault(); tndFileInput.click()" tabindex="0" role="button"
             aria-label="Upload tender documents">
             <i class="pi pi-upload" aria-hidden="true"></i>
-            <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload tender documents' }}</span>
+            <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload tender
+              documents' }}</span>
             @if (!attachments().length && !existingAttachments().length) {
             <span class="file-hint">PDF, Excel, Word — NIT, technical specifications, drawing sheets</span>
             }
@@ -662,10 +660,7 @@
         </div>
 
         <!-- ── F. Remarks Section ─────────────────────────── -->
-        <app-step-remarks
-          mode="dialog"
-          [remarks]="dialogRemarks()"
-          (remarksChange)="dialogRemarks.set($event)"
+        <app-step-remarks mode="dialog" [remarks]="dialogRemarks()" (remarksChange)="dialogRemarks.set($event)"
           sectionNumber="6" />
 
       </div>
@@ -676,8 +671,9 @@
     <ng-template pTemplate="footer">
       <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="closeDialog()"
         [disabled]="submitting()"></button>
-      <button pButton type="submit" form="tender-form" label="Save Customer Tender" icon="pi pi-check" class="submit-btn"
-        [loading]="submitting()" [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
+      <button pButton type="submit" form="tender-form" label="Save Customer Tender" icon="pi pi-check"
+        class="submit-btn" [loading]="submitting()"
+        [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
     </ng-template>
   </p-dialog>
 

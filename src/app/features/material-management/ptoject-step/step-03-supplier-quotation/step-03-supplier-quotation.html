@@ -28,14 +28,8 @@
       <div class="header-step-pill" aria-hidden="true">
         Step <strong>03</strong> of 15
       </div>
-      <button
-        pButton
-        type="button"
-        icon="pi pi-plus"
-        label="New Supplier Quotation"
-        class="header-primary-btn"
-        (click)="openDialog()"
-      ></button>
+      <button pButton type="button" icon="pi pi-plus" label="New Supplier Quotation" class="header-primary-btn"
+        (click)="openDialog()"></button>
     </div>
   </div>
 
@@ -151,8 +145,7 @@
             }
 
             <!-- Card Body Grid (Left: Materials Table, Right: Commercial Terms & Notes & Files) -->
-            <div class="qe-body"
-              [class.qe-body--full-table]="!q.remark && (!q.attachments || !q.attachments.length)">
+            <div class="qe-body" [class.qe-body--full-table]="!q.remark && (!q.attachments || !q.attachments.length)">
 
               <!-- Left Column: Materials Table (Main Content) -->
               @if (q.items && q.items.length) {
@@ -161,7 +154,7 @@
                   <i class="pi pi-box" aria-hidden="true"></i>
                   Quoted Materials ({{ q.items.length }})
                 </p>
-                <p-table [value]="q.items" [paginator]="q.items.length > 5" [rows]="5"
+                <p-table [value]="q.items" [paginator]="q.items.length > 5" [rows]="10"
                   [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
                   aria-label="Quoted materials">
                   <ng-template pTemplate="header">
@@ -248,11 +241,8 @@
                 }
 
                 <!-- Remarks & Notes Timeline Sequence -->
-                <app-step-remarks
-                  [remarks]="q.remarks || q.remark"
-                  [defaultDate]="q.quotation_date"
-                  [loading]="quickAddingId() === q.id"
-                  (quickAdd)="quickAddRemark(q, $event)"
+                <app-step-remarks [remarks]="q.remarks || q.remark" [defaultDate]="q.quotation_date"
+                  [loading]="quickAddingId() === q.id" (quickAdd)="quickAddRemark(q, $event)"
                   (deleteRemark)="deleteRemarkFromQuotation(q, $event)" />
 
                 <!-- Attachments -->
@@ -350,8 +340,8 @@
             <div class="input-unit-group">
               <p-select [id]="'dlg-sq-' + (field.currencyKey || 'currency_unit')"
                 [formControlName]="field.currencyKey || 'currency_unit'" [options]="field.currencyOptions || []"
-                optionLabel="label" optionValue="value" [style]="{ width: '120px', flex: '0 0 120px' }"
-                appendTo="body" aria-label="Currency"></p-select>
+                optionLabel="label" optionValue="value" [style]="{ width: '120px', flex: '0 0 120px' }" appendTo="body"
+                aria-label="Currency"></p-select>
               <input [id]="'dlg-sq-' + field.key" pInputText [formControlName]="field.key"
                 [placeholder]="field.placeholder || '0.00'" style="flex: 1; min-width: 0;"
                 [class.ng-invalid]="isFieldInvalid(field.key)" />
@@ -365,8 +355,8 @@
                 [class.ng-invalid]="isFieldInvalid(field.key)" />
               <p-select [id]="'dlg-sq-' + (field.unitKey || 'validity_unit')"
                 [formControlName]="field.unitKey || 'validity_unit'" [options]="field.unitOptions || []"
-                optionLabel="label" optionValue="value" [style]="{ width: '110px', flex: '0 0 110px' }"
-                appendTo="body" aria-label="Validity Unit"></p-select>
+                optionLabel="label" optionValue="value" [style]="{ width: '110px', flex: '0 0 110px' }" appendTo="body"
+                aria-label="Validity Unit"></p-select>
             </div>
             }
 
@@ -447,7 +437,7 @@
 
         <!-- Items Table with Pagination -->
         @if (items().length > 0) {
-        <p-table [value]="items()" [paginator]="items().length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
+        <p-table [value]="items()" [paginator]="items().length > 5" [rows]="10" [rowsPerPageOptions]="[5, 10, 20]"
           styleClass="p-datatable-sm items-table-wrap" aria-label="Quotation items list">
           <ng-template pTemplate="header">
             <tr>
@@ -580,12 +570,12 @@
 
         <!-- Drop zone -->
         <div class="file-drop-zone"
-          [class.file-drop-zone--compact]="attachments().length > 0 || existingAttachments().length > 0"
-          role="button" tabindex="0" (click)="fileInput.click()"
-          (keydown.enter)="fileInput.click()" (keydown.space)="$event.preventDefault(); fileInput.click()"
-          aria-label="Upload quotation attachments">
+          [class.file-drop-zone--compact]="attachments().length > 0 || existingAttachments().length > 0" role="button"
+          tabindex="0" (click)="fileInput.click()" (keydown.enter)="fileInput.click()"
+          (keydown.space)="$event.preventDefault(); fileInput.click()" aria-label="Upload quotation attachments">
           <i class="pi pi-upload" aria-hidden="true"></i>
-          <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload quotation files' }}</span>
+          <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload
+            quotation files' }}</span>
           @if (!attachments().length && !existingAttachments().length) {
           <span class="file-hint">PDF, Excel, Images — official quotation documents</span>
           }
@@ -595,10 +585,7 @@
       </div>
 
       <!-- ── 4. Remarks ─────────────────────────────────── -->
-      <app-step-remarks
-        mode="dialog"
-        [remarks]="dialogRemarks()"
-        (remarksChange)="dialogRemarks.set($event)"
+      <app-step-remarks mode="dialog" [remarks]="dialogRemarks()" (remarksChange)="dialogRemarks.set($event)"
         sectionNumber="4" />
 
     </div>

@@ -160,7 +160,7 @@
             <!-- Materials Table -->
             @if (q.items && q.items.length) {
             <div class="cost-items-table-container">
-              <p-table [value]="q.items" [paginator]="q.items.length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
+              <p-table [value]="q.items" [paginator]="q.items.length > 5" [rows]="10" [rowsPerPageOptions]="[5, 10, 20]"
                 styleClass="p-datatable-sm items-table-wrap" aria-label="Customer quotation items">
                 <ng-template pTemplate="header">
                   <tr>
@@ -220,11 +220,8 @@
             }
 
             <!-- Remarks & Notes Timeline Sequence -->
-            <app-step-remarks
-              [remarks]="q.remarks || q.remark"
-              [defaultDate]="q.quotation_date"
-              [loading]="quickAddingId() === q.id"
-              (quickAdd)="quickAddRemark(q, $event)"
+            <app-step-remarks [remarks]="q.remarks || q.remark" [defaultDate]="q.quotation_date"
+              [loading]="quickAddingId() === q.id" (quickAdd)="quickAddRemark(q, $event)"
               (deleteRemark)="deleteRemarkFromQuotation(q, $event)" />
 
             <!-- Attachments List -->
@@ -292,7 +289,8 @@
               <i class="pi pi-check-circle" aria-hidden="true"></i>
               <div class="sync-pill-meta">
                 <span class="sync-pill-source">
-                  Auto-imported from <strong>{{ cs.title || ('Cost Sheet v' + (cs.versionNumber || 1) + '.0') }}</strong>
+                  Auto-imported from <strong>{{ cs.title || ('Cost Sheet v' + (cs.versionNumber || 1) + '.0')
+                    }}</strong>
                 </span>
                 <span class="sync-pill-subtext">
                   {{ items().length }} {{ items().length === 1 ? 'item' : 'items' }} loaded with selling rates
@@ -397,13 +395,15 @@
             </p>
             @if (totalNetAmount() > 0) {
             <div class="header-totals-group" style="display: inline-flex; align-items: center; gap: 8px;">
-              <span class="vsc-cost-pill" style="background: var(--color-surface, #fff); border: 1px solid var(--color-border, #e2e8f0); color: #475569;">
+              <span class="vsc-cost-pill"
+                style="background: var(--color-surface, #fff); border: 1px solid var(--color-border, #e2e8f0); color: #475569;">
                 Excl. GST: {{ selectedCurrencySymbol() }}&nbsp;{{ totalNetAmount() | number:'1.2-2' }}
               </span>
               @if (costSheetGstRatePercent() !== null && costSheetGstRatePercent()! > 0) {
               <span class="vsc-cost-pill">
                 <i class="pi pi-indian-rupee" aria-hidden="true"></i>
-                Incl. GST ({{ costSheetGstRatePercent() | number:'1.0-2' }}%): {{ selectedCurrencySymbol() }}&nbsp;{{ totalGrossInclGst() | number:'1.2-2' }}
+                Incl. GST ({{ costSheetGstRatePercent() | number:'1.0-2' }}%): {{ selectedCurrencySymbol() }}&nbsp;{{
+                totalGrossInclGst() | number:'1.2-2' }}
               </span>
               }
             </div>
@@ -455,7 +455,7 @@
           <!-- Items Table -->
           @if (items().length > 0) {
           <div class="cost-items-table-container">
-            <p-table [value]="items()" [paginator]="items().length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
+            <p-table [value]="items()" [paginator]="items().length > 5" [rows]="10" [rowsPerPageOptions]="[5, 10, 20]"
               styleClass="p-datatable-sm items-table-wrap" aria-label="Customer quotation items">
               <ng-template pTemplate="header">
                 <tr>
@@ -510,11 +510,13 @@
                   <td colspan="5" class="total-label-cell">
                     <div class="total-label-wrapper">
                       <span class="total-title">Total Selling Price (Excl. GST)</span>
-                      <span class="total-items-badge">({{ items().length }} {{ items().length === 1 ? 'item' : 'items' }})</span>
+                      <span class="total-items-badge">({{ items().length }} {{ items().length === 1 ? 'item' : 'items'
+                        }})</span>
                     </div>
                   </td>
                   <td class="total-amount-cell" style="min-width: 130px; text-align: right; white-space: nowrap;">
-                    <span class="total-amount-value" style="font-size: 0.95rem; font-weight: 600; color: var(--color-heading);">
+                    <span class="total-amount-value"
+                      style="font-size: 0.95rem; font-weight: 600; color: var(--color-heading);">
                       {{ selectedCurrencySymbol() }}&nbsp;{{ totalNetAmount() | number:'1.2-2' }}
                     </span>
                   </td>
@@ -540,11 +542,13 @@
                   <td colspan="5" class="total-label-cell">
                     <div class="total-label-wrapper">
                       <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-calculator"></i></span>
-                      <span class="total-title" style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total Quotation Value (Incl. GST)</span>
+                      <span class="total-title" style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total
+                        Quotation Value (Incl. GST)</span>
                     </div>
                   </td>
                   <td class="total-amount-cell" style="min-width: 130px; text-align: right; white-space: nowrap;">
-                    <span class="total-amount-value" style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
+                    <span class="total-amount-value"
+                      style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
                       {{ selectedCurrencySymbol() }}&nbsp;{{ totalGrossInclGst() | number:'1.2-2' }}
                     </span>
                   </td>
@@ -616,7 +620,8 @@
             (keydown.space)="$event.preventDefault(); cqFileInput.click()" tabindex="0" role="button"
             aria-label="Upload quotation attachments">
             <i class="pi pi-upload" aria-hidden="true"></i>
-            <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload quotation files' }}</span>
+            <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload
+              quotation files' }}</span>
             @if (!attachments().length && !existingAttachments().length) {
             <span class="file-hint">PDF, Excel, Images — official quotation documents</span>
             }
@@ -626,10 +631,7 @@
         </div>
 
         <!-- ── D. Remarks Section ─────────────────────────── -->
-        <app-step-remarks
-          mode="dialog"
-          [remarks]="dialogRemarks()"
-          (remarksChange)="dialogRemarks.set($event)"
+        <app-step-remarks mode="dialog" [remarks]="dialogRemarks()" (remarksChange)="dialogRemarks.set($event)"
           sectionNumber="4" />
 
       </div>
@@ -640,8 +642,9 @@
     <ng-template pTemplate="footer">
       <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="closeDialog()"
         [disabled]="submitting()"></button>
-      <button pButton type="submit" form="cust-quotation-form" label="Save Customer Quotation" icon="pi pi-check" class="submit-btn"
-        [loading]="submitting()" [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
+      <button pButton type="submit" form="cust-quotation-form" label="Save Customer Quotation" icon="pi pi-check"
+        class="submit-btn" [loading]="submitting()"
+        [disabled]="submitting() || headerForm.invalid || items().length === 0"></button>
     </ng-template>
   </p-dialog>
 

@@ -57,4 +57,34 @@ describe('Step02RequestQuotation', () => {
       { material_name: 'RACK EUROPE 14 SLOTS', quantity: '2' },
     ]);
   });
+
+  it('should parse request remarks correctly', () => {
+    const sampleRequest = {
+      id: 1,
+      project_id: 1,
+      supplier_id: 2,
+      quotation_requested_date: '2026-09-24',
+      supplier_contacted: true,
+      remarks: [{ remark: 'Need urgent quotation' }],
+      attachments: [],
+      items: [],
+    } as any;
+
+    const remarks = (component as any).getRequestRemarks(sampleRequest);
+    expect(remarks.length).toBe(1);
+    expect(remarks[0].text).toBe('Need urgent quotation');
+  });
+
+  it('should add and remove remarks in dialog', () => {
+    (component as any).newRemarkInput.set('Technical requirement note');
+    (component as any).addDialogRemark();
+
+    expect((component as any).dialogRemarks().length).toBe(1);
+    expect((component as any).dialogRemarks()[0].text).toBe('Technical requirement note');
+    expect((component as any).newRemarkInput()).toBe('');
+
+    (component as any).removeDialogRemark(0);
+    expect((component as any).dialogRemarks().length).toBe(0);
+  });
 });
+

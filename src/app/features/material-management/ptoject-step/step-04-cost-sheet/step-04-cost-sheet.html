@@ -3,8 +3,8 @@
     <!-- ── 1. Page Header Bar ───────────────────────────────── -->
     <header class="page-header">
         <div class="header-left">
-            <button pButton type="button" icon="pi pi-arrow-left" class="back-btn"
-                (click)="goBack()" aria-label="Back to project timeline" pTooltip="Back to Project Steps"
+            <button pButton type="button" icon="pi pi-arrow-left" class="back-btn" (click)="goBack()"
+                aria-label="Back to project timeline" pTooltip="Back to Project Steps"
                 tooltipPosition="bottom"></button>
             <div class="header-title-group">
                 <span class="eyebrow">STEP 04 • COST SHEET CALCULATION</span>
@@ -26,7 +26,8 @@
                 {{ c.name }}
             </span>
             } @else if (project()?.customer_name) {
-            <span class="header-partner-pill" [pTooltip]="'Customer: ' + project()?.customer_name" tooltipPosition="bottom">
+            <span class="header-partner-pill" [pTooltip]="'Customer: ' + project()?.customer_name"
+                tooltipPosition="bottom">
                 <i class="pi pi-user" aria-hidden="true"></i>
                 {{ project()?.customer_name }}
             </span>
@@ -47,7 +48,8 @@
             <div class="kpi-content">
                 <span class="kpi-label">Cost Sheet Versions</span>
                 <span class="kpi-num">{{ costSheets().length }}</span>
-                <span class="kpi-hint">{{ costSheets().length === 1 ? '1 calculated version' : costSheets().length + ' calculated versions' }}</span>
+                <span class="kpi-hint">{{ costSheets().length === 1 ? '1 calculated version' : costSheets().length + '
+                    calculated versions' }}</span>
             </div>
         </div>
 
@@ -242,7 +244,7 @@
                         <!-- Line Items Breakdown Table -->
                         @if (sheet.items && sheet.items.length) {
                         <div class="cost-items-table-container">
-                            <p-table [value]="sheet.items" [paginator]="sheet.items.length > 5" [rows]="5"
+                            <p-table [value]="sheet.items" [paginator]="sheet.items.length > 5" [rows]="10"
                                 [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
                                 aria-label="Cost sheet line items">
                                 <ng-template pTemplate="header">
@@ -370,7 +372,8 @@
             <!-- ── B. Global Costing Parameters ───────────────── -->
             <div class="dlg-section" [formGroup]="globalParamsForm">
                 <div class="dlg-section-header">
-                    <p class="dlg-section-label"><i class="pi pi-percentage"></i> 2. Global Costing & Landed Tax Parameters</p>
+                    <p class="dlg-section-label"><i class="pi pi-percentage"></i> 2. Global Costing & Landed Tax
+                        Parameters</p>
                     <span class="section-hint">Values apply across all items dynamically</span>
                 </div>
 
@@ -378,8 +381,8 @@
                     <div class="field">
                         <label for="gp-eur">EUR to INR Rate (₹) <span class="req">*</span></label>
                         <input id="gp-eur" pInputText type="number" step="0.01" formControlName="eurToInr"
-                            [class.ng-invalid]="isGlobalParamInvalid('eurToInr')" [class.ng-dirty]="isGlobalParamInvalid('eurToInr')"
-                            placeholder="Enter EUR to INR rate" />
+                            [class.ng-invalid]="isGlobalParamInvalid('eurToInr')"
+                            [class.ng-dirty]="isGlobalParamInvalid('eurToInr')" placeholder="Enter EUR to INR rate" />
                         @if (isGlobalParamInvalid('eurToInr')) {
                         <span class="field-error">{{ getGlobalParamError('eurToInr') }}</span>
                         }
@@ -388,7 +391,8 @@
                     <div class="field">
                         <label for="gp-if">Insurance & Freight (%) <span class="req">*</span></label>
                         <input id="gp-if" pInputText type="number" step="0.1" formControlName="insuranceFreightRate"
-                            [class.ng-invalid]="isGlobalParamInvalid('insuranceFreightRate')" [class.ng-dirty]="isGlobalParamInvalid('insuranceFreightRate')"
+                            [class.ng-invalid]="isGlobalParamInvalid('insuranceFreightRate')"
+                            [class.ng-dirty]="isGlobalParamInvalid('insuranceFreightRate')"
                             placeholder="Enter insurance & freight rate" />
                         @if (isGlobalParamInvalid('insuranceFreightRate')) {
                         <span class="field-error">{{ getGlobalParamError('insuranceFreightRate') }}</span>
@@ -398,7 +402,8 @@
                     <div class="field">
                         <label for="gp-cd">Default Customs Duty (%) <span class="req">*</span></label>
                         <input id="gp-cd" pInputText type="number" step="0.1" formControlName="defaultCustomsDutyRate"
-                            [class.ng-invalid]="isGlobalParamInvalid('defaultCustomsDutyRate')" [class.ng-dirty]="isGlobalParamInvalid('defaultCustomsDutyRate')"
+                            [class.ng-invalid]="isGlobalParamInvalid('defaultCustomsDutyRate')"
+                            [class.ng-dirty]="isGlobalParamInvalid('defaultCustomsDutyRate')"
                             placeholder="Enter customs duty rate" />
                         @if (isGlobalParamInvalid('defaultCustomsDutyRate')) {
                         <span class="field-error">{{ getGlobalParamError('defaultCustomsDutyRate') }}</span>
@@ -408,8 +413,8 @@
                     <div class="field">
                         <label for="gp-igst">IGST on Import (%) <span class="req">*</span></label>
                         <input id="gp-igst" pInputText type="number" step="0.1" formControlName="igstRate"
-                            [class.ng-invalid]="isGlobalParamInvalid('igstRate')" [class.ng-dirty]="isGlobalParamInvalid('igstRate')"
-                            placeholder="Enter IGST rate" />
+                            [class.ng-invalid]="isGlobalParamInvalid('igstRate')"
+                            [class.ng-dirty]="isGlobalParamInvalid('igstRate')" placeholder="Enter IGST rate" />
                         @if (isGlobalParamInvalid('igstRate')) {
                         <span class="field-error">{{ getGlobalParamError('igstRate') }}</span>
                         }
@@ -418,7 +423,8 @@
                     <div class="field">
                         <label for="gp-trans">Inland Transport (%) <span class="req">*</span></label>
                         <input id="gp-trans" pInputText type="number" step="0.1" formControlName="transportationRate"
-                            [class.ng-invalid]="isGlobalParamInvalid('transportationRate')" [class.ng-dirty]="isGlobalParamInvalid('transportationRate')"
+                            [class.ng-invalid]="isGlobalParamInvalid('transportationRate')"
+                            [class.ng-dirty]="isGlobalParamInvalid('transportationRate')"
                             placeholder="Enter transportation rate" />
                         @if (isGlobalParamInvalid('transportationRate')) {
                         <span class="field-error">{{ getGlobalParamError('transportationRate') }}</span>
@@ -428,7 +434,8 @@
                     <div class="field">
                         <label for="gp-fin">Finance Charges (%) <span class="req">*</span></label>
                         <input id="gp-fin" pInputText type="number" step="0.1" formControlName="financeChargesRate"
-                            [class.ng-invalid]="isGlobalParamInvalid('financeChargesRate')" [class.ng-dirty]="isGlobalParamInvalid('financeChargesRate')"
+                            [class.ng-invalid]="isGlobalParamInvalid('financeChargesRate')"
+                            [class.ng-dirty]="isGlobalParamInvalid('financeChargesRate')"
                             placeholder="Enter finance charges rate" />
                         @if (isGlobalParamInvalid('financeChargesRate')) {
                         <span class="field-error">{{ getGlobalParamError('financeChargesRate') }}</span>
@@ -438,8 +445,8 @@
                     <div class="field">
                         <label for="gp-margin">Profit Margin (%) <span class="req">*</span></label>
                         <input id="gp-margin" pInputText type="number" step="0.1" formControlName="marginRate"
-                            [class.ng-invalid]="isGlobalParamInvalid('marginRate')" [class.ng-dirty]="isGlobalParamInvalid('marginRate')"
-                            placeholder="Enter profit margin" />
+                            [class.ng-invalid]="isGlobalParamInvalid('marginRate')"
+                            [class.ng-dirty]="isGlobalParamInvalid('marginRate')" placeholder="Enter profit margin" />
                         @if (isGlobalParamInvalid('marginRate')) {
                         <span class="field-error">{{ getGlobalParamError('marginRate') }}</span>
                         }
@@ -448,8 +455,8 @@
                     <div class="field">
                         <label for="gp-gst">Selling GST (%) <span class="req">*</span></label>
                         <input id="gp-gst" pInputText type="number" step="0.1" formControlName="gstRate"
-                            [class.ng-invalid]="isGlobalParamInvalid('gstRate')" [class.ng-dirty]="isGlobalParamInvalid('gstRate')"
-                            placeholder="Enter GST rate" />
+                            [class.ng-invalid]="isGlobalParamInvalid('gstRate')"
+                            [class.ng-dirty]="isGlobalParamInvalid('gstRate')" placeholder="Enter GST rate" />
                         @if (isGlobalParamInvalid('gstRate')) {
                         <span class="field-error">{{ getGlobalParamError('gstRate') }}</span>
                         }
@@ -508,8 +515,7 @@
                             <label for="cs-item-qty">Quantity <span class="req">*</span></label>
                             <input id="cs-item-qty" pInputText type="number" step="0.001" min="0.001"
                                 formControlName="quantity" [class.ng-invalid]="isRowFieldInvalid('quantity')"
-                                [class.ng-dirty]="isRowFieldInvalid('quantity')"
-                                placeholder="Enter qty" />
+                                [class.ng-dirty]="isRowFieldInvalid('quantity')" placeholder="Enter qty" />
                             @if (isRowFieldInvalid('quantity')) {
                             <span class="field-error">{{ getRowFieldError('quantity') }}</span>
                             }
@@ -518,9 +524,9 @@
                         <div class="quick-field quick-field--price" style="flex: 1 1 110px;">
                             <label for="cs-item-price">Unit Price (€) <span class="req">*</span></label>
                             <input id="cs-item-price" pInputText type="number" step="0.01" min="0"
-                                formControlName="pricePerUnitEur" [class.ng-invalid]="isRowFieldInvalid('pricePerUnitEur')"
-                                [class.ng-dirty]="isRowFieldInvalid('pricePerUnitEur')"
-                                placeholder="Enter price (€)" />
+                                formControlName="pricePerUnitEur"
+                                [class.ng-invalid]="isRowFieldInvalid('pricePerUnitEur')"
+                                [class.ng-dirty]="isRowFieldInvalid('pricePerUnitEur')" placeholder="Enter price (€)" />
                             @if (isRowFieldInvalid('pricePerUnitEur')) {
                             <span class="field-error">{{ getRowFieldError('pricePerUnitEur') }}</span>
                             }
@@ -550,7 +556,7 @@
                 <!-- Dialog Items Table -->
                 @if (items().length > 0) {
                 <div class="cost-items-table-container">
-                    <p-table [value]="items()" [paginator]="items().length > 5" [rows]="5"
+                    <p-table [value]="items()" [paginator]="items().length > 5" [rows]="10"
                         [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
                         aria-label="Cost sheet draft items">
                         <ng-template pTemplate="header">
@@ -589,7 +595,8 @@
                                     €&nbsp;{{ ((item.quantity || 0) * (item.pricePerUnitEur || 0)) | number:'1.2-2' }}
                                 </td>
                                 <td class="num-cell">
-                                    {{ formatPercent(item.customsDutyRate ?? globalParamsForm.controls.defaultCustomsDutyRate.value ?? 0) }}
+                                    {{ formatPercent(item.customsDutyRate ??
+                                    globalParamsForm.controls.defaultCustomsDutyRate.value ?? 0) }}
                                 </td>
                                 <td style="text-align: right; width: 80px; white-space: nowrap;">
                                     <div class="actions-cell">

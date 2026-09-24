@@ -162,12 +162,15 @@
                 {{ (item.proforma_invoice_date || item.date) | date: 'dd-MM-yyyy' }}
               </span>
 
-              <h2 class="vsc-title">{{ item.proforma_invoice_no ? ('Proforma Invoice (' + item.proforma_invoice_no + ')') : 'Supplier Proforma Invoice' }}</h2>
+              <h2 class="vsc-title">{{ item.proforma_invoice_no ? ('Proforma Invoice (' + item.proforma_invoice_no +
+                ')') : 'Supplier Proforma Invoice' }}</h2>
             </div>
 
             <div class="vsc-header-right">
               @if (calculateOrderNet(item) > 0) {
-              <span class="vsc-cost-pill" [pTooltip]="'Total Net Value: ' + getCurrencyCode(item.currency) + ' ' + (calculateOrderNet(item) | number:'1.2-2')" tooltipPosition="bottom">
+              <span class="vsc-cost-pill"
+                [pTooltip]="'Total Net Value: ' + getCurrencyCode(item.currency) + ' ' + (calculateOrderNet(item) | number:'1.2-2')"
+                tooltipPosition="bottom">
                 <i class="pi pi-wallet" aria-hidden="true"></i>
                 {{ getCurrencySymbol(item.currency) }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
               </span>
@@ -182,12 +185,13 @@
 
               <div class="actions-cell">
                 <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
-                  [attr.aria-label]="'Edit proforma invoice ' + (item.proforma_invoice_no || item.id)" pTooltip="Edit proforma invoice"
-                  tooltipPosition="top" (click)="openEditProformaDialog(item)"></button>
+                  [attr.aria-label]="'Edit proforma invoice ' + (item.proforma_invoice_no || item.id)"
+                  pTooltip="Edit proforma invoice" tooltipPosition="top"
+                  (click)="openEditProformaDialog(item)"></button>
                 <button pButton type="button" icon="pi pi-trash"
                   class="p-button-text p-button-sm p-button-danger qe-delete"
-                  [attr.aria-label]="'Delete proforma invoice ' + (item.proforma_invoice_no || item.id)" pTooltip="Delete proforma invoice"
-                  tooltipPosition="top" (click)="deleteProforma(item)"></button>
+                  [attr.aria-label]="'Delete proforma invoice ' + (item.proforma_invoice_no || item.id)"
+                  pTooltip="Delete proforma invoice" tooltipPosition="top" (click)="deleteProforma(item)"></button>
               </div>
             </div>
           </div>
@@ -237,8 +241,9 @@
             <!-- Materials Table -->
             @if (item.items && item.items.length > 0) {
             <div class="cost-items-table-container">
-              <p-table [value]="item.items" [paginator]="item.items.length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
-                [scrollable]="true" scrollHeight="320px" styleClass="p-datatable-sm items-table-wrap" [tableStyle]="{ 'min-width': '100%' }">
+              <p-table [value]="item.items" [paginator]="item.items.length > 5" [rows]="10"
+                [rowsPerPageOptions]="[5, 10, 20]" [scrollable]="true" scrollHeight="320px"
+                styleClass="p-datatable-sm items-table-wrap" [tableStyle]="{ 'min-width': '100%' }">
                 <ng-template pTemplate="header">
                   <tr>
                     <th style="width: 50px; text-align: center;">#</th>
@@ -274,12 +279,15 @@
                     <td colspan="5" class="total-label-cell">
                       <div class="total-label-wrapper">
                         <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-calculator"></i></span>
-                        <span class="total-title" style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total Net Value</span>
-                        <span class="total-items-badge">({{ item.items.length }} {{ item.items.length === 1 ? 'item' : 'items' }})</span>
+                        <span class="total-title" style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total
+                          Net Value</span>
+                        <span class="total-items-badge">({{ item.items.length }} {{ item.items.length === 1 ? 'item' :
+                          'items' }})</span>
                       </div>
                     </td>
                     <td class="total-amount-cell" style="min-width: 150px; text-align: right; white-space: nowrap;">
-                      <span class="total-amount-value" style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
+                      <span class="total-amount-value"
+                        style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
                         {{ getCurrencySymbol(item.currency) }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
                       </span>
                     </td>
@@ -290,10 +298,8 @@
             }
 
             <!-- Remarks & Notes -->
-            <app-step-remarks
-              [remarks]="item.remarks || item.remark"
-              [defaultDate]="item.proforma_invoice_date || item.date"
-              [loading]="quickAddingId() === item.id"
+            <app-step-remarks [remarks]="item.remarks || item.remark"
+              [defaultDate]="item.proforma_invoice_date || item.date" [loading]="quickAddingId() === item.id"
               (quickAdd)="quickAddProformaRemark(item, $event)"
               (deleteRemark)="deleteRemarkFromProforma(item, $event)" />
 
@@ -380,12 +386,15 @@
                 {{ (item.invoice_date || item.date) | date: 'dd-MM-yyyy' }}
               </span>
 
-              <h2 class="vsc-title">{{ item.invoice_no ? ('Commercial Invoice (' + item.invoice_no + ')') : 'Supplier Commercial Invoice' }}</h2>
+              <h2 class="vsc-title">{{ item.invoice_no ? ('Commercial Invoice (' + item.invoice_no + ')') : 'Supplier
+                Commercial Invoice' }}</h2>
             </div>
 
             <div class="vsc-header-right">
               @if (calculateOrderNet(item) > 0) {
-              <span class="vsc-cost-pill" [pTooltip]="'Total Net Value: ' + getCurrencyCode(item.currency) + ' ' + (calculateOrderNet(item) | number:'1.2-2')" tooltipPosition="bottom">
+              <span class="vsc-cost-pill"
+                [pTooltip]="'Total Net Value: ' + getCurrencyCode(item.currency) + ' ' + (calculateOrderNet(item) | number:'1.2-2')"
+                tooltipPosition="bottom">
                 <i class="pi pi-wallet" aria-hidden="true"></i>
                 {{ getCurrencySymbol(item.currency) }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
               </span>
@@ -455,8 +464,9 @@
             <!-- Materials Table -->
             @if (item.items && item.items.length > 0) {
             <div class="cost-items-table-container">
-              <p-table [value]="item.items" [paginator]="item.items.length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
-                [scrollable]="true" scrollHeight="320px" styleClass="p-datatable-sm items-table-wrap" [tableStyle]="{ 'min-width': '100%' }">
+              <p-table [value]="item.items" [paginator]="item.items.length > 5" [rows]="10"
+                [rowsPerPageOptions]="[5, 10, 20]" [scrollable]="true" scrollHeight="320px"
+                styleClass="p-datatable-sm items-table-wrap" [tableStyle]="{ 'min-width': '100%' }">
                 <ng-template pTemplate="header">
                   <tr>
                     <th style="width: 50px; text-align: center;">#</th>
@@ -492,12 +502,15 @@
                     <td colspan="5" class="total-label-cell">
                       <div class="total-label-wrapper">
                         <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-calculator"></i></span>
-                        <span class="total-title" style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total Net Value</span>
-                        <span class="total-items-badge">({{ item.items.length }} {{ item.items.length === 1 ? 'item' : 'items' }})</span>
+                        <span class="total-title" style="font-weight: 700; color: var(--color-primary, #e14d3f);">Total
+                          Net Value</span>
+                        <span class="total-items-badge">({{ item.items.length }} {{ item.items.length === 1 ? 'item' :
+                          'items' }})</span>
                       </div>
                     </td>
                     <td class="total-amount-cell" style="min-width: 150px; text-align: right; white-space: nowrap;">
-                      <span class="total-amount-value" style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
+                      <span class="total-amount-value"
+                        style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #e14d3f);">
                         {{ getCurrencySymbol(item.currency) }}&nbsp;{{ calculateOrderNet(item) | number:'1.2-2' }}
                       </span>
                     </td>
@@ -508,11 +521,8 @@
             }
 
             <!-- Remarks & Notes -->
-            <app-step-remarks
-              [remarks]="item.remarks || item.remark"
-              [defaultDate]="item.invoice_date || item.date"
-              [loading]="quickAddingId() === item.id"
-              (quickAdd)="quickAddInvoiceRemark(item, $event)"
+            <app-step-remarks [remarks]="item.remarks || item.remark" [defaultDate]="item.invoice_date || item.date"
+              [loading]="quickAddingId() === item.id" (quickAdd)="quickAddInvoiceRemark(item, $event)"
               (deleteRemark)="deleteRemarkFromInvoice(item, $event)" />
 
             <!-- Attachments -->
@@ -568,7 +578,8 @@
           <p>
             Record shipment packing condition, package breakdown, and container packing slips.
             @if (latestProformaInvoice() || latestOrderConfirmation()) {
-            <br /><strong>{{ latestProformaInvoice() ? 'Latest Proforma Invoice' : 'Latest Order Confirmation' }}</strong> is available to automatically pre-populate material items.
+            <br /><strong>{{ latestProformaInvoice() ? 'Latest Proforma Invoice' : 'Latest Order Confirmation'
+              }}</strong> is available to automatically pre-populate material items.
             }
           </p>
           <button pButton type="button" icon="pi pi-plus" label="Record Packing List" class="create-cost-sheet-btn"
@@ -597,12 +608,15 @@
                 {{ (item.packing_list_date || item.date) | date: 'dd-MM-yyyy' }}
               </span>
 
-              <h2 class="vsc-title">{{ item.packing_list_no ? ('Packing List (' + item.packing_list_no + ')') : 'Shipment Packing List' }}</h2>
+              <h2 class="vsc-title">{{ item.packing_list_no ? ('Packing List (' + item.packing_list_no + ')') :
+                'Shipment Packing List' }}</h2>
             </div>
 
             <div class="vsc-header-right">
               @if (calculatePackingListTotalWeight(item) > 0) {
-              <span class="vsc-cost-pill" [pTooltip]="'Total Weight: ' + (calculatePackingListTotalWeight(item) | number:'1.2-2') + ' kg'" tooltipPosition="bottom">
+              <span class="vsc-cost-pill"
+                [pTooltip]="'Total Weight: ' + (calculatePackingListTotalWeight(item) | number:'1.2-2') + ' kg'"
+                tooltipPosition="bottom">
                 <i class="pi pi-box" aria-hidden="true"></i>
                 {{ calculatePackingListTotalWeight(item) | number: '1.2-2' }} kg
               </span>
@@ -617,12 +631,12 @@
 
               <div class="actions-cell">
                 <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
-                  [attr.aria-label]="'Edit packing list ' + (item.packing_list_no || item.id)" pTooltip="Edit packing list"
-                  tooltipPosition="top" (click)="openEditPackingListDialog(item)"></button>
+                  [attr.aria-label]="'Edit packing list ' + (item.packing_list_no || item.id)"
+                  pTooltip="Edit packing list" tooltipPosition="top" (click)="openEditPackingListDialog(item)"></button>
                 <button pButton type="button" icon="pi pi-trash"
                   class="p-button-text p-button-sm p-button-danger qe-delete"
-                  [attr.aria-label]="'Delete packing list ' + (item.packing_list_no || item.id)" pTooltip="Delete packing list"
-                  tooltipPosition="top" (click)="deletePackingList(item)"></button>
+                  [attr.aria-label]="'Delete packing list ' + (item.packing_list_no || item.id)"
+                  pTooltip="Delete packing list" tooltipPosition="top" (click)="deletePackingList(item)"></button>
               </div>
             </div>
           </div>
@@ -644,8 +658,9 @@
             <!-- Materials / Package Breakdown Table -->
             @if (item.items && item.items.length > 0) {
             <div class="cost-items-table-container">
-              <p-table [value]="item.items" [paginator]="item.items.length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
-                [scrollable]="true" scrollHeight="320px" styleClass="p-datatable-sm items-table-wrap" [tableStyle]="{ 'min-width': '100%' }">
+              <p-table [value]="item.items" [paginator]="item.items.length > 5" [rows]="10"
+                [rowsPerPageOptions]="[5, 10, 20]" [scrollable]="true" scrollHeight="320px"
+                styleClass="p-datatable-sm items-table-wrap" [tableStyle]="{ 'min-width': '100%' }">
                 <ng-template pTemplate="header">
                   <tr>
                     <th style="width: 50px; text-align: center;">#</th>
@@ -681,12 +696,15 @@
                     <td colspan="5" class="total-label-cell">
                       <div class="total-label-wrapper">
                         <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-box"></i></span>
-                        <span class="total-title" style="font-weight: 700; color: var(--color-heading);">Total Weight</span>
-                        <span class="total-items-badge">({{ item.items.length }} {{ item.items.length === 1 ? 'item' : 'items' }})</span>
+                        <span class="total-title" style="font-weight: 700; color: var(--color-heading);">Total
+                          Weight</span>
+                        <span class="total-items-badge">({{ item.items.length }} {{ item.items.length === 1 ? 'item' :
+                          'items' }})</span>
                       </div>
                     </td>
                     <td class="total-amount-cell" style="min-width: 150px; text-align: right; white-space: nowrap;">
-                      <span class="total-amount-value" style="font-size: 1rem; font-weight: 700; color: var(--color-heading);">
+                      <span class="total-amount-value"
+                        style="font-size: 1rem; font-weight: 700; color: var(--color-heading);">
                         {{ calculatePackingListNetWeight(item) | number:'1.2-2' }} kg
                       </span>
                     </td>
@@ -695,11 +713,13 @@
                     <td colspan="5" class="total-label-cell">
                       <div class="total-label-wrapper">
                         <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-box"></i></span>
-                        <span class="total-title" style="font-weight: 700; color: var(--color-heading);">Gross Weight</span>
+                        <span class="total-title" style="font-weight: 700; color: var(--color-heading);">Gross
+                          Weight</span>
                       </div>
                     </td>
                     <td class="total-amount-cell" style="min-width: 150px; text-align: right; white-space: nowrap;">
-                      <span class="total-amount-value" style="font-size: 1rem; font-weight: 700; color: var(--color-heading);">
+                      <span class="total-amount-value"
+                        style="font-size: 1rem; font-weight: 700; color: var(--color-heading);">
                         {{ calculatePackingListTotalWeight(item) | number:'1.2-2' }} kg
                       </span>
                     </td>
@@ -710,10 +730,8 @@
             }
 
             <!-- Remarks & Notes -->
-            <app-step-remarks
-              [remarks]="item.remarks || item.remark"
-              [defaultDate]="item.packing_list_date || item.date"
-              [loading]="quickAddingId() === item.id"
+            <app-step-remarks [remarks]="item.remarks || item.remark"
+              [defaultDate]="item.packing_list_date || item.date" [loading]="quickAddingId() === item.id"
               (quickAdd)="quickAddPackingListRemark(item, $event)"
               (deleteRemark)="deleteRemarkFromPackingList(item, $event)" />
 
@@ -848,8 +866,8 @@
             <div class="field">
               <label for="dlg-pi-warranty">Warranty Period <span class="req" aria-hidden="true">*</span></label>
               <p-select id="dlg-pi-warranty" formControlName="warranty_period" [options]="warrantyPeriodOptions"
-                optionLabel="label" optionValue="value" placeholder="Select Warranty Period" [fluid]="true" appendTo="body"
-                [style]="{ width: '100%', height: '38px' }" />
+                optionLabel="label" optionValue="value" placeholder="Select Warranty Period" [fluid]="true"
+                appendTo="body" [style]="{ width: '100%', height: '38px' }" />
               @if (isFieldInvalid('proforma', 'warranty_period')) {
               <p class="field-error">{{ getFieldError('proforma', 'warranty_period') }}</p>
               }
@@ -936,7 +954,7 @@
           <!-- Items Table -->
           @if (proformaItems().length > 0) {
           <div class="cost-items-table-container">
-            <p-table [value]="proformaItems()" [paginator]="proformaItems().length > 5" [rows]="5"
+            <p-table [value]="proformaItems()" [paginator]="proformaItems().length > 5" [rows]="10"
               styleClass="p-datatable-sm items-table-wrap" aria-label="Proforma invoice materials list">
               <ng-template pTemplate="header">
                 <tr>
@@ -1067,10 +1085,7 @@
         </div>
 
         <!-- Section 5: Remarks & Notes -->
-        <app-step-remarks
-          mode="dialog"
-          [remarks]="dialogRemarks()"
-          (remarksChange)="dialogRemarks.set($event)"
+        <app-step-remarks mode="dialog" [remarks]="dialogRemarks()" (remarksChange)="dialogRemarks.set($event)"
           sectionNumber="5" />
 
       </div>
@@ -1177,8 +1192,8 @@
             <div class="field">
               <label for="dlg-inv-warranty">Warranty Period <span class="req" aria-hidden="true">*</span></label>
               <p-select id="dlg-inv-warranty" formControlName="warranty_period" [options]="warrantyPeriodOptions"
-                optionLabel="label" optionValue="value" placeholder="Select Warranty Period" [fluid]="true" appendTo="body"
-                [style]="{ width: '100%', height: '38px' }" />
+                optionLabel="label" optionValue="value" placeholder="Select Warranty Period" [fluid]="true"
+                appendTo="body" [style]="{ width: '100%', height: '38px' }" />
               @if (isFieldInvalid('invoice', 'warranty_period')) {
               <p class="field-error">{{ getFieldError('invoice', 'warranty_period') }}</p>
               }
@@ -1209,7 +1224,8 @@
             @if (invoiceTotalNet() > 0) {
             <div class="header-totals-group" style="display: inline-flex; align-items: center; gap: 8px;">
               <span class="vsc-cost-pill">
-                Total Net ({{ getCurrencyCode(invoiceForm.get('currency')?.value) }}): {{ invoiceTotalNet() | number: '1.2-2' }}
+                Total Net ({{ getCurrencyCode(invoiceForm.get('currency')?.value) }}): {{ invoiceTotalNet() | number:
+                '1.2-2' }}
               </span>
             </div>
             }
@@ -1266,7 +1282,7 @@
           <!-- Items Table -->
           @if (invoiceItems().length > 0) {
           <div class="cost-items-table-container">
-            <p-table [value]="invoiceItems()" [paginator]="invoiceItems().length > 5" [rows]="5"
+            <p-table [value]="invoiceItems()" [paginator]="invoiceItems().length > 5" [rows]="10"
               styleClass="p-datatable-sm items-table-wrap" aria-label="Commercial invoice materials list">
               <ng-template pTemplate="header">
                 <tr>
@@ -1398,10 +1414,7 @@
         </div>
 
         <!-- Section 5: Remarks & Notes -->
-        <app-step-remarks
-          mode="dialog"
-          [remarks]="dialogRemarks()"
-          (remarksChange)="dialogRemarks.set($event)"
+        <app-step-remarks mode="dialog" [remarks]="dialogRemarks()" (remarksChange)="dialogRemarks.set($event)"
           sectionNumber="5" />
 
       </div>
@@ -1513,7 +1526,8 @@
             @if (packingListTotalWeight() > 0) {
             <div class="header-totals-group" style="display: inline-flex; align-items: center; gap: 8px;">
               <span class="vsc-cost-pill">
-                <i class="pi pi-box" style="margin-right: 4px;"></i> Total Weight: {{ packingListTotalWeight() | number: '1.2-2' }} kg
+                <i class="pi pi-box" style="margin-right: 4px;"></i> Total Weight: {{ packingListTotalWeight() | number:
+                '1.2-2' }} kg
               </span>
             </div>
             }
@@ -1570,7 +1584,7 @@
           <!-- Items Table -->
           @if (packingListItems().length > 0) {
           <div class="cost-items-table-container">
-            <p-table [value]="packingListItems()" [paginator]="packingListItems().length > 5" [rows]="5"
+            <p-table [value]="packingListItems()" [paginator]="packingListItems().length > 5" [rows]="10"
               styleClass="p-datatable-sm items-table-wrap" aria-label="Packing list materials">
               <ng-template pTemplate="header">
                 <tr>
@@ -1616,14 +1630,17 @@
                   <td colspan="3" class="total-label-cell">
                     <div class="total-label-wrapper">
                       <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-box"></i></span>
-                      <span class="total-title" style="font-weight: 700; color: var(--color-heading);">Total Weight</span>
+                      <span class="total-title" style="font-weight: 700; color: var(--color-heading);">Total
+                        Weight</span>
                     </div>
                   </td>
                   <td class="num-cell" style="text-align: right; font-weight: 700;">
                     <span class="qty-badge">{{ packingListTotalItems() | number }} units</span>
                   </td>
-                  <td class="total-amount-cell" colspan="2" style="min-width: 120px; text-align: right; white-space: nowrap;">
-                    <span class="total-amount-value" style="font-size: 1rem; font-weight: 700; color: var(--color-heading);">
+                  <td class="total-amount-cell" colspan="2"
+                    style="min-width: 120px; text-align: right; white-space: nowrap;">
+                    <span class="total-amount-value"
+                      style="font-size: 1rem; font-weight: 700; color: var(--color-heading);">
                       {{ packingListTotalWeight() | number:'1.2-2' }} kg
                     </span>
                   </td>
@@ -1633,12 +1650,15 @@
                   <td colspan="3" class="total-label-cell">
                     <div class="total-label-wrapper">
                       <span class="total-icon-badge" aria-hidden="true"><i class="pi pi-box"></i></span>
-                      <span class="total-title" style="font-weight: 700; color: var(--color-heading);">Gross Weight</span>
+                      <span class="total-title" style="font-weight: 700; color: var(--color-heading);">Gross
+                        Weight</span>
                     </div>
                   </td>
                   <td class="num-cell" style="text-align: right; font-weight: 700;"></td>
-                  <td class="total-amount-cell" colspan="2" style="min-width: 180px; text-align: right; white-space: nowrap;">
-                    <div class="footer-input-wrapper" style="display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px;">
+                  <td class="total-amount-cell" colspan="2"
+                    style="min-width: 180px; text-align: right; white-space: nowrap;">
+                    <div class="footer-input-wrapper"
+                      style="display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px;">
                       <input id="dlg-pkl-footer-gross-weight" pInputText formControlName="gross_weight"
                         [placeholder]="(packingListTotalWeight() > 0 ? (packingListTotalWeight() | number:'1.2-2') : '0.00')"
                         aria-label="Gross Weight in kilograms"
@@ -1721,10 +1741,7 @@
         </div>
 
         <!-- Section 4: Remarks & Notes -->
-        <app-step-remarks
-          mode="dialog"
-          [remarks]="dialogRemarks()"
-          (remarksChange)="dialogRemarks.set($event)"
+        <app-step-remarks mode="dialog" [remarks]="dialogRemarks()" (remarksChange)="dialogRemarks.set($event)"
           sectionNumber="4" />
 
       </div>
@@ -1735,9 +1752,8 @@
         <button pButton type="button" label="Cancel" class="p-button-text cancel-btn" (click)="closePackingListDialog()"
           [disabled]="submitting()"></button>
         <button pButton type="submit" form="packing-form"
-          [label]="editingPackingList() ? 'Update Packing List' : 'Submit Packing List'"
-          icon="pi pi-check" class="submit-btn" [loading]="submitting()"
-          [disabled]="submitting() || packingListForm.invalid"></button>
+          [label]="editingPackingList() ? 'Update Packing List' : 'Submit Packing List'" icon="pi pi-check"
+          class="submit-btn" [loading]="submitting()" [disabled]="submitting() || packingListForm.invalid"></button>
       </div>
     </ng-template>
   </p-dialog>

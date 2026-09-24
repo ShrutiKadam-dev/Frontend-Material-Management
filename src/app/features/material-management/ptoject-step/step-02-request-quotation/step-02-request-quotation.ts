@@ -7,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormsModule, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { finalize } from 'rxjs';
 import { MessageService } from 'primeng/api';
@@ -36,11 +36,11 @@ import { Supplier } from '../../../../core/models/supplier.model';
 import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
-import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
   selector: 'app-step-02-request-quotation',
   imports: [
+    FormsModule,
     ReactiveFormsModule,
     ButtonModule,
     DialogModule,
@@ -51,7 +51,6 @@ import { StepRemarksComponent } from '../../../../shared/components/step-remarks
     TooltipModule,
     TableModule,
     DatePipe,
-    StepRemarksComponent,
   ],
   templateUrl: './step-02-request-quotation.html',
   styleUrl: './step-02-request-quotation.scss',
@@ -104,6 +103,41 @@ export class Step02RequestQuotation implements OnInit {
 
   /** Tracking which request card is currently submitting a quick remark */
   protected readonly quickAddingId = signal<number | null>(null);
+
+  /** Local model for quick remark text on each request card, keyed by request ID */
+  protected readonly quickRemarkTexts = signal<Record<number, string>>({});
+
+  /** Input text for new remark in dialog */
+  protected readonly newRemarkInput = signal<string>('');
+
+  protected getQuickRemarkText(id: number): string {
+    return this.quickRemarkTexts()[id] ?? '';
+  }
+
+  protected setQuickRemarkText(id: number, val: string): void {
+    this.quickRemarkTexts.update((prev) => ({ ...prev, [id]: val }));
+  }
+
+  protected getRequestRemarks(req: QuotationRequest): StepRemarkItem[] {
+    const raw = (req.remarks && (Array.isArray(req.remarks) ? req.remarks.length > 0 : true)) ? req.remarks : (req as any).remark;
+    return parseStepRemarks(raw, req.quotation_requested_date);
+  }
+
+  protected addDialogRemark(): void {
+    const text = this.newRemarkInput().trim();
+    if (!text) return;
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    this.dialogRemarks.update((list) => [...list, newRemark]);
+    this.newRemarkInput.set('');
+  }
+
+  protected removeDialogRemark(index: number): void {
+    this.dialogRemarks.update((list) => list.filter((_, i) => i !== index));
+  }
 
   protected readonly headerForm = this.fb.group({
     quotation_requested_date: [null as Date | null, [Validators.required]],
@@ -174,6 +208,7 @@ export class Step02RequestQuotation implements OnInit {
     this.existingAttachments.set([]);
     this.attachments.set([]);
     this.dialogRemarks.set([]);
+    this.newRemarkInput.set('');
     this.addRowVisible.set(false);
     this.editingIndex.set(null);
     this.errorMessage.set(null);
@@ -205,7 +240,9 @@ export class Step02RequestQuotation implements OnInit {
     this.items.set(request.items ? request.items.map((it) => ({ ...it })) : []);
     this.existingAttachments.set(request.attachments ?? []);
     this.attachments.set([]);
-    this.dialogRemarks.set(parseStepRemarks(request.remarks, request.quotation_requested_date));
+    const raw = (request.remarks && (Array.isArray(request.remarks) ? request.remarks.length > 0 : true)) ? request.remarks : (request as any).remark;
+    this.dialogRemarks.set(parseStepRemarks(raw, request.quotation_requested_date));
+    this.newRemarkInput.set('');
     this.addRowVisible.set(false);
     this.editingIndex.set(null);
     this.errorMessage.set(null);
@@ -358,6 +395,9 @@ export class Step02RequestQuotation implements OnInit {
     this.submitting.set(true);
     this.errorMessage.set(null);
 
+    if (this.newRemarkInput().trim()) {
+      this.addDialogRemark();
+    }
     const remarksPayload = serializeStepRemarks(this.dialogRemarks());
 
     if (current) {
@@ -432,13 +472,16 @@ export class Step02RequestQuotation implements OnInit {
 
   /* ── Quick Add / Delete Remarks on Card ──────────────── */
 
-  protected quickAddRemark(request: QuotationRequest, text: string): void {
+  protected quickAddRemark(request: QuotationRequest, textInput?: string): void {
+    const text = (textInput ?? this.getQuickRemarkText(request.id)).trim();
+    if (!text || this.quickAddingId() === request.id) return;
+
     const newRemark: StepRemarkItem = {
       id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       text,
       created_at: new Date().toISOString(),
     };
-    const currentRemarks = parseStepRemarks(request.remarks, request.quotation_requested_date);
+    const currentRemarks = this.getRequestRemarks(request);
     const updatedRemarks = [...currentRemarks, newRemark];
     const remarksPayload = serializeStepRemarks(updatedRemarks);
 
@@ -457,6 +500,7 @@ export class Step02RequestQuotation implements OnInit {
       .pipe(finalize(() => this.quickAddingId.set(null)))
       .subscribe({
         next: () => {
+          this.setQuickRemarkText(request.id, '');
           this.messageService.add({
             severity: 'success',
             summary: 'Remark Added',
@@ -476,7 +520,7 @@ export class Step02RequestQuotation implements OnInit {
   }
 
   protected deleteRemarkFromRequest(request: QuotationRequest, remarkId: string): void {
-    const currentRemarks = parseStepRemarks(request.remarks, request.quotation_requested_date);
+    const currentRemarks = this.getRequestRemarks(request);
     const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
     const remarksPayload = serializeStepRemarks(updatedRemarks);
 

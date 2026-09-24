@@ -130,7 +130,7 @@
                   <i class="pi pi-box" aria-hidden="true"></i>
                   Requested Items ({{ q.items.length }})
                 </p>
-                <p-table [value]="q.items" [paginator]="q.items.length > 5" [rows]="5"
+                <p-table [value]="q.items" [paginator]="q.items.length > 5" [rows]="10"
                   [rowsPerPageOptions]="[5, 10, 20]" styleClass="p-datatable-sm items-table-wrap"
                   aria-label="Materials for query">
                   <ng-template pTemplate="header">
@@ -190,7 +190,8 @@
                               <i class="pi pi-clock" aria-hidden="true"></i>
                               {{ rmk.created_at | date: 'dd-MM-yyyy, hh:mm a' }}
                             </span>
-                            <button type="button" class="timeline-delete-btn" pTooltip="Delete remark" tooltipPosition="left"
+                            <button type="button" class="timeline-delete-btn" pTooltip="Delete remark"
+                              tooltipPosition="left"
                               [attr.aria-label]="'Delete remark from ' + (rmk.created_at | date: 'dd-MM-yyyy')"
                               (click)="deleteRemarkFromQuery(rmk.id)">
                               <i class="pi pi-trash" aria-hidden="true"></i>
@@ -212,8 +213,7 @@
                       class="quick-remark-input" (keydown.enter)="$event.preventDefault(); quickAddRemark()" />
                     <button pButton type="button" icon="pi pi-plus" label="Add Remark"
                       class="p-button-sm quick-remark-btn" [loading]="quickAddingRemark()"
-                      [disabled]="!quickRemarkText().trim() || quickAddingRemark()"
-                      (click)="quickAddRemark()"></button>
+                      [disabled]="!quickRemarkText().trim() || quickAddingRemark()" (click)="quickAddRemark()"></button>
                   </div>
                 </div>
 
@@ -352,7 +352,7 @@
 
         <!-- Items Table with Pagination -->
         @if (items().length > 0) {
-        <p-table [value]="items()" [paginator]="items().length > 5" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]"
+        <p-table [value]="items()" [paginator]="items().length > 5" [rows]="10" [rowsPerPageOptions]="[5, 10, 20]"
           styleClass="p-datatable-sm items-table-wrap" aria-label="Material items list">
           <ng-template pTemplate="header">
             <tr>
@@ -443,10 +443,9 @@
 
         <!-- Drop zone -->
         <div class="file-drop-zone"
-          [class.file-drop-zone--compact]="attachments().length > 0 || existingAttachments().length > 0"
-          role="button" tabindex="0" (click)="fileInput.click()"
-          (keydown.enter)="fileInput.click()" (keydown.space)="$event.preventDefault(); fileInput.click()"
-          aria-label="Upload attachments">
+          [class.file-drop-zone--compact]="attachments().length > 0 || existingAttachments().length > 0" role="button"
+          tabindex="0" (click)="fileInput.click()" (keydown.enter)="fileInput.click()"
+          (keydown.space)="$event.preventDefault(); fileInput.click()" aria-label="Upload attachments">
           <i class="pi pi-upload" aria-hidden="true"></i>
           <span>{{ (attachments().length || existingAttachments().length) ? 'Add more files' : 'Click to upload files'
             }}</span>
@@ -462,7 +461,8 @@
       <div class="dlg-section">
         <div class="dlg-section-header">
           <p class="dlg-section-label"><i class="pi pi-comments"></i> 4. Notes & Remarks</p>
-          <span class="card-count-badge">{{ dialogRemarks().length }} {{ dialogRemarks().length === 1 ? 'remark' : 'remarks' }}</span>
+          <span class="card-count-badge">{{ dialogRemarks().length }} {{ dialogRemarks().length === 1 ? 'remark' :
+            'remarks' }}</span>
         </div>
 
         @if (dialogRemarks().length > 0) {
