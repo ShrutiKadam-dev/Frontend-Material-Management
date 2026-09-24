@@ -249,16 +249,13 @@
             </div>
             }
 
-            <!-- Remarks / Notes -->
-            @if (t.remark) {
-            <div class="vsc-remark-box">
-              <i class="pi pi-info-circle" aria-hidden="true"></i>
-              <div class="vsc-remark-content">
-                <span class="vsc-remark-label">Remarks:</span>
-                <span class="vsc-remark-text">{{ t.remark }}</span>
-              </div>
-            </div>
-            }
+            <!-- Remarks & Notes Timeline Sequence -->
+            <app-step-remarks
+              [remarks]="t.remarks || t.remark"
+              [defaultDate]="t.tender_date"
+              [loading]="quickAddingId() === t.id"
+              (quickAdd)="quickAddRemark(t, $event)"
+              (deleteRemark)="deleteRemarkFromTender(t, $event)" />
 
             <!-- Attachments List -->
             @if (t.attachments && t.attachments.length) {
@@ -665,14 +662,11 @@
         </div>
 
         <!-- ── F. Remarks Section ─────────────────────────── -->
-        <div class="dlg-section">
-          <p class="dlg-section-label"><i class="pi pi-comment"></i> 6. Remarks / Special Notes</p>
-          <div class="field">
-            <textarea id="dlg-tnd-remark" pTextarea formControlName="remark" rows="3"
-              placeholder="Enter special requirements, compliance conditions, or notes…"
-              style="width: 100%; resize: vertical;"></textarea>
-          </div>
-        </div>
+        <app-step-remarks
+          mode="dialog"
+          [remarks]="dialogRemarks()"
+          (remarksChange)="dialogRemarks.set($event)"
+          sectionNumber="6" />
 
       </div>
 

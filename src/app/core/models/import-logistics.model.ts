@@ -23,6 +23,7 @@ export interface ImportLogistics {
   date: string;
   port_of_discharge: string;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   attachments?: Attachment[];
   created_at?: string;
   updated_at?: string;
@@ -42,6 +43,7 @@ export interface ImportLogisticsCreateInput {
   date: string;
   port_of_discharge: string;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
 }
 
 export interface ImportLogisticsUpdateInput {
@@ -58,4 +60,5 @@ export interface ImportLogisticsUpdateInput {
   date?: string;
   port_of_discharge?: string;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
 }

@@ -337,16 +337,13 @@
                         </div>
                         }
 
-                        <!-- Remarks / Payment Instructions -->
-                        @if (payment.remark) {
-                        <div class="vsc-remark-box">
-                            <i class="pi pi-comment" aria-hidden="true"></i>
-                            <div class="vsc-remark-content">
-                                <span class="vsc-remark-label">Payment Ref & Remarks:</span>
-                                <span class="vsc-remark-text">{{ payment.remark }}</span>
-                            </div>
-                        </div>
-                        }
+                        <!-- Remarks & Notes -->
+                        <app-step-remarks
+                            [remarks]="payment.remarks || payment.remark"
+                            [defaultDate]="payment.payment_date"
+                            [loading]="quickAddingId() === payment.id"
+                            (quickAdd)="quickAddPaymentRemark(payment, $event)"
+                            (deleteRemark)="deleteRemarkFromPayment(payment, $event)" />
                     </div>
                 </article>
                 }
@@ -567,17 +564,12 @@
                         (change)="onFileSelected($event)" />
                 </div>
 
-                <!-- Section 4: Bank Details & Remarks (Then Remarks) -->
-                <div class="dlg-section">
-                    <p class="dlg-section-label">
-                        <i class="pi pi-comment"></i> 4. Bank UTR & Settlement Remarks
-                    </p>
-                    <div class="field">
-                        <label for="remark">Bank UTR / Transaction Ref / Remarks</label>
-                        <textarea id="remark" pTextarea formControlName="remark" rows="2"
-                            placeholder="e.g. Bank UTR #AXIS12345678, RTGS received on 10 Sep 2026..."></textarea>
-                    </div>
-                </div>
+                <!-- Section 4: Remarks & Notes -->
+                <app-step-remarks
+                    mode="dialog"
+                    [remarks]="dialogRemarks()"
+                    (remarksChange)="dialogRemarks.set($event)"
+                    sectionNumber="4" />
 
             </div>
         </form>

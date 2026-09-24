@@ -15,6 +15,7 @@ import {
 } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { finalize } from 'rxjs';
+import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -35,6 +36,9 @@ import {
 import { Attachment } from '../../../../core/models/attachment.model';
 import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
+import { StepRemarkItem } from '../../../../core/models/step-remark.model';
+import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
   selector: 'app-step-14-customer-payment',
@@ -48,6 +52,7 @@ import { Project } from '../../../../core/models/project.model';
     TooltipModule,
     DatePipe,
     DecimalPipe,
+    StepRemarksComponent,
   ],
   templateUrl: './step-14-customer-payment.html',
   styleUrl: './step-14-customer-payment.scss',
@@ -57,6 +62,7 @@ export class Step14CustomerPayment implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly messageService = inject(MessageService);
   private readonly paymentService = inject(CustomerPaymentService);
   private readonly projectService = inject(ProjectService);
   private readonly customerService = inject(CustomerService);
@@ -81,6 +87,8 @@ export class Step14CustomerPayment implements OnInit {
   protected readonly selectedFiles = signal<File[]>([]);
   protected readonly existingAttachments = signal<Attachment[]>([]);
   protected readonly downloadingAttachmentId = signal<number | null>(null);
+  protected readonly dialogRemarks = signal<StepRemarkItem[]>([]);
+  protected readonly quickAddingId = signal<number | null>(null);
 
   // ── Reactive Form ──────────────────────────────────────────────
   protected readonly paymentForm: FormGroup = this.fb.group({
@@ -209,6 +217,7 @@ export class Step14CustomerPayment implements OnInit {
     this.editingPayment.set(null);
     this.selectedFiles.set([]);
     this.existingAttachments.set([]);
+    this.dialogRemarks.set([]);
 
     const invoice = this.latestTaxInvoice();
 
@@ -230,6 +239,7 @@ export class Step14CustomerPayment implements OnInit {
     this.editingPayment.set(payment);
     this.selectedFiles.set([]);
     this.existingAttachments.set(payment.attachments || []);
+    this.dialogRemarks.set(parseStepRemarks(payment.remarks || payment.remark, payment.payment_date));
 
     const payDate = payment.payment_date ? new Date(payment.payment_date) : null;
 
@@ -275,7 +285,7 @@ export class Step14CustomerPayment implements OnInit {
       payment_date: payDateStr,
       tds: Number(val.tds) || 0,
       ld: Number(val.ld) || 0,
-      remark: val.remark ? String(val.remark).trim() : undefined,
+      remarks: serializeStepRemarks(this.dialogRemarks()),
     };
 
     const files = this.selectedFiles();
@@ -425,5 +435,72 @@ export class Step14CustomerPayment implements OnInit {
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
+  }
+
+  protected quickAddPaymentRemark(item: CustomerPayment, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.payment_date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(item.id);
+    const updatePayload: CustomerPaymentUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.paymentService
+      .updateCustomerPayment(item.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to Customer Payment.',
+            life: 3000,
+          });
+          this.loadAllStep14Data();
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromPayment(item: CustomerPayment, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.payment_date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: CustomerPaymentUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.paymentService.updateCustomerPayment(item.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from Customer Payment.',
+          life: 3000,
+        });
+        this.loadAllStep14Data();
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
   }
 }

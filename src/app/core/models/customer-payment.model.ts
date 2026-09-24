@@ -19,6 +19,7 @@ export interface CustomerPayment {
   total_deductions?: number;
   balance_amount?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   attachments?: Attachment[];
   created_at?: string;
   updated_at?: string;
@@ -34,6 +35,7 @@ export interface CustomerPaymentCreateInput {
   ld: number;
   tds: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
 }
 
 export interface CustomerPaymentUpdateInput extends Partial<CustomerPaymentCreateInput> {}

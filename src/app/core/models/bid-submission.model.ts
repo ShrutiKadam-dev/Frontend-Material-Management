@@ -31,6 +31,7 @@ export interface BidSubmission {
   total_amount?: number;
   status?: string;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   attachments?: Attachment[];
   items?: BidSubmissionItem[];
   created_at?: string;
@@ -54,6 +55,7 @@ export interface BidSubmissionCreateInput {
   total_net_amount?: number;
   total_amount?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items: BidSubmissionItem[];
 }
 
@@ -74,5 +76,6 @@ export interface BidSubmissionUpdateInput {
   total_net_amount?: number;
   total_amount?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items?: BidSubmissionItem[];
 }

@@ -299,16 +299,13 @@
               </div>
             </div>
 
-            <!-- Operational Remarks Callout -->
-            @if (item.remark) {
-            <div class="clearance-remark-card">
-              <i class="pi pi-comment remark-icon" aria-hidden="true"></i>
-              <div class="remark-content">
-                <span class="remark-title">Operational Remark & Notes:</span>
-                <p class="remark-body">{{ item.remark }}</p>
-              </div>
-            </div>
-            }
+            <!-- Remarks & Notes -->
+            <app-step-remarks
+              [remarks]="item.remarks || item.remark"
+              [defaultDate]="item.boe_date"
+              [loading]="quickAddingId() === item.id"
+              (quickAdd)="quickAddClearanceRemark(item, $event)"
+              (deleteRemark)="deleteRemarkFromClearance(item, $event)" />
 
             <!-- ── Standard Attachments Cards (Matching Other Steps) ── -->
             @if (item.attachments && item.attachments.length > 0) {
@@ -690,18 +687,12 @@
         </div>
       </div>
 
-      <!-- Section 4: Remark (Remark first as per project guidelines) -->
-      <div class="dlg-section">
-        <p class="dlg-section-label">
-          <i class="pi pi-comment"></i> 4. Remark & Clearance Notes
-        </p>
-
-        <div class="field full-width">
-          <label for="dlg-remark">Remark</label>
-          <textarea id="dlg-remark" pTextarea formControlName="remark" rows="3"
-            placeholder="Add operational notes, examination status, Out-of-charge remarks, or CFS details…"></textarea>
-        </div>
-      </div>
+      <!-- Section 4: Remarks & Notes -->
+      <app-step-remarks
+        mode="dialog"
+        [remarks]="dialogRemarks()"
+        (remarksChange)="dialogRemarks.set($event)"
+        sectionNumber="4" />
 
       <!-- Section 5: Document Uploads (Shown after Remark, Matching Standard File Upload) -->
       <div class="dlg-section">

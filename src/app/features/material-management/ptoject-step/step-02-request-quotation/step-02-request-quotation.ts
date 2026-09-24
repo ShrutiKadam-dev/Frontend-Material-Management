@@ -34,6 +34,9 @@ import {
 import { Attachment } from '../../../../core/models/attachment.model';
 import { Supplier } from '../../../../core/models/supplier.model';
 import { Project } from '../../../../core/models/project.model';
+import { StepRemarkItem } from '../../../../core/models/step-remark.model';
+import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
   selector: 'app-step-02-request-quotation',
@@ -48,6 +51,7 @@ import { Project } from '../../../../core/models/project.model';
     TooltipModule,
     TableModule,
     DatePipe,
+    StepRemarksComponent,
   ],
   templateUrl: './step-02-request-quotation.html',
   styleUrl: './step-02-request-quotation.scss',
@@ -94,6 +98,12 @@ export class Step02RequestQuotation implements OnInit {
   protected readonly editingIndex = signal<number | null>(null);
 
   protected readonly totalItems = computed(() => this.items().length);
+
+  /** Timeline remarks list for active dialog */
+  protected readonly dialogRemarks = signal<StepRemarkItem[]>([]);
+
+  /** Tracking which request card is currently submitting a quick remark */
+  protected readonly quickAddingId = signal<number | null>(null);
 
   protected readonly headerForm = this.fb.group({
     quotation_requested_date: [null as Date | null, [Validators.required]],
@@ -163,6 +173,7 @@ export class Step02RequestQuotation implements OnInit {
     this.items.set([]);
     this.existingAttachments.set([]);
     this.attachments.set([]);
+    this.dialogRemarks.set([]);
     this.addRowVisible.set(false);
     this.editingIndex.set(null);
     this.errorMessage.set(null);
@@ -189,11 +200,12 @@ export class Step02RequestQuotation implements OnInit {
     this.headerForm.setValue({
       quotation_requested_date: this.parseDate(request.quotation_requested_date),
       supplier_contacted: request.supplier_contacted ?? true,
-      remarks: request.remarks ?? '',
+      remarks: Array.isArray(request.remarks) ? request.remarks.join(', ') : (request.remarks ?? ''),
     });
     this.items.set(request.items ? request.items.map((it) => ({ ...it })) : []);
     this.existingAttachments.set(request.attachments ?? []);
     this.attachments.set([]);
+    this.dialogRemarks.set(parseStepRemarks(request.remarks, request.quotation_requested_date));
     this.addRowVisible.set(false);
     this.editingIndex.set(null);
     this.errorMessage.set(null);
@@ -346,13 +358,15 @@ export class Step02RequestQuotation implements OnInit {
     this.submitting.set(true);
     this.errorMessage.set(null);
 
+    const remarksPayload = serializeStepRemarks(this.dialogRemarks());
+
     if (current) {
       const updatePayload: QuotationRequestUpdateInput = {
         project_id: projectId,
         supplier_id: supplierId,
         quotation_requested_date: this.formatDate(reqDate),
         supplier_contacted: Boolean(raw.supplier_contacted),
-        remarks: raw.remarks ?? '',
+        remarks: remarksPayload,
         items: this.items(),
       };
 
@@ -386,7 +400,7 @@ export class Step02RequestQuotation implements OnInit {
         supplier_id: supplierId,
         quotation_requested_date: this.formatDate(reqDate),
         supplier_contacted: Boolean(raw.supplier_contacted),
-        remarks: raw.remarks ?? '',
+        remarks: remarksPayload,
         items: this.items(),
       };
 
@@ -414,6 +428,85 @@ export class Step02RequestQuotation implements OnInit {
           },
         });
     }
+  }
+
+  /* ── Quick Add / Delete Remarks on Card ──────────────── */
+
+  protected quickAddRemark(request: QuotationRequest, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(request.remarks, request.quotation_requested_date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(request.id);
+    const updatePayload: QuotationRequestUpdateInput = {
+      project_id: request.project_id,
+      supplier_id: request.supplier_id,
+      quotation_requested_date: request.quotation_requested_date,
+      supplier_contacted: request.supplier_contacted,
+      remarks: remarksPayload,
+      items: request.items,
+    };
+
+    this.quotationRequestService
+      .update(request.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to quotation request.',
+            life: 3000,
+          });
+          this.loadRequests(this.projectId());
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromRequest(request: QuotationRequest, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(request.remarks, request.quotation_requested_date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: QuotationRequestUpdateInput = {
+      project_id: request.project_id,
+      supplier_id: request.supplier_id,
+      quotation_requested_date: request.quotation_requested_date,
+      supplier_contacted: request.supplier_contacted,
+      remarks: remarksPayload,
+      items: request.items,
+    };
+
+    this.quotationRequestService.update(request.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from quotation request.',
+          life: 3000,
+        });
+        this.loadRequests(this.projectId());
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
   }
 
   protected deleteRequest(id: number): void {

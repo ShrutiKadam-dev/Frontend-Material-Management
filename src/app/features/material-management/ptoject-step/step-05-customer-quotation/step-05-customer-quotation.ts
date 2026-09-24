@@ -45,6 +45,9 @@ import { Attachment } from '../../../../core/models/attachment.model';
 import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
 import { CostSheet } from '../../../../core/models/cost-sheet.model';
+import { StepRemarkItem } from '../../../../core/models/step-remark.model';
+import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
   selector: 'app-step-05-customer-quotation',
@@ -60,6 +63,7 @@ import { CostSheet } from '../../../../core/models/cost-sheet.model';
     SelectModule,
     DatePipe,
     DecimalPipe,
+    StepRemarksComponent,
   ],
   templateUrl: './step-05-customer-quotation.html',
   styleUrl: './step-05-customer-quotation.scss',
@@ -97,6 +101,8 @@ export class Step05CustomerQuotation implements OnInit {
   protected readonly editingIndex = signal<number | null>(null);
   protected readonly attachments = signal<File[]>([]);
   protected readonly existingAttachments = signal<Attachment[]>([]);
+  protected readonly dialogRemarks = signal<StepRemarkItem[]>([]);
+  protected readonly quickAddingId = signal<number | null>(null);
 
   /* ── Global Dropdown Options ──────────────────────────── */
   protected readonly incotermsOptions = INCOTERMS_OPTIONS;
@@ -394,6 +400,7 @@ export class Step05CustomerQuotation implements OnInit {
     this.items.set(mappedItems);
     this.attachments.set([]);
     this.existingAttachments.set([]);
+    this.dialogRemarks.set([]);
     this.editingQuotation.set(null);
     this.editingIndex.set(null);
     this.rowForm.reset();
@@ -428,6 +435,7 @@ export class Step05CustomerQuotation implements OnInit {
     this.items.set(q.items ? [...q.items] : []);
     this.attachments.set([]);
     this.existingAttachments.set(q.attachments ? [...q.attachments] : []);
+    this.dialogRemarks.set(parseStepRemarks(q.remarks || q.remark, q.quotation_date));
     this.editingQuotation.set(q);
     this.editingIndex.set(null);
     this.rowForm.reset();
@@ -535,7 +543,7 @@ export class Step05CustomerQuotation implements OnInit {
       currency_symbol: currencySymbol,
       total_net_amount: this.totalNetAmount(),
       validity: validityStr,
-      remark: raw.remark || '',
+      remarks: serializeStepRemarks(this.dialogRemarks()),
       items: this.items(),
     };
 
@@ -674,13 +682,87 @@ export class Step05CustomerQuotation implements OnInit {
     if (!validity) return ['30', 'Days'];
     const parts = validity.trim().split(/\s+/);
     if (parts.length >= 2) {
-      return [parts[0], parts.slice(1).join(' ')];
+      let unit = parts.slice(1).join(' ');
+      const lower = unit.toLowerCase();
+      if (lower === 'day' || lower === 'days') unit = 'Days';
+      else if (lower === 'week' || lower === 'weeks') unit = 'Weeks';
+      else if (lower === 'month' || lower === 'months') unit = 'Months';
+      else if (lower === 'year' || lower === 'years') unit = 'Years';
+      return [parts[0], unit];
     }
     return [parts[0], 'Days'];
   }
 
   private todayIso(): string {
     return new Date().toISOString().substring(0, 10);
+  }
+
+  /* ── Remarks Operations ──────────────────────────────── */
+  protected quickAddRemark(quotation: CustomerQuotation, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(quotation.remarks || quotation.remark, quotation.quotation_date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(quotation.id);
+    const updatePayload: CustomerQuotationUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.customerQuotationService
+      .update(quotation.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to customer quotation.',
+            life: 3000,
+          });
+          this.loadQuotations(this.projectId());
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromQuotation(quotation: CustomerQuotation, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(quotation.remarks || quotation.remark, quotation.quotation_date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: CustomerQuotationUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.customerQuotationService.update(quotation.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from customer quotation.',
+          life: 3000,
+        });
+        this.loadQuotations(this.projectId());
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
   }
 
   /* ── Navigation ──────────────────────────────────────── */

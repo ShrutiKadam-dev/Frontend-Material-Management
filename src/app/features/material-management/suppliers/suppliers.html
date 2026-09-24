@@ -144,25 +144,41 @@
   @if (viewMode() === 'grid') {
   <div class="entity-cards-grid" role="feed" aria-label="Suppliers list">
     @for (supplier of filteredSuppliers(); track supplier.id) {
-    <article class="modern-entity-card app-panel">
+    <article class="modern-project-card modern-entity-card">
 
-      <!-- Profile Info Hero -->
-      <div class="card-profile-row">
+      <!-- 1. Top Row: Chip Group (Left) & Date (Right) -->
+      <div class="mpc-top-row">
+        <div class="mpc-chip-group">
+          <span class="mpc-chip mpc-chip--id" pTooltip="Supplier ID" tooltipPosition="top">
+            SUP-{{ supplier.id < 10 ? '0' + supplier.id : supplier.id }} </span>
+              @if (getNickname(supplier.name); as nick) {
+              <span class="mpc-chip mpc-chip--nickname" [title]="'Nickname: ' + nick">
+                <i class="pi pi-tag" aria-hidden="true"></i>
+                {{ nick }}
+              </span>
+              }
+        </div>
+
+        <div class="mpc-meta-block">
+          <span class="mpc-date" [title]="'Added: ' + (supplier.created_at | date:'dd-MM-yyyy')">
+            <i class="pi pi-calendar" aria-hidden="true"></i>
+            {{ supplier.created_at | date:'d MMM yyyy' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- 2. Profile Info Hero: Avatar + Company Name + Location -->
+      <div class="entity-profile-header">
         <div class="entity-avatar-box" aria-hidden="true">
           {{ initials(supplier.name) }}
         </div>
-        <div class="profile-meta">
-          <div class="profile-title-line">
-            <h2 class="profile-name" (click)="openDetailsDialog(supplier)" [title]="supplier.name" tabindex="0"
-              (keydown.enter)="openDetailsDialog(supplier)">
-              {{ getDisplayName(supplier.name) }}
-            </h2>
-            @if (getNickname(supplier.name); as nick) {
-            <span class="nickname-pill" [title]="'Nickname: ' + nick">{{ nick }}</span>
-            }
-          </div>
+        <div class="entity-meta-stack">
+          <h2 class="mpc-title" (click)="openDetailsDialog(supplier)" [title]="supplier.name" tabindex="0"
+            (keydown.enter)="openDetailsDialog(supplier)">
+            {{ getDisplayName(supplier.name) }}
+          </h2>
           @if (getCleanAddr(supplier.address); as cleanAddr) {
-          <div class="profile-location" [title]="cleanAddr">
+          <div class="mpc-location" [title]="cleanAddr">
             <i class="pi pi-map-marker location-icon" aria-hidden="true"></i>
             <span>{{ cleanAddr }}</span>
           </div>
@@ -170,16 +186,18 @@
         </div>
       </div>
 
-      <!-- Unified Contact & POC Box -->
-      <div class="card-contact-box" aria-label="Supplier contact info">
+      <!-- 3. Unified Contact & POC Box -->
+      <div class="entity-contact-card" aria-label="Supplier contact info">
         <!-- POC Header Line -->
         @if (getPrimaryPoc(supplier); as primaryPoc) {
         <div class="poc-header-row">
           <div class="poc-lead">
-            <i class="pi pi-user poc-icon" aria-hidden="true"></i>
+            <div class="poc-icon-box" aria-hidden="true">
+              <i class="pi pi-user"></i>
+            </div>
             <div class="poc-info">
               <strong class="poc-name">{{ primaryPoc.name }}</strong>
-              <span class="poc-badge">{{ primaryPoc.designation || 'POC' }}</span>
+              <span class="poc-badge">{{ primaryPoc.designation || 'PRIMARY CONTACT' }}</span>
             </div>
           </div>
           @if (getSupplierPocs(supplier).length > 1) {
@@ -192,50 +210,42 @@
 
         <!-- Direct communication channels -->
         <div class="contact-channels-list">
+          @if (supplier.email) {
           <div class="contact-channel-item">
             <i class="pi pi-envelope contact-icon" aria-hidden="true"></i>
             <a [href]="'mailto:' + supplier.email" class="contact-link" [title]="supplier.email">
               {{ supplier.email }}
             </a>
           </div>
+          }
 
+          @if (supplier.contact_number) {
           <div class="contact-channel-item">
             <i class="pi pi-phone contact-icon" aria-hidden="true"></i>
             <a [href]="'tel:' + supplier.contact_number" class="contact-link" [title]="supplier.contact_number">
               {{ supplier.contact_number }}
             </a>
           </div>
+          }
         </div>
       </div>
 
-      <!-- Timestamps Meta -->
-      <div class="card-meta-row">
-        <span class="meta-item">
-          <i class="pi pi-calendar" aria-hidden="true"></i>
-          Added: {{ supplier.created_at | date:'dd-MM-yyyy' }}
-        </span>
-        @if (supplier.updated_at && supplier.updated_at !== supplier.created_at) {
-        <span class="meta-item meta-item--muted">
-          <i class="pi pi-clock" aria-hidden="true"></i>
-          Updated: {{ supplier.updated_at | date:'dd-MM-yyyy' }}
-        </span>
-        }
-      </div>
+      <!-- 4. Card Actions Footer (Matching Project Card) -->
+      <div class="mpc-footer">
+        <div class="mpc-footer-actions">
+          <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm edit-card-btn"
+            pTooltip="Edit Supplier" tooltipPosition="top" (click)="openEditDialog(supplier)"
+            aria-label="Edit supplier details"></button>
 
-      <!-- Card Actions Footer -->
-      <div class="card-footer-actions">
-        <button pButton type="button" icon="pi pi-pencil" label="Edit"
-          class="p-button-outlined p-button-sm edit-card-btn" (click)="openEditDialog(supplier)"
-          aria-label="Edit supplier details"></button>
+          <button pButton type="button" icon="pi pi-trash"
+            class="p-button-text p-button-sm p-button-danger remove-card-btn" (click)="deleteSupplier(supplier)"
+            pTooltip="Remove Supplier" tooltipPosition="top" aria-label="Remove supplier"></button>
+        </div>
 
         <button pButton type="button" icon="pi pi-arrow-up-right" iconPos="right" label="View Profile"
-          class="p-button-sm view-profile-btn" (click)="openDetailsDialog(supplier)"
-          aria-label="View supplier profile"></button>
-
-        <button pButton type="button" icon="pi pi-trash"
-          class="p-button-outlined p-button-danger p-button-sm remove-card-btn" (click)="deleteSupplier(supplier)"
-          pTooltip="Remove supplier" tooltipPosition="top" aria-label="Remove supplier"></button>
+          class="launch-pipeline-btn" (click)="openDetailsDialog(supplier)" aria-label="View supplier profile"></button>
       </div>
+
     </article>
     }
   </div>
@@ -370,16 +380,18 @@
   </ng-template>
 
   <form [formGroup]="supplierForm" (ngSubmit)="onSubmit()" novalidate class="modern-form">
+    <!-- ── Section 1: Supplier / Company Information ─────────────────── -->
+
     <!-- Supplier Name & Nickname (Weighted 2 Columns) -->
     <div class="form-grid-name-nick">
       <!-- Supplier / Company Name -->
       <div class="form-field-group">
         <label for="supplier-name" class="form-label">
-          Supplier Name <span class="required-star">*</span>
+          Supplier / Company Name <span class="required-star">*</span>
         </label>
         <p-iconfield>
           <p-inputicon class="pi pi-building" />
-          <input pInputText id="supplier-name" formControlName="name" placeholder="Enter supplier name"
+          <input pInputText id="supplier-name" formControlName="name" placeholder="e.g. Pasaban S.A."
             class="dialog-input"
             [attr.aria-invalid]="supplierForm.get('name')?.invalid && supplierForm.get('name')?.touched" />
         </p-iconfield>
@@ -395,23 +407,21 @@
       <!-- Supplier Nickname -->
       <div class="form-field-group">
         <label for="supplier-nickname" class="form-label">
-          Nickname
+          Nickname / Short Code
         </label>
         <p-iconfield>
           <p-inputicon class="pi pi-tag" />
-          <input pInputText id="supplier-nickname" formControlName="nickname" placeholder="Enter nickname"
+          <input pInputText id="supplier-nickname" formControlName="nickname" placeholder="e.g. PAS"
             class="dialog-input" />
         </p-iconfield>
       </div>
     </div>
 
-    <!-- ── Points of Contact (POC) Section ────────────────────────────── -->
-    <div class="form-section-divider">
-      <div class="form-section-header">
-        <div class="section-title-wrap">
-          <i class="pi pi-users" aria-hidden="true"></i>
-          <span>Points of Contact (POC)</span>
-        </div>
+    <!-- ── Section 2: Points of Contact (Representatives) ───────────── -->
+    <div class="entity-form-section-banner">
+      <div class="ef-banner-icon" aria-hidden="true"><i class="pi pi-users"></i></div>
+      <div class="ef-banner-text">
+        <h3 class="ef-banner-title">Points of Contact (POC)</h3>
       </div>
     </div>
 
@@ -421,7 +431,7 @@
         <div class="poc-card-header">
           <div class="poc-badge-label">
             <span class="poc-number-chip">{{ idx + 1 }}</span>
-            <span>{{ idx === 0 ? 'Primary Point of Contact' : 'Alternate Point of Contact' }}</span>
+            <span>{{ idx === 0 ? 'Primary Representative' : 'Alternate Representative' }}</span>
           </div>
 
           @if (pocControls.length > 1) {
@@ -433,35 +443,51 @@
         </div>
 
         <div class="poc-fields-grid">
-          <!-- Row 1: Name & Phone Number (50% / 50%) -->
+          <!-- Row 1: Contact Person Name & Designation -->
           <div class="poc-row-2col">
-            <!-- POC Name -->
+            <!-- Contact Person Name -->
             <div class="form-field-group">
               <label [for]="'supp-poc-name-' + idx" class="form-label">
-                POC Name <span class="required-star">*</span>
+                Contact Person Name <span class="required-star">*</span>
               </label>
               <p-iconfield>
                 <p-inputicon class="pi pi-user" />
-                <input pInputText [id]="'supp-poc-name-' + idx" formControlName="name" placeholder="Enter POC name"
-                  class="dialog-input" [attr.aria-invalid]="poc.get('name')?.invalid && poc.get('name')?.touched" />
+                <input pInputText [id]="'supp-poc-name-' + idx" formControlName="name"
+                  placeholder="Enter contact name" class="dialog-input"
+                  [attr.aria-invalid]="poc.get('name')?.invalid && poc.get('name')?.touched" />
               </p-iconfield>
               @if (poc.get('name')?.invalid && (poc.get('name')?.dirty || poc.get('name')?.touched)) {
               <p class="field-error-msg" role="alert">
                 <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-                POC name required.
+                Contact person name required.
               </p>
               }
             </div>
 
-            <!-- POC Contact Number -->
+            <!-- Designation / Role -->
+            <div class="form-field-group">
+              <label [for]="'supp-poc-desig-' + idx" class="form-label">
+                Designation / Role
+              </label>
+              <p-iconfield>
+                <p-inputicon class="pi pi-id-card" />
+                <input pInputText [id]="'supp-poc-desig-' + idx" formControlName="designation"
+                  placeholder="Enter designation" class="dialog-input" />
+              </p-iconfield>
+            </div>
+          </div>
+
+          <!-- Row 2: Phone Number & Email Address -->
+          <div class="poc-row-2col">
+            <!-- Contact Number -->
             <div class="form-field-group">
               <label [for]="'supp-poc-phone-' + idx" class="form-label">
-                Contact Number <span class="required-star">*</span>
+                Direct Phone Number <span class="required-star">*</span>
               </label>
               <p-iconfield>
                 <p-inputicon class="pi pi-phone" />
                 <input pInputText [id]="'supp-poc-phone-' + idx" formControlName="contact_number"
-                  placeholder="Enter contact number" class="dialog-input"
+                  placeholder="Enter phone number" class="dialog-input"
                   [attr.aria-invalid]="poc.get('contact_number')?.invalid && poc.get('contact_number')?.touched" />
               </p-iconfield>
               @if (poc.get('contact_number')?.invalid && (poc.get('contact_number')?.dirty ||
@@ -472,25 +498,25 @@
               </p>
               }
             </div>
-          </div>
 
-          <!-- Row 2: Email Address (Full Width for spaciousness) -->
-          <div class="form-field-group">
-            <label [for]="'supp-poc-email-' + idx" class="form-label">
-              Email Address <span class="required-star">*</span>
-            </label>
-            <p-iconfield>
-              <p-inputicon class="pi pi-envelope" />
-              <input pInputText [id]="'supp-poc-email-' + idx" type="email" formControlName="email"
-                placeholder="Enter email address" class="dialog-input"
-                [attr.aria-invalid]="poc.get('email')?.invalid && poc.get('email')?.touched" />
-            </p-iconfield>
-            @if (poc.get('email')?.invalid && (poc.get('email')?.dirty || poc.get('email')?.touched)) {
-            <p class="field-error-msg" role="alert">
-              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-              Valid email required.
-            </p>
-            }
+            <!-- Email Address -->
+            <div class="form-field-group">
+              <label [for]="'supp-poc-email-' + idx" class="form-label">
+                Direct Email Address <span class="required-star">*</span>
+              </label>
+              <p-iconfield>
+                <p-inputicon class="pi pi-envelope" />
+                <input pInputText [id]="'supp-poc-email-' + idx" type="email" formControlName="email"
+                  placeholder="Enter email address" class="dialog-input"
+                  [attr.aria-invalid]="poc.get('email')?.invalid && poc.get('email')?.touched" />
+              </p-iconfield>
+              @if (poc.get('email')?.invalid && (poc.get('email')?.dirty || poc.get('email')?.touched)) {
+              <p class="field-error-msg" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                Valid email required.
+              </p>
+              }
+            </div>
           </div>
         </div>
       </div>
@@ -503,13 +529,11 @@
       </button>
     </div>
 
-    <!-- ── Address & Operational Hub Section ───────────────────────────── -->
-    <div class="form-section-divider">
-      <div class="form-section-header">
-        <div class="section-title-wrap">
-          <i class="pi pi-map-marker" aria-hidden="true"></i>
-          <span>Registered Address & Location</span>
-        </div>
+    <!-- ── Section 3: Registered Business Address ────────────────────── -->
+    <div class="entity-form-section-banner">
+      <div class="ef-banner-icon" aria-hidden="true"><i class="pi pi-map-marker"></i></div>
+      <div class="ef-banner-text">
+        <h3 class="ef-banner-title">Registered Business Address</h3>
       </div>
     </div>
 
@@ -652,63 +676,81 @@
 <p-dialog [visible]="detailsVisible()" (visibleChange)="detailsVisible.set($event)" [modal]="true"
   [style]="{ width: '92vw', maxWidth: '580px' }" [draggable]="false" [resizable]="false" [dismissableMask]="true"
   styleClass="modern-dialog details-dialog">
+  <ng-template pTemplate="header">
+    <div class="dialog-header-custom">
+      <div class="dialog-header-icon-box" aria-hidden="true">
+        <i class="pi pi-id-card"></i>
+      </div>
+      <div class="dialog-header-titles">
+        <h2 class="dialog-title">Supplier Details</h2>
+      </div>
+    </div>
+  </ng-template>
+
   @if (selectedSupplier(); as supplier) {
-  <!-- Hero Profile Box -->
+  <!-- Centered Contact Card Hero -->
   <div class="details-hero">
     <div class="details-avatar" aria-hidden="true">
       {{ initials(supplier.name) }}
     </div>
     <div class="details-hero-body">
-      <div class="hero-tag-row">
-        <span class="id-pill">Vendor ID #{{ supplier.id }}</span>
-        @if (getNickname(supplier.name); as nick) {
-        <span class="hero-nickname-chip">Nickname: <strong>{{ nick }}</strong></span>
-        }
-        <span class="status-chip status-chip--verified">Verified Vendor</span>
-      </div>
       <h2 class="details-hero-name">{{ getDisplayName(supplier.name) }}</h2>
+      @if (getNickname(supplier.name); as nick) {
+      <div class="details-hero-badges-row">
+        <span class="mpc-chip mpc-chip--nickname"><i class="pi pi-tag" aria-hidden="true"></i> {{ nick }}</span>
+      </div>
+      }
       @if (getCleanAddr(supplier.address); as cleanAddr) {
-      <p class="details-hero-location">
+      <p class="details-hero-address">
         <i class="pi pi-map-marker" aria-hidden="true"></i>
-        {{ cleanAddr }}
+        <span>{{ cleanAddr }}</span>
       </p>
       }
     </div>
   </div>
 
-  <!-- Details Body Cards -->
+  <!-- Details Body -->
   <div class="details-body">
-    <!-- Points of Contact (POCs) List -->
-    <div class="details-card">
-      <div class="details-card-header-row">
-        <h3 class="details-card-title">Points of Contact (POC)</h3>
+    <!-- Points of Contact (POCs) Section - Flat List with Dashed Dividers -->
+    <div class="details-section">
+      <div class="details-section-header">
+        <div class="details-section-title">
+          <i class="pi pi-users" aria-hidden="true"></i>
+          <span>Points of Contact</span>
+        </div>
         <span class="poc-total-count-chip">{{ getSupplierPocs(supplier).length }} {{ getSupplierPocs(supplier).length
           === 1 ? 'Contact' : 'Contacts' }}</span>
       </div>
 
-      <div class="details-pocs-list">
+      <div class="details-pocs-flat-list">
         @for (poc of getSupplierPocs(supplier); track $index; let idx = $index) {
-        <div class="details-poc-item">
-          <div class="poc-avatar" aria-hidden="true">
-            {{ poc.name ? poc.name.charAt(0).toUpperCase() : 'P' }}
+        <div class="details-poc-flat-row">
+          <div class="poc-flat-avatar" aria-hidden="true">
+            {{ pocInitials(poc, supplier.name) }}
           </div>
-          <div class="poc-details-content">
-            <div class="poc-header-row">
-              <strong class="poc-person-name">{{ poc.name }}</strong>
-              <span class="poc-type-tag">{{ idx === 0 ? 'Primary POC' : (poc.designation || 'Alternate POC') }}</span>
+          <div class="poc-flat-body">
+            <div class="poc-flat-name-row">
+              <strong class="poc-person-name">{{ getPocPersonName(poc, supplier.name) }}</strong>
+              <span class="poc-role-badge" [class.poc-role-badge--primary]="idx === 0">
+                {{ getPocRole(poc, idx, supplier.name) }}
+              </span>
             </div>
-            <div class="poc-channels-grid">
+            <div class="poc-flat-contact-line">
               @if (poc.email) {
-              <div class="poc-channel-item">
+              <a [href]="'mailto:' + poc.email" class="poc-inline-link" pTooltip="Send email" tooltipPosition="bottom">
                 <i class="pi pi-envelope" aria-hidden="true"></i>
-                <a [href]="'mailto:' + poc.email" class="channel-link">{{ poc.email }}</a>
-              </div>
+                <span>{{ poc.email }}</span>
+              </a>
+              }
+              @if (poc.email && poc.contact_number) {
+              <span class="poc-inline-dot" aria-hidden="true">·</span>
               }
               @if (poc.contact_number) {
-              <div class="poc-channel-item">
+              <a [href]="'tel:' + poc.contact_number" class="poc-inline-link" pTooltip="Call contact"
+                tooltipPosition="bottom">
                 <i class="pi pi-phone" aria-hidden="true"></i>
-                <a [href]="'tel:' + poc.contact_number" class="channel-link">{{ poc.contact_number }}</a>
-              </div>
+                <span>{{ poc.contact_number }}</span>
+              </a>
               }
             </div>
           </div>
@@ -717,77 +759,31 @@
       </div>
     </div>
 
-    <!-- Address & Operational Hub -->
-    <div class="details-card">
-      <h3 class="details-card-title">Location & Regional Footprint</h3>
-      <div class="details-row">
-        <div class="details-channel-lead">
-          <span class="channel-icon-wrap channel-icon-wrap--map" aria-hidden="true">
-            <i class="pi pi-building"></i>
-          </span>
-          <div class="channel-info">
-            <span class="channel-label">Registered Address</span>
-            <span class="channel-value">{{ getCleanAddr(supplier.address) }}</span>
-          </div>
-        </div>
-      </div>
-
-      @if (parseAddress(supplier.address); as parsedAddr) {
-      @if (parsedAddr.city || parsedAddr.state || parsedAddr.pincode) {
-      <div class="location-breakdown-chips">
-        @if (parsedAddr.city) {
-        <span class="location-chip">
-          <i class="pi pi-map-marker" aria-hidden="true"></i>
-          <span>City: <strong>{{ parsedAddr.city }}</strong></span>
-        </span>
-        }
-        @if (parsedAddr.state) {
-        <span class="location-chip">
-          <i class="pi pi-flag" aria-hidden="true"></i>
-          <span>State: <strong>{{ parsedAddr.state }}</strong></span>
-        </span>
-        }
-        @if (parsedAddr.pincode) {
-        <span class="location-chip">
-          <i class="pi pi-hashtag" aria-hidden="true"></i>
-          <span>PIN: <strong>{{ parsedAddr.pincode }}</strong></span>
-        </span>
-        }
-        @if (parsedAddr.country) {
-        <span class="location-chip">
-          <i class="pi pi-globe" aria-hidden="true"></i>
-          <span><strong>{{ parsedAddr.country }}</strong></span>
-        </span>
-        }
-      </div>
-      }
-      }
-    </div>
-
-    <!-- System Metadata -->
-    <div class="details-metadata-grid">
-      <div class="meta-card">
-        <span class="meta-label">Created At</span>
-        <strong class="meta-val">{{ supplier.created_at | date:'dd-MM-yyyy, HH:mm' }}</strong>
-      </div>
-      <div class="meta-card">
-        <span class="meta-label">Last Updated</span>
-        <strong class="meta-val">{{ supplier.updated_at | date:'dd-MM-yyyy, HH:mm' }}</strong>
-      </div>
+    <!-- Sleek Minimalist Metadata Caption -->
+    <div class="details-meta-strip">
+      <span class="meta-item">
+        <i class="pi pi-calendar-plus" aria-hidden="true"></i>
+        <span>Created: <strong>{{ supplier.created_at | date:'dd-MM-yyyy, HH:mm' }}</strong></span>
+      </span>
+      <span class="meta-dot" aria-hidden="true">•</span>
+      <span class="meta-item">
+        <i class="pi pi-sync" aria-hidden="true"></i>
+        <span>Updated: <strong>{{ supplier.updated_at | date:'dd-MM-yyyy, HH:mm' }}</strong></span>
+      </span>
     </div>
   </div>
 
-  <!-- Details Footer Actions -->
+  <!-- Details Footer Actions (Stacked Modern Layout) -->
   <div class="details-footer">
-    <button pButton type="button" icon="pi pi-trash" label="Remove Supplier"
-      class="p-button-outlined p-button-danger remove-details-btn"
-      (click)="deleteSupplier(supplier)"></button>
-
-    <button pButton type="button" icon="pi pi-pencil" label="Edit Supplier" class="p-button-outlined edit-details-btn"
+    <button pButton type="button" icon="pi pi-pencil" label="Edit Supplier" class="edit-details-btn create-entity-btn"
       (click)="detailsVisible.set(false); openEditDialog(supplier)"></button>
 
-    <button pButton type="button" label="Close" class="create-entity-btn close-details-btn"
-      (click)="detailsVisible.set(false)"></button>
+    <div class="details-footer-secondary-row">
+      <button pButton type="button" label="Close" class="close-details-btn p-button-outlined"
+        (click)="detailsVisible.set(false)"></button>
+      <button pButton type="button" icon="pi pi-trash" label="Remove Supplier"
+        class="remove-details-btn p-button-outlined p-button-danger" (click)="deleteSupplier(supplier)"></button>
+    </div>
   </div>
   }
 </p-dialog>

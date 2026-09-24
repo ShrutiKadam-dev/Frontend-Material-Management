@@ -235,12 +235,12 @@
       </div>
 
       <a routerLink="/projects" class="view-all-link">
-        <span>View all {{ recentProjects().length }} projects</span>
+        <span>View all {{ totalProjectsCount() }} projects</span>
         <i class="pi pi-arrow-right" aria-hidden="true"></i>
       </a>
     </div>
 
-    @if (recentProjects().length === 0) {
+    @if (latestProjects().length === 0) {
     <div class="empty-projects-state app-panel">
       <div class="empty-icon-wrap" aria-hidden="true">
         <i class="pi pi-folder-open"></i>
@@ -253,98 +253,108 @@
     </div>
     } @else {
     <div class="dashboard-projects-grid">
-      @for (project of recentProjects(); track project.id) {
+      @for (project of latestProjects(); track project.id) {
       <article class="modern-project-card" [class.modern-project-card--delayed]="project.health_status === 'delayed'">
 
-        <!-- Card Top Bar -->
-        <div class="mpc-topbar">
-          <div class="mpc-badge-group">
-            <span class="mpc-id-pill">#{{ project.id < 10 ? '0' + project.id : project.id }}</span>
-            <span class="health-pill" [class]="'health-pill ' + getHealthBadgeClass(project.health_status)">
-              <span class="pulse-dot" aria-hidden="true"></span>
+        <!-- 1. Top Row: Chip Group (Left) & Price Block (Right) -->
+        <div class="mpc-top-row">
+          <div class="mpc-chip-group">
+            <span class="mpc-chip mpc-chip--id" pTooltip="Project Code" tooltipPosition="top">
+              {{ project.project_code || ('PRJ-' + (project.id < 10 ? '0' + project.id : project.id)) }}
+            </span>
+            @if (project.nickname || project.project_nickname) {
+            <span class="mpc-chip mpc-chip--nickname" [title]="'Nickname: ' + (project.nickname || project.project_nickname)">
+              <i class="pi pi-tag" aria-hidden="true"></i>
+              {{ project.nickname || project.project_nickname }}
+            </span>
+            }
+            <span class="mpc-chip mpc-chip--status" [class]="'mpc-chip mpc-chip--status ' + getHealthBadgeClass(project.health_status)">
+              <span class="status-dot" aria-hidden="true"></span>
               {{ getHealthLabel(project.health_status) }}
             </span>
-            <span class="status-badge" [class]="'status-badge ' + getStatusBadgeClass(project.status)">
-              {{ project.status }}
+            <span class="mpc-chip mpc-chip--phase" [class]="'mpc-chip mpc-chip--phase ' + getStatusBadgeClass(project.status)">
+              {{ getStatusLabel(project.status) }}
             </span>
           </div>
 
-          @if (project.total_value) {
-          <div class="mpc-value-badge" pTooltip="Contract Value" tooltipPosition="left">
-            <span class="curr-symbol">{{ project.currency || 'INR' }}</span>
-            <strong>₹&nbsp;{{ project.total_value | number:'1.2-2' }}</strong>
+          <div class="mpc-price-block">
+            <div class="price-amount-row">
+              <span class="price-currency">{{ project.currency || 'INR' }}</span>
+              <span class="price-value">₹{{ (project.total_value || 0) | number:'1.2-2' }}</span>
+            </div>
+            <span class="price-date">
+              {{ project.target_delivery_date ? ('Target delivery ' + (project.target_delivery_date | date:'d MMMM yyyy')) : ('Last updated ' + ((project.updated_at || project.created_at) | date:'d MMMM yyyy')) }}
+            </span>
           </div>
-          }
         </div>
 
-        <!-- Project Title -->
-        <div class="mpc-title-box">
-          <h3 class="mpc-title" (click)="navigateToProject(project.id)" [title]="project.title">
-            {{ project.title }}
-          </h3>
-        </div>
+        <!-- 2. Title -->
+        <h2 class="mpc-title" (click)="navigateToProject(project.id)" [title]="project.project_title">
+          {{ project.project_title }}
+        </h2>
 
-        <!-- Parties Grid (Customer & Supplier) -->
+        <!-- 3. Customer / Supplier 2-Column Grid -->
         <div class="mpc-parties-grid">
-          <div class="party-box party-box--customer">
-            <div class="party-header">
-              <span class="party-label">
-                <i class="pi pi-building" aria-hidden="true"></i> Client
-              </span>
-              @if (project.customer_payment_status) {
-              <span class="payment-chip" [class]="'payment-chip ' + getPaymentBadgeClass(project.customer_payment_status)">
-                {{ project.customer_payment_status }}
-              </span>
-              }
+          <div class="party-cell party-cell--customer">
+            <div class="party-icon-box" aria-hidden="true">
+              <i class="pi pi-building"></i>
             </div>
-            <p class="party-name" [title]="project.customer">{{ project.customer }}</p>
+            <div class="party-text-stack">
+              <span class="party-label">Customer</span>
+              <span class="party-value" [title]="project.customer_name">
+                {{ project.customer_name || 'Customer' }}
+              </span>
+            </div>
           </div>
 
-          <div class="party-box party-box--supplier">
-            <div class="party-header">
-              <span class="party-label">
-                <i class="pi pi-truck" aria-hidden="true"></i> Vendor
-              </span>
-              @if (project.supplier_payment_status) {
-              <span class="payment-chip" [class]="'payment-chip ' + getPaymentBadgeClass(project.supplier_payment_status)">
-                {{ project.supplier_payment_status }}
-              </span>
-              }
+          <div class="party-cell party-cell--supplier">
+            <div class="party-icon-box" aria-hidden="true">
+              <i class="pi pi-truck"></i>
             </div>
-            <p class="party-name" [title]="project.supplier">{{ project.supplier }}</p>
+            <div class="party-text-stack">
+              <span class="party-label">Supplier</span>
+              <span class="party-value" [title]="project.supplier_name">
+                {{ project.supplier_name || 'Supplier' }}
+              </span>
+            </div>
           </div>
         </div>
 
-        <!-- Active Milestone & Progress Bar -->
-        <div class="mpc-progress-box">
+        <!-- 4. Progress Section -->
+        <div class="mpc-progress-section">
           <div class="progress-info-row">
-            <div class="active-step-meta">
-              <span class="step-num-pill">{{ project.step }}</span>
-              <span class="step-name-text">{{ project.milestone }}</span>
+            <div class="progress-stage-group">
+              <span class="step-chip">
+                Step {{ project.current_step_number || 1 }} of {{ project.total_steps || 15 }}
+              </span>
+              <span class="stage-name">
+                {{ project.current_step_name || 'Customer Query Initiated' }}
+              </span>
             </div>
-            <span class="percent-text">{{ getProgressPercent(project) }}%</span>
+            <span class="progress-percent">{{ getProgressPercent(project) }}%</span>
           </div>
 
-          <div class="progress-track" role="progressbar" [attr.aria-valuenow]="getProgressPercent(project)" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-track" role="progressbar" [attr.aria-valuenow]="getProgressPercent(project)"
+            aria-valuemin="0" aria-valuemax="100">
             <div class="progress-fill" [style.width.%]="getProgressPercent(project)"
               [class.progress-fill--delayed]="project.health_status === 'delayed'"></div>
           </div>
         </div>
 
-        <!-- Next Action Spotlight -->
+        <!-- 5. Next Action Spotlight -->
         @if (project.next_action) {
-        <div class="next-action-spotlight">
-          <div class="action-icon-wrap" aria-hidden="true">
+        <div class="mpc-next-action">
+          <div class="next-action-icon-chip" aria-hidden="true">
             <i class="pi pi-bolt"></i>
           </div>
-          <div class="action-details">
-            <span class="action-caption">Next Operational Step:</span>
-            <p class="action-text" [title]="project.next_action">{{ project.next_action }}</p>
+          <div class="next-action-text-stack">
+            <span class="next-action-label">Next action</span>
+            <p class="next-action-value" [title]="project.next_action">{{ project.next_action }}</p>
           </div>
         </div>
         }
 
-        <!-- Card Footer -->
+        <!-- 6. Bottom Row: Target delivery date / Pipeline info (Left), Primary CTA (Right) -->
         <div class="mpc-footer">
           @if (project.target_delivery_date) {
           <span class="delivery-pill" [class.delivery-pill--overdue]="project.health_status === 'delayed'">
@@ -358,7 +368,7 @@
           </span>
           }
 
-          <button pButton type="button" label="Open Pipeline" icon="pi pi-arrow-right" iconPos="right"
+          <button pButton type="button" label="Open 15-step pipeline" icon="pi pi-arrow-right" iconPos="right"
             class="launch-pipeline-btn" (click)="navigateToProject(project.id)"></button>
         </div>
       </article>

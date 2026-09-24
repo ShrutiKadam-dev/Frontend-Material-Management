@@ -358,16 +358,13 @@
                         </div>
                         }
 
-                        <!-- Remarks -->
-                        @if (inv.remark) {
-                        <div class="vsc-remark-box">
-                            <i class="pi pi-comment" aria-hidden="true"></i>
-                            <div class="vsc-remark-content">
-                                <span class="vsc-remark-label">Remarks:</span>
-                                <span class="vsc-remark-text">{{ inv.remark }}</span>
-                            </div>
-                        </div>
-                        }
+                        <!-- Remarks & Notes -->
+                        <app-step-remarks
+                            [remarks]="inv.remarks || inv.remark"
+                            [defaultDate]="inv.invoice_date"
+                            [loading]="quickAddingId() === inv.id"
+                            (quickAdd)="quickAddInvoiceRemark(inv, $event)"
+                            (deleteRemark)="deleteRemarkFromInvoice(inv, $event)" />
 
                         <!-- Attachments -->
                         @if (inv.attachments && inv.attachments.length > 0) {
@@ -519,16 +516,13 @@
                         </div>
                         }
 
-                        <!-- Remarks -->
-                        @if (pl.remark) {
-                        <div class="vsc-remark-box">
-                            <i class="pi pi-comment" aria-hidden="true"></i>
-                            <div class="vsc-remark-content">
-                                <span class="vsc-remark-label">Remarks:</span>
-                                <span class="vsc-remark-text">{{ pl.remark }}</span>
-                            </div>
-                        </div>
-                        }
+                        <!-- Remarks & Notes -->
+                        <app-step-remarks
+                            [remarks]="pl.remarks || pl.remark"
+                            [defaultDate]="pl.packing_list_date"
+                            [loading]="quickAddingId() === pl.id"
+                            (quickAdd)="quickAddPackingListRemark(pl, $event)"
+                            (deleteRemark)="deleteRemarkFromPackingList(pl, $event)" />
 
                         <!-- Attachments -->
                         @if (pl.attachments && pl.attachments.length > 0) {
@@ -716,16 +710,13 @@
                         </div>
                         }
 
-                        <!-- Remarks -->
-                        @if (dc.remark) {
-                        <div class="vsc-remark-box">
-                            <i class="pi pi-comment" aria-hidden="true"></i>
-                            <div class="vsc-remark-content">
-                                <span class="vsc-remark-label">Remarks:</span>
-                                <span class="vsc-remark-text">{{ dc.remark }}</span>
-                            </div>
-                        </div>
-                        }
+                        <!-- Remarks & Notes -->
+                        <app-step-remarks
+                            [remarks]="dc.remarks || dc.remark"
+                            [defaultDate]="dc.delivery_challan_date"
+                            [loading]="quickAddingId() === dc.id"
+                            (quickAdd)="quickAddChallanRemark(dc, $event)"
+                            (deleteRemark)="deleteRemarkFromChallan(dc, $event)" />
 
                         <!-- Attachments -->
                         @if (dc.attachments && dc.attachments.length > 0) {
@@ -847,16 +838,13 @@
                             </div>
                         </div>
 
-                        <!-- Remarks -->
-                        @if (wc.remark) {
-                        <div class="vsc-remark-box">
-                            <i class="pi pi-comment" aria-hidden="true"></i>
-                            <div class="vsc-remark-content">
-                                <span class="vsc-remark-label">Remarks & Terms:</span>
-                                <span class="vsc-remark-text">{{ wc.remark }}</span>
-                            </div>
-                        </div>
-                        }
+                        <!-- Remarks & Notes -->
+                        <app-step-remarks
+                            [remarks]="wc.remarks || wc.remark"
+                            [defaultDate]="wc.certificate_date"
+                            [loading]="quickAddingId() === wc.id"
+                            (quickAdd)="quickAddWarrantyRemark(wc, $event)"
+                            (deleteRemark)="deleteRemarkFromWarranty(wc, $event)" />
 
                         <!-- Attachments -->
                         @if (wc.attachments && wc.attachments.length > 0) {
@@ -986,16 +974,13 @@
                             </div>
                         </div>
 
-                        <!-- Remarks -->
-                        @if (td.remark) {
-                        <div class="vsc-remark-box">
-                            <i class="pi pi-comment" aria-hidden="true"></i>
-                            <div class="vsc-remark-content">
-                                <span class="vsc-remark-label">Remarks:</span>
-                                <span class="vsc-remark-text">{{ td.remark }}</span>
-                            </div>
-                        </div>
-                        }
+                        <!-- Remarks & Notes -->
+                        <app-step-remarks
+                            [remarks]="td.remarks || td.remark"
+                            [defaultDate]="td.date"
+                            [loading]="quickAddingId() === td.id"
+                            (quickAdd)="quickAddTransportRemark(td, $event)"
+                            (deleteRemark)="deleteRemarkFromTransport(td, $event)" />
 
                         <!-- Attachments -->
                         @if (td.attachments && td.attachments.length > 0) {
@@ -1403,17 +1388,12 @@
                         (change)="onFileSelected($event)" />
                 </div>
 
-                <!-- Section 4: Remark -->
-                <div class="dlg-section">
-                    <p class="dlg-section-label">
-                        <i class="pi pi-comment"></i> 4. Remark
-                    </p>
-                    <div class="field">
-                        <label for="inv-remark">Remark / Payment Instructions</label>
-                        <textarea id="inv-remark" pTextarea formControlName="remark" rows="2"
-                            placeholder="Enter bank instructions, payment notes or billing remarks…"></textarea>
-                    </div>
-                </div>
+                <!-- Section 4: Remarks & Notes -->
+                <app-step-remarks
+                    mode="dialog"
+                    [remarks]="dialogRemarks()"
+                    (remarksChange)="dialogRemarks.set($event)"
+                    sectionNumber="4" />
 
             </div>
         </form>
@@ -1750,17 +1730,12 @@
                         (change)="onFileSelected($event)" />
                 </div>
 
-                <!-- Section 4: Remark -->
-                <div class="dlg-section">
-                    <p class="dlg-section-label">
-                        <i class="pi pi-comment"></i> 4. Remark
-                    </p>
-                    <div class="field">
-                        <label for="pl-remark">Remark / Handling Instructions</label>
-                        <textarea id="pl-remark" pTextarea formControlName="remark" rows="2"
-                            placeholder="Fragile handling, crate dimensions or dispatch notes…"></textarea>
-                    </div>
-                </div>
+                <!-- Section 4: Remarks & Notes -->
+                <app-step-remarks
+                    mode="dialog"
+                    [remarks]="dialogRemarks()"
+                    (remarksChange)="dialogRemarks.set($event)"
+                    sectionNumber="4" />
 
             </div>
         </form>
@@ -2140,17 +2115,12 @@
                         (change)="onFileSelected($event)" />
                 </div>
 
-                <!-- Section 4: Remark -->
-                <div class="dlg-section">
-                    <p class="dlg-section-label">
-                        <i class="pi pi-comment"></i> 4. Remark
-                    </p>
-                    <div class="field">
-                        <label for="dc-remark">Remark / Delivery Terms</label>
-                        <textarea id="dc-remark" pTextarea formControlName="remark" rows="2"
-                            placeholder="Recipient acknowledgement instructions, vehicle remarks…"></textarea>
-                    </div>
-                </div>
+                <!-- Section 4: Remarks & Notes -->
+                <app-step-remarks
+                    mode="dialog"
+                    [remarks]="dialogRemarks()"
+                    (remarksChange)="dialogRemarks.set($event)"
+                    sectionNumber="4" />
 
             </div>
         </form>
@@ -2350,17 +2320,12 @@
                         (change)="onFileSelected($event)" />
                 </div>
 
-                <!-- Section 4: Remark -->
-                <div class="dlg-section">
-                    <p class="dlg-section-label">
-                        <i class="pi pi-comment"></i> 4. Remark & Coverage Clauses
-                    </p>
-                    <div class="field">
-                        <label for="wc-remark">Remark / Warranty Clauses</label>
-                        <textarea id="wc-remark" pTextarea formControlName="remark" rows="3"
-                            placeholder="Manufacturer guarantee terms, exclusions, service contact details…"></textarea>
-                    </div>
-                </div>
+                <!-- Section 4: Remarks & Notes -->
+                <app-step-remarks
+                    mode="dialog"
+                    [remarks]="dialogRemarks()"
+                    (remarksChange)="dialogRemarks.set($event)"
+                    sectionNumber="4" />
 
             </div>
         </form>
@@ -2547,17 +2512,12 @@
                         (change)="onFileSelected($event)" />
                 </div>
 
-                <!-- Section 4: Remark -->
-                <div class="dlg-section">
-                    <p class="dlg-section-label">
-                        <i class="pi pi-comment"></i> 4. Remark
-                    </p>
-                    <div class="field">
-                        <label for="tr-remark">Remark / Driver & Vehicle Details</label>
-                        <textarea id="tr-remark" pTextarea formControlName="remark" rows="2"
-                            placeholder="Vehicle number, transporter name, driver contact info, transit notes…"></textarea>
-                    </div>
-                </div>
+                <!-- Section 4: Remarks & Notes -->
+                <app-step-remarks
+                    mode="dialog"
+                    [remarks]="dialogRemarks()"
+                    (remarksChange)="dialogRemarks.set($event)"
+                    sectionNumber="4" />
 
             </div>
         </form>

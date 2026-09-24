@@ -16,6 +16,7 @@ import {
 } from '@angular/forms';
 import { DatePipe, DecimalPipe, UpperCasePipe } from '@angular/common';
 import { finalize } from 'rxjs';
+import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -53,6 +54,9 @@ import {
 import { Attachment } from '../../../../core/models/attachment.model';
 import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
+import { StepRemarkItem } from '../../../../core/models/step-remark.model';
+import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 import { WARRANTY_PERIOD_OPTIONS } from '../../../../core/constants/dropdown-options.constant';
 
 export type Step13Tab =
@@ -77,6 +81,7 @@ export type Step13Tab =
     DatePipe,
     DecimalPipe,
     UpperCasePipe,
+    StepRemarksComponent,
   ],
   templateUrl: './step-13-customer-delivery.html',
   styleUrl: './step-13-customer-delivery.scss',
@@ -86,6 +91,7 @@ export class Step13CustomerDelivery implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly messageService = inject(MessageService);
   private readonly deliveryService = inject(CustomerDeliveryService);
   private readonly projectService = inject(ProjectService);
   private readonly customerService = inject(CustomerService);
@@ -131,6 +137,8 @@ export class Step13CustomerDelivery implements OnInit {
   // ── File Upload Signals for Active Dialog ───────────────────────
   protected readonly selectedFiles = signal<File[]>([]);
   protected readonly existingAttachments = signal<Attachment[]>([]);
+  protected readonly dialogRemarks = signal<StepRemarkItem[]>([]);
+  protected readonly quickAddingId = signal<number | null>(null);
 
   // ── Options ────────────────────────────────────────────────────
   protected readonly transportModeOptions = [
@@ -402,6 +410,7 @@ export class Step13CustomerDelivery implements OnInit {
     this.editingInvoice.set(null);
     this.selectedFiles.set([]);
     this.existingAttachments.set([]);
+    this.dialogRemarks.set([]);
     this.editingInvoiceItemIdx.set(null);
     this.invoiceRowForm.reset();
 
@@ -440,6 +449,7 @@ export class Step13CustomerDelivery implements OnInit {
     this.editingInvoice.set(inv);
     this.selectedFiles.set([]);
     this.existingAttachments.set(inv.attachments || []);
+    this.dialogRemarks.set(parseStepRemarks(inv.remarks || inv.remark, inv.invoice_date));
     this.editingInvoiceItemIdx.set(null);
     this.invoiceRowForm.reset();
 
@@ -576,7 +586,7 @@ export class Step13CustomerDelivery implements OnInit {
       gst_amount: Number(formVal.gst_amount) || 0,
       round_off: Number(formVal.round_off) || 0,
       net_total: Number(formVal.net_total) || 0,
-      remark: formVal.remark || undefined,
+      remarks: serializeStepRemarks(this.dialogRemarks()),
       items: this.invoiceItemsList(),
     };
 
@@ -673,6 +683,7 @@ export class Step13CustomerDelivery implements OnInit {
     this.editingPackingList.set(null);
     this.selectedFiles.set([]);
     this.existingAttachments.set([]);
+    this.dialogRemarks.set([]);
     this.editingPackingItemIdx.set(null);
     this.packingRowForm.reset({ package_no: 'Box #1' });
 
@@ -708,6 +719,7 @@ export class Step13CustomerDelivery implements OnInit {
     this.editingPackingList.set(pl);
     this.selectedFiles.set([]);
     this.existingAttachments.set(pl.attachments || []);
+    this.dialogRemarks.set(parseStepRemarks(pl.remarks || pl.remark, pl.packing_list_date));
     this.editingPackingItemIdx.set(null);
     this.packingRowForm.reset({ package_no: 'Box #1' });
 
@@ -820,7 +832,7 @@ export class Step13CustomerDelivery implements OnInit {
       packing_condition: formVal.packing_condition || '',
       net_weight: formVal.net_weight || '',
       gross_weight: formVal.gross_weight || '',
-      remark: formVal.remark || undefined,
+      remarks: serializeStepRemarks(this.dialogRemarks()),
       items: this.packingItemsList(),
     };
 
@@ -867,6 +879,7 @@ export class Step13CustomerDelivery implements OnInit {
     this.editingChallan.set(null);
     this.selectedFiles.set([]);
     this.existingAttachments.set([]);
+    this.dialogRemarks.set([]);
     this.editingChallanItemIdx.set(null);
     this.challanRowForm.reset();
 
@@ -904,6 +917,7 @@ export class Step13CustomerDelivery implements OnInit {
     this.editingChallan.set(dc);
     this.selectedFiles.set([]);
     this.existingAttachments.set(dc.attachments || []);
+    this.dialogRemarks.set(parseStepRemarks(dc.remarks || dc.remark, dc.delivery_challan_date));
     this.editingChallanItemIdx.set(null);
     this.challanRowForm.reset();
 
@@ -1040,7 +1054,7 @@ export class Step13CustomerDelivery implements OnInit {
       gst_amount: Number(formVal.gst_amount) || 0,
       round_off: Number(formVal.round_off) || 0,
       net_total: Number(formVal.net_total) || 0,
-      remark: formVal.remark || undefined,
+      remarks: serializeStepRemarks(this.dialogRemarks()),
       items: this.challanItemsList(),
     };
 
@@ -1087,6 +1101,7 @@ export class Step13CustomerDelivery implements OnInit {
     this.editingWarranty.set(null);
     this.selectedFiles.set([]);
     this.existingAttachments.set([]);
+    this.dialogRemarks.set([]);
 
     const po = this.latestPoTemplate();
     const latestInv = this.latestTaxInvoiceTemplate() || (this.taxInvoices().length ? this.taxInvoices()[0] : null);
@@ -1166,6 +1181,7 @@ export class Step13CustomerDelivery implements OnInit {
     this.editingWarranty.set(wc);
     this.selectedFiles.set([]);
     this.existingAttachments.set(wc.attachments || []);
+    this.dialogRemarks.set(parseStepRemarks(wc.remarks || wc.remark, wc.certificate_date));
 
     this.warrantyForm.patchValue({
       certificate_date: this.parseDateSafe(wc.certificate_date),
@@ -1211,7 +1227,7 @@ export class Step13CustomerDelivery implements OnInit {
       po_date: poDateStr,
       invoice_no: formVal.invoice_no || '',
       invoice_date: invDateStr,
-      remark: formVal.remark || undefined,
+      remarks: serializeStepRemarks(this.dialogRemarks()),
     };
 
     const files = this.selectedFiles();
@@ -1257,6 +1273,7 @@ export class Step13CustomerDelivery implements OnInit {
     this.editingTransport.set(null);
     this.selectedFiles.set([]);
     this.existingAttachments.set([]);
+    this.dialogRemarks.set([]);
 
     this.transportForm.reset({
       transport_mode: 'road',
@@ -1277,6 +1294,7 @@ export class Step13CustomerDelivery implements OnInit {
     this.editingTransport.set(td);
     this.selectedFiles.set([]);
     this.existingAttachments.set(td.attachments || []);
+    this.dialogRemarks.set(parseStepRemarks(td.remarks || td.remark, td.date));
 
     this.transportForm.patchValue({
       transport_mode: td.transport_mode,
@@ -1319,7 +1337,7 @@ export class Step13CustomerDelivery implements OnInit {
       from_location: formVal.from_location || '',
       to_location: formVal.to_location || '',
       transport_charges: Number(formVal.transport_charges) || 0,
-      remark: formVal.remark || undefined,
+      remarks: serializeStepRemarks(this.dialogRemarks()),
     };
 
     const files = this.selectedFiles();
@@ -1479,5 +1497,345 @@ export class Step13CustomerDelivery implements OnInit {
       return isNaN(parsed.getTime()) ? null : parsed;
     }
     return null;
+  }
+
+  // ── Tax Invoice Remarks ─────────────────────────────────────────
+  protected quickAddInvoiceRemark(item: CustomerTaxInvoice, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.invoice_date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(item.id);
+    const updatePayload: CustomerTaxInvoiceUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.deliveryService
+      .updateTaxInvoice(item.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to Tax Invoice.',
+            life: 3000,
+          });
+          this.loadAllStep13Data();
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromInvoice(item: CustomerTaxInvoice, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.invoice_date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: CustomerTaxInvoiceUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.deliveryService.updateTaxInvoice(item.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from Tax Invoice.',
+          life: 3000,
+        });
+        this.loadAllStep13Data();
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
+  }
+
+  // ── Packing List Remarks ────────────────────────────────────────
+  protected quickAddPackingListRemark(item: CustomerPackingList, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.packing_list_date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(item.id);
+    const updatePayload: CustomerPackingListUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.deliveryService
+      .updatePackingList(item.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to Packing List.',
+            life: 3000,
+          });
+          this.loadAllStep13Data();
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromPackingList(item: CustomerPackingList, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.packing_list_date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: CustomerPackingListUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.deliveryService.updatePackingList(item.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from Packing List.',
+          life: 3000,
+        });
+        this.loadAllStep13Data();
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
+  }
+
+  // ── Delivery Challan Remarks ────────────────────────────────────
+  protected quickAddChallanRemark(item: CustomerDeliveryChallan, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.delivery_challan_date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(item.id);
+    const updatePayload: CustomerDeliveryChallanUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.deliveryService
+      .updateDeliveryChallan(item.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to Delivery Challan.',
+            life: 3000,
+          });
+          this.loadAllStep13Data();
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromChallan(item: CustomerDeliveryChallan, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.delivery_challan_date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: CustomerDeliveryChallanUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.deliveryService.updateDeliveryChallan(item.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from Delivery Challan.',
+          life: 3000,
+        });
+        this.loadAllStep13Data();
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
+  }
+
+  // ── Warranty Certificate Remarks ────────────────────────────────
+  protected quickAddWarrantyRemark(item: CustomerWarrantyCertificate, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.certificate_date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(item.id);
+    const updatePayload: CustomerWarrantyCertificateUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.deliveryService
+      .updateWarrantyCertificate(item.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to Warranty Certificate.',
+            life: 3000,
+          });
+          this.loadAllStep13Data();
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromWarranty(item: CustomerWarrantyCertificate, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.certificate_date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: CustomerWarrantyCertificateUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.deliveryService.updateWarrantyCertificate(item.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from Warranty Certificate.',
+          life: 3000,
+        });
+        this.loadAllStep13Data();
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
+  }
+
+  // ── Transport Details Remarks ───────────────────────────────────
+  protected quickAddTransportRemark(item: CustomerTransportDetail, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(item.id);
+    const updatePayload: CustomerTransportDetailUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.deliveryService
+      .updateTransportDetail(item.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to Transport Details.',
+            life: 3000,
+          });
+          this.loadAllStep13Data();
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromTransport(item: CustomerTransportDetail, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: CustomerTransportDetailUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.deliveryService.updateTransportDetail(item.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from Transport Details.',
+          life: 3000,
+        });
+        this.loadAllStep13Data();
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
   }
 }

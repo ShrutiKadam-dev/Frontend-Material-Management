@@ -20,6 +20,7 @@ describe('Projects', () => {
         id,
         project_title: 'Demo Project',
         project_code: 'PRJ-DEMO',
+        nickname: 'DEMO-NICK',
         customer_id: 1,
         supplier_id: 2,
         created_at: '2026-08-27T11:00:00Z',
@@ -60,8 +61,36 @@ describe('Projects', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialize form with project_code', () => {
+  it('should initialize form with project_code and nickname', () => {
     expect(component['projectForm'].get('project_code')).toBeDefined();
+    expect(component['projectForm'].get('nickname')).toBeDefined();
+    expect(component['projectForm'].get('nickname')?.value).toBe('');
+  });
+
+  it('should patch nickname when opening edit dialog', () => {
+    component['openEditDialog']({ id: 1, project_title: 'Test' } as any);
+    expect(component['projectForm'].get('nickname')?.value).toBe('DEMO-NICK');
+  });
+
+  it('should include nickname in create payload on submit', () => {
+    let capturedPayload: any = null;
+    vi.spyOn(mockProjectService, 'createProject').mockImplementation((payload: any) => {
+      capturedPayload = payload;
+      return of({ id: 99, ...payload });
+    });
+
+    component['openAddDialog']();
+    component['projectForm'].patchValue({
+      project_title: 'New Cooling System',
+      project_code: 'PRJ-COOL',
+      nickname: 'COOL-SYS',
+      customer_id: 1,
+      supplier_id: 2,
+    });
+
+    component['onSubmit']();
+    expect(capturedPayload).toBeTruthy();
+    expect(capturedPayload.nickname).toBe('COOL-SYS');
   });
 });
 

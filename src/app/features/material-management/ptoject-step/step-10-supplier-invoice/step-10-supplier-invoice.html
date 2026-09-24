@@ -289,16 +289,13 @@
             </div>
             }
 
-            <!-- Remark -->
-            @if (item.remark) {
-            <div class="vsc-remark-box">
-              <i class="pi pi-info-circle" aria-hidden="true"></i>
-              <div class="vsc-remark-content">
-                <span class="vsc-remark-label">Remarks:</span>
-                <span class="vsc-remark-text">{{ item.remark }}</span>
-              </div>
-            </div>
-            }
+            <!-- Remarks & Notes -->
+            <app-step-remarks
+              [remarks]="item.remarks || item.remark"
+              [defaultDate]="item.proforma_invoice_date || item.date"
+              [loading]="quickAddingId() === item.id"
+              (quickAdd)="quickAddProformaRemark(item, $event)"
+              (deleteRemark)="deleteRemarkFromProforma(item, $event)" />
 
             <!-- Attachments -->
             @if (item.attachments && item.attachments.length > 0) {
@@ -510,16 +507,13 @@
             </div>
             }
 
-            <!-- Remark -->
-            @if (item.remark) {
-            <div class="vsc-remark-box">
-              <i class="pi pi-info-circle" aria-hidden="true"></i>
-              <div class="vsc-remark-content">
-                <span class="vsc-remark-label">Remarks:</span>
-                <span class="vsc-remark-text">{{ item.remark }}</span>
-              </div>
-            </div>
-            }
+            <!-- Remarks & Notes -->
+            <app-step-remarks
+              [remarks]="item.remarks || item.remark"
+              [defaultDate]="item.invoice_date || item.date"
+              [loading]="quickAddingId() === item.id"
+              (quickAdd)="quickAddInvoiceRemark(item, $event)"
+              (deleteRemark)="deleteRemarkFromInvoice(item, $event)" />
 
             <!-- Attachments -->
             @if (item.attachments && item.attachments.length > 0) {
@@ -715,16 +709,13 @@
             </div>
             }
 
-            <!-- Remark -->
-            @if (item.remark) {
-            <div class="vsc-remark-box">
-              <i class="pi pi-info-circle" aria-hidden="true"></i>
-              <div class="vsc-remark-content">
-                <span class="vsc-remark-label">Remarks:</span>
-                <span class="vsc-remark-text">{{ item.remark }}</span>
-              </div>
-            </div>
-            }
+            <!-- Remarks & Notes -->
+            <app-step-remarks
+              [remarks]="item.remarks || item.remark"
+              [defaultDate]="item.packing_list_date || item.date"
+              [loading]="quickAddingId() === item.id"
+              (quickAdd)="quickAddPackingListRemark(item, $event)"
+              (deleteRemark)="deleteRemarkFromPackingList(item, $event)" />
 
             <!-- Attachments -->
             @if (item.attachments && item.attachments.length > 0) {
@@ -1075,15 +1066,12 @@
           <input #piFileInput type="file" multiple style="display: none;" (change)="onFileSelected($event)" />
         </div>
 
-        <!-- Section 5: Remarks -->
-        <div class="dlg-section">
-          <p class="dlg-section-label"><i class="pi pi-comment"></i> 5. Remarks & Special Notes</p>
-          <div class="field">
-            <textarea pTextarea formControlName="remark" rows="3"
-              placeholder="Enter special proforma invoice conditions, payment bank notes, or delivery remarks…"
-              style="width: 100%; resize: vertical;"></textarea>
-          </div>
-        </div>
+        <!-- Section 5: Remarks & Notes -->
+        <app-step-remarks
+          mode="dialog"
+          [remarks]="dialogRemarks()"
+          (remarksChange)="dialogRemarks.set($event)"
+          sectionNumber="5" />
 
       </div>
     </form>
@@ -1409,15 +1397,12 @@
           <input #invFileInput type="file" multiple style="display: none;" (change)="onFileSelected($event)" />
         </div>
 
-        <!-- Section 5: Remarks -->
-        <div class="dlg-section">
-          <p class="dlg-section-label"><i class="pi pi-comment"></i> 5. Remarks & Special Notes</p>
-          <div class="field">
-            <textarea pTextarea formControlName="remark" rows="3"
-              placeholder="Enter special invoice conditions, customs remarks, or banking notes…"
-              style="width: 100%; resize: vertical;"></textarea>
-          </div>
-        </div>
+        <!-- Section 5: Remarks & Notes -->
+        <app-step-remarks
+          mode="dialog"
+          [remarks]="dialogRemarks()"
+          (remarksChange)="dialogRemarks.set($event)"
+          sectionNumber="5" />
 
       </div>
     </form>
@@ -1735,15 +1720,12 @@
           <input #pklFileInput type="file" multiple style="display: none;" (change)="onFileSelected($event)" />
         </div>
 
-        <!-- Section 4: Remarks -->
-        <div class="dlg-section">
-          <p class="dlg-section-label"><i class="pi pi-comment"></i> 4. Remarks & Container Markings</p>
-          <div class="field">
-            <textarea pTextarea formControlName="remark" rows="3"
-              placeholder="Enter special container markings, weight / dimensions, or logistics remarks…"
-              style="width: 100%; resize: vertical;"></textarea>
-          </div>
-        </div>
+        <!-- Section 4: Remarks & Notes -->
+        <app-step-remarks
+          mode="dialog"
+          [remarks]="dialogRemarks()"
+          (remarksChange)="dialogRemarks.set($event)"
+          sectionNumber="4" />
 
       </div>
     </form>

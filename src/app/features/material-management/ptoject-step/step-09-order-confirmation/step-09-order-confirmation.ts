@@ -39,6 +39,9 @@ import {
 import { Attachment } from '../../../../core/models/attachment.model';
 import { Supplier } from '../../../../core/models/supplier.model';
 import { Project } from '../../../../core/models/project.model';
+import { StepRemarkItem } from '../../../../core/models/step-remark.model';
+import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 import {
   INCOTERMS_OPTIONS,
   VALIDITY_UNIT_OPTIONS,
@@ -59,6 +62,7 @@ import {
     TableModule,
     DatePipe,
     DecimalPipe,
+    StepRemarksComponent,
   ],
   templateUrl: './step-09-order-confirmation.html',
   styleUrl: './step-09-order-confirmation.scss',
@@ -93,6 +97,8 @@ export class Step09OrderConfirmation implements OnInit {
   protected readonly editingItemIndex = signal<number | null>(null);
   protected readonly attachments = signal<File[]>([]);
   protected readonly existingAttachments = signal<Attachment[]>([]);
+  protected readonly dialogRemarks = signal<StepRemarkItem[]>([]);
+  protected readonly quickAddingId = signal<number | null>(null);
 
   /* ── Dropdown Constants ─────────────────────────────────── */
   protected readonly incotermsOptions = INCOTERMS_OPTIONS;
@@ -250,6 +256,7 @@ export class Step09OrderConfirmation implements OnInit {
     this.items.set(mappedItems);
     this.attachments.set([]);
     this.existingAttachments.set([]);
+    this.dialogRemarks.set([]);
     this.editingItemIndex.set(null);
     this.rowForm.reset();
     this.dialogVisible.set(true);
@@ -286,6 +293,7 @@ export class Step09OrderConfirmation implements OnInit {
     this.items.set(mappedItems);
     this.attachments.set([]);
     this.existingAttachments.set(order.attachments || []);
+    this.dialogRemarks.set(parseStepRemarks(order.remarks || order.remark, order.order_confirmation_date));
     this.editingItemIndex.set(null);
     this.rowForm.reset();
     this.dialogVisible.set(true);
@@ -462,7 +470,7 @@ export class Step09OrderConfirmation implements OnInit {
         payment_terms: val.payment_terms || undefined,
         total_amount: totalNet,
         total_net_amount: totalNet,
-        remark: val.remark || '',
+        remarks: serializeStepRemarks(this.dialogRemarks()),
         items: itemsPayload,
       };
 
@@ -495,7 +503,7 @@ export class Step09OrderConfirmation implements OnInit {
         payment_terms: val.payment_terms || undefined,
         total_amount: totalNet,
         total_net_amount: totalNet,
-        remark: val.remark || '',
+        remarks: serializeStepRemarks(this.dialogRemarks()),
         items: itemsPayload,
       };
 
@@ -628,5 +636,73 @@ export class Step09OrderConfirmation implements OnInit {
     if (!dateStr) return null;
     const d = new Date(dateStr);
     return isNaN(d.getTime()) ? null : d;
+  }
+
+  /* ── Remarks Operations ──────────────────────────────── */
+  protected quickAddRemark(order: OrderConfirmation, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(order.remarks || order.remark, order.order_confirmation_date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(order.id);
+    const updatePayload: OrderConfirmationUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.orderConfirmationService
+      .update(order.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to order confirmation.',
+            life: 3000,
+          });
+          this.loadOrderConfirmations(this.projectId());
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromOrder(order: OrderConfirmation, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(order.remarks || order.remark, order.order_confirmation_date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: OrderConfirmationUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.orderConfirmationService.update(order.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from order confirmation.',
+          life: 3000,
+        });
+        this.loadOrderConfirmations(this.projectId());
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
   }
 }

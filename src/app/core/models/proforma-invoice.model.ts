@@ -32,6 +32,7 @@ export interface ProformaInvoice {
   total_amount?: number;
   total_net_amount?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   status?: string;
   attachments?: Attachment[];
   items?: ProformaInvoiceItem[];
@@ -53,6 +54,7 @@ export interface ProformaInvoiceCreateInput {
   total_amount?: number;
   total_net_amount?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items: ProformaInvoiceItem[];
 }
 
@@ -70,5 +72,6 @@ export interface ProformaInvoiceUpdateInput {
   total_amount?: number;
   total_net_amount?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items?: ProformaInvoiceItem[];
 }

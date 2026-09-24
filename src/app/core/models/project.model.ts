@@ -2,6 +2,8 @@ export interface Project {
   id: number;
   project_title: string;
   project_code?: string;
+  nickname?: string;
+  project_nickname?: string;
   customer_id: number;
   supplier_id: number;
   customer_name?: string;
@@ -25,6 +27,8 @@ export interface Project {
 export interface ProjectCreateInput {
   project_title: string;
   project_code?: string;
+  nickname?: string;
+  project_nickname?: string;
   customer_id: number;
   supplier_id: number;
   currency?: string;
@@ -34,9 +38,12 @@ export interface ProjectCreateInput {
 export interface ProjectUpdateInput {
   project_title: string;
   project_code?: string;
+  nickname?: string;
+  project_nickname?: string;
   customer_id: number;
   supplier_id: number;
   status?: string;
   currency?: string;
   target_delivery_date?: string;
 }
+

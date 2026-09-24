@@ -84,21 +84,21 @@ describe('Step01CustomerQuery', () => {
     expect(parsed[1].text).toBe('Second remark');
   });
 
-  it('should serialize remarks properly', () => {
+  it('should serialize remarks payload as array of objects [{ remark: string }]', () => {
     const remarks = [
       { id: '1', text: 'Note A', created_at: '2026-09-20' },
       { id: '2', text: 'Note B', created_at: '2026-09-21' },
     ];
     const serialized = (component as unknown as {
-      serializeRemarks: (r: typeof remarks) => string;
-    }).serializeRemarks(remarks);
+      serializeRemarksPayload: (r: typeof remarks) => Array<{ remark: string }>;
+    }).serializeRemarksPayload(remarks);
 
-    expect(serialized).toBe(JSON.stringify(remarks));
+    expect(serialized).toEqual([{ remark: 'Note A' }, { remark: 'Note B' }]);
 
     const emptySerialized = (component as unknown as {
-      serializeRemarks: (r: typeof remarks) => string;
-    }).serializeRemarks([]);
-    expect(emptySerialized).toBe('');
+      serializeRemarksPayload: (r: typeof remarks) => Array<{ remark: string }>;
+    }).serializeRemarksPayload([]);
+    expect(emptySerialized).toEqual([{ remark: '' }]);
   });
 
   it('should manage remarks in dialog (addDialogRemark and removeDialogRemark)', () => {
@@ -127,7 +127,7 @@ describe('Step01CustomerQuery', () => {
     expect(target.dialogRemarks()[0].text).toBe('Payment approved');
   });
 
-  it('should quick-add remark directly to existing query via customerQueryService.update', () => {
+  it('should quick-add remark directly to existing query via customerQueryService.update with remarks payload', () => {
     const target = component as unknown as {
       queries: { set: (q: CustomerQuery[]) => void };
       quickRemarkText: { set: (v: string) => void };
@@ -145,11 +145,15 @@ describe('Step01CustomerQuery', () => {
     expect(updateSpy).toHaveBeenCalled();
     const args = updateSpy.mock.calls[0];
     expect(args[0]).toBe(mockQuery.id);
-    expect(args[1].remark).toContain('Additional customer clarification received');
+    expect(args[1].remarks).toEqual([
+      { remark: 'First client note' },
+      { remark: 'Second technical specification note' },
+      { remark: 'Additional customer clarification received' },
+    ]);
     expect(getByProjSpy).toHaveBeenCalled();
   });
 
-  it('should delete an individual remark from existing query via customerQueryService.update', () => {
+  it('should delete an individual remark from existing query via customerQueryService.update with remarks payload', () => {
     const target = component as unknown as {
       queries: { set: (q: CustomerQuery[]) => void };
       deleteRemarkFromQuery: (id: string) => void;
@@ -164,7 +168,8 @@ describe('Step01CustomerQuery', () => {
 
     expect(updateSpy).toHaveBeenCalled();
     const args = updateSpy.mock.calls[0];
-    expect(args[1].remark).not.toContain('First client note');
-    expect(args[1].remark).toContain('Second technical specification note');
+    expect(args[1].remarks).toEqual([
+      { remark: 'Second technical specification note' },
+    ]);
   });
 });

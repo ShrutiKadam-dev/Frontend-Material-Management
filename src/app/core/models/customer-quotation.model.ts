@@ -27,7 +27,8 @@ export interface CustomerQuotation {
   incoterms?: string;
   payment_terms?: string;
   delivery_period?: string;
-  remark: string;
+  remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   attachments: Attachment[];
   items: CustomerQuotationItem[];
   created_at?: string;
@@ -47,7 +48,8 @@ export interface CustomerQuotationCreateInput {
   incoterms?: string;
   payment_terms?: string;
   delivery_period?: string;
-  remark: string;
+  remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items: CustomerQuotationItem[];
 }
 
@@ -65,5 +67,6 @@ export interface CustomerQuotationUpdateInput {
   payment_terms?: string;
   delivery_period?: string;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items?: CustomerQuotationItem[];
 }

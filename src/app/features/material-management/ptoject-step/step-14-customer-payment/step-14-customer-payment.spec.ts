@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
+import { MessageService } from 'primeng/api';
 
 import { Step14CustomerPayment } from './step-14-customer-payment';
 import { CustomerPaymentService } from '../../../../core/services/customer-payment';
@@ -76,6 +77,7 @@ describe('Step14CustomerPayment', () => {
         { provide: ProjectService, useValue: mockProjectService },
         { provide: CustomerService, useValue: mockCustomerService },
         { provide: AttachmentService, useValue: mockAttachmentService },
+        MessageService,
       ],
     }).compileComponents();
 

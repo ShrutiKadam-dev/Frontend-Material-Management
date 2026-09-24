@@ -222,16 +222,13 @@
             </div>
             }
 
-            <!-- Remarks / Notes -->
-            @if (order.remark) {
-            <div class="vsc-remark-box">
-              <i class="pi pi-info-circle" aria-hidden="true"></i>
-              <div class="vsc-remark-content">
-                <span class="vsc-remark-label">Remarks:</span>
-                <span class="vsc-remark-text">{{ order.remark }}</span>
-              </div>
-            </div>
-            }
+            <!-- Remarks & Notes Timeline Sequence -->
+            <app-step-remarks
+              [remarks]="order.remarks || order.remark"
+              [defaultDate]="order.order_confirmation_date"
+              [loading]="quickAddingId() === order.id"
+              (quickAdd)="quickAddRemark(order, $event)"
+              (deleteRemark)="deleteRemarkFromOrder(order, $event)" />
 
             <!-- Attachments List -->
             @if (order.attachments && order.attachments.length) {
@@ -614,14 +611,11 @@
         </div>
 
         <!-- ── 5. Remarks Section ──────────────────────────── -->
-        <div class="dlg-section">
-          <p class="dlg-section-label"><i class="pi pi-comment"></i> 5. Remarks & Special Instructions</p>
-          <div class="field">
-            <textarea id="dlg-order-remark" pTextarea formControlName="remark" rows="3"
-              placeholder="Enter special order confirmation conditions, delivery notes, or comments…"
-              style="width: 100%; resize: vertical;"></textarea>
-          </div>
-        </div>
+        <app-step-remarks
+          mode="dialog"
+          [remarks]="dialogRemarks()"
+          (remarksChange)="dialogRemarks.set($event)"
+          sectionNumber="5" />
 
       </div>
 

@@ -31,6 +31,7 @@ export interface CustomerTender {
   payment_terms?: string;
   warranty_period?: string;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   attachments?: Attachment[];
   items?: CustomerTenderItem[];
   created_at?: string;
@@ -57,6 +58,7 @@ export interface CustomerTenderCreateInput {
   payment_terms?: string;
   warranty_period?: string;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items: CustomerTenderItem[];
 }
 
@@ -80,5 +82,6 @@ export interface CustomerTenderUpdateInput {
   payment_terms?: string;
   warranty_period?: string;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items?: CustomerTenderItem[];
 }

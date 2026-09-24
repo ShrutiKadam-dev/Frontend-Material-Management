@@ -28,6 +28,7 @@ export interface SupplierInvoice {
   total_amount?: number;
   total_net_amount?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   status?: string;
   attachments?: Attachment[];
   items?: SupplierInvoiceItem[];
@@ -46,6 +47,7 @@ export interface SupplierInvoiceCreateInput {
   total_amount?: number;
   total_net_amount?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items: SupplierInvoiceItem[];
 }
 
@@ -61,5 +63,6 @@ export interface SupplierInvoiceUpdateInput {
   total_amount?: number;
   total_net_amount?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items?: SupplierInvoiceItem[];
 }

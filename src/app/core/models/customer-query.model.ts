@@ -12,6 +12,20 @@ export interface CustomerQueryRemark {
   created_at: string;
 }
 
+export interface RemarkPayloadItem {
+  remark: string;
+}
+
+export interface CustomerQueryRemarkItem {
+  id?: number | string;
+  remark?: string;
+  text?: string;
+  user?: string;
+  user_id?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface CustomerQuery {
   id: number;
   project_id: number;
@@ -19,7 +33,8 @@ export interface CustomerQuery {
   qo_date: string;
   qo_amount?: string;
   qo_validity?: string;
-  remark: string;
+  remarks?: CustomerQueryRemarkItem[] | RemarkPayloadItem[] | CustomerQueryRemark[] | string[] | string;
+  remark?: string;
   attachments: Attachment[];
   items: CustomerQueryItem[];
   created_at?: string;
@@ -33,7 +48,8 @@ export interface CustomerQueryCreateInput {
   qo_amount?: string;
   qo_validity?: string;
   attachments?: string[];
-  remark: string;
+  remarks: Array<{ remark: string }> | string[];
+  remark?: string;
   items: CustomerQueryItem[];
 }
 
@@ -44,6 +60,7 @@ export interface CustomerQueryUpdateInput {
   qo_amount?: string;
   qo_validity?: string;
   attachments?: string[];
+  remarks?: Array<{ remark: string }> | string[];
   remark?: string;
   items?: CustomerQueryItem[];
 }

@@ -247,16 +247,13 @@
                 </div>
                 }
 
-                <!-- Remark -->
-                @if (q.remark) {
-                <div class="vsc-remark-box" style="margin-bottom: 8px;">
-                  <i class="pi pi-info-circle" aria-hidden="true"></i>
-                  <div class="vsc-remark-content">
-                    <span class="vsc-remark-label">Remarks:</span>
-                    <span class="vsc-remark-text">{{ q.remark }}</span>
-                  </div>
-                </div>
-                }
+                <!-- Remarks & Notes Timeline Sequence -->
+                <app-step-remarks
+                  [remarks]="q.remarks || q.remark"
+                  [defaultDate]="q.quotation_date"
+                  [loading]="quickAddingId() === q.id"
+                  (quickAdd)="quickAddRemark(q, $event)"
+                  (deleteRemark)="deleteRemarkFromQuotation(q, $event)" />
 
                 <!-- Attachments -->
                 @if (q.attachments && q.attachments.length) {
@@ -598,15 +595,11 @@
       </div>
 
       <!-- ── 4. Remarks ─────────────────────────────────── -->
-      <div class="dlg-section">
-        <p class="dlg-section-label"><i class="pi pi-comment"></i> 4. Notes & Remarks</p>
-        <div class="field">
-          <label for="dlg-sq-remark" class="visually-hidden">Remark</label>
-          <textarea id="dlg-sq-remark" pTextarea formControlName="remark" rows="3"
-            placeholder="Prices include standard 1-year operational warranty, etc…"
-            style="width: 100%; resize: vertical;"></textarea>
-        </div>
-      </div>
+      <app-step-remarks
+        mode="dialog"
+        [remarks]="dialogRemarks()"
+        (remarksChange)="dialogRemarks.set($event)"
+        sectionNumber="4" />
 
     </div>
 

@@ -1,0 +1,1484 @@
+// Shared Modern Project Card Design System
+// Used by Projects (/projects) and Dashboard (/)
+
+$pc-accent: #c0522f;
+$pc-accent-hover: #a84324;
+$pc-accent-soft: #fbf2ed;
+$pc-ink: #1c1b1a;
+$pc-ink-soft: #6b6864;
+$pc-line: #e7e4de;
+$pc-surface: #ffffff;
+$pc-surface-tonal: #faf9f6;
+$pc-success: #1b7a43;
+$pc-success-bg: #eaf6ee;
+$pc-info: #1d5cb0;
+$pc-info-bg: #edf4fc;
+
+.modern-project-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: $pc-surface;
+  border: 1px solid $pc-line;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  position: relative;
+  box-sizing: border-box;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: #d8d4cd;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.06);
+  }
+
+  &--delayed {
+    border-left: 4px solid #f59e0b;
+  }
+}
+
+/* 1. Top Row: Chip Group & Price Block */
+.mpc-top-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mpc-chip-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mpc-chip {
+  height: 28px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  line-height: 1;
+  white-space: nowrap;
+
+  &--id {
+    background: #f1efe9;
+    color: #57534e;
+    border: 1px solid $pc-line;
+    font-family: inherit;
+    letter-spacing: 0.01em;
+  }
+
+  &--nickname {
+    background: #faf5f0;
+    color: $pc-accent;
+    border: 1px solid #fed7aa;
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    gap: 4px;
+
+    i {
+      color: $pc-accent;
+      font-size: 11px;
+    }
+  }
+
+  &--status {
+    background: $pc-success-bg;
+    color: $pc-success;
+    border: 1px solid #cce5d6;
+    gap: 6px;
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: $pc-success;
+      flex-shrink: 0;
+    }
+
+    &.health-pill--delayed {
+      background: #fef3c7;
+      color: #b45309;
+      border-color: #fde68a;
+
+      .status-dot {
+        background: #b45309;
+      }
+    }
+
+    &.health-pill--at-risk {
+      background: #fee2e2;
+      color: #b91c1c;
+      border-color: #fecaca;
+
+      .status-dot {
+        background: #b91c1c;
+      }
+    }
+  }
+
+  &--phase {
+    background: $pc-info-bg;
+    color: $pc-info;
+    border: 1px solid #d0ddf3;
+
+    &.status-badge--completed {
+      background: $pc-success-bg;
+      color: $pc-success;
+      border-color: #cce5d6;
+    }
+
+    &.status-badge--on-hold {
+      background: #f1efe9;
+      color: $pc-ink-soft;
+      border-color: $pc-line;
+    }
+
+    &.status-badge--cancelled {
+      background: #fee2e2;
+      color: #b91c1c;
+      border-color: #fecaca;
+    }
+  }
+}
+
+.mpc-price-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
+}
+
+.price-amount-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+
+  .price-currency {
+    font-size: 13px;
+    font-weight: 600;
+    color: $pc-ink-soft;
+    line-height: 1;
+  }
+
+  .price-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: $pc-ink;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.price-date {
+  font-size: 12.5px;
+  color: $pc-ink-soft;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+/* 2. Title */
+.mpc-title {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: $pc-ink;
+  margin: 0;
+  cursor: pointer;
+  letter-spacing: -0.01em;
+  transition: color 140ms ease;
+
+  &:hover {
+    color: $pc-accent;
+  }
+}
+
+/* 3. Customer & Supplier 2-Column Grid */
+.mpc-parties-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #faf9f6;
+  border: 1px solid $pc-line;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.party-cell {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  box-sizing: border-box;
+
+  &--customer {
+    border-right: 1px solid $pc-line;
+  }
+
+  .party-icon-box {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    border-radius: 8px;
+    background: $pc-accent-soft;
+    color: $pc-accent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .party-text-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .party-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: $pc-ink-soft;
+    line-height: 1.2;
+  }
+
+  .party-value {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: $pc-ink;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+    line-height: 1.3;
+  }
+}
+
+/* 4. Progress Section */
+.mpc-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progress-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.progress-stage-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+
+  .step-chip {
+    height: 24px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    background: #f1efe9;
+    color: #57534e;
+    border: 1px solid $pc-line;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    line-height: 1;
+    box-sizing: border-box;
+  }
+
+  .stage-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: $pc-ink;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+}
+
+.progress-percent {
+  font-size: 15px;
+  font-weight: 700;
+  color: $pc-accent;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.progress-track {
+  width: 100%;
+  height: 6px;
+  background: #f0ede6;
+  border-radius: 999px;
+  overflow: hidden;
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #c0522f, #d96b43);
+    transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    &--delayed {
+      background: linear-gradient(90deg, #f59e0b, #eab308);
+    }
+  }
+}
+
+/* 5. Next Action Spotlight */
+.mpc-next-action {
+  background: $pc-surface-tonal;
+  border: 1px solid $pc-accent-soft;
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  .next-action-icon-chip {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    border-radius: 8px;
+    background: $pc-accent;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .next-action-text-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .next-action-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: $pc-accent;
+    line-height: 1.2;
+  }
+
+  .next-action-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: $pc-ink;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.35;
+  }
+}
+
+/* 6. Bottom Row: Action Footer */
+.mpc-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid $pc-line;
+}
+
+.mpc-footer-actions,
+.mpc-actions-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0;
+}
+
+.mpc-footer-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.delivery-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: $pc-ink-soft;
+  background: #faf9f6;
+  border: 1px solid $pc-line;
+  border-radius: 8px;
+  padding: 6px 12px;
+
+  .pi {
+    font-size: 13px;
+    color: $pc-ink-soft;
+  }
+
+  &--overdue {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #b91c1c;
+
+    .pi {
+      color: #b91c1c;
+    }
+  }
+
+  &--muted {
+    color: $pc-ink-soft;
+  }
+}
+
+.edit-card-btn,
+.remove-card-btn {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  border-radius: 10px !important;
+  border: 1px solid $pc-line !important;
+  background: #ffffff !important;
+  color: $pc-ink-soft !important;
+  font-size: 15px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  transition: all 140ms ease !important;
+
+  .pi {
+    font-size: 15px !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+  }
+}
+
+.edit-card-btn {
+  &:hover {
+    background: #faf9f6 !important;
+    border-color: #cbd5e1 !important;
+    color: $pc-ink !important;
+  }
+}
+
+.remove-card-btn {
+  &:hover {
+    background: #fef2f2 !important;
+    border-color: #fecaca !important;
+    color: #dc2626 !important;
+  }
+}
+
+.launch-pipeline-btn {
+  background: $pc-accent !important;
+  border: 1px solid $pc-accent !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  box-sizing: border-box !important;
+  padding: 0 20px !important;
+  border-radius: 10px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  white-space: nowrap !important;
+  box-shadow: 0 1px 3px rgba(192, 82, 47, 0.2) !important;
+  transition: all 140ms ease !important;
+  cursor: pointer !important;
+
+  &:hover {
+    background: $pc-accent-hover !important;
+    border-color: $pc-accent-hover !important;
+    transform: translateX(1px);
+  }
+}
+
+/* Responsive adjustments (<520px) */
+@media (max-width: 520px) {
+  .modern-project-card {
+    padding: 18px 16px;
+    gap: 16px;
+  }
+
+  .mpc-top-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .mpc-price-block {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .mpc-parties-grid {
+    grid-template-columns: 1fr;
+
+    .party-cell--customer {
+      border-right: none;
+      border-bottom: 1px solid $pc-line;
+    }
+  }
+
+  .mpc-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .launch-pipeline-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .mpc-footer-actions {
+    justify-content: flex-start;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   UNIFIED MODERN ENTITY CARD (Suppliers & Customers)
+   Neat, clean card layout matching the Project Card design system
+══════════════════════════════════════════════════════════════════ */
+
+.entity-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.modern-entity-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: $pc-surface;
+  border: 1px solid $pc-line;
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  position: relative;
+  box-sizing: border-box;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: #d8d4cd;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.06);
+  }
+}
+
+.entity-profile-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.entity-avatar-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: $pc-accent-soft;
+  border: 1px solid rgba(192, 82, 47, 0.22);
+  color: $pc-accent;
+  font-weight: 800;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: -0.02em;
+}
+
+.entity-meta-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+
+  .mpc-title {
+    font-size: 17.5px;
+    font-weight: 700;
+    color: $pc-ink;
+    line-height: 1.3;
+    margin: 0;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 140ms ease;
+
+    &:hover {
+      color: $pc-accent;
+    }
+  }
+}
+
+.mpc-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: $pc-ink-soft;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  .location-icon {
+    font-size: 12px;
+    color: $pc-accent;
+    flex-shrink: 0;
+  }
+}
+
+.mpc-meta-block {
+  display: flex;
+  align-items: center;
+}
+
+.mpc-date {
+  font-size: 12px;
+  font-weight: 500;
+  color: $pc-ink-soft;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  i {
+    font-size: 11px;
+    color: #9c9088;
+  }
+}
+
+/* Unified Contact & POC Box (Styled as tonal surface like party-cell) */
+.entity-contact-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 13px 15px;
+  background: $pc-surface-tonal;
+  border: 1px solid $pc-line;
+  border-radius: 12px;
+}
+
+.poc-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid $pc-line;
+}
+
+.poc-lead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.poc-icon-box {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: #ffffff;
+  border: 1px solid $pc-line;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $pc-accent;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.poc-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.poc-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: $pc-ink;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.poc-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 1.5px 6px;
+  background: #ffffff;
+  color: #57534e;
+  border: 1px solid $pc-line;
+  border-radius: 5px;
+  line-height: 1.2;
+}
+
+.poc-count-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  background: $pc-accent-soft;
+  color: $pc-accent;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.contact-channels-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.contact-channel-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12.5px;
+
+  .contact-icon {
+    font-size: 12px;
+    color: $pc-accent;
+    flex-shrink: 0;
+  }
+
+  .contact-link {
+    color: #3f3e3a;
+    font-size: 12.5px;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 120ms ease;
+
+    &:hover {
+      color: $pc-accent;
+      text-decoration: underline;
+    }
+  }
+}
+
+/* ── Shared Form Section Banners (Add / Edit Modals) ────────── */
+.entity-form-section-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: $pc-surface-tonal;
+  border: 1px solid $pc-line;
+  border-radius: 10px;
+  margin: 6px 0 2px;
+}
+
+.ef-banner-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: $pc-accent-soft;
+  color: $pc-accent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.ef-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ef-banner-title {
+  font-size: 0.88rem;
+  font-weight: 750;
+  color: $pc-ink;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.ef-banner-sub {
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: $pc-ink-soft;
+  margin: 0;
+}
+
+.field-helper-hint {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #78716c;
+  margin-top: 3px;
+  display: block;
+}
+
+/* ── Modern Details Dialog System ────────────────────────────── */
+.details-dialog {
+  .p-dialog-header {
+    background: #ffffff !important;
+    border-bottom: 1px solid $pc-line !important;
+    padding: 16px 24px !important;
+  }
+
+  .p-dialog-content {
+    padding: 24px 26px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+.dialog-header-custom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dialog-header-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: $pc-accent-soft;
+  color: $pc-accent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.dialog-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: $pc-ink;
+  margin: 0;
+}
+
+/* 1. Centered Profile Header (Circular Gradient Avatar) */
+.details-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid $pc-line;
+}
+
+.details-avatar {
+  width: 68px;
+  height: 68px;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #fdf1ec 0%, #f4ded6 100%);
+  border: 2px solid rgba(192, 82, 47, 0.28);
+  color: $pc-accent;
+  font-weight: 850;
+  font-size: 1.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(192, 82, 47, 0.16);
+  letter-spacing: 0.02em;
+}
+
+.details-hero-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.details-hero-name {
+  font-size: 1.35rem;
+  font-weight: 850;
+  color: $pc-ink;
+  margin: 0;
+  line-height: 1.25;
+  text-align: center;
+  word-break: break-word;
+}
+
+.details-hero-badges-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.details-hero-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.details-hero-subtitle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.details-hero-address {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: #57534e;
+  line-height: 1.4;
+  margin: 2px 0 0;
+  max-width: 440px;
+  text-align: center;
+
+  .pi {
+    color: $pc-accent;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+}
+
+.details-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 2. Streamlined Section Headers */
+.details-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.details-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 2px;
+}
+
+.details-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #78716c;
+  margin: 0;
+
+  .pi {
+    color: $pc-accent;
+    font-size: 0.82rem;
+  }
+}
+
+.poc-total-count-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  background: #f5f4f0;
+  color: $pc-ink-soft;
+  border: 1px solid $pc-line;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* 3. POC Entries: Flat List with Dashed Dividers (Single-Line Contact Info) */
+.details-pocs-flat-list {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid $pc-line;
+  border-radius: 14px;
+  padding: 4px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.details-poc-flat-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px dashed $pc-line;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.poc-flat-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50% !important;
+  background: $pc-accent-soft;
+  color: $pc-accent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  border: 1px solid rgba(192, 82, 47, 0.18);
+}
+
+.poc-flat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.poc-flat-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.poc-person-name {
+  font-size: 0.88rem;
+  font-weight: 750;
+  color: $pc-ink;
+}
+
+.poc-role-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  white-space: nowrap;
+
+  &--primary {
+    background: $pc-accent-soft;
+    color: $pc-accent;
+    border-color: rgba(192, 82, 47, 0.25);
+  }
+}
+
+.poc-flat-contact-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8rem;
+  color: #57534e;
+  flex-wrap: wrap;
+}
+
+.poc-inline-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #57534e;
+  text-decoration: none;
+  transition: color 120ms ease;
+
+  .pi {
+    font-size: 0.74rem;
+    color: $pc-accent;
+  }
+
+  &:hover {
+    color: $pc-accent;
+    text-decoration: underline;
+  }
+}
+
+.poc-inline-dot {
+  color: #a8a29e;
+  font-weight: 700;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+/* 4. Address: 2-Column Label/Value Grid */
+.details-address-card {
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid $pc-line;
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.details-address-text {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #292524;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.address-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  padding-top: 10px;
+  border-top: 1px dashed $pc-line;
+}
+
+.address-grid-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.grid-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #78716c;
+}
+
+.grid-val {
+  font-size: 0.84rem;
+  font-weight: 650;
+  color: $pc-ink;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 5. Minimalist Metadata Strip */
+.details-meta-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 4px 0 2px;
+  background: transparent;
+  border: none;
+  font-size: 0.74rem;
+  color: #78716c;
+  flex-wrap: wrap;
+
+  .meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    .pi {
+      font-size: 0.74rem;
+      color: #a8a29e;
+    }
+
+    strong {
+      color: #44403c;
+      font-weight: 650;
+    }
+  }
+
+  .meta-dot {
+    color: #d6d3d1;
+    font-size: 0.8rem;
+  }
+}
+
+/* 6. Stacked Modal Footer Actions (Full-width Edit + 50/50 Secondary Pair, 12px buttons) */
+.details-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid $pc-line;
+  margin-top: 4px;
+}
+
+.edit-details-btn {
+  width: 100% !important;
+  justify-content: center !important;
+  height: 42px !important;
+  border-radius: 12px !important;
+  font-weight: 750 !important;
+  font-size: 0.88rem !important;
+  box-shadow: 0 2px 8px rgba(192, 82, 47, 0.22);
+}
+
+.details-footer-secondary-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+
+  .close-details-btn,
+  .remove-details-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    height: 38px !important;
+    border-radius: 12px !important;
+    font-weight: 650 !important;
+    font-size: 0.82rem !important;
+  }
+}
+
+.remove-details-btn {
+  border-color: rgba(239, 68, 68, 0.35) !important;
+  color: #ef4444 !important;
+  background: #ffffff !important;
+
+  &:hover {
+    background: #fef2f2 !important;
+    border-color: #ef4444 !important;
+    color: #dc2626 !important;
+  }
+}
+
+.close-details-btn {
+  border-color: $pc-line !important;
+  color: $pc-ink-soft !important;
+  background: #ffffff !important;
+
+  &:hover {
+    background: $pc-surface-tonal !important;
+    color: $pc-ink !important;
+    border-color: #d8d4cd !important;
+  }
+}
+
+/* ── Shared Entity Form & POC Repeater Styles ──────────────── */
+.modern-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 0.82rem;
+  font-weight: 750;
+  color: $pc-ink;
+}
+
+.required-star {
+  color: #b42318;
+}
+
+.dialog-input {
+  width: 100%;
+}
+
+.field-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #b42318;
+  font-size: 0.76rem;
+  font-weight: 600;
+  margin: 2px 0 0 0;
+
+  .pi {
+    font-size: 0.75rem;
+  }
+}
+
+.form-grid-name-nick {
+  display: grid;
+  grid-template-columns: 1.65fr 1fr;
+  gap: 14px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-grid-2col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+
+  @media (max-width: 580px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pocs-form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.poc-card {
+  background: #faf8f6;
+  border: 1px solid $pc-line;
+  border-radius: 10px;
+  padding: 13px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: rgba(192, 82, 47, 0.3);
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(36, 27, 24, 0.04);
+  }
+}
+
+.poc-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed $pc-line;
+}
+
+.poc-badge-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 750;
+  color: $pc-ink;
+}
+
+.poc-number-chip {
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: $pc-accent-soft;
+  color: $pc-accent;
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-poc-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #9c9088;
+  cursor: pointer;
+  transition: all 0.12s ease;
+
+  &:hover {
+    background: #fee2e2;
+    color: #ef4444;
+  }
+}
+
+.poc-fields-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.poc-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  @media (max-width: 580px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.add-poc-dashed-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 16px;
+  background: transparent;
+  border: 1px dashed rgba(192, 82, 47, 0.4);
+  border-radius: 8px;
+  color: $pc-accent;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: $pc-accent-soft;
+    border-color: $pc-accent;
+  }
+}
+
+.dialog-actions-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid $pc-line;
+}
+
+

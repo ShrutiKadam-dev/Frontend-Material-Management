@@ -11,6 +11,7 @@ export interface BillOfEntry {
   total_assessable_value: number;
   total_duty?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   attachments?: Attachment[];
   created_at?: string;
   updated_at?: string;
@@ -26,6 +27,7 @@ export interface BillOfEntryCreateInput {
   total_assessable_value: number;
   total_duty?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
 }
 
 export interface BillOfEntryUpdateInput {
@@ -38,6 +40,7 @@ export interface BillOfEntryUpdateInput {
   total_assessable_value?: number;
   total_duty?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
 }
 
 export interface LatestBillOfEntry {

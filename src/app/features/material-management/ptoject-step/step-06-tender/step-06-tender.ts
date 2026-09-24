@@ -38,6 +38,9 @@ import {
 import { Attachment } from '../../../../core/models/attachment.model';
 import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
+import { StepRemarkItem } from '../../../../core/models/step-remark.model';
+import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
   selector: 'app-step-06-tender',
@@ -53,6 +56,7 @@ import { Project } from '../../../../core/models/project.model';
     SelectModule,
     DatePipe,
     DecimalPipe,
+    StepRemarksComponent,
   ],
   templateUrl: './step-06-tender.html',
   styleUrl: './step-06-tender.scss',
@@ -85,6 +89,8 @@ export class Step06Tender implements OnInit {
   protected readonly editingItemIndex = signal<number | null>(null);
   protected readonly attachments = signal<File[]>([]);
   protected readonly existingAttachments = signal<Attachment[]>([]);
+  protected readonly dialogRemarks = signal<StepRemarkItem[]>([]);
+  protected readonly quickAddingId = signal<number | null>(null);
 
   /* ── Dropdown Constants ────────────────────────────────── */
   protected readonly incotermsOptions = INCOTERMS_OPTIONS;
@@ -207,6 +213,7 @@ export class Step06Tender implements OnInit {
     this.items.set([]);
     this.attachments.set([]);
     this.existingAttachments.set([]);
+    this.dialogRemarks.set([]);
     this.editingTender.set(null);
     this.editingItemIndex.set(null);
     this.rowForm.reset();
@@ -242,6 +249,7 @@ export class Step06Tender implements OnInit {
     this.items.set(t.items ? [...t.items] : []);
     this.attachments.set([]);
     this.existingAttachments.set(t.attachments ? [...t.attachments] : []);
+    this.dialogRemarks.set(parseStepRemarks(t.remarks || t.remark, t.tender_date));
     this.editingTender.set(t);
     this.editingItemIndex.set(null);
     this.rowForm.reset();
@@ -367,7 +375,7 @@ export class Step06Tender implements OnInit {
       delivery_period: raw.delivery_period?.trim() || undefined,
       payment_terms: raw.payment_terms?.trim() || undefined,
       warranty_period: raw.warranty_period?.trim() || undefined,
-      remark: raw.remark?.trim() || undefined,
+      remarks: serializeStepRemarks(this.dialogRemarks()),
       items: this.items(),
     };
 
@@ -422,6 +430,74 @@ export class Step06Tender implements OnInit {
           summary: 'Error',
           detail: 'Failed to delete customer tender.',
           life: 3000,
+        });
+      },
+    });
+  }
+
+  /* ── Remarks Operations ──────────────────────────────── */
+  protected quickAddRemark(tender: CustomerTender, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(tender.remarks || tender.remark, tender.tender_date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(tender.id);
+    const updatePayload: CustomerTenderUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.customerTenderService
+      .update(tender.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to customer tender.',
+            life: 3000,
+          });
+          this.loadTenders(this.projectId());
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromTender(tender: CustomerTender, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(tender.remarks || tender.remark, tender.tender_date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: CustomerTenderUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.customerTenderService.update(tender.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from customer tender.',
+          life: 3000,
+        });
+        this.loadTenders(this.projectId());
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
         });
       },
     });
@@ -548,7 +624,13 @@ export class Step06Tender implements OnInit {
     if (!validity) return ['90', 'Days'];
     const parts = validity.trim().split(/\s+/);
     if (parts.length >= 2) {
-      return [parts[0], parts.slice(1).join(' ')];
+      let unit = parts.slice(1).join(' ');
+      const lower = unit.toLowerCase();
+      if (lower === 'day' || lower === 'days') unit = 'Days';
+      else if (lower === 'week' || lower === 'weeks') unit = 'Weeks';
+      else if (lower === 'month' || lower === 'months') unit = 'Months';
+      else if (lower === 'year' || lower === 'years') unit = 'Years';
+      return [parts[0], unit];
     }
     return [parts[0], 'Days'];
   }

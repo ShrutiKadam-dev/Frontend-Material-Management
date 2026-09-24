@@ -263,16 +263,13 @@
             </div>
             }
 
-            <!-- Remarks / Notes -->
-            @if (po.remark) {
-            <div class="vsc-remark-box">
-              <i class="pi pi-info-circle" aria-hidden="true"></i>
-              <div class="vsc-remark-content">
-                <span class="vsc-remark-label">Remarks:</span>
-                <span class="vsc-remark-text">{{ po.remark }}</span>
-              </div>
-            </div>
-            }
+            <!-- Remarks & Notes Timeline Sequence -->
+            <app-step-remarks
+              [remarks]="po.remarks || po.remark"
+              [defaultDate]="po.po_date"
+              [loading]="quickAddingId() === po.id"
+              (quickAdd)="quickAddRemark(po, $event)"
+              (deleteRemark)="deleteRemarkFromPO(po, $event)" />
 
             <!-- Attachments List -->
             @if (po.attachments && po.attachments.length) {
@@ -731,14 +728,11 @@
         </div>
 
         <!-- ── 5. Remarks Section ──────────────────────────── -->
-        <div class="dlg-section">
-          <p class="dlg-section-label"><i class="pi pi-comment"></i> 5. Remarks & Special Notes</p>
-          <div class="field">
-            <textarea id="dlg-po-remark" pTextarea formControlName="remark" rows="3"
-              placeholder="Enter special purchase order conditions, delivery instructions, or notes…"
-              style="width: 100%; resize: vertical;"></textarea>
-          </div>
-        </div>
+        <app-step-remarks
+          mode="dialog"
+          [remarks]="dialogRemarks()"
+          (remarksChange)="dialogRemarks.set($event)"
+          sectionNumber="5" />
 
       </div>
     </form>

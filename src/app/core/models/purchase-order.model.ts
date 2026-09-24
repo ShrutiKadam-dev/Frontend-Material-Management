@@ -51,6 +51,7 @@ export interface PurchaseOrder {
   total_gross_amount?: number;
   total_amount?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   status?: string;
   attachments?: Attachment[];
   items?: PurchaseOrderItem[];
@@ -75,6 +76,7 @@ export interface PurchaseOrderCreateInput {
   total_net_amount: number;
   total_gross_amount: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items: PurchaseOrderItem[];
 }
 
@@ -95,5 +97,6 @@ export interface PurchaseOrderUpdateInput {
   total_net_amount?: number;
   total_gross_amount?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items?: PurchaseOrderItem[];
 }

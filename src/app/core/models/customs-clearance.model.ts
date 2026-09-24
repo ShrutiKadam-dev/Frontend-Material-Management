@@ -16,6 +16,7 @@ export interface CustomsClearance {
   other_customs_charges: number;
   total_customs_amount: number;
   remark?: string | null;
+  remarks?: Array<{ remark: string }> | string[];
   attachments?: Attachment[];
   duty_challan_attachments?: Attachment[];
   boe_attachments?: Attachment[];
@@ -39,6 +40,7 @@ export interface CustomsClearanceCreateInput {
   other_customs_charges: number;
   total_customs_amount: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
 }
 
 export interface CustomsClearanceUpdateInput extends Partial<CustomsClearanceCreateInput> {}

@@ -250,16 +250,13 @@
             </div>
             }
 
-            <!-- Remarks / Notes -->
-            @if (s.remark) {
-            <div class="vsc-remark-box">
-              <i class="pi pi-info-circle" aria-hidden="true"></i>
-              <div class="vsc-remark-content">
-                <span class="vsc-remark-label">Remarks:</span>
-                <span class="vsc-remark-text">{{ s.remark }}</span>
-              </div>
-            </div>
-            }
+            <!-- Remarks & Notes Timeline Sequence -->
+            <app-step-remarks
+              [remarks]="s.remarks || s.remark"
+              [defaultDate]="s.submission_date"
+              [loading]="quickAddingId() === s.id"
+              (quickAdd)="quickAddRemark(s, $event)"
+              (deleteRemark)="deleteRemarkFromSubmission(s, $event)" />
 
             <!-- Attachments List -->
             @if (s.attachments && s.attachments.length) {
@@ -686,14 +683,11 @@
         </div>
 
         <!-- ── 5. Remarks Section ──────────────────────────── -->
-        <div class="dlg-section">
-          <p class="dlg-section-label"><i class="pi pi-comment"></i> 5. Submission Remarks & Special Notes</p>
-          <div class="field">
-            <textarea id="dlg-bid-remark" pTextarea formControlName="remark" rows="3"
-              placeholder="Enter special bid conditions, compliance notes, or comments…"
-              style="width: 100%; resize: vertical;"></textarea>
-          </div>
-        </div>
+        <app-step-remarks
+          mode="dialog"
+          [remarks]="dialogRemarks()"
+          (remarksChange)="dialogRemarks.set($event)"
+          sectionNumber="5" />
 
       </div>
 

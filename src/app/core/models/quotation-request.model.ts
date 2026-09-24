@@ -13,7 +13,7 @@ export interface QuotationRequest {
   supplier_name?: string;
   quotation_requested_date: string;
   supplier_contacted: boolean;
-  remarks: string;
+  remarks?: string[] | string;
   attachments: Attachment[];
   items: QuotationRequestItem[];
   created_at?: string;
@@ -25,7 +25,7 @@ export interface QuotationRequestCreateInput {
   supplier_id: number;
   quotation_requested_date: string;
   supplier_contacted: boolean;
-  remarks: string;
+  remarks: Array<{ remark: string }> | string[];
   items: QuotationRequestItem[];
 }
 
@@ -34,6 +34,6 @@ export interface QuotationRequestUpdateInput {
   supplier_id?: number;
   quotation_requested_date?: string;
   supplier_contacted?: boolean;
-  remarks?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items?: QuotationRequestItem[];
 }

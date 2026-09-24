@@ -12,6 +12,7 @@ import { PurchaseOrderService } from '../../../../core/services/purchase-order';
 import { SupplierInvoiceService } from '../../../../core/services/supplier-invoice';
 import { API_BASE_URL } from '../../../../core/tokens/api-base-url.token';
 import { SupplierPayment } from '../../../../core/models/supplier-payment.model';
+import { MessageService } from 'primeng/api';
 
 describe('Step15SupplierPayment', () => {
   let component: Step15SupplierPayment;
@@ -119,6 +120,7 @@ describe('Step15SupplierPayment', () => {
         { provide: PurchaseOrderService, useValue: poServiceMock },
         { provide: SupplierInvoiceService, useValue: supplierInvoiceServiceMock },
         { provide: API_BASE_URL, useValue: 'http://localhost:3000' },
+        MessageService,
       ],
     }).compileComponents();
 

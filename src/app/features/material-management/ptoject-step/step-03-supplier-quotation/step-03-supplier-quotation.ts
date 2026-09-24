@@ -43,6 +43,9 @@ import { StepFormFieldConfig } from '../../../../core/models/step-form-config.mo
 import { Attachment } from '../../../../core/models/attachment.model';
 import { Supplier } from '../../../../core/models/supplier.model';
 import { Project } from '../../../../core/models/project.model';
+import { StepRemarkItem } from '../../../../core/models/step-remark.model';
+import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
   selector: 'app-step-03-supplier-quotation',
@@ -58,6 +61,7 @@ import { Project } from '../../../../core/models/project.model';
     SelectModule,
     DatePipe,
     DecimalPipe,
+    StepRemarksComponent,
   ],
   templateUrl: './step-03-supplier-quotation.html',
   styleUrl: './step-03-supplier-quotation.scss',
@@ -84,6 +88,12 @@ export class Step03SupplierQuotation implements OnInit {
   protected readonly submitting = signal(false);
   protected readonly downloadingAttachmentId = signal<number | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
+
+  /** Timeline remarks list for active dialog */
+  protected readonly dialogRemarks = signal<StepRemarkItem[]>([]);
+
+  /** Tracking which quotation card is currently submitting a quick remark */
+  protected readonly quickAddingId = signal<number | null>(null);
 
   /** Global Dropdown Options */
   protected readonly incotermsOptions = INCOTERMS_OPTIONS;
@@ -202,7 +212,7 @@ export class Step03SupplierQuotation implements OnInit {
     currency_unit: ['', [Validators.required]],
     quotation_value: ['', [Validators.required, Validators.pattern(/^\d+(\.\d{1,2})?$/)]],
     validity_value: ['', [Validators.required, Validators.pattern(/^\d+$/)]],
-    validity_unit: ['', [Validators.required]],
+    validity_unit: ['Days', [Validators.required]],
     incoterms: ['', [Validators.required]],
     payment_terms: ['', [Validators.required]],
     delivery_period: ['', [Validators.required]],
@@ -271,7 +281,7 @@ export class Step03SupplierQuotation implements OnInit {
       currency_unit: '',
       quotation_value: '',
       validity_value: '',
-      validity_unit: '',
+      validity_unit: 'Days',
       incoterms: '',
       payment_terms: '',
       delivery_period: '',
@@ -280,6 +290,7 @@ export class Step03SupplierQuotation implements OnInit {
     this.items.set([]);
     this.existingAttachments.set([]);
     this.attachments.set([]);
+    this.dialogRemarks.set([]);
     this.addRowVisible.set(false);
     this.editingIndex.set(null);
     this.errorMessage.set(null);
@@ -324,7 +335,7 @@ export class Step03SupplierQuotation implements OnInit {
       currency_unit: curr,
       quotation_value: val,
       validity_value: valNum,
-      validity_unit: valUnit,
+      validity_unit: valUnit || 'Days',
       incoterms: quotation.incoterms ?? 'FOB',
       payment_terms: quotation.payment_terms ?? '50% Advance, 50% against Delivery',
       delivery_period: quotation.delivery_period ?? '5 Weeks',
@@ -333,6 +344,7 @@ export class Step03SupplierQuotation implements OnInit {
     this.items.set(quotation.items ? quotation.items.map((it) => ({ ...it })) : []);
     this.existingAttachments.set(quotation.attachments ?? []);
     this.attachments.set([]);
+    this.dialogRemarks.set(parseStepRemarks(quotation.remarks || quotation.remark, quotation.quotation_date));
     this.addRowVisible.set(false);
     this.editingIndex.set(null);
     this.errorMessage.set(null);
@@ -556,6 +568,8 @@ export class Step03SupplierQuotation implements OnInit {
       net_amount: it.net_amount !== undefined && it.net_amount !== '' && !isNaN(Number(it.net_amount)) ? Number(it.net_amount) : it.net_amount,
     }));
 
+    const remarksPayload = serializeStepRemarks(this.dialogRemarks());
+
     if (current) {
       const updatePayload: SupplierQuotationUpdateInput = {
         project_id: projectId,
@@ -570,7 +584,7 @@ export class Step03SupplierQuotation implements OnInit {
         incoterms: raw.incoterms,
         payment_terms: raw.payment_terms,
         delivery_period: raw.delivery_period,
-        remark: raw.remark ?? '',
+        remarks: remarksPayload,
         items: formattedItems,
       };
 
@@ -612,7 +626,7 @@ export class Step03SupplierQuotation implements OnInit {
         incoterms: raw.incoterms,
         payment_terms: raw.payment_terms,
         delivery_period: raw.delivery_period,
-        remark: raw.remark ?? '',
+        remarks: remarksPayload,
         items: formattedItems,
       };
 
@@ -640,6 +654,75 @@ export class Step03SupplierQuotation implements OnInit {
           },
         });
     }
+  }
+
+  /* ── Quick Add / Delete Remarks on Card ──────────────── */
+
+  protected quickAddRemark(quotation: SupplierQuotation, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(quotation.remarks || quotation.remark, quotation.quotation_date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(quotation.id);
+    const updatePayload: SupplierQuotationUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.supplierQuotationService
+      .update(quotation.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to quotation.',
+            life: 3000,
+          });
+          this.loadQuotations(this.projectId());
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromQuotation(quotation: SupplierQuotation, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(quotation.remarks || quotation.remark, quotation.quotation_date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: SupplierQuotationUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.supplierQuotationService.update(quotation.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from quotation.',
+          life: 3000,
+        });
+        this.loadQuotations(this.projectId());
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
   }
 
   protected deleteQuotation(id: number): void {

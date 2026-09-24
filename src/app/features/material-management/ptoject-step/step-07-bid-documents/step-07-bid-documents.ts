@@ -42,6 +42,9 @@ import { CustomerTender } from '../../../../core/models/customer-tender.model';
 import { Attachment } from '../../../../core/models/attachment.model';
 import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
+import { StepRemarkItem } from '../../../../core/models/step-remark.model';
+import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
   selector: 'app-step-07-bid-documents',
@@ -57,6 +60,7 @@ import { Project } from '../../../../core/models/project.model';
     SelectModule,
     DatePipe,
     DecimalPipe,
+    StepRemarksComponent,
   ],
   templateUrl: './step-07-bid-documents.html',
   styleUrl: './step-07-bid-documents.scss',
@@ -93,6 +97,8 @@ export class Step07BidDocuments implements OnInit {
   protected readonly editingItemIndex = signal<number | null>(null);
   protected readonly attachments = signal<File[]>([]);
   protected readonly existingAttachments = signal<Attachment[]>([]);
+  protected readonly dialogRemarks = signal<StepRemarkItem[]>([]);
+  protected readonly quickAddingId = signal<number | null>(null);
 
   /* ── Dropdown Constants ────────────────────────────────── */
   protected readonly incotermsOptions = INCOTERMS_OPTIONS;
@@ -278,6 +284,7 @@ export class Step07BidDocuments implements OnInit {
     this.items.set(mappedItems);
     this.attachments.set([]);
     this.existingAttachments.set([]);
+    this.dialogRemarks.set([]);
     this.editingSubmission.set(null);
     this.editingItemIndex.set(null);
     this.rowForm.reset();
@@ -307,6 +314,7 @@ export class Step07BidDocuments implements OnInit {
     this.items.set(sub.items ? [...sub.items] : []);
     this.attachments.set([]);
     this.existingAttachments.set(sub.attachments ? [...sub.attachments] : []);
+    this.dialogRemarks.set(parseStepRemarks(sub.remarks || sub.remark, sub.submission_date));
     this.editingSubmission.set(sub);
     this.editingItemIndex.set(null);
     this.rowForm.reset();
@@ -507,7 +515,7 @@ export class Step07BidDocuments implements OnInit {
         gst_amount: Number(gstAmount.toFixed(2)),
         total_net_amount: Number(totalNet.toFixed(2)),
         total_amount: Number(totalGross.toFixed(2)),
-        remark: f.remark?.trim() || undefined,
+        remarks: serializeStepRemarks(this.dialogRemarks()),
         items: mappedItems,
       };
 
@@ -547,7 +555,7 @@ export class Step07BidDocuments implements OnInit {
         gst_amount: Number(gstAmount.toFixed(2)),
         total_net_amount: Number(totalNet.toFixed(2)),
         total_amount: Number(totalGross.toFixed(2)),
-        remark: f.remark?.trim() || undefined,
+        remarks: serializeStepRemarks(this.dialogRemarks()),
         items: mappedItems,
       };
 
@@ -674,6 +682,74 @@ export class Step07BidDocuments implements OnInit {
 
   protected parseValidityHelper(raw?: string | null): { value: string; unit: string } {
     return parseValidity(raw, '90', 'Days');
+  }
+
+  /* ── Remarks Operations ──────────────────────────────── */
+  protected quickAddRemark(submission: BidSubmission, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(submission.remarks || submission.remark, submission.submission_date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(submission.id);
+    const updatePayload: BidSubmissionUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.bidSubmissionService
+      .update(submission.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to bid submission.',
+            life: 3000,
+          });
+          this.loadSubmissions(this.projectId());
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromSubmission(submission: BidSubmission, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(submission.remarks || submission.remark, submission.submission_date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: BidSubmissionUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.bidSubmissionService.update(submission.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from bid submission.',
+          life: 3000,
+        });
+        this.loadSubmissions(this.projectId());
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
   }
 
   protected goBack(): void {

@@ -13,7 +13,9 @@ import { TooltipModule } from 'primeng/tooltip';
 
 import { AuthService } from '../../../core/services/auth';
 import { DashboardService } from '../../../core/services/dashboard';
+import { ProjectService } from '../../../core/services/project';
 import { DashboardMetric, DashboardOverviewStats, DashboardProject } from '../../../core/models/dashboard.model';
+import { Project } from '../../../core/models/project.model';
 
 @Component({
   selector: 'app-dashbord',
@@ -24,11 +26,20 @@ import { DashboardMetric, DashboardOverviewStats, DashboardProject } from '../..
 })
 export class Dashbord implements OnInit {
   private readonly dashboardService = inject(DashboardService);
+  private readonly projectService = inject(ProjectService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
   // ── State Signals ──────────────────────────────────────────────
   protected readonly metrics = signal<DashboardMetric[]>([]);
+  protected readonly projects = signal<Project[]>([]);
+  protected readonly latestProjects = computed(() => {
+    const list = this.projects();
+    if (!list || list.length === 0) return [];
+    return [...list]
+      .sort((a, b) => (b.id ?? 0) - (a.id ?? 0))
+      .slice(0, 2);
+  });
   protected readonly recentProjects = signal<DashboardProject[]>([]);
   protected readonly overviewStats = signal<DashboardOverviewStats | null>(null);
   protected readonly loading = signal<boolean>(true);
@@ -151,6 +162,15 @@ export class Dashbord implements OnInit {
     this.loading.set(true);
     this.error.set(null);
 
+    this.projectService.getProjects().subscribe({
+      next: (projects) => {
+        this.projects.set(projects);
+      },
+      error: (err: unknown) => {
+        console.error('Failed to load projects for dashboard', err);
+      },
+    });
+
     this.dashboardService.getDashboardData().subscribe({
       next: (data) => {
         this.metrics.set(data.metrics);
@@ -168,7 +188,7 @@ export class Dashbord implements OnInit {
     });
   }
 
-  protected navigateToProject(projectId: number): void {
+  protected navigateToProject(projectId?: number): void {
     if (projectId) {
       this.router.navigate(['/projects', projectId, 'steps']);
     }
@@ -207,8 +227,24 @@ export class Dashbord implements OnInit {
       case 'on_hold':
       case 'on hold':
         return 'status-badge--on-hold';
+      case 'cancelled':
+        return 'status-badge--cancelled';
       default:
         return 'status-badge--in-progress';
+    }
+  }
+
+  protected getStatusLabel(status?: string): string {
+    switch (status?.toLowerCase()) {
+      case 'completed':
+        return 'Completed';
+      case 'on_hold':
+      case 'on hold':
+        return 'On Hold';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return 'In Progress';
     }
   }
 
@@ -223,8 +259,21 @@ export class Dashbord implements OnInit {
     }
   }
 
-  protected getProgressPercent(project: DashboardProject): number {
-    if (project.progress !== undefined && project.progress !== null && !isNaN(project.progress)) {
+  protected getProgressPercent(project: Project | DashboardProject): number {
+    if (
+      'progress_percentage' in project &&
+      project.progress_percentage !== undefined &&
+      project.progress_percentage !== null &&
+      !isNaN(project.progress_percentage)
+    ) {
+      return project.progress_percentage;
+    }
+    if (
+      'progress' in project &&
+      project.progress !== undefined &&
+      project.progress !== null &&
+      !isNaN(project.progress)
+    ) {
       return project.progress;
     }
     const step = project.current_step_number || 1;

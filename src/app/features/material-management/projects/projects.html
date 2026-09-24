@@ -128,15 +128,22 @@
       <div class="mpc-top-row">
         <div class="mpc-chip-group">
           <span class="mpc-chip mpc-chip--id" pTooltip="Project Code" tooltipPosition="top">
-            {{ project.project_code || ('PRJ-' + (project.id < 10 ? '0' + project.id : project.id)) }}
-          </span>
-          <span class="mpc-chip mpc-chip--status" [class]="'mpc-chip mpc-chip--status ' + getHealthBadgeClass(project.health_status)">
-            <span class="status-dot" aria-hidden="true"></span>
-            {{ getHealthLabel(project.health_status) }}
-          </span>
-          <span class="mpc-chip mpc-chip--phase" [class]="'mpc-chip mpc-chip--phase ' + getStatusBadgeClass(project.status)">
-            {{ getStatusLabel(project.status) }}
-          </span>
+            {{ project.project_code || ('PRJ-' + (project.id < 10 ? '0' + project.id : project.id)) }} </span>
+              @if (project.nickname) {
+              <span class="mpc-chip mpc-chip--nickname" [title]="'Nickname: ' + (project.nickname)">
+                <i class="pi pi-tag" aria-hidden="true"></i>
+                {{ project.nickname }}
+              </span>
+              }
+              <span class="mpc-chip mpc-chip--status"
+                [class]="'mpc-chip mpc-chip--status ' + getHealthBadgeClass(project.health_status)">
+                <span class="status-dot" aria-hidden="true"></span>
+                {{ getHealthLabel(project.health_status) }}
+              </span>
+              <span class="mpc-chip mpc-chip--phase"
+                [class]="'mpc-chip mpc-chip--phase ' + getStatusBadgeClass(project.status)">
+                {{ getStatusLabel(project.status) }}
+              </span>
         </div>
 
         <div class="mpc-price-block">
@@ -145,14 +152,15 @@
             <span class="price-value">₹{{ (project.total_value || 0) | number:'1.2-2' }}</span>
           </div>
           <span class="price-date">
-            {{ project.target_delivery_date ? ('Target delivery ' + (project.target_delivery_date | date:'d MMMM yyyy')) : ('Last updated ' + ((project.updated_at || project.created_at) | date:'d MMMM yyyy')) }}
+            {{ project.target_delivery_date ? ('Target delivery ' + (project.target_delivery_date | date:'d MMMM yyyy'))
+            : ('Last updated ' + ((project.updated_at || project.created_at) | date:'d MMMM yyyy')) }}
           </span>
         </div>
       </div>
 
       <!-- 2. Title -->
-      <h2 class="mpc-title" (click)="openDetailsDialog(project)" [title]="project.project_title">
-        {{ project.project_title }}
+      <h2 class="mpc-title" (click)="openDetailsDialog(project)" [title]="project.nickname || project.project_title">
+        {{ project.nickname || project.project_title }}
       </h2>
 
       <!-- 3. Customer / Supplier 2-Column Grid -->
@@ -223,9 +231,9 @@
             pTooltip="Edit Project" tooltipPosition="top" (click)="openEditDialog(project)"
             aria-label="Edit project"></button>
 
-          <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger remove-card-btn"
-            pTooltip="Remove Project" tooltipPosition="top" (click)="deleteProject(project)"
-            aria-label="Remove project"></button>
+          <button pButton type="button" icon="pi pi-trash"
+            class="p-button-text p-button-sm p-button-danger remove-card-btn" pTooltip="Remove Project"
+            tooltipPosition="top" (click)="deleteProject(project)" aria-label="Remove project"></button>
         </div>
 
         <button pButton type="button" label="Open 15-step pipeline" icon="pi pi-arrow-right" iconPos="right"
@@ -311,9 +319,9 @@
               <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
                 pTooltip="Edit Project" tooltipPosition="top" (click)="openEditDialog(p)"
                 aria-label="Edit project"></button>
-              <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger qe-delete"
-                pTooltip="Remove Project" tooltipPosition="top" (click)="deleteProject(p)"
-                aria-label="Remove project"></button>
+              <button pButton type="button" icon="pi pi-trash"
+                class="p-button-text p-button-sm p-button-danger qe-delete" pTooltip="Remove Project"
+                tooltipPosition="top" (click)="deleteProject(p)" aria-label="Remove project"></button>
             </div>
           </td>
         </tr>
@@ -344,7 +352,7 @@
         </p>
 
         <div class="dlg-grid">
-          <div class="field">
+          <div class="field span-two">
             <label for="dlg-project-title">Project Title <span class="req" aria-hidden="true">*</span></label>
             <input id="dlg-project-title" pInputText formControlName="project_title"
               placeholder="e.g. Cold Storage Refrigeration Units"
@@ -355,9 +363,13 @@
           </div>
 
           <div class="field">
+            <label for="dlg-project-nickname">Project Nickname</label>
+            <input id="dlg-project-nickname" pInputText formControlName="nickname" placeholder="e.g. CSRU-Phase1" />
+          </div>
+
+          <div class="field">
             <label for="dlg-project-code">Project Code</label>
-            <input id="dlg-project-code" pInputText formControlName="project_code"
-              placeholder="e.g. PRJ-2026-001" />
+            <input id="dlg-project-code" pInputText formControlName="project_code" placeholder="e.g. PRJ-2026-001" />
           </div>
         </div>
       </div>

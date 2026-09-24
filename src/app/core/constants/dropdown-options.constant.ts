@@ -182,9 +182,20 @@ export function parseValidity(raw?: string | null, fallbackValue = '60', fallbac
   const str = String(raw).trim();
   const parts = str.split(/\s+/);
   if (parts.length >= 2 && !isNaN(Number(parts[0]))) {
+    let unit = parts.slice(1).join(' ');
+    const lower = unit.toLowerCase();
+    if (lower === 'day' || lower === 'days') {
+      unit = 'Days';
+    } else if (lower === 'week' || lower === 'weeks') {
+      unit = 'Weeks';
+    } else if (lower === 'month' || lower === 'months') {
+      unit = 'Months';
+    } else if (lower === 'year' || lower === 'years') {
+      unit = 'Years';
+    }
     return {
       value: parts[0],
-      unit: parts.slice(1).join(' '),
+      unit,
     };
   } else if (!isNaN(Number(str))) {
     return {
@@ -192,9 +203,19 @@ export function parseValidity(raw?: string | null, fallbackValue = '60', fallbac
       unit: fallbackUnit,
     };
   }
+  const lowerStr = str.toLowerCase();
+  if (lowerStr === 'day' || lowerStr === 'days') {
+    return { value: fallbackValue, unit: 'Days' };
+  } else if (lowerStr === 'week' || lowerStr === 'weeks') {
+    return { value: fallbackValue, unit: 'Weeks' };
+  } else if (lowerStr === 'month' || lowerStr === 'months') {
+    return { value: fallbackValue, unit: 'Months' };
+  } else if (lowerStr === 'year' || lowerStr === 'years') {
+    return { value: fallbackValue, unit: 'Years' };
+  }
   return {
     value: fallbackValue,
-    unit: str,
+    unit: str || fallbackUnit,
   };
 }
 

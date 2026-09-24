@@ -55,6 +55,9 @@ import {
 import { Attachment } from '../../../../core/models/attachment.model';
 import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
+import { StepRemarkItem } from '../../../../core/models/step-remark.model';
+import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 import {
   CURRENCY_OPTIONS,
   INCOTERMS_OPTIONS,
@@ -78,6 +81,7 @@ export type SubStepType = 'proforma' | 'invoice' | 'packing-list';
     TableModule,
     DatePipe,
     DecimalPipe,
+    StepRemarksComponent,
   ],
   templateUrl: './step-10-supplier-invoice.html',
   styleUrl: './step-10-supplier-invoice.scss',
@@ -134,6 +138,8 @@ export class Step10SupplierInvoice implements OnInit {
 
   protected readonly attachments = signal<File[]>([]);
   protected readonly existingAttachments = signal<Attachment[]>([]);
+  protected readonly dialogRemarks = signal<StepRemarkItem[]>([]);
+  protected readonly quickAddingId = signal<number | null>(null);
   protected readonly editingItemIndex = signal<number | null>(null);
 
   /* ── Reactive Forms ────────────────────────────────────── */
@@ -302,6 +308,7 @@ export class Step10SupplierInvoice implements OnInit {
     this.proformaItems.set(defaultItems);
     this.attachments.set([]);
     this.existingAttachments.set([]);
+    this.dialogRemarks.set([]);
     this.editingItemIndex.set(null);
     this.rowForm.reset();
     this.proformaDialogVisible.set(true);
@@ -335,6 +342,7 @@ export class Step10SupplierInvoice implements OnInit {
     this.proformaItems.set(mappedItems);
     this.attachments.set([]);
     this.existingAttachments.set(item.attachments || []);
+    this.dialogRemarks.set(parseStepRemarks(item.remarks || item.remark, item.proforma_invoice_date || item.date));
     this.editingItemIndex.set(null);
     this.rowForm.reset();
     this.proformaDialogVisible.set(true);
@@ -399,7 +407,7 @@ export class Step10SupplierInvoice implements OnInit {
         delivery_period: val.delivery_period,
         total_amount: totalNet,
         total_net_amount: totalNet,
-        remark: val.remark || '',
+        remarks: serializeStepRemarks(this.dialogRemarks()),
         items: itemsPayload,
       };
 
@@ -431,7 +439,7 @@ export class Step10SupplierInvoice implements OnInit {
         delivery_period: val.delivery_period,
         total_amount: totalNet,
         total_net_amount: totalNet,
-        remark: val.remark || '',
+        remarks: serializeStepRemarks(this.dialogRemarks()),
         items: itemsPayload,
       };
 
@@ -508,6 +516,7 @@ export class Step10SupplierInvoice implements OnInit {
     this.invoiceItems.set(defaultItems);
     this.attachments.set([]);
     this.existingAttachments.set([]);
+    this.dialogRemarks.set([]);
     this.editingItemIndex.set(null);
     this.rowForm.reset();
     this.invoiceDialogVisible.set(true);
@@ -541,6 +550,7 @@ export class Step10SupplierInvoice implements OnInit {
     this.invoiceItems.set(mappedItems);
     this.attachments.set([]);
     this.existingAttachments.set(item.attachments || []);
+    this.dialogRemarks.set(parseStepRemarks(item.remarks || item.remark, item.invoice_date || item.date));
     this.editingItemIndex.set(null);
     this.rowForm.reset();
     this.invoiceDialogVisible.set(true);
@@ -605,7 +615,7 @@ export class Step10SupplierInvoice implements OnInit {
         delivery_period: val.delivery_period,
         total_amount: totalNet,
         total_net_amount: totalNet,
-        remark: val.remark || '',
+        remarks: serializeStepRemarks(this.dialogRemarks()),
         items: itemsPayload,
       };
 
@@ -637,7 +647,7 @@ export class Step10SupplierInvoice implements OnInit {
         delivery_period: val.delivery_period,
         total_amount: totalNet,
         total_net_amount: totalNet,
-        remark: val.remark || '',
+        remarks: serializeStepRemarks(this.dialogRemarks()),
         items: itemsPayload,
       };
 
@@ -730,6 +740,7 @@ export class Step10SupplierInvoice implements OnInit {
     this.packingListItems.set(defaultItems);
     this.attachments.set([]);
     this.existingAttachments.set([]);
+    this.dialogRemarks.set([]);
     this.editingItemIndex.set(null);
     this.rowForm.reset();
     this.packingListDialogVisible.set(true);
@@ -774,6 +785,7 @@ export class Step10SupplierInvoice implements OnInit {
     this.packingListItems.set(mappedItems);
     this.attachments.set([]);
     this.existingAttachments.set(item.attachments || []);
+    this.dialogRemarks.set(parseStepRemarks(item.remarks || item.remark, item.packing_list_date || item.date));
     this.editingItemIndex.set(null);
     this.rowForm.reset();
     this.packingListDialogVisible.set(true);
@@ -841,7 +853,7 @@ export class Step10SupplierInvoice implements OnInit {
         net_weight: netWeight,
         total_weight: grossWeight,
         gross_weight: grossWeight,
-        remark: val.remark || '',
+        remarks: serializeStepRemarks(this.dialogRemarks()),
         items: itemsPayload,
       };
 
@@ -872,7 +884,7 @@ export class Step10SupplierInvoice implements OnInit {
         net_weight: netWeight,
         total_weight: grossWeight,
         gross_weight: grossWeight,
-        remark: val.remark || '',
+        remarks: serializeStepRemarks(this.dialogRemarks()),
         items: itemsPayload,
       };
 
@@ -1217,5 +1229,207 @@ export class Step10SupplierInvoice implements OnInit {
     if (!dateStr) return null;
     const d = new Date(dateStr);
     return isNaN(d.getTime()) ? null : d;
+  }
+
+  /* ── Remarks Operations ──────────────────────────────── */
+  protected quickAddProformaRemark(item: ProformaInvoice, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.proforma_invoice_date || item.date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(item.id);
+    const updatePayload: ProformaInvoiceUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.proformaService
+      .update(item.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to Proforma Invoice.',
+            life: 3000,
+          });
+          this.loadAllData(this.projectId());
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromProforma(item: ProformaInvoice, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.proforma_invoice_date || item.date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: ProformaInvoiceUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.proformaService.update(item.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from Proforma Invoice.',
+          life: 3000,
+        });
+        this.loadAllData(this.projectId());
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
+  }
+
+  protected quickAddInvoiceRemark(item: SupplierInvoice, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.invoice_date || item.date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(item.id);
+    const updatePayload: SupplierInvoiceUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.supplierInvoiceService
+      .update(item.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to Commercial Invoice.',
+            life: 3000,
+          });
+          this.loadAllData(this.projectId());
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromInvoice(item: SupplierInvoice, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.invoice_date || item.date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: SupplierInvoiceUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.supplierInvoiceService.update(item.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from Commercial Invoice.',
+          life: 3000,
+        });
+        this.loadAllData(this.projectId());
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
+  }
+
+  protected quickAddPackingListRemark(item: PackingList, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.packing_list_date || item.date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(item.id);
+    const updatePayload: PackingListUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.packingListService
+      .update(item.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to Packing List.',
+            life: 3000,
+          });
+          this.loadAllData(this.projectId());
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromPackingList(item: PackingList, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.packing_list_date || item.date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: PackingListUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.packingListService.update(item.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from Packing List.',
+          life: 3000,
+        });
+        this.loadAllData(this.projectId());
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
   }
 }

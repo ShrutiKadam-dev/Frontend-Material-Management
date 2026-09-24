@@ -245,11 +245,23 @@ export class Customer implements OnInit {
         const pocs = this.customerForm.get('pocs') as FormArray;
         pocs.clear();
         if (pocList.length > 0) {
-          pocList.forEach((poc) => pocs.push(this.createPocGroup(poc)));
+          pocList.forEach((poc) => {
+            const rawName = (poc.name || '').trim();
+            const cleanEntity = displayName.trim();
+            const isSynthetic =
+              rawName.toLowerCase() === `${cleanEntity.toLowerCase()} contact` ||
+              rawName.toLowerCase() === cleanEntity.toLowerCase();
+            pocs.push(
+              this.createPocGroup({
+                ...poc,
+                name: isSynthetic ? '' : poc.name,
+              }),
+            );
+          });
         } else {
           pocs.push(
             this.createPocGroup({
-              name: displayName ? `${displayName} Contact` : '',
+              name: '',
               email: freshCustomer.email || '',
               contact_number: freshCustomer.contact_number || '',
               designation: 'Primary Representative',
@@ -450,6 +462,48 @@ export class Customer implements OnInit {
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase())
       .join('');
+  }
+
+  protected getPocPersonName(poc: PointOfContact, entityName?: string | null): string {
+    const rawName = (poc.name || '').trim();
+    const cleanEntity = this.getDisplayName(entityName).trim();
+    const isSynthetic =
+      !rawName ||
+      rawName.toLowerCase() === 'primary contact' ||
+      rawName.toLowerCase() === 'company contact' ||
+      (cleanEntity && rawName.toLowerCase() === cleanEntity.toLowerCase()) ||
+      (cleanEntity && rawName.toLowerCase() === `${cleanEntity.toLowerCase()} contact`);
+
+    if (isSynthetic) {
+      return poc.designation || 'Primary Representative';
+    }
+    return rawName;
+  }
+
+  protected getPocRole(poc: PointOfContact, index: number, entityName?: string | null): string {
+    const rawName = (poc.name || '').trim();
+    const cleanEntity = this.getDisplayName(entityName).trim();
+    const isSynthetic =
+      !rawName ||
+      rawName.toLowerCase() === 'primary contact' ||
+      rawName.toLowerCase() === 'company contact' ||
+      (cleanEntity && rawName.toLowerCase() === cleanEntity.toLowerCase()) ||
+      (cleanEntity && rawName.toLowerCase() === `${cleanEntity.toLowerCase()} contact`);
+
+    if (isSynthetic) {
+      return index === 0 ? 'Primary Contact' : 'Alternate Contact';
+    }
+    return poc.designation || (index === 0 ? 'Primary POC' : 'Alternate POC');
+  }
+
+  protected pocInitials(poc: PointOfContact, entityName?: string | null): string {
+    const displayName = this.getPocPersonName(poc, entityName);
+    if (!displayName) return 'P';
+    const parts = displayName.split(' ').filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return displayName.slice(0, 2).toUpperCase();
   }
 
   protected parseAddress(addr: string | null | undefined): StructuredAddress {

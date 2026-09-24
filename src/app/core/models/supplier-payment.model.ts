@@ -15,6 +15,7 @@ export interface SupplierPayment {
   transaction_details: string;
   pending_amount?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   attachments?: Attachment[];
   created_at?: string;
   updated_at?: string;
@@ -30,6 +31,7 @@ export interface SupplierPaymentCreateInput {
   pending_amount?: number | null;
   total_supplier_value?: number | null;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
 }
 
 export interface SupplierPaymentUpdateInput {
@@ -41,4 +43,5 @@ export interface SupplierPaymentUpdateInput {
   pending_amount?: number | null;
   total_supplier_value?: number | null;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
 }

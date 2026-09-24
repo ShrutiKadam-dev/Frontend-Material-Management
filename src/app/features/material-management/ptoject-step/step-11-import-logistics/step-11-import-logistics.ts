@@ -13,6 +13,7 @@ import {
 } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { finalize } from 'rxjs';
+import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -41,6 +42,9 @@ import {
 import { Attachment } from '../../../../core/models/attachment.model';
 import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
+import { StepRemarkItem } from '../../../../core/models/step-remark.model';
+import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 import { LOGISTIC_TYPE_OPTIONS } from '../../../../core/constants/dropdown-options.constant';
 
 export type Step11Tab = 'logistics' | 'bill-of-entry';
@@ -59,6 +63,7 @@ export type Step11Tab = 'logistics' | 'bill-of-entry';
     TableModule,
     DatePipe,
     DecimalPipe,
+    StepRemarksComponent,
   ],
   templateUrl: './step-11-import-logistics.html',
   styleUrl: './step-11-import-logistics.scss',
@@ -68,6 +73,7 @@ export class Step11ImportLogistics implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly messageService = inject(MessageService);
   private readonly logisticsService = inject(ImportLogisticsService);
   private readonly boeService = inject(BillOfEntryService);
   private readonly projectService = inject(ProjectService);
@@ -97,6 +103,8 @@ export class Step11ImportLogistics implements OnInit {
   protected readonly editingBoe = signal<BillOfEntry | null>(null);
   protected readonly selectedBoeFiles = signal<File[]>([]);
   protected readonly existingBoeAttachments = signal<Attachment[]>([]);
+  protected readonly dialogRemarks = signal<StepRemarkItem[]>([]);
+  protected readonly quickAddingId = signal<number | null>(null);
 
   // ── Options ────────────────────────────────────────────────────
   protected readonly logisticTypeOptions = LOGISTIC_TYPE_OPTIONS;
@@ -219,6 +227,7 @@ export class Step11ImportLogistics implements OnInit {
     this.editingLogistics.set(null);
     this.selectedLogisticsFiles.set([]);
     this.existingLogisticsAttachments.set([]);
+    this.dialogRemarks.set([]);
     this.errorMessage.set(null);
 
     this.logisticsForm.reset({
@@ -245,6 +254,7 @@ export class Step11ImportLogistics implements OnInit {
     this.editingLogistics.set(item);
     this.selectedLogisticsFiles.set([]);
     this.existingLogisticsAttachments.set(item.attachments || []);
+    this.dialogRemarks.set(parseStepRemarks(item.remarks || item.remark, item.date));
     this.errorMessage.set(null);
 
     const type = item.logistic_type || 'air';
@@ -345,7 +355,7 @@ export class Step11ImportLogistics implements OnInit {
       logistic_type: type,
       date: dateStr,
       port_of_discharge: formVal.port_of_discharge,
-      remark: formVal.remark || undefined,
+      remarks: serializeStepRemarks(this.dialogRemarks()),
       ...(type === 'air'
         ? {
           airway_bill_no: formVal.airway_bill_no,
@@ -418,6 +428,7 @@ export class Step11ImportLogistics implements OnInit {
     this.editingBoe.set(null);
     this.selectedBoeFiles.set([]);
     this.existingBoeAttachments.set([]);
+    this.dialogRemarks.set([]);
     this.errorMessage.set(null);
 
     this.boeForm.reset({
@@ -438,6 +449,7 @@ export class Step11ImportLogistics implements OnInit {
     this.editingBoe.set(item);
     this.selectedBoeFiles.set([]);
     this.existingBoeAttachments.set(item.attachments || []);
+    this.dialogRemarks.set(parseStepRemarks(item.remarks || item.remark, item.date));
     this.errorMessage.set(null);
 
     this.boeForm.patchValue({
@@ -503,7 +515,7 @@ export class Step11ImportLogistics implements OnInit {
       sws: Number(formVal.sws) || 0,
       igst: Number(formVal.igst) || 0,
       total_duty: totalDuty,
-      remark: formVal.remark || undefined,
+      remarks: serializeStepRemarks(this.dialogRemarks()),
     };
 
     const files = this.selectedBoeFiles();
@@ -648,5 +660,143 @@ export class Step11ImportLogistics implements OnInit {
     if (!dateStr) return null;
     const d = new Date(dateStr);
     return isNaN(d.getTime()) ? null : d;
+  }
+
+  protected quickAddLogisticsRemark(item: ImportLogistics, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(item.id);
+    const updatePayload: ImportLogisticsUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.logisticsService
+      .update(item.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to Import Logistics.',
+            life: 3000,
+          });
+          const pId = this.projectId();
+          if (pId) this.loadData(pId);
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromLogistics(item: ImportLogistics, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: ImportLogisticsUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.logisticsService.update(item.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from Import Logistics.',
+          life: 3000,
+        });
+        const pId = this.projectId();
+        if (pId) this.loadData(pId);
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
+  }
+
+  protected quickAddBoeRemark(item: BillOfEntry, text: string): void {
+    const newRemark: StepRemarkItem = {
+      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.date);
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    this.quickAddingId.set(item.id);
+    const updatePayload: BillOfEntryUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.boeService
+      .update(item.id, updatePayload)
+      .pipe(finalize(() => this.quickAddingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Remark Added',
+            detail: 'New remark saved to Bill of Entry.',
+            life: 3000,
+          });
+          const pId = this.projectId();
+          if (pId) this.loadData(pId);
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add remark. Please try again.',
+          });
+        },
+      });
+  }
+
+  protected deleteRemarkFromBoe(item: BillOfEntry, remarkId: string): void {
+    const currentRemarks = parseStepRemarks(item.remarks || item.remark, item.date);
+    const updatedRemarks = currentRemarks.filter((r) => r.id !== remarkId);
+    const remarksPayload = serializeStepRemarks(updatedRemarks);
+
+    const updatePayload: BillOfEntryUpdateInput = {
+      remarks: remarksPayload,
+    };
+
+    this.boeService.update(item.id, updatePayload).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Remark Deleted',
+          detail: 'Remark removed from Bill of Entry.',
+          life: 3000,
+        });
+        const pId = this.projectId();
+        if (pId) this.loadData(pId);
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete remark.',
+        });
+      },
+    });
   }
 }

@@ -27,6 +27,7 @@ export interface PackingList {
   weight?: number | string;
   total_weight?: number | string;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   status?: string;
   attachments?: Attachment[];
   items?: PackingListItem[];
@@ -44,6 +45,7 @@ export interface PackingListCreateInput {
   weight?: number | string;
   total_weight?: number | string;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items?: PackingListItem[];
 }
 
@@ -57,5 +59,6 @@ export interface PackingListUpdateInput {
   weight?: number | string;
   total_weight?: number | string;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items?: PackingListItem[];
 }

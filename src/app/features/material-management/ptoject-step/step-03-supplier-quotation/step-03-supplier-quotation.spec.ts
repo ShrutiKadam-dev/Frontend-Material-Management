@@ -57,4 +57,14 @@ describe('Step03SupplierQuotation', () => {
       { material_name: 'RACK EUROPE 14 SLOTS', quantity: 2, hsn_code: '' },
     ]);
   });
+
+  it('should default validity_unit to Days in headerForm and on openDialog', () => {
+    expect((component as any).headerForm.get('validity_unit')?.value).toBe('Days');
+
+    (component as any).headerForm.patchValue({ validity_unit: 'Weeks' });
+    expect((component as any).headerForm.get('validity_unit')?.value).toBe('Weeks');
+
+    (component as any).openDialog();
+    expect((component as any).headerForm.get('validity_unit')?.value).toBe('Days');
+  });
 });

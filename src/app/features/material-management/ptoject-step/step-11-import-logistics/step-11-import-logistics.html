@@ -235,16 +235,13 @@
               }
             </div>
 
-            <!-- Remarks FIRST -->
-            @if (item.remark) {
-            <div class="vsc-remark-box">
-              <i class="pi pi-info-circle" aria-hidden="true"></i>
-              <div class="vsc-remark-content">
-                <span class="vsc-remark-label">Remarks:</span>
-                <span class="vsc-remark-text">{{ item.remark }}</span>
-              </div>
-            </div>
-            }
+            <!-- Remarks & Notes -->
+            <app-step-remarks
+              [remarks]="item.remarks || item.remark"
+              [defaultDate]="item.date"
+              [loading]="quickAddingId() === item.id"
+              (quickAdd)="quickAddLogisticsRemark(item, $event)"
+              (deleteRemark)="deleteRemarkFromLogistics(item, $event)" />
 
             <!-- Attachments AFTER Remarks -->
             @if (item.attachments && item.attachments.length > 0) {
@@ -375,16 +372,13 @@
               </div>
             </div>
 
-            <!-- Remarks FIRST -->
-            @if (item.remark) {
-            <div class="vsc-remark-box">
-              <i class="pi pi-info-circle" aria-hidden="true"></i>
-              <div class="vsc-remark-content">
-                <span class="vsc-remark-label">Remarks:</span>
-                <span class="vsc-remark-text">{{ item.remark }}</span>
-              </div>
-            </div>
-            }
+            <!-- Remarks & Notes -->
+            <app-step-remarks
+              [remarks]="item.remarks || item.remark"
+              [defaultDate]="item.date"
+              [loading]="quickAddingId() === item.id"
+              (quickAdd)="quickAddBoeRemark(item, $event)"
+              (deleteRemark)="deleteRemarkFromBoe(item, $event)" />
 
             <!-- Attachments AFTER Remarks -->
             @if (item.attachments && item.attachments.length > 0) {
@@ -633,15 +627,12 @@
           <input #logisticsFileInput type="file" multiple style="display: none;" (change)="onLogisticsFilesSelected($event)" />
         </div>
 
-        <!-- Section 4: Remarks -->
-        <div class="dlg-section">
-          <p class="dlg-section-label"><i class="pi pi-comment"></i> 4. Remarks & Special Notes</p>
-          <div class="field">
-            <textarea pTextarea formControlName="remark" rows="3"
-              placeholder="Add logistics remarks, container numbers, transshipment details…"
-              style="width: 100%; resize: vertical;"></textarea>
-          </div>
-        </div>
+        <!-- Section 4: Remarks & Notes -->
+        <app-step-remarks
+          mode="dialog"
+          [remarks]="dialogRemarks()"
+          (remarksChange)="dialogRemarks.set($event)"
+          sectionNumber="4" />
 
       </div>
     </form>
@@ -805,15 +796,12 @@
           <input #boeFileInput type="file" multiple style="display: none;" (change)="onBoeFilesSelected($event)" />
         </div>
 
-        <!-- Section 4: Remarks -->
-        <div class="dlg-section">
-          <p class="dlg-section-label"><i class="pi pi-comment"></i> 4. Remarks & Special Notes</p>
-          <div class="field">
-            <textarea pTextarea formControlName="remark" rows="3"
-              placeholder="Add customs clearance notes, CHA details, duty payment reference…"
-              style="width: 100%; resize: vertical;"></textarea>
-          </div>
-        </div>
+        <!-- Section 4: Remarks & Notes -->
+        <app-step-remarks
+          mode="dialog"
+          [remarks]="dialogRemarks()"
+          (remarksChange)="dialogRemarks.set($event)"
+          sectionNumber="4" />
 
       </div>
     </form>

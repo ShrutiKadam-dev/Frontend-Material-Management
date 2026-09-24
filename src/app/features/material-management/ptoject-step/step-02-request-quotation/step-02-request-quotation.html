@@ -155,17 +155,13 @@
               }
 
               <!-- Right: Remarks & Attachments -->
-              @if (req.remarks || (req.attachments && req.attachments.length)) {
               <div class="qe-col-details">
-                @if (req.remarks) {
-                <div class="vsc-remark-box" style="margin-bottom: 8px;">
-                  <i class="pi pi-info-circle" aria-hidden="true"></i>
-                  <div class="vsc-remark-content">
-                    <span class="vsc-remark-label">Remarks:</span>
-                    <span class="vsc-remark-text">{{ req.remarks }}</span>
-                  </div>
-                </div>
-                }
+                <app-step-remarks
+                  [remarks]="req.remarks"
+                  [defaultDate]="req.quotation_requested_date"
+                  [loading]="quickAddingId() === req.id"
+                  (quickAdd)="quickAddRemark(req, $event)"
+                  (deleteRemark)="deleteRemarkFromRequest(req, $event)" />
 
                 @if (req.attachments && req.attachments.length) {
                 <div class="qe-attachments" aria-label="Quotation request attachments">
@@ -202,7 +198,6 @@
                 </div>
                 }
               </div>
-              }
 
             </div>
 
@@ -468,14 +463,11 @@
       </div>
 
       <!-- ── 4. Remarks ─────────────────────────────────── -->
-      <div class="dlg-section">
-        <p class="dlg-section-label"><i class="pi pi-comment"></i> 4. Notes & Remarks</p>
-        <div class="field">
-          <label for="dlg-remarks" class="visually-hidden">Remarks</label>
-          <textarea id="dlg-remarks" pTextarea formControlName="remarks" rows="3"
-            placeholder="Any notes or special instructions for the supplier…" style="width: 100%; resize: vertical;"></textarea>
-        </div>
-      </div>
+      <app-step-remarks
+        mode="dialog"
+        [remarks]="dialogRemarks()"
+        (remarksChange)="dialogRemarks.set($event)"
+        sectionNumber="4" />
 
     </div>
 

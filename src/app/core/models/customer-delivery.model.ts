@@ -22,6 +22,7 @@ export interface CustomerTaxInvoice {
   round_off: number;
   net_total: number;
   remark?: string | null;
+  remarks?: Array<{ remark: string }> | string[];
   items: DeliveryItem[];
   attachments?: Attachment[];
   created_at?: string;
@@ -37,6 +38,7 @@ export interface CustomerTaxInvoiceCreateInput {
   round_off: number;
   net_total: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items: DeliveryItem[];
 }
 
@@ -53,6 +55,7 @@ export interface CustomerPackingList {
   net_weight: number | string;
   gross_weight: number | string;
   remark?: string | null;
+  remarks?: Array<{ remark: string }> | string[];
   items: DeliveryItem[];
   attachments?: Attachment[];
   created_at?: string;
@@ -68,6 +71,7 @@ export interface CustomerPackingListCreateInput {
   net_weight: number | string;
   gross_weight: number | string;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items: DeliveryItem[];
 }
 
@@ -84,6 +88,7 @@ export interface CustomerDeliveryChallan {
   round_off?: number;
   net_total?: number;
   remark?: string | null;
+  remarks?: Array<{ remark: string }> | string[];
   items: DeliveryItem[];
   attachments?: Attachment[];
   created_at?: string;
@@ -99,6 +104,7 @@ export interface CustomerDeliveryChallanCreateInput {
   round_off?: number;
   net_total?: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
   items: DeliveryItem[];
 }
 
@@ -115,6 +121,7 @@ export interface CustomerWarrantyCertificate {
   invoice_no: string;
   invoice_date: string;
   remark?: string | null;
+  remarks?: Array<{ remark: string }> | string[];
   attachments?: Attachment[];
   created_at?: string;
   updated_at?: string;
@@ -129,6 +136,7 @@ export interface CustomerWarrantyCertificateCreateInput {
   invoice_no: string;
   invoice_date: string;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
 }
 
 export interface CustomerWarrantyCertificateUpdateInput extends Partial<CustomerWarrantyCertificateCreateInput> {}
@@ -148,6 +156,7 @@ export interface CustomerTransportDetail {
   to_location: string;
   transport_charges: number;
   remark?: string | null;
+  remarks?: Array<{ remark: string }> | string[];
   attachments?: Attachment[];
   created_at?: string;
   updated_at?: string;
@@ -164,6 +173,7 @@ export interface CustomerTransportDetailCreateInput {
   to_location: string;
   transport_charges: number;
   remark?: string;
+  remarks?: Array<{ remark: string }> | string[];
 }
 
 export interface CustomerTransportDetailUpdateInput extends Partial<CustomerTransportDetailCreateInput> {}

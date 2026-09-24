@@ -77,6 +77,7 @@ export class Projects implements OnInit {
   protected readonly projectForm = this.fb.group({
     project_title: ['', [Validators.required]],
     project_code: [''],
+    nickname: [''],
     customer_id: [null as number | null, [Validators.required]],
     supplier_id: [null as number | null, [Validators.required]],
   });
@@ -112,6 +113,7 @@ export class Projects implements OnInit {
       list = list.filter((p) => {
         const titleMatch = p.project_title?.toLowerCase().includes(query);
         const codeMatch = p.project_code?.toLowerCase().includes(query);
+        const nickMatch = (p.nickname || '').toLowerCase().includes(query);
         const custMatch = (p.customer_name || this.getCustomerName(p.customer_id))
           .toLowerCase()
           .includes(query);
@@ -120,7 +122,7 @@ export class Projects implements OnInit {
           .includes(query);
         const nextActionMatch = p.next_action?.toLowerCase().includes(query);
         const stepMatch = p.current_step_name?.toLowerCase().includes(query);
-        return titleMatch || codeMatch || custMatch || suppMatch || nextActionMatch || stepMatch;
+        return titleMatch || codeMatch || nickMatch || custMatch || suppMatch || nextActionMatch || stepMatch;
       });
     }
 
@@ -186,6 +188,7 @@ export class Projects implements OnInit {
     this.projectForm.reset({
       project_title: '',
       project_code: '',
+      nickname: '',
       customer_id: null,
       supplier_id: null,
     });
@@ -201,6 +204,7 @@ export class Projects implements OnInit {
         this.projectForm.patchValue({
           project_title: fresh.project_title,
           project_code: fresh.project_code || '',
+          nickname: fresh.nickname || '',
           customer_id: fresh.customer_id,
           supplier_id: fresh.supplier_id,
         });
@@ -225,10 +229,12 @@ export class Projects implements OnInit {
 
     this.submitting.set(true);
     const formValue = this.projectForm.value;
+    const nicknameVal = (formValue.nickname || '').trim() || undefined;
 
     const payload: ProjectCreateInput = {
       project_title: formValue.project_title ?? '',
       project_code: (formValue.project_code || '').trim() || undefined,
+      nickname: nicknameVal,
       customer_id: formValue.customer_id as number,
       supplier_id: formValue.supplier_id as number,
     };
