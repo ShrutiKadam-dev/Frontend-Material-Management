@@ -428,7 +428,14 @@
                         <i class="pi pi-box"></i>
                     </span>
                     <h3>No Customer Packing Lists recorded yet</h3>
-                    <p>Create detailed packing lists with condition, net & gross weights.</p>
+                    <p>Create detailed packing lists with condition, net & gross weights.
+                        @if (latestSupplierPackingListTemplate(); as spl) {
+                        <br />• <strong>Latest Supplier Packing List</strong> is available to automatically pre-fill weights and line items.
+                        }
+                        @if (latestPoTemplate(); as po) {
+                        <br />• <strong>Latest Purchase Order</strong> is available to automatically pre-fill line items.
+                        }
+                    </p>
                     <button pButton type="button" icon="pi pi-plus" label="Create First Packing List"
                         class="create-cost-sheet-btn" (click)="openCreatePackingListDialog()"></button>
                 </div>
@@ -1430,14 +1437,20 @@
         <form [formGroup]="packingListForm" (ngSubmit)="onSubmitPackingList()" novalidate id="packing-form">
             <div class="dlg-body">
 
-                <!-- Auto-Sync Notice from Latest Purchase Order -->
-                @if (!editingPackingList() && latestPoTemplate(); as po) {
-                <div class="cost-sheet-sync-pill" role="status">
-                    <i class="pi pi-check-circle" aria-hidden="true"></i>
-                    <span>
-                        Auto-imported from <strong>Latest Purchase Order</strong> · {{ po.items?.length || packingItemsList().length }} items with commercial terms pre-filled.
-                    </span>
-                </div>
+                <!-- Auto-Sync Notice for Packing List -->
+                @if (!editingPackingList()) {
+                    @if (latestSupplierPackingListTemplate(); as spl) {
+                    <div class="cost-sheet-sync-pill" role="status">
+                        <i class="pi pi-check-circle" aria-hidden="true"></i>
+                        <span>Auto-imported from <strong>Latest Supplier Packing List</strong> · Total weight, gross weight & items pre-filled.</span>
+                    </div>
+                    }
+                    @if (latestPoTemplate(); as po) {
+                    <div class="cost-sheet-sync-pill" role="status" [style.margin-top.px]="latestSupplierPackingListTemplate() ? 6 : null">
+                        <i class="pi pi-check-circle" aria-hidden="true"></i>
+                        <span>Auto-imported from <strong>Latest Purchase Order</strong> · {{ po.items?.length || packingItemsList().length }} items with commercial terms pre-filled.</span>
+                    </div>
+                    }
                 }
 
                 <!-- Section 1: Packing Identification -->
@@ -1513,7 +1526,7 @@
                             }
                         </p>
                         @if (packingTotalQty() > 0) {
-                        <div class="header-totals-group" style="display: inline-flex; align-items: center; gap: 8px;">
+                        <div class="header-totals-group">
                             <span class="vsc-cost-pill">
                                 <i class="pi pi-box" aria-hidden="true"></i>
                                 Total Packed Qty: {{ packingTotalQty() }}

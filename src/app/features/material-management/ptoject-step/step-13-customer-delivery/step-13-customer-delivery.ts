@@ -441,6 +441,76 @@ export class Step13CustomerDelivery implements OnInit {
     }
   }
 
+  protected autoImportFromSupplierPackingList(): void {
+    const spl = this.latestSupplierPackingListTemplate();
+    if (spl) {
+      this.patchFromLatestSupplierPackingList(spl, true);
+      this.messageService.add({
+        severity: 'info',
+        summary: 'Supplier Packing List Imported',
+        detail: 'Total weight, gross weight, condition, and packing items imported.',
+      });
+    }
+
+    const pId = this.projectId() || Number(this.route.snapshot.paramMap.get('projectId')) || 0;
+    if (pId) {
+      this.deliveryService.getLatestSupplierPackingList(pId).subscribe({
+        next: (freshSpl) => {
+          if (freshSpl) {
+            this.latestSupplierPackingListTemplate.set(freshSpl);
+            this.patchFromLatestSupplierPackingList(freshSpl, true);
+            if (!spl) {
+              this.messageService.add({
+                severity: 'info',
+                summary: 'Supplier Packing List Imported',
+                detail: 'Total weight, gross weight, condition, and packing items imported.',
+              });
+            }
+          } else if (!spl) {
+            this.messageService.add({
+              severity: 'warn',
+              summary: 'No Supplier Packing List',
+              detail: 'No supplier packing list found for this project.',
+            });
+          }
+        },
+        error: () => {
+          if (!spl) {
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Import Failed',
+              detail: 'Could not fetch supplier packing list.',
+            });
+          }
+        },
+      });
+    }
+  }
+
+  protected autoImportFromPurchaseOrder(): void {
+    const po = this.latestPoTemplate();
+    if (!po || !po.items || po.items.length === 0) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'No PO Items',
+        detail: 'No items available in the latest purchase order.',
+      });
+      return;
+    }
+    const mapped: DeliveryItem[] = po.items.map((item) => ({
+      material_name: item.material_name,
+      hsn_code: item.hsn_code || '',
+      quantity: item.quantity,
+      weight: 0,
+    }));
+    this.packingItemsList.set(mapped);
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Purchase Order Items Imported',
+      detail: `${mapped.length} items imported from Latest Purchase Order.`,
+    });
+  }
+
   protected loadAllStep13Data(projectId?: number): void {
     const pId = projectId ?? this.projectId();
     if (!pId) return;

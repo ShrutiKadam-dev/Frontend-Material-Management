@@ -160,4 +160,30 @@ describe('Step13CustomerDelivery', () => {
     expect((component as any).packingListForm.get('gross_weight')?.value).toBe('1050.8');
     expect((component as any).packingListForm.get('packing_condition')?.value).toBe('Wooden Crates');
   });
+
+  it('should auto-import supplier packing list on autoImportFromSupplierPackingList call', () => {
+    (component as any).openCreatePackingListDialog();
+    (component as any).packingListForm.patchValue({ net_weight: '', gross_weight: '' });
+    (component as any).packingItemsList.set([]);
+
+    (component as any).autoImportFromSupplierPackingList();
+
+    expect((component as any).packingListForm.get('net_weight')?.value).toBe('1250.50');
+    expect((component as any).packingListForm.get('gross_weight')?.value).toBe('1380.75');
+    expect((component as any).packingItemsList().length).toBe(1);
+    expect((component as any).packingItemsList()[0].material_name).toBe('Industrial Valve');
+  });
+
+  it('should auto-import PO items on autoImportFromPurchaseOrder call', () => {
+    (component as any).latestPoTemplate.set({
+      po_number: 'PO-2026-999',
+      items: [{ material_name: 'Electric Motor', hsn_code: '8501', quantity: 2 }],
+    });
+    (component as any).packingItemsList.set([]);
+
+    (component as any).autoImportFromPurchaseOrder();
+
+    expect((component as any).packingItemsList().length).toBe(1);
+    expect((component as any).packingItemsList()[0].material_name).toBe('Electric Motor');
+  });
 });
