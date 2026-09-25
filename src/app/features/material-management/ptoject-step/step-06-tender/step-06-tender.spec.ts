@@ -7,6 +7,7 @@ import { of } from 'rxjs';
 import { vi } from 'vitest';
 
 import { CustomerTenderService } from '../../../../core/services/customer-tender';
+import { CustomerQuotationService } from '../../../../core/services/customer-quotation';
 import { Step06Tender } from './step-06-tender';
 
 describe('Step06Tender', () => {
@@ -88,6 +89,46 @@ describe('Step06Tender', () => {
     expect(formDate?.getFullYear()).toBe(2026);
     expect(formDate?.getMonth()).toBe(8);
     expect(formDate?.getDate()).toBe(10);
+  });
+
+  it('should auto-patch items and terms from latest customer quotation on openCreateDialog', () => {
+    const quotationService = TestBed.inject(CustomerQuotationService);
+    const mockQuotation: any = {
+      id: 12,
+      project_id: 1,
+      quotation_number: 'CQ-2026-001',
+      validity: '60 Days',
+      incoterms: 'FOB Mumbai',
+      delivery_period: '4-6 Weeks',
+      payment_terms: '100% advance',
+      items: [
+        { id: 101, item_code: 'ITM-01', material_name: 'Copper Wire 10mm', quantity: 50 },
+        { id: 102, item_code: 'ITM-02', material_name: 'Insulation Tape', quantity: 200 },
+      ],
+    };
+    vi.spyOn(quotationService, 'getLatest').mockReturnValue(of(mockQuotation));
+
+    component['fetchLatestCustomerQuotation'](1);
+    component['openCreateDialog']();
+
+    expect(component['items']().length).toBe(2);
+    expect(component['items']()[0]).toEqual({
+      item_code: 'ITM-01',
+      material_name: 'Copper Wire 10mm',
+      quantity: 50,
+      unit_price: undefined,
+    });
+    expect(component['items']()[1]).toEqual({
+      item_code: 'ITM-02',
+      material_name: 'Insulation Tape',
+      quantity: 200,
+      unit_price: undefined,
+    });
+    expect(component['headerForm'].get('delivery_terms')?.value).toBe('FOB Mumbai');
+    expect(component['headerForm'].get('delivery_period')?.value).toBe('4-6 Weeks');
+    expect(component['headerForm'].get('payment_terms')?.value).toBe('100% advance');
+    expect(component['headerForm'].get('validity_amount')?.value).toBe('60');
+    expect(component['headerForm'].get('validity_unit')?.value).toBe('Days');
   });
 });
 

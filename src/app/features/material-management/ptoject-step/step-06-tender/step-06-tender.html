@@ -311,6 +311,18 @@
         </div>
         }
 
+        <!-- Auto-Sync Notice from Step 05 Latest Customer Quotation -->
+        @if (latestCustomerQuotation(); as cq) {
+        @if (!editingTender() && items().length > 0) {
+        <div class="cost-sheet-sync-pill" role="status">
+          <i class="pi pi-check-circle" aria-hidden="true"></i>
+          <span>
+            Auto-imported from <strong>Latest Customer Quotation</strong> · {{ items().length }} items with commercial terms pre-filled.
+          </span>
+        </div>
+        }
+        }
+
         <!-- ── A. Tender Key Details & Dates ──────────────── -->
         <div class="dlg-section">
           <p class="dlg-section-label"><i class="pi pi-calendar"></i> 1. Tender Details & Dates</p>

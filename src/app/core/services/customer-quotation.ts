@@ -22,6 +22,13 @@ export class CustomerQuotationService {
     );
   }
 
+  getLatest(projectId?: number): Observable<CustomerQuotation | any> {
+    const query = projectId ? `?project_id=${projectId}` : '';
+    return this.http.get<CustomerQuotation | any>(
+      `${this.apiBaseUrl}/api/v1/customer-quotations/latest${query}`,
+    );
+  }
+
   create(
     payload: CustomerQuotationCreateInput,
     files: File[] = [],

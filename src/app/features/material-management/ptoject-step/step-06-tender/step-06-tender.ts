@@ -21,9 +21,11 @@ import { TableModule } from 'primeng/table';
 import { SelectModule } from 'primeng/select';
 
 import { CustomerTenderService } from '../../../../core/services/customer-tender';
+import { CustomerQuotationService } from '../../../../core/services/customer-quotation';
 import { CustomerService } from '../../../../core/services/customer';
 import { ProjectService } from '../../../../core/services/project';
 import { AttachmentService } from '../../../../core/services/attachment';
+import { CustomerQuotation } from '../../../../core/models/customer-quotation.model';
 import {
   INCOTERMS_OPTIONS,
   VALIDITY_UNIT_OPTIONS,
@@ -77,6 +79,7 @@ export class Step06Tender implements OnInit {
   private readonly projectService = inject(ProjectService);
   private readonly attachmentService = inject(AttachmentService);
   private readonly messageService = inject(MessageService);
+  private readonly customerQuotationService = inject(CustomerQuotationService);
 
   /* ── Core State Signals ────────────────────────────────── */
   protected readonly projectId = signal(0);
@@ -91,6 +94,7 @@ export class Step06Tender implements OnInit {
   /* ── Dialog State Signals ──────────────────────────────── */
   protected readonly dialogVisible = signal(false);
   protected readonly editingTender = signal<CustomerTender | null>(null);
+  protected readonly latestCustomerQuotation = signal<CustomerQuotation | null>(null);
   protected readonly items = signal<CustomerTenderItem[]>([]);
   protected readonly editingItemIndex = signal<number | null>(null);
   protected readonly attachments = signal<File[]>([]);
@@ -156,6 +160,7 @@ export class Step06Tender implements OnInit {
     this.projectId.set(id);
     this.loadProjectDetails(id);
     this.loadTenders(id);
+    this.fetchLatestCustomerQuotation(id);
   }
 
   /* ── Data Loaders ──────────────────────────────────────── */
@@ -189,10 +194,64 @@ export class Step06Tender implements OnInit {
       });
   }
 
+  protected fetchLatestCustomerQuotation(projectId: number, autoPatchIfCreating = false): void {
+    this.customerQuotationService.getLatest(projectId).subscribe({
+      next: (res: any) => {
+        const data = res?.data || res;
+        const quotation: CustomerQuotation | null = Array.isArray(data) ? data[0] : (data || null);
+        this.latestCustomerQuotation.set(quotation);
+
+        if (autoPatchIfCreating && !this.editingTender() && this.dialogVisible()) {
+          const items = Array.isArray(quotation?.items) ? quotation.items : [];
+          if (this.items().length === 0 && items.length > 0) {
+            const mappedItems: CustomerTenderItem[] = items.map((it: any) => ({
+              item_code: it.item_code || '',
+              material_name: it.material_name || '',
+              quantity: it.quantity != null ? it.quantity : 0,
+              unit_price: it.unit_price != null ? it.unit_price : undefined,
+            }));
+            this.items.set(mappedItems);
+          }
+          if (quotation) {
+            const [valAmount, valUnit] = this.parseValidity(quotation.validity);
+            this.headerForm.patchValue({
+              ...(valAmount && !this.headerForm.get('validity_amount')?.value
+                ? { validity_amount: valAmount, validity_unit: valUnit }
+                : {}),
+              ...(quotation.incoterms && !this.headerForm.get('delivery_terms')?.value
+                ? { delivery_terms: quotation.incoterms }
+                : {}),
+              ...(quotation.delivery_period && !this.headerForm.get('delivery_period')?.value
+                ? { delivery_period: quotation.delivery_period }
+                : {}),
+              ...(quotation.payment_terms && !this.headerForm.get('payment_terms')?.value
+                ? { payment_terms: quotation.payment_terms }
+                : {}),
+            });
+          }
+        }
+      },
+      error: () => {
+        this.latestCustomerQuotation.set(null);
+      },
+    });
+  }
+
   /* ── Dialog Management ─────────────────────────────────── */
   protected openCreateDialog(): void {
     const proj = this.project();
     const cust = this.customer();
+    const cq = this.latestCustomerQuotation();
+
+    const [valAmount, valUnit] = this.parseValidity(cq?.validity);
+
+    // Map items from latest customer quotation if available
+    const mappedItems: CustomerTenderItem[] = (cq?.items || []).map((it: any) => ({
+      item_code: it.item_code || '',
+      material_name: it.material_name || '',
+      quantity: it.quantity != null ? it.quantity : 0,
+      unit_price: it.unit_price != null ? it.unit_price : undefined,
+    }));
 
     this.headerForm.reset({
       customer_id: proj?.customer_id || cust?.id || 0,
@@ -207,16 +266,16 @@ export class Step06Tender implements OnInit {
       opening_date_time: null,
       closing_date_time: null,
       tender_fee: null,
-      validity_amount: '',
-      validity_unit: 'Days',
-      delivery_terms: '',
-      delivery_period: '',
-      payment_terms: '',
+      validity_amount: valAmount,
+      validity_unit: valUnit,
+      delivery_terms: cq?.incoterms || '',
+      delivery_period: cq?.delivery_period || '',
+      payment_terms: cq?.payment_terms || '',
       warranty_period: '',
       remark: '',
     });
 
-    this.items.set([]);
+    this.items.set(mappedItems);
     this.attachments.set([]);
     this.existingAttachments.set([]);
     this.dialogRemarks.set([]);
@@ -225,6 +284,11 @@ export class Step06Tender implements OnInit {
     this.rowForm.reset();
     this.errorMessage.set(null);
     this.dialogVisible.set(true);
+
+    const pId = this.projectId();
+    if (pId && (!cq || !cq.items?.length)) {
+      this.fetchLatestCustomerQuotation(pId, true);
+    }
   }
 
   protected openEditDialog(t: CustomerTender): void {
