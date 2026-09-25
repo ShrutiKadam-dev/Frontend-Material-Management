@@ -31,6 +31,22 @@ describe('Step13CustomerDelivery', () => {
       invoice_date: '2026-09-10',
       net_total: 50000,
     }),
+    getLatestSupplierPackingList: () => of({
+      packing_list_no: 'SPL-2026-444',
+      total_weight: '1250.50',
+      total_gross_weight_kg: '1380.75',
+      packing_condition: 'Export Standard Palletized Boxes',
+      total_no_of_packs: 4,
+      items: [
+        {
+          material_name: 'Industrial Valve',
+          hsn_code: '848180',
+          quantity: 10,
+          weight: 1250.50,
+          package_no: 'Box #1',
+        },
+      ],
+    }),
   };
 
   const mockProjectService = {
@@ -118,5 +134,30 @@ describe('Step13CustomerDelivery', () => {
     expect((component as any).warrantyForm.get('warranty_period')?.value).toBe('12 Months');
     expect((component as any).warrantyForm.get('po_date')?.value).toBeInstanceOf(Date);
     expect((component as any).warrantyForm.get('invoice_date')?.value).toBeInstanceOf(Date);
+  });
+
+  it('should auto-patch total_weight into net_weight and total_gross_weight_kg into gross_weight when opening Create Packing List dialog', () => {
+    (component as any).openCreatePackingListDialog();
+
+    expect((component as any).packingListForm.get('net_weight')?.value).toBe('1250.50');
+    expect((component as any).packingListForm.get('gross_weight')?.value).toBe('1380.75');
+    expect((component as any).packingListForm.get('packing_condition')?.value).toBe('Export Standard Palletized Boxes');
+    expect((component as any).packingListForm.get('total_no_of_packs')?.value).toBe(4);
+    expect((component as any).packingItemsList().length).toBe(1);
+    expect((component as any).packingItemsList()[0].material_name).toBe('Industrial Valve');
+  });
+
+  it('should patch total_weight and total_gross_weight_kg from fresh supplier packing list template', () => {
+    const customSpl = {
+      total_weight: 980.25,
+      total_gross_weight_kg: 1050.8,
+      packing_condition: 'Wooden Crates',
+    };
+
+    (component as any).patchFromLatestSupplierPackingList(customSpl, true);
+
+    expect((component as any).packingListForm.get('net_weight')?.value).toBe('980.25');
+    expect((component as any).packingListForm.get('gross_weight')?.value).toBe('1050.8');
+    expect((component as any).packingListForm.get('packing_condition')?.value).toBe('Wooden Crates');
   });
 });

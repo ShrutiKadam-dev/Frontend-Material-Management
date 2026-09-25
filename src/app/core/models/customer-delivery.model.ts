@@ -206,3 +206,31 @@ export interface LatestCustomerTaxInvoiceTemplate {
   round_off?: number;
   items?: DeliveryItem[];
 }
+
+// Supplier Packing List Latest Template for auto-patching
+export interface LatestSupplierPackingListTemplate {
+  id?: number;
+  project_id?: number;
+  packing_list_no?: string;
+  packing_list_date?: string;
+  date?: string;
+  packing_condition?: string;
+  total_weight?: number | string;
+  net_weight?: number | string;
+  weight?: number | string;
+  total_gross_weight_kg?: number | string;
+  gross_weight?: number | string;
+  total_gross_weight?: number | string;
+  total_no_of_packs?: number | string;
+  items?: Array<{
+    material_name?: string;
+    description?: string;
+    hsn_code?: string;
+    quantity?: number | string;
+    weight?: number | string;
+    unit_weight?: number | string;
+    total_weight?: number | string;
+    package_no?: string;
+  }>;
+  [key: string]: unknown;
+}

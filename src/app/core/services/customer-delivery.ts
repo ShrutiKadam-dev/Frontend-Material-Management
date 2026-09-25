@@ -21,6 +21,7 @@ import {
   CustomerTransportDetailUpdateInput,
   LatestPurchaseOrderTemplate,
   LatestCustomerTaxInvoiceTemplate,
+  LatestSupplierPackingListTemplate,
 } from '../models/customer-delivery.model';
 
 @Injectable({
@@ -141,6 +142,115 @@ export class CustomerDeliveryService {
                   gst_amount: data['gst_amount'] !== undefined ? Number(data['gst_amount']) : undefined,
                   round_off: data['round_off'] !== undefined ? Number(data['round_off']) : undefined,
                 };
+              }),
+              catchError(() => of(null)),
+            );
+        }),
+      );
+  }
+
+  // ── 0.2 Fetch Latest Supplier Packing List for Auto-Patching ───
+  getLatestSupplierPackingList(projectId: number): Observable<LatestSupplierPackingListTemplate | null> {
+    return this.http
+      .get<any>(
+        `${this.apiBaseUrl}/api/v1/supplier-packing-lists/latest?project_id=${projectId}`,
+      )
+      .pipe(
+        map((res: any) => {
+          if (!res) return null;
+          let data = res.data !== undefined ? res.data : res;
+          if (Array.isArray(data)) {
+            data = data[0];
+          }
+          if (data && typeof data === 'object') {
+            if (data.supplier_packing_list) data = data.supplier_packing_list;
+            else if (data.packing_list) data = data.packing_list;
+          }
+          if (!data || typeof data !== 'object') return null;
+
+          const totalWeight =
+            data.total_weight ??
+            data.net_weight ??
+            data.weight ??
+            '';
+
+          const grossWeight =
+            data.total_gross_weight_kg ??
+            data.total_gross_weight ??
+            data.gross_weight ??
+            '';
+
+          const rawItems = Array.isArray(data.items) ? data.items : [];
+
+          return {
+            ...data,
+            total_weight: totalWeight,
+            net_weight: totalWeight,
+            total_gross_weight_kg: grossWeight,
+            gross_weight: grossWeight,
+            total_gross_weight: grossWeight,
+            packing_list_no: data.packing_list_no || data.packing_no || '',
+            packing_list_date: data.packing_list_date || data.date || '',
+            packing_condition: data.packing_condition || '',
+            total_no_of_packs: data.total_no_of_packs || data.packs || 0,
+            items: rawItems.map((it: any, idx: number) => ({
+              package_no: it.package_no || `Box #${idx + 1}`,
+              material_name: it.material_name || it.description || 'Item',
+              hsn_code: it.hsn_code || '',
+              quantity: Number(it.quantity) || 1,
+              weight: Number(it.weight || it.total_weight || it.unit_weight) || 0,
+              unit_weight: Number(it.unit_weight || it.weight) || 0,
+              total_weight: Number(it.total_weight || it.weight) || 0,
+            })),
+          } as LatestSupplierPackingListTemplate;
+        }),
+        catchError(() => {
+          // Fallback: try fetching all supplier packing lists and take the latest
+          return this.http
+            .get<any>(
+              `${this.apiBaseUrl}/api/v1/supplier-packing-lists?project_id=${projectId}`,
+            )
+            .pipe(
+              map((res: any) => {
+                if (!res) return null;
+                const list = Array.isArray(res) ? res : res.data || [];
+                if (!list.length) return null;
+                const data = list[list.length - 1];
+                const totalWeight =
+                  data.total_weight ??
+                  data.net_weight ??
+                  data.weight ??
+                  '';
+
+                const grossWeight =
+                  data.total_gross_weight_kg ??
+                  data.total_gross_weight ??
+                  data.gross_weight ??
+                  '';
+
+                const rawItems = Array.isArray(data.items) ? data.items : [];
+
+                return {
+                  ...data,
+                  total_weight: totalWeight,
+                  net_weight: totalWeight,
+                  total_gross_weight_kg: grossWeight,
+                  gross_weight: grossWeight,
+                  total_gross_weight: grossWeight,
+                  packing_list_no: data.packing_list_no || data.packing_no || '',
+                  packing_list_date: data.packing_list_date || data.date || '',
+                  packing_condition: data.packing_condition || '',
+                  total_no_of_packs: data.total_no_of_packs || data.packs || 0,
+                  items: rawItems.map((it: any, idx: number) => ({
+                    package_no: it.package_no || `Box #${idx + 1}`,
+                    material_name: it.material_name || it.description || 'Item',
+                    hsn_code: it.hsn_code || '',
+                    quantity: Number(it.quantity) || 1,
+                    weight: Number(it.weight || it.total_weight || it.unit_weight) || 0,
+                    unit_weight: Number(it.unit_weight || it.weight) || 0,
+                    total_weight: Number(it.total_weight || it.weight) || 0,
+                  })),
+                } as LatestSupplierPackingListTemplate;
               }),
               catchError(() => of(null)),
             );

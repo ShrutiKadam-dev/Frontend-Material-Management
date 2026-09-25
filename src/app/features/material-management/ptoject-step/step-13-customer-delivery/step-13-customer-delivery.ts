@@ -49,6 +49,7 @@ import {
   DeliveryItem,
   LatestPurchaseOrderTemplate,
   LatestCustomerTaxInvoiceTemplate,
+  LatestSupplierPackingListTemplate,
   TransportMode,
 } from '../../../../core/models/customer-delivery.model';
 import { Attachment } from '../../../../core/models/attachment.model';
@@ -112,6 +113,7 @@ export class Step13CustomerDelivery implements OnInit {
 
   protected readonly latestPoTemplate = signal<LatestPurchaseOrderTemplate | null>(null);
   protected readonly latestTaxInvoiceTemplate = signal<LatestCustomerTaxInvoiceTemplate | null>(null);
+  protected readonly latestSupplierPackingListTemplate = signal<LatestSupplierPackingListTemplate | null>(null);
   protected readonly loadingWarrantyReferences = signal(false);
 
   protected readonly loading = signal(true);
@@ -190,7 +192,6 @@ export class Step13CustomerDelivery implements OnInit {
   protected readonly packingItemsList = signal<DeliveryItem[]>([]);
   protected readonly editingPackingItemIdx = signal<number | null>(null);
   protected readonly packingRowForm = this.fb.group({
-    package_no: [''],
     material_name: ['', [Validators.required]],
     hsn_code: [''],
     quantity: ['', [Validators.required, Validators.pattern(/^[0-9]+(\.[0-9]+)?$/)]],
@@ -316,6 +317,7 @@ export class Step13CustomerDelivery implements OnInit {
     this.loadAllStep13Data(id);
     this.loadLatestPurchaseOrderTemplate(id);
     this.loadLatestCustomerTaxInvoiceTemplate(id);
+    this.loadLatestSupplierPackingListTemplate(id);
   }
 
   protected goBack(): void {
@@ -366,6 +368,77 @@ export class Step13CustomerDelivery implements OnInit {
       },
       error: () => { },
     });
+  }
+
+  protected loadLatestSupplierPackingListTemplate(projectId: number, overwriteForm = false): void {
+    this.deliveryService.getLatestSupplierPackingList(projectId).subscribe({
+      next: (spl) => {
+        if (spl) {
+          this.latestSupplierPackingListTemplate.set(spl);
+          if (overwriteForm || (this.packingListDialogVisible() && !this.editingPackingList())) {
+            this.patchFromLatestSupplierPackingList(spl, overwriteForm);
+          }
+        }
+      },
+      error: () => { },
+    });
+  }
+
+  protected patchFromLatestSupplierPackingList(spl: LatestSupplierPackingListTemplate, overwrite = false): void {
+    if (!spl) return;
+    this.latestSupplierPackingListTemplate.set(spl);
+
+    const netWeight =
+      spl.total_weight !== undefined && spl.total_weight !== null
+        ? String(spl.total_weight)
+        : spl.net_weight !== undefined && spl.net_weight !== null
+        ? String(spl.net_weight)
+        : spl.weight !== undefined && spl.weight !== null
+        ? String(spl.weight)
+        : '';
+
+    const grossWeight =
+      spl.total_gross_weight_kg !== undefined && spl.total_gross_weight_kg !== null
+        ? String(spl.total_gross_weight_kg)
+        : spl.total_gross_weight !== undefined && spl.total_gross_weight !== null
+        ? String(spl.total_gross_weight)
+        : spl.gross_weight !== undefined && spl.gross_weight !== null
+        ? String(spl.gross_weight)
+        : '';
+
+    const condition = spl.packing_condition ? String(spl.packing_condition).trim() : '';
+    const packs = Number(spl.total_no_of_packs) || 0;
+
+    const currentVal = this.packingListForm.getRawValue();
+    const patchObj: Record<string, any> = {};
+
+    if (netWeight && (overwrite || !currentVal.net_weight)) {
+      patchObj['net_weight'] = netWeight;
+    }
+    if (grossWeight && (overwrite || !currentVal.gross_weight)) {
+      patchObj['gross_weight'] = grossWeight;
+    }
+    if (condition && (overwrite || !currentVal.packing_condition)) {
+      patchObj['packing_condition'] = condition;
+    }
+    if (packs > 0 && (overwrite || !currentVal.total_no_of_packs || currentVal.total_no_of_packs === 0)) {
+      patchObj['total_no_of_packs'] = packs;
+    }
+
+    if (Object.keys(patchObj).length > 0) {
+      this.packingListForm.patchValue(patchObj);
+    }
+
+    // Populate or enrich packing items list
+    if ((overwrite || this.packingItemsList().length === 0) && Array.isArray(spl.items) && spl.items.length > 0) {
+      const mapped: DeliveryItem[] = spl.items.map((item) => ({
+        material_name: item.material_name || item.description || 'Item',
+        hsn_code: item.hsn_code || '',
+        quantity: Number(item.quantity) || 1,
+        weight: Number(item.weight || item.total_weight || item.unit_weight) || 0,
+      }));
+      this.packingItemsList.set(mapped);
+    }
   }
 
   protected loadAllStep13Data(projectId?: number): void {
@@ -684,23 +757,31 @@ export class Step13CustomerDelivery implements OnInit {
     this.existingAttachments.set([]);
     this.dialogRemarks.set([]);
     this.editingPackingItemIdx.set(null);
-    this.packingRowForm.reset({ package_no: 'Box #1' });
+    this.packingRowForm.reset();
 
     const po = this.latestPoTemplate();
+    const spl = this.latestSupplierPackingListTemplate();
 
     this.packingListForm.reset({
       packing_list_no: '',
-      packing_list_date: '',
-      total_no_of_packs: 0,
+      packing_list_date: null,
+      total_no_of_packs: 1,
       packing_condition: '',
       net_weight: '',
       gross_weight: '',
       remark: '',
     });
 
-    if (po && po.items && po.items.length > 0) {
+    if (spl && spl.items && spl.items.length > 0) {
+      const mapped: DeliveryItem[] = spl.items.map((item, idx) => ({
+        material_name: item.material_name || item.description || 'Item',
+        hsn_code: item.hsn_code || '',
+        quantity: Number(item.quantity) || 1,
+        weight: Number(item.weight || item.total_weight || item.unit_weight) || 0,
+      }));
+      this.packingItemsList.set(mapped);
+    } else if (po && po.items && po.items.length > 0) {
       const mapped: DeliveryItem[] = po.items.map((item, idx) => ({
-        package_no: `Box #${idx + 1}`,
         material_name: item.material_name,
         hsn_code: item.hsn_code,
         quantity: item.quantity,
@@ -712,6 +793,15 @@ export class Step13CustomerDelivery implements OnInit {
     }
 
     this.packingListDialogVisible.set(true);
+
+    if (spl) {
+      this.patchFromLatestSupplierPackingList(spl, true);
+    }
+
+    const pId = this.projectId() || Number(this.route.snapshot.paramMap.get('projectId')) || 0;
+    if (pId) {
+      this.loadLatestSupplierPackingListTemplate(pId, true);
+    }
   }
 
   protected openEditPackingListDialog(pl: CustomerPackingList): void {
@@ -720,7 +810,7 @@ export class Step13CustomerDelivery implements OnInit {
     this.existingAttachments.set(pl.attachments || []);
     this.dialogRemarks.set(parseStepRemarks(pl.remarks || pl.remark, pl.packing_list_date));
     this.editingPackingItemIdx.set(null);
-    this.packingRowForm.reset({ package_no: 'Box #1' });
+    this.packingRowForm.reset();
 
     this.packingListForm.patchValue({
       packing_list_no: pl.packing_list_no,
@@ -739,7 +829,6 @@ export class Step13CustomerDelivery implements OnInit {
   protected openEditPackingRow(index: number, focusTarget?: HTMLInputElement): void {
     const item = this.packingItemsList()[index];
     this.packingRowForm.setValue({
-      package_no: item.package_no || `Box #${index + 1}`,
       material_name: item.material_name || '',
       hsn_code: item.hsn_code || '',
       quantity: String(item.quantity || ''),
@@ -761,14 +850,12 @@ export class Step13CustomerDelivery implements OnInit {
     }
 
     const val = this.packingRowForm.getRawValue();
-    const pkgNo = (val.package_no || '').trim() || `Box #${this.packingItemsList().length + 1}`;
     const name = (val.material_name || '').trim();
     const hsn = (val.hsn_code || '').trim();
     const qty = parseFloat(val.quantity || '0');
     const wt = val.weight ? parseFloat(val.weight) : 0;
 
     const newItem: DeliveryItem = {
-      package_no: pkgNo,
       material_name: name,
       hsn_code: hsn,
       quantity: qty,
@@ -789,7 +876,7 @@ export class Step13CustomerDelivery implements OnInit {
       this.packingItemsList.update((list) => [...list, newItem]);
     }
 
-    this.packingRowForm.reset({ package_no: `Box #${this.packingItemsList().length + 1}` });
+    this.packingRowForm.reset();
     if (focusTarget) {
       setTimeout(() => focusTarget.focus(), 0);
     }
@@ -797,7 +884,7 @@ export class Step13CustomerDelivery implements OnInit {
 
   protected cancelPackingRow(): void {
     this.editingPackingItemIdx.set(null);
-    this.packingRowForm.reset({ package_no: `Box #${this.packingItemsList().length + 1}` });
+    this.packingRowForm.reset();
   }
 
   protected deletePackingRow(index: number): void {
