@@ -40,6 +40,12 @@ import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import {
+  formatLocalDate,
+  formatLocalDateTime,
+  parseLocalDate,
+  parseLocalDateTime,
+} from '../../../../core/utils/date.utils';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
@@ -233,9 +239,9 @@ export class Step06Tender implements OnInit {
       website: t.website || '',
       tender_title: t.tender_title || '',
       tender_number: t.tender_number || '',
-      tender_date: t.tender_date ? new Date(t.tender_date) : null,
-      opening_date_time: t.opening_date_time ? new Date(t.opening_date_time) : null,
-      closing_date_time: t.closing_date_time ? new Date(t.closing_date_time) : null,
+      tender_date: parseLocalDate(t.tender_date),
+      opening_date_time: parseLocalDateTime(t.opening_date_time),
+      closing_date_time: parseLocalDateTime(t.closing_date_time),
       tender_fee: t.tender_fee ? Number(t.tender_fee) : null,
       validity_amount: valAmount,
       validity_unit: valUnit,
@@ -366,9 +372,9 @@ export class Step06Tender implements OnInit {
       contact_number: raw.contact_number?.trim() || undefined,
       tender_title: raw.tender_title.trim(),
       tender_number: raw.tender_number.trim(),
-      tender_date: this.toIsoString(raw.tender_date) || new Date().toISOString(),
-      opening_date_time: this.toIsoString(raw.opening_date_time),
-      closing_date_time: this.toIsoString(raw.closing_date_time),
+      tender_date: formatLocalDate(raw.tender_date) || formatLocalDate(new Date()),
+      opening_date_time: formatLocalDateTime(raw.opening_date_time),
+      closing_date_time: formatLocalDateTime(raw.closing_date_time),
       tender_fee: raw.tender_fee !== null ? Number(raw.tender_fee) : undefined,
       validity: validityStr || undefined,
       delivery_terms: raw.delivery_terms?.trim() || undefined,
@@ -635,17 +641,6 @@ export class Step06Tender implements OnInit {
     return [parts[0], 'Days'];
   }
 
-  private toIsoString(val: unknown): string | undefined {
-    if (!val) return undefined;
-    if (val instanceof Date) {
-      return isNaN(val.getTime()) ? undefined : val.toISOString();
-    }
-    if (typeof val === 'string' && val.trim()) {
-      const d = new Date(val);
-      return isNaN(d.getTime()) ? val : d.toISOString();
-    }
-    return undefined;
-  }
 
   /* ── Navigation ──────────────────────────────────────── */
   protected goBack(): void {

@@ -47,6 +47,7 @@ import { Project } from '../../../../core/models/project.model';
 import { CostSheet } from '../../../../core/models/cost-sheet.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
@@ -161,7 +162,7 @@ export class Step05CustomerQuotation implements OnInit {
   protected readonly headerForm = this.fb.group({
     customer_id: [0],
     quotation_number: ['', [Validators.required]],
-    quotation_date: ['', [Validators.required]],
+    quotation_date: [null as Date | string | null, [Validators.required]],
     quotation_value: ['', [Validators.required]],
     currency_unit: ['INR', [Validators.required]],
     currency_symbol: ['₹'],
@@ -388,7 +389,7 @@ export class Step05CustomerQuotation implements OnInit {
     this.headerForm.reset({
       customer_id: proj?.customer_id || cust?.id || 0,
       quotation_number: '',
-      quotation_date: '',
+      quotation_date: new Date(),
       quotation_value: defaultQuoteVal,
       currency_unit: 'INR',
       currency_symbol: '₹',
@@ -423,7 +424,7 @@ export class Step05CustomerQuotation implements OnInit {
     this.headerForm.reset({
       customer_id: q.customer_id,
       quotation_number: q.quotation_number,
-      quotation_date: q.quotation_date ? q.quotation_date.substring(0, 10) : this.todayIso(),
+      quotation_date: parseLocalDate(q.quotation_date) || new Date(),
       quotation_value: q.quotation_value || '',
       currency_unit: q.currency_unit || 'INR',
       currency_symbol: q.currency_symbol || '₹',
@@ -537,7 +538,7 @@ export class Step05CustomerQuotation implements OnInit {
       project_id: this.projectId(),
       customer_id: Number(raw.customer_id) || this.project()?.customer_id || 0,
       quotation_number: raw.quotation_number.trim(),
-      quotation_date: raw.quotation_date,
+      quotation_date: formatLocalDate(raw.quotation_date) || this.todayIso(),
       quotation_value: raw.quotation_value ? String(raw.quotation_value).trim() : '',
       currency_unit: raw.currency_unit,
       currency_symbol: currencySymbol,
@@ -694,7 +695,7 @@ export class Step05CustomerQuotation implements OnInit {
   }
 
   private todayIso(): string {
-    return new Date().toISOString().substring(0, 10);
+    return formatLocalDate(new Date());
   }
 
   /* ── Remarks Operations ──────────────────────────────── */

@@ -41,6 +41,7 @@ import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 import {
   INCOTERMS_OPTIONS,
@@ -731,17 +732,12 @@ export class Step08PurchaseOrder implements OnInit {
     return 'pi pi-file';
   }
 
-  private formatDate(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
+  private formatDate(date: Date | string | null | undefined): string {
+    return formatLocalDate(date);
   }
 
   private parseDate(dateStr?: string | null): Date | null {
-    if (!dateStr) return null;
-    const d = new Date(dateStr);
-    return isNaN(d.getTime()) ? null : d;
+    return parseLocalDate(dateStr);
   }
 
   /* ── Remarks Operations ──────────────────────────────── */

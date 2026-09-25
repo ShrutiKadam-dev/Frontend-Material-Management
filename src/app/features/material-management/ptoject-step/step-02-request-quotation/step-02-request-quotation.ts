@@ -36,6 +36,7 @@ import { Supplier } from '../../../../core/models/supplier.model';
 import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 
@@ -631,23 +632,11 @@ export class Step02RequestQuotation implements OnInit {
     this.router.navigate(['/projects', this.projectId(), 'steps']);
   }
 
-  private formatDate(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
+  private formatDate(date: Date | string | null | undefined): string {
+    return formatLocalDate(date);
   }
 
-  private parseDate(dateStr: string): Date | null {
-    if (!dateStr) return null;
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      const year = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1;
-      const day = parseInt(parts[2], 10);
-      return new Date(year, month, day);
-    }
-    const d = new Date(dateStr);
-    return isNaN(d.getTime()) ? null : d;
+  private parseDate(dateStr?: string | Date | null): Date | null {
+    return parseLocalDate(dateStr);
   }
 }

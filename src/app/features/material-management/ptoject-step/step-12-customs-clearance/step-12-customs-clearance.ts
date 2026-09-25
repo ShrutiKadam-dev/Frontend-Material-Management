@@ -39,6 +39,7 @@ import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
@@ -306,7 +307,7 @@ export class Step12CustomsClearance implements OnInit {
 
           const boeNo = latest.bill_of_entry_no || latest.bill_of_entry_number || '';
           const rawDate = latest.boe_date || latest.date;
-          const boeDate = rawDate ? new Date(rawDate as string) : null;
+          const boeDate = parseLocalDate(rawDate as string);
 
           const currentFormVal = this.clearanceForm.getRawValue();
 
@@ -344,9 +345,9 @@ export class Step12CustomsClearance implements OnInit {
     this.clearanceForm.patchValue({
       cha_name: record.cha_name,
       bill_of_entry_no: record.bill_of_entry_no,
-      boe_date: record.boe_date ? new Date(record.boe_date) : null,
+      boe_date: parseLocalDate(record.boe_date),
       customs_location: record.customs_location,
-      duty_paid_date: record.duty_paid_date ? new Date(record.duty_paid_date) : null,
+      duty_paid_date: parseLocalDate(record.duty_paid_date),
       challan_no: record.challan_no || '',
       cfs_name: record.cfs_name || '',
       transaction_ref_no: record.transaction_ref_no || '',
@@ -377,16 +378,9 @@ export class Step12CustomsClearance implements OnInit {
     this.saving.set(true);
     const formVal = this.clearanceForm.getRawValue();
 
-    const boeDateStr = formVal.boe_date
-      ? formVal.boe_date instanceof Date
-        ? this.formatDate(formVal.boe_date)
-        : String(formVal.boe_date)
-      : '';
-
+    const boeDateStr = this.formatDate(formVal.boe_date);
     const dutyPaidDateStr = formVal.duty_paid_date
-      ? formVal.duty_paid_date instanceof Date
-        ? this.formatDate(formVal.duty_paid_date)
-        : String(formVal.duty_paid_date)
+      ? this.formatDate(formVal.duty_paid_date)
       : undefined;
 
     const dutyAmount = Number(formVal.duty_amount) || 0;
@@ -577,11 +571,8 @@ export class Step12CustomsClearance implements OnInit {
     return 'pi pi-file';
   }
 
-  private formatDate(d: Date): string {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  private formatDate(d: Date | string | null | undefined): string {
+    return formatLocalDate(d);
   }
 
   protected quickAddClearanceRemark(record: CustomsClearance, text: string): void {

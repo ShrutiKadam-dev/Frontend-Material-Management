@@ -56,6 +56,7 @@ import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 import { WARRANTY_PERIOD_OPTIONS } from '../../../../core/constants/dropdown-options.constant';
 
@@ -455,7 +456,7 @@ export class Step13CustomerDelivery implements OnInit {
 
     this.invoiceForm.patchValue({
       invoice_no: inv.invoice_no,
-      invoice_date: inv.invoice_date ? new Date(inv.invoice_date) : null,
+      invoice_date: this.parseDateSafe(inv.invoice_date),
       gst_rate: inv.gst_rate ?? 18,
       gst_amount: inv.gst_amount ?? 0,
       round_off: inv.round_off ?? 0,
@@ -574,9 +575,7 @@ export class Step13CustomerDelivery implements OnInit {
 
     this.saving.set(true);
     const formVal = this.invoiceForm.getRawValue();
-    const dateStr = formVal.invoice_date instanceof Date
-      ? this.formatDate(formVal.invoice_date)
-      : String(formVal.invoice_date);
+    const dateStr = this.formatDate(formVal.invoice_date);
 
     const payload: CustomerTaxInvoiceCreateInput = {
       project_id: pId,
@@ -725,7 +724,7 @@ export class Step13CustomerDelivery implements OnInit {
 
     this.packingListForm.patchValue({
       packing_list_no: pl.packing_list_no,
-      packing_list_date: pl.packing_list_date ? new Date(pl.packing_list_date) : null,
+      packing_list_date: this.parseDateSafe(pl.packing_list_date),
       total_no_of_packs: pl.total_no_of_packs || 1,
       packing_condition: pl.packing_condition,
       net_weight: pl.net_weight !== undefined ? String(pl.net_weight) : '',
@@ -820,9 +819,7 @@ export class Step13CustomerDelivery implements OnInit {
 
     this.saving.set(true);
     const formVal = this.packingListForm.getRawValue();
-    const dateStr = formVal.packing_list_date instanceof Date
-      ? this.formatDate(formVal.packing_list_date)
-      : String(formVal.packing_list_date);
+    const dateStr = this.formatDate(formVal.packing_list_date);
 
     const payload: CustomerPackingListCreateInput = {
       project_id: pId,
@@ -923,7 +920,7 @@ export class Step13CustomerDelivery implements OnInit {
 
     this.challanForm.patchValue({
       delivery_challan_no: dc.delivery_challan_no,
-      delivery_challan_date: dc.delivery_challan_date ? new Date(dc.delivery_challan_date) : null,
+      delivery_challan_date: this.parseDateSafe(dc.delivery_challan_date),
       gst_rate: dc.gst_rate ?? 18,
       gst_amount: dc.gst_amount ?? 0,
       round_off: dc.round_off ?? 0,
@@ -1042,9 +1039,7 @@ export class Step13CustomerDelivery implements OnInit {
 
     this.saving.set(true);
     const formVal = this.challanForm.getRawValue();
-    const dateStr = formVal.delivery_challan_date instanceof Date
-      ? this.formatDate(formVal.delivery_challan_date)
-      : String(formVal.delivery_challan_date);
+    const dateStr = this.formatDate(formVal.delivery_challan_date);
 
     const payload: CustomerDeliveryChallanCreateInput = {
       project_id: pId,
@@ -1209,15 +1204,9 @@ export class Step13CustomerDelivery implements OnInit {
     this.saving.set(true);
     const formVal = this.warrantyForm.getRawValue();
 
-    const certDateStr = formVal.certificate_date instanceof Date
-      ? this.formatDate(formVal.certificate_date)
-      : String(formVal.certificate_date);
-    const poDateStr = formVal.po_date instanceof Date
-      ? this.formatDate(formVal.po_date)
-      : String(formVal.po_date);
-    const invDateStr = formVal.invoice_date instanceof Date
-      ? this.formatDate(formVal.invoice_date)
-      : String(formVal.invoice_date);
+    const certDateStr = this.formatDate(formVal.certificate_date);
+    const poDateStr = this.formatDate(formVal.po_date);
+    const invDateStr = this.formatDate(formVal.invoice_date);
 
     const payload: CustomerWarrantyCertificateCreateInput = {
       project_id: pId,
@@ -1301,7 +1290,7 @@ export class Step13CustomerDelivery implements OnInit {
       lr_no: td.lr_no || '',
       rr_no: td.rr_no || '',
       awb_no: td.awb_no || '',
-      date: td.date ? new Date(td.date) : null,
+      date: this.parseDateSafe(td.date),
       from_location: td.from_location,
       to_location: td.to_location,
       transport_charges: td.transport_charges ?? 0,
@@ -1323,9 +1312,7 @@ export class Step13CustomerDelivery implements OnInit {
 
     this.saving.set(true);
     const formVal = this.transportForm.getRawValue();
-    const dateStr = formVal.date instanceof Date
-      ? this.formatDate(formVal.date)
-      : String(formVal.date);
+    const dateStr = this.formatDate(formVal.date);
 
     const payload: CustomerTransportDetailCreateInput = {
       project_id: pId,
@@ -1465,38 +1452,12 @@ export class Step13CustomerDelivery implements OnInit {
     return 'Invalid';
   }
 
-  private formatDate(d: Date): string {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  private formatDate(d: Date | string | null | undefined): string {
+    return formatLocalDate(d);
   }
 
   protected parseDateSafe(val: string | Date | null | undefined): Date | null {
-    if (!val) return null;
-    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
-    if (typeof val === 'string') {
-      const trimmed = val.trim();
-      if (!trimmed) return null;
-      const parts = trimmed.split(/[-T/ ]/);
-      if (parts.length >= 3) {
-        if (parts[0].length === 4) {
-          const year = parseInt(parts[0], 10);
-          const month = parseInt(parts[1], 10) - 1;
-          const day = parseInt(parts[2], 10);
-          return new Date(year, month, day);
-        }
-        if (parts[2].length === 4) {
-          const day = parseInt(parts[0], 10);
-          const month = parseInt(parts[1], 10) - 1;
-          const year = parseInt(parts[2], 10);
-          return new Date(year, month, day);
-        }
-      }
-      const parsed = new Date(trimmed);
-      return isNaN(parsed.getTime()) ? null : parsed;
-    }
-    return null;
+    return parseLocalDate(val);
   }
 
   // ── Tax Invoice Remarks ─────────────────────────────────────────

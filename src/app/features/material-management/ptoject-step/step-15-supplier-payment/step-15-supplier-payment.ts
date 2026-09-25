@@ -44,6 +44,7 @@ import { SelectOption } from '../../../../core/models/select-option.model';
 import { MessageService } from 'primeng/api';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
@@ -274,7 +275,7 @@ export class Step15SupplierPayment implements OnInit {
       parseStepRemarks(payment.remarks || payment.remark, payment.payment_date),
     );
 
-    const payDate = payment.payment_date ? new Date(payment.payment_date) : null;
+    const payDate = parseLocalDate(payment.payment_date);
 
     this.paymentForm.reset({
       currency: payment.currency || 'INR',
@@ -340,12 +341,7 @@ export class Step15SupplierPayment implements OnInit {
 
     this.saving.set(true);
     const val = this.paymentForm.getRawValue();
-    let payDateStr = '';
-    if (val.payment_date instanceof Date) {
-      payDateStr = this.formatDate(val.payment_date);
-    } else if (val.payment_date) {
-      payDateStr = String(val.payment_date).trim();
-    }
+    const payDateStr = this.formatDate(val.payment_date);
 
     const payload: SupplierPaymentCreateInput = {
       project_id: pId,
@@ -495,11 +491,8 @@ export class Step15SupplierPayment implements OnInit {
     return 'Invalid value.';
   }
 
-  private formatDate(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
+  private formatDate(date: Date | string | null | undefined): string {
+    return formatLocalDate(date);
   }
 
   protected quickAddPaymentRemark(item: SupplierPayment, text: string): void {

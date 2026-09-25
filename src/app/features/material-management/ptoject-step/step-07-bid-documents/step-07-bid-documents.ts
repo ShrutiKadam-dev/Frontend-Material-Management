@@ -44,6 +44,7 @@ import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
@@ -300,7 +301,7 @@ export class Step07BidDocuments implements OnInit {
       customer_tender_id: sub.customer_tender_id || 0,
       tender_title: sub.tender_title || '',
       tender_number: sub.tender_number || '',
-      submission_date: sub.submission_date ? new Date(sub.submission_date) : null,
+      submission_date: parseLocalDate(sub.submission_date),
       validity_amount: parsedVal.value,
       validity_unit: parsedVal.unit,
       delivery_terms: sub.delivery_terms || '',
@@ -479,9 +480,7 @@ export class Step07BidDocuments implements OnInit {
     this.errorMessage.set(null);
 
     const f = this.headerForm.getRawValue();
-    const submissionDateStr = f.submission_date
-      ? new Date(f.submission_date).toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0];
+    const submissionDateStr = formatLocalDate(f.submission_date) || formatLocalDate(new Date());
 
     const currentSub = this.editingSubmission();
 
