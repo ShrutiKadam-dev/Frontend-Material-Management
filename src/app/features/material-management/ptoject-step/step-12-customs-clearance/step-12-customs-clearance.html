@@ -524,39 +524,10 @@
       @if (latestBillOfEntry(); as boe) {
       @if (!editingClearance()) {
       <div class="cost-sheet-sync-pill" role="status">
-        <div class="sync-pill-header">
-          <div class="sync-pill-title">
-            <i class="pi pi-check-circle" aria-hidden="true"></i>
-            <span>
-              Auto-filled from <strong>Latest Bill of Entry{{ boe.bill_of_entry_no ? ' (' + boe.bill_of_entry_no + ')' : '' }}</strong>
-            </span>
-          </div>
-          @if (boe.boe_date || boe.date) {
-          <span class="sync-pill-badge">
-            BOE Date: {{ (boe.boe_date || boe.date) | date:'dd-MM-yyyy' }}
-          </span>
-          }
-        </div>
-        <div class="sync-financials-chips">
-          <span class="sync-chip">
-            <span class="sync-chip-label">Duty Amount:</span>
-            <strong class="sync-chip-value">₹&nbsp;{{ (boe.duty !== undefined && boe.duty !== null ? boe.duty : (boe.total_duty || 0)) | number:'1.2-2' }}</strong>
-          </span>
-          <span class="sync-chip">
-            <span class="sync-chip-label">IGST Amount:</span>
-            <strong class="sync-chip-value">₹&nbsp;{{ (boe.igst !== undefined && boe.igst !== null ? boe.igst : (boe.igst_amount || 0)) | number:'1.2-2' }}</strong>
-          </span>
-          @if (boe.sws !== undefined && boe.sws !== null && boe.sws > 0) {
-          <span class="sync-chip">
-            <span class="sync-chip-label">SWS:</span>
-            <strong class="sync-chip-value">₹&nbsp;{{ boe.sws | number:'1.2-2' }}</strong>
-          </span>
-          }
-          <span class="sync-chip">
-            <span class="sync-chip-label">Total Statutory Duty:</span>
-            <strong class="sync-chip-value highlight">₹&nbsp;{{ ((boe.duty !== undefined && boe.duty !== null ? boe.duty : (boe.total_duty || 0)) + (boe.igst !== undefined && boe.igst !== null ? boe.igst : (boe.igst_amount || 0)) + (boe.sws || 0)) | number:'1.2-2' }}</strong>
-          </span>
-        </div>
+        <i class="pi pi-check-circle" aria-hidden="true"></i>
+        <span>
+          Auto-imported from <strong>Latest Bill of Entry</strong> · commercial terms pre-filled.
+        </span>
       </div>
       }
       }

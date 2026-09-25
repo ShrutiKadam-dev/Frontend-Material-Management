@@ -1405,13 +1405,14 @@
 
 .cost-sheet-sync-pill {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   gap: 10px;
   background: #ffffff;
   border: 1px solid var(--color-border, #e7e4de);
   border-left: 4px solid var(--color-success, #10b981);
   border-radius: var(--radius-control, 10px);
-  padding: 12px 18px;
+  padding: 10px 16px;
   color: var(--color-text, #334155);
   font-size: 0.84rem;
   margin: 16px 26px 6px 26px;
@@ -1423,128 +1424,15 @@
     flex-shrink: 0;
   }
 
+  span {
+    color: var(--color-text, #334155);
+    font-size: 0.84rem;
+    line-height: 1.4;
+  }
+
   strong {
     color: #1c1b1a;
     font-weight: 700;
-  }
-
-  .sync-pill-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
-    width: 100%;
-  }
-
-  .sync-pill-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    font-size: 0.85rem;
-  }
-
-  .sync-pill-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .sync-pill-source {
-    color: #334155;
-    font-size: 0.85rem;
-
-    strong {
-      color: #1c1b1a;
-      font-weight: 700;
-    }
-  }
-
-  .sync-pill-subtext {
-    color: #6b6864;
-    font-size: 0.76rem;
-    font-weight: 400;
-  }
-
-  .sync-pill-badge {
-    background: #edeae4;
-    border: 1px solid #e7e4de;
-    color: #334155;
-    font-weight: 700;
-    font-size: 0.76rem;
-    padding: 3px 9px;
-    border-radius: 6px;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-
-    &--active {
-      background: #ecfdf5;
-      border-color: #a7f3d0;
-      color: #065f46;
-
-      .pi {
-        font-size: 0.75rem;
-        color: #065f46;
-      }
-    }
-  }
-
-  .sync-financials-chips {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.84rem;
-    border-top: 1px solid #edeae4;
-    padding-top: 10px;
-    margin-top: 2px;
-  }
-
-  .sync-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #faf9f6;
-    border: 1px solid #e7e4de;
-    border-radius: 6px;
-    padding: 5px 12px;
-    white-space: nowrap;
-
-    .sync-chip-label {
-      color: #6b6864;
-      font-size: 0.74rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-    }
-
-    .sync-chip-value {
-      color: #1c1b1a;
-      font-weight: 700;
-      font-size: 0.86rem;
-      font-variant-numeric: tabular-nums;
-
-      &.highlight {
-        color: #047857;
-      }
-
-      &--gst {
-        color: #0d9488;
-      }
-    }
-
-    &--total {
-      background: #ecfdf5;
-      border-color: #a7f3d0;
-
-      .sync-chip-label {
-        color: #047857;
-      }
-    }
   }
 }
 

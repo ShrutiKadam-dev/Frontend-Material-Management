@@ -155,63 +155,12 @@
               <div class="qe-col-details">
 
                 <!-- ── Multiple Remarks Section ── -->
-                <div class="remarks-card-section" aria-label="Quotation request remarks">
-                  <p class="qe-section-title">
-                    <i class="pi pi-comments" aria-hidden="true"></i>
-                    Remarks & Notes ({{ getRequestRemarks(req).length }})
-                  </p>
+                <app-step-remarks [remarks]="req.remarks" [defaultDate]="req.quotation_requested_date"
+                  [loading]="quickAddingId() === req.id" (quickAdd)="quickAddRemark(req, $event)"
+                  (deleteRemark)="deleteRemarkFromRequest(req, $event)">
+                </app-step-remarks>
 
-                  <!-- Remarks Timeline Stream / Sequence -->
-                  <div class="remarks-timeline">
-                    @if (getRequestRemarks(req).length === 0) {
-                    <div class="empty-remarks-hint">
-                      <i class="pi pi-comment" aria-hidden="true"></i>
-                      <span>No remarks recorded yet. Add an initial remark below.</span>
-                    </div>
-                    } @else {
-                    <div class="timeline-sequence">
-                      @for (rmk of getRequestRemarks(req); track rmk.id; let last = $last) {
-                      <div class="timeline-item" [class.timeline-item--last]="last">
-                        <div class="timeline-indicator">
-                          <span class="timeline-dot" aria-hidden="true"></span>
-                          @if (!last) {
-                          <span class="timeline-stem" aria-hidden="true"></span>
-                          }
-                        </div>
-                        <div class="timeline-entry">
-                          <div class="timeline-meta-bar">
-                            <span class="timeline-timestamp">
-                              <i class="pi pi-clock" aria-hidden="true"></i>
-                              {{ rmk.created_at | date: 'dd-MM-yyyy, hh:mm a' }}
-                            </span>
-                            <button type="button" class="timeline-delete-btn" pTooltip="Delete remark"
-                              tooltipPosition="left"
-                              [attr.aria-label]="'Delete remark from ' + (rmk.created_at | date: 'dd-MM-yyyy')"
-                              (click)="deleteRemarkFromRequest(req, rmk.id)">
-                              <i class="pi pi-trash" aria-hidden="true"></i>
-                            </button>
-                          </div>
-                          <div class="timeline-text">
-                            {{ rmk.text }}
-                          </div>
-                        </div>
-                      </div>
-                      }
-                    </div>
-                    }
-                  </div>
 
-                  <!-- Quick Add Remark Box -->
-                  <div class="quick-remark-bar">
-                    <input pInputText type="text" [ngModel]="getQuickRemarkText(req.id)"
-                      (ngModelChange)="setQuickRemarkText(req.id, $event)" placeholder="Add a new remark or note…"
-                      class="quick-remark-input" (keydown.enter)="$event.preventDefault(); quickAddRemark(req)" />
-                    <button pButton type="button" icon="pi pi-plus" label="Add Remark"
-                      class="p-button-sm quick-remark-btn" [loading]="quickAddingId() === req.id"
-                      [disabled]="!getQuickRemarkText(req.id).trim() || quickAddingId() === req.id"
-                      (click)="quickAddRemark(req)"></button>
-                  </div>
-                </div>
 
                 <!-- ── Attachments Section ── -->
                 @if (req.attachments && req.attachments.length) {
@@ -466,51 +415,10 @@
       </div>
 
       <!-- ── 4. Multiple Remarks ────────────────────────── -->
-      <div class="dlg-section">
-        <div class="dlg-section-header">
-          <p class="dlg-section-label"><i class="pi pi-comments"></i> 4. Notes & Remarks</p>
-          <span class="card-count-badge">{{ dialogRemarks().length }} {{ dialogRemarks().length === 1 ? 'remark' :
-            'remarks' }}</span>
-        </div>
+      <app-step-remarks mode="dialog" [remarks]="dialogRemarks()" (remarksChange)="dialogRemarks.set($event)"
+        [sectionNumber]="4" title="Notes & Remarks">
+      </app-step-remarks>
 
-        @if (dialogRemarks().length > 0) {
-        <div class="dlg-timeline-sequence">
-          @for (rmk of dialogRemarks(); track rmk.id; let i = $index; let last = $last) {
-          <div class="timeline-item" [class.timeline-item--last]="last">
-            <div class="timeline-indicator">
-              <span class="timeline-dot" aria-hidden="true"></span>
-              @if (!last) {
-              <span class="timeline-stem" aria-hidden="true"></span>
-              }
-            </div>
-            <div class="timeline-entry">
-              <div class="timeline-meta-bar">
-                <span class="timeline-timestamp">
-                  <i class="pi pi-clock" aria-hidden="true"></i>
-                  {{ rmk.created_at | date: 'dd-MM-yyyy, hh:mm a' }}
-                </span>
-                <button type="button" class="dlg-remark-remove" [attr.aria-label]="'Remove remark ' + (i + 1)"
-                  pTooltip="Remove remark" tooltipPosition="top" (click)="removeDialogRemark(i)">
-                  <i class="pi pi-times" aria-hidden="true"></i>
-                </button>
-              </div>
-              <div class="timeline-text">
-                {{ rmk.text }}
-              </div>
-            </div>
-          </div>
-          }
-        </div>
-        }
-
-        <div class="dlg-add-remark-row">
-          <input pInputText type="text" [(ngModel)]="newRemarkInput" [ngModelOptions]="{ standalone: true }"
-            placeholder="Type note or remark and press Enter or click Add…" class="dlg-remark-input"
-            (keydown.enter)="$event.preventDefault(); addDialogRemark()" />
-          <button pButton type="button" icon="pi pi-plus" label="Add" class="p-button-sm dlg-add-remark-btn"
-            [disabled]="!newRemarkInput().trim()" (click)="addDialogRemark()"></button>
-        </div>
-      </div>
 
     </div>
 

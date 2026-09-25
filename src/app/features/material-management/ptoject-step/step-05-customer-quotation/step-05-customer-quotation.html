@@ -283,27 +283,14 @@
 
         <!-- Cost Sheet Auto-Sync Notice -->
         @if (latestCostSheet(); as cs) {
+        @if (!editingQuotation()) {
         <div class="cost-sheet-sync-pill" role="status">
-          <div class="sync-pill-header">
-            <div class="sync-pill-title">
-              <i class="pi pi-check-circle" aria-hidden="true"></i>
-              <div class="sync-pill-meta">
-                <span class="sync-pill-source">
-                  Auto-imported from <strong>{{ cs.title || ('Cost Sheet v' + (cs.versionNumber || 1) + '.0')
-                    }}</strong>
-                </span>
-                <span class="sync-pill-subtext">
-                  {{ items().length }} {{ items().length === 1 ? 'item' : 'items' }} loaded with selling rates
-                </span>
-              </div>
-            </div>
-            @if (costSheetGstRatePercent() !== null) {
-            <span class="sync-pill-badge">
-              GST Rate: {{ costSheetGstRatePercent() | number:'1.0-2' }}%
-            </span>
-            }
-          </div>
+          <i class="pi pi-check-circle" aria-hidden="true"></i>
+          <span>
+            Auto-imported from <strong>Latest Cost Sheet</strong> · {{ items().length }} items with commercial terms pre-filled.
+          </span>
         </div>
+        }
         }
 
         <!-- ── A. Quotation Header Information ────────────── -->

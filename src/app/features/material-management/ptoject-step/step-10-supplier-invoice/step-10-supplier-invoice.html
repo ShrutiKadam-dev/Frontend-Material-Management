@@ -1457,16 +1457,16 @@
         <div class="cost-sheet-sync-pill" role="status">
           <i class="pi pi-check-circle" aria-hidden="true"></i>
           <span>
-            Auto-imported from <strong>Latest Proforma Invoice</strong> · {{ packingListItems().length }} package
-            items ready for verification.
+            Auto-imported from <strong>Latest Proforma Invoice</strong> · {{ packingListItems().length }} items with
+            commercial terms pre-filled.
           </span>
         </div>
         } @else if (latestOrderConfirmation(); as oc) {
         <div class="cost-sheet-sync-pill" role="status">
           <i class="pi pi-check-circle" aria-hidden="true"></i>
           <span>
-            Auto-imported from <strong>Latest Order Confirmation</strong> · {{ packingListItems().length }} package
-            items ready for verification.
+            Auto-imported from <strong>Latest Order Confirmation</strong> · {{ packingListItems().length }} items with
+            commercial terms pre-filled.
           </span>
         </div>
         }

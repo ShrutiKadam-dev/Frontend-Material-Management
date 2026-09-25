@@ -33,7 +33,7 @@ export interface CustomerQuery {
   qo_date: string;
   qo_amount?: string;
   qo_validity?: string;
-  remarks?: CustomerQueryRemarkItem[] | RemarkPayloadItem[] | CustomerQueryRemark[] | string[] | string;
+  remarks?: string[] | string | unknown;
   remark?: string;
   attachments: Attachment[];
   items: CustomerQueryItem[];
@@ -48,7 +48,7 @@ export interface CustomerQueryCreateInput {
   qo_amount?: string;
   qo_validity?: string;
   attachments?: string[];
-  remarks: Array<{ remark: string }> | string[];
+  remarks: string[];
   remark?: string;
   items: CustomerQueryItem[];
 }
@@ -60,7 +60,8 @@ export interface CustomerQueryUpdateInput {
   qo_amount?: string;
   qo_validity?: string;
   attachments?: string[];
-  remarks?: Array<{ remark: string }> | string[];
+  remarks?: string[];
   remark?: string;
   items?: CustomerQueryItem[];
 }
+

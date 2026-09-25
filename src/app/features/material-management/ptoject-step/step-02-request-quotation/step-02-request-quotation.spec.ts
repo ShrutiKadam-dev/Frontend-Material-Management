@@ -7,6 +7,8 @@ import { MessageService } from 'primeng/api';
 
 import { Step02RequestQuotation } from './step-02-request-quotation';
 import { CustomerQueryService } from '../../../../core/services/customer-query';
+import { QuotationRequestService } from '../../../../core/services/quotation-request';
+
 
 describe('Step02RequestQuotation', () => {
   let component: Step02RequestQuotation;
@@ -65,7 +67,7 @@ describe('Step02RequestQuotation', () => {
       supplier_id: 2,
       quotation_requested_date: '2026-09-24',
       supplier_contacted: true,
-      remarks: [{ remark: 'Need urgent quotation' }],
+      remarks: ['Need urgent quotation'],
       attachments: [],
       items: [],
     } as any;
@@ -86,5 +88,52 @@ describe('Step02RequestQuotation', () => {
     (component as any).removeDialogRemark(0);
     expect((component as any).dialogRemarks().length).toBe(0);
   });
+
+  it('should quick-add remark directly to existing request with only remarks in update payload', () => {
+    const quotationRequestService = TestBed.inject(QuotationRequestService);
+    const sampleRequest = {
+      id: 1,
+      project_id: 1,
+      supplier_id: 2,
+      quotation_requested_date: '2026-09-24',
+      supplier_contacted: true,
+      remarks: ['First note'],
+      attachments: [],
+      items: [],
+    } as any;
+
+    const updateSpy = vi.spyOn(quotationRequestService, 'update').mockReturnValue(of(sampleRequest));
+    vi.spyOn(quotationRequestService, 'getByProject').mockReturnValue(of([sampleRequest]));
+
+    (component as any).quickAddRemark(sampleRequest, 'Second note');
+
+    expect(updateSpy).toHaveBeenCalledWith(1, {
+      remarks: ['First note', 'Second note'],
+    });
+  });
+
+  it('should delete remark from request with only remarks in update payload', () => {
+    const quotationRequestService = TestBed.inject(QuotationRequestService);
+    const sampleRequest = {
+      id: 1,
+      project_id: 1,
+      supplier_id: 2,
+      quotation_requested_date: '2026-09-24',
+      supplier_contacted: true,
+      remarks: ['First note', 'Second note'],
+      attachments: [],
+      items: [],
+    } as any;
+
+    const updateSpy = vi.spyOn(quotationRequestService, 'update').mockReturnValue(of(sampleRequest));
+    vi.spyOn(quotationRequestService, 'getByProject').mockReturnValue(of([sampleRequest]));
+
+    (component as any).deleteRemarkFromRequest(sampleRequest, 'rmk-1');
+
+    expect(updateSpy).toHaveBeenCalledWith(1, {
+      remarks: ['Second note'],
+    });
+  });
 });
+
 

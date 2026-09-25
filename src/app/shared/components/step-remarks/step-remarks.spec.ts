@@ -1,5 +1,8 @@
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { StepRemarksComponent } from './step-remarks';
+
 
 describe('StepRemarksComponent', () => {
   let component: StepRemarksComponent;
@@ -19,6 +22,18 @@ describe('StepRemarksComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should parse array of string remarks and display in timeline', () => {
+    fixture.componentRef.setInput('remarks', [
+      'Urgent delivery required',
+      'Follow-up with supplier needed',
+    ]);
+    fixture.detectChanges();
+
+    expect(component.parsedRemarks().length).toBe(2);
+    expect(component.parsedRemarks()[0].text).toBe('Urgent delivery required');
+    expect(component.parsedRemarks()[1].text).toBe('Follow-up with supplier needed');
+  });
+
   it('should parse array of remark objects and display in timeline', () => {
     fixture.componentRef.setInput('remarks', [
       { id: '1', remark: 'Urgent delivery required', created_at: '2026-09-24T10:00:00Z' },
@@ -28,6 +43,7 @@ describe('StepRemarksComponent', () => {
     expect(component.parsedRemarks().length).toBe(1);
     expect(component.parsedRemarks()[0].text).toBe('Urgent delivery required');
   });
+
 
   it('should parse legacy plain text remark', () => {
     fixture.componentRef.setInput('remarks', 'Need material sample first');

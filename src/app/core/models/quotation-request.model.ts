@@ -25,7 +25,7 @@ export interface QuotationRequestCreateInput {
   supplier_id: number;
   quotation_requested_date: string;
   supplier_contacted: boolean;
-  remarks: Array<{ remark: string }> | string[];
+  remarks: string[];
   items: QuotationRequestItem[];
 }
 
@@ -34,6 +34,7 @@ export interface QuotationRequestUpdateInput {
   supplier_id?: number;
   quotation_requested_date?: string;
   supplier_contacted?: boolean;
-  remarks?: Array<{ remark: string }> | string[];
+  remarks?: string[];
   items?: QuotationRequestItem[];
 }
+

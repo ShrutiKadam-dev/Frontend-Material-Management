@@ -1076,37 +1076,10 @@
                 <!-- Auto-Sync Notice from Latest Purchase Order -->
                 @if (!editingInvoice() && latestPoTemplate(); as po) {
                 <div class="cost-sheet-sync-pill" role="status">
-                    <div class="sync-pill-header">
-                        <div class="sync-pill-title">
-                            <i class="pi pi-check-circle" aria-hidden="true"></i>
-                            <span>
-                                Auto-imported from <strong>Latest Purchase Order{{ (po.po_number || po.po_no) ? ' (' +
-                                    (po.po_number || po.po_no) + ')' : '' }}</strong> · {{ po.items?.length ||
-                                invoiceItemsList().length }} items loaded with pricing terms.
-                            </span>
-                        </div>
-                        <span class="sync-pill-badge">
-                            GST Rate: {{ po.gst_rate ?? invoiceForm.get('gst_rate')?.value ?? 18 }}%
-                        </span>
-                    </div>
-                    @if (invoiceSubtotal() > 0 || (invoiceForm.get('net_total')?.value || 0) > 0) {
-                    <div class="sync-financials-chips">
-                        <span class="sync-chip">
-                            <span class="sync-chip-label">Excl. GST:</span>
-                            <strong class="sync-chip-value">₹&nbsp;{{ invoiceSubtotal() | number:'1.2-2' }}</strong>
-                        </span>
-                        <span class="sync-chip">
-                            <span class="sync-chip-label">GST ({{ invoiceForm.get('gst_rate')?.value || 18 }}%):</span>
-                            <strong class="sync-chip-value">+ ₹&nbsp;{{ (invoiceForm.get('gst_amount')?.value || 0) |
-                                number:'1.2-2' }}</strong>
-                        </span>
-                        <span class="sync-chip">
-                            <span class="sync-chip-label">Incl. GST:</span>
-                            <strong class="sync-chip-value highlight">₹&nbsp;{{ (invoiceForm.get('net_total')?.value ||
-                                invoiceSubtotal()) | number:'1.2-2' }}</strong>
-                        </span>
-                    </div>
-                    }
+                    <i class="pi pi-check-circle" aria-hidden="true"></i>
+                    <span>
+                        Auto-imported from <strong>Latest Purchase Order</strong> · {{ po.items?.length || invoiceItemsList().length }} items with commercial terms pre-filled.
+                    </span>
                 </div>
                 }
 
@@ -1463,21 +1436,10 @@
                 <!-- Auto-Sync Notice from Latest Purchase Order -->
                 @if (!editingPackingList() && latestPoTemplate(); as po) {
                 <div class="cost-sheet-sync-pill" role="status">
-                    <div class="sync-pill-header">
-                        <div class="sync-pill-title">
-                            <i class="pi pi-check-circle" aria-hidden="true"></i>
-                            <span>
-                                Auto-imported from <strong>Latest Purchase Order{{ (po.po_number || po.po_no) ? ' (' +
-                                    (po.po_number || po.po_no) + ')' : '' }}</strong> · {{ po.items?.length ||
-                                packingItemsList().length }} items pre-filled for box packaging.
-                            </span>
-                        </div>
-                        @if (po.po_date) {
-                        <span class="sync-pill-badge">
-                            PO Date: {{ po.po_date | date:'dd-MM-yyyy' }}
-                        </span>
-                        }
-                    </div>
+                    <i class="pi pi-check-circle" aria-hidden="true"></i>
+                    <span>
+                        Auto-imported from <strong>Latest Purchase Order</strong> · {{ po.items?.length || packingItemsList().length }} items with commercial terms pre-filled.
+                    </span>
                 </div>
                 }
 
@@ -1805,37 +1767,10 @@
                 <!-- Auto-Sync Notice from Latest Purchase Order -->
                 @if (!editingChallan() && latestPoTemplate(); as po) {
                 <div class="cost-sheet-sync-pill" role="status">
-                    <div class="sync-pill-header">
-                        <div class="sync-pill-title">
-                            <i class="pi pi-check-circle" aria-hidden="true"></i>
-                            <span>
-                                Auto-imported from <strong>Latest Purchase Order{{ (po.po_number || po.po_no) ? ' (' +
-                                    (po.po_number || po.po_no) + ')' : '' }}</strong> · {{ po.items?.length ||
-                                challanItemsList().length }} items loaded with pricing terms.
-                            </span>
-                        </div>
-                        <span class="sync-pill-badge">
-                            GST Rate: {{ po.gst_rate ?? challanForm.get('gst_rate')?.value ?? 18 }}%
-                        </span>
-                    </div>
-                    @if (challanSubtotal() > 0 || (challanForm.get('net_total')?.value || 0) > 0) {
-                    <div class="sync-financials-chips">
-                        <span class="sync-chip">
-                            <span class="sync-chip-label">Excl. GST:</span>
-                            <strong class="sync-chip-value">₹&nbsp;{{ challanSubtotal() | number:'1.2-2' }}</strong>
-                        </span>
-                        <span class="sync-chip">
-                            <span class="sync-chip-label">GST ({{ challanForm.get('gst_rate')?.value || 18 }}%):</span>
-                            <strong class="sync-chip-value">+ ₹&nbsp;{{ (challanForm.get('gst_amount')?.value || 0) |
-                                number:'1.2-2' }}</strong>
-                        </span>
-                        <span class="sync-chip">
-                            <span class="sync-chip-label">Incl. GST:</span>
-                            <strong class="sync-chip-value highlight">₹&nbsp;{{ (challanForm.get('net_total')?.value ||
-                                challanSubtotal()) | number:'1.2-2' }}</strong>
-                        </span>
-                    </div>
-                    }
+                    <i class="pi pi-check-circle" aria-hidden="true"></i>
+                    <span>
+                        Auto-imported from <strong>Latest Purchase Order</strong> · {{ po.items?.length || challanItemsList().length }} items with commercial terms pre-filled.
+                    </span>
                 </div>
                 }
 
@@ -2191,46 +2126,12 @@
             <div class="dlg-body">
 
                 <!-- Auto-Sync Notice from Latest PO & Tax Invoice -->
-                @if (!editingWarranty() && (latestPoTemplate() || latestTaxInvoiceTemplate() || (taxInvoices().length >
-                0))) {
+                @if (!editingWarranty() && (latestPoTemplate() || latestTaxInvoiceTemplate() || (taxInvoices().length > 0))) {
                 <div class="cost-sheet-sync-pill" role="status">
-                    <div class="sync-pill-header">
-                        <div class="sync-pill-title">
-                            <i class="pi pi-check-circle" aria-hidden="true"></i>
-                            <span>
-                                Auto-imported references from
-                                @if (latestPoTemplate(); as po) {
-                                <strong>Latest PO{{ (po.po_number || po.po_no) ? ' (' + (po.po_number || po.po_no) + ')'
-                                    : '' }}</strong>
-                                }
-                                @if (latestPoTemplate() && (latestTaxInvoiceTemplate() || taxInvoices().length > 0)) {
-                                &amp;
-                                }
-                                @if (latestTaxInvoiceTemplate() || (taxInvoices().length ? taxInvoices()[0] : null); as
-                                inv) {
-                                <strong>Latest Customer Invoice{{ inv.invoice_no ? ' (' + inv.invoice_no + ')' : ''
-                                    }}</strong>
-                                }
-                            </span>
-                        </div>
-                        <span class="sync-pill-badge">
-                            Warranty: {{ warrantyForm.get('warranty_period')?.value || '12 Months' }}
-                        </span>
-                    </div>
-                    <div class="sync-financials-chips">
-                        <span class="sync-chip">
-                            <span class="sync-chip-label">PO Ref:</span>
-                            <strong class="sync-chip-value">{{ warrantyForm.get('po_no')?.value || '—' }} ({{
-                                warrantyForm.get('po_date')?.value ? (warrantyForm.get('po_date')?.value |
-                                date:'dd-MM-yyyy') : '—' }})</strong>
-                        </span>
-                        <span class="sync-chip">
-                            <span class="sync-chip-label">Invoice Ref:</span>
-                            <strong class="sync-chip-value">{{ warrantyForm.get('invoice_no')?.value || '—' }} ({{
-                                warrantyForm.get('invoice_date')?.value ? (warrantyForm.get('invoice_date')?.value |
-                                date:'dd-MM-yyyy') : '—' }})</strong>
-                        </span>
-                    </div>
+                    <i class="pi pi-check-circle" aria-hidden="true"></i>
+                    <span>
+                        Auto-imported from <strong>Latest Purchase Order</strong> · commercial terms pre-filled.
+                    </span>
                 </div>
                 }
 

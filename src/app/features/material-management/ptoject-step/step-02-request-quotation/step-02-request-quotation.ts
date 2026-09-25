@@ -36,6 +36,8 @@ import { Supplier } from '../../../../core/models/supplier.model';
 import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
+
 
 @Component({
   selector: 'app-step-02-request-quotation',
@@ -51,11 +53,13 @@ import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/r
     TooltipModule,
     TableModule,
     DatePipe,
+    StepRemarksComponent,
   ],
   templateUrl: './step-02-request-quotation.html',
   styleUrl: './step-02-request-quotation.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
+
 export class Step02RequestQuotation implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -487,12 +491,7 @@ export class Step02RequestQuotation implements OnInit {
 
     this.quickAddingId.set(request.id);
     const updatePayload: QuotationRequestUpdateInput = {
-      project_id: request.project_id,
-      supplier_id: request.supplier_id,
-      quotation_requested_date: request.quotation_requested_date,
-      supplier_contacted: request.supplier_contacted,
       remarks: remarksPayload,
-      items: request.items,
     };
 
     this.quotationRequestService
@@ -525,13 +524,9 @@ export class Step02RequestQuotation implements OnInit {
     const remarksPayload = serializeStepRemarks(updatedRemarks);
 
     const updatePayload: QuotationRequestUpdateInput = {
-      project_id: request.project_id,
-      supplier_id: request.supplier_id,
-      quotation_requested_date: request.quotation_requested_date,
-      supplier_contacted: request.supplier_contacted,
       remarks: remarksPayload,
-      items: request.items,
     };
+
 
     this.quotationRequestService.update(request.id, updatePayload).subscribe({
       next: () => {
