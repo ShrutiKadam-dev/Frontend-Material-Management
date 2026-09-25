@@ -525,9 +525,7 @@
       @if (!editingClearance()) {
       <div class="cost-sheet-sync-pill" role="status">
         <i class="pi pi-check-circle" aria-hidden="true"></i>
-        <span>
-          Auto-imported from <strong>Latest Bill of Entry</strong> · commercial terms pre-filled.
-        </span>
+        <span>Auto-imported from <strong>Latest Bill of Entry</strong> · commercial terms pre-filled.</span>
       </div>
       }
       }
@@ -561,7 +559,7 @@
           <div class="field">
             <label for="dlg-boe-date">BOE Date <span class="req" aria-hidden="true">*</span></label>
             <p-datepicker inputId="dlg-boe-date" formControlName="boe_date" dateFormat="dd-mm-yy" [showIcon]="true"
-              [fluid]="true" placeholder="DD-MM-YYYY" [class.ng-invalid]="isFieldInvalid('boe_date')" />
+              [fluid]="true" placeholder="DD-MM-YYYY" [invalid]="isFieldInvalid('boe_date')" />
             @if (isFieldInvalid('boe_date')) {
             <p class="field-error">{{ getFieldError('boe_date') }}</p>
             }

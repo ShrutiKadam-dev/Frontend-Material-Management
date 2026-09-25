@@ -48,8 +48,10 @@ export interface LatestBillOfEntry {
   project_id?: number;
   bill_of_entry_no?: string;
   bill_of_entry_number?: string;
+  boe_no?: string;
   date?: string;
   boe_date?: string;
+  bill_of_entry_date?: string;
   bcd?: number;
   sws?: number;
   igst?: number;

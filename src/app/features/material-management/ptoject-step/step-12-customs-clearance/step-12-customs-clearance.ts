@@ -198,6 +198,7 @@ export class Step12CustomsClearance implements OnInit {
 
     this.loadProjectDetails(id);
     this.loadClearanceData(id);
+    this.loadLatestBillOfEntry(id);
   }
 
   protected goBack(): void {
@@ -245,10 +246,29 @@ export class Step12CustomsClearance implements OnInit {
       });
   }
 
+  protected loadLatestBillOfEntry(projectId: number, overwriteForm = false): void {
+    this.loadingLatestBoe.set(true);
+    this.billOfEntryService
+      .getLatest(projectId)
+      .pipe(finalize(() => this.loadingLatestBoe.set(false)))
+      .subscribe({
+        next: (latest) => {
+          if (!latest) return;
+          this.latestBillOfEntry.set(latest);
+          if (overwriteForm || (this.dialogVisible() && !this.editingClearance())) {
+            this.patchFromLatestBillOfEntry(latest, overwriteForm);
+          }
+        },
+        error: (err) => {
+          console.warn('Could not load latest bill of entry', err);
+        },
+      });
+  }
+
   // ── Dialog Handlers ────────────────────────────────────────────
   protected openCreateDialog(): void {
+    const latest = this.latestBillOfEntry();
     this.editingClearance.set(null);
-    this.latestBillOfEntry.set(null);
     this.selectedDutyChallanFiles.set([]);
     this.selectedBoeFiles.set([]);
     this.selectedOtherDocsFiles.set([]);
@@ -259,9 +279,9 @@ export class Step12CustomsClearance implements OnInit {
     this.clearanceForm.reset({
       cha_name: '',
       bill_of_entry_no: '',
-      boe_date: '',
+      boe_date: null,
       customs_location: '',
-      duty_paid_date: '',
+      duty_paid_date: null,
       challan_no: '',
       cfs_name: '',
       transaction_ref_no: '',
@@ -271,61 +291,84 @@ export class Step12CustomsClearance implements OnInit {
       remark: '',
     });
 
-    const pId = this.projectId();
-    if (pId) {
-      this.fetchAndPatchLatestBillOfEntry(pId);
+    this.dialogVisible.set(true);
+
+    if (latest) {
+      this.patchFromLatestBillOfEntry(latest, true);
     }
 
-    this.dialogVisible.set(true);
+    const pId = this.projectId() || Number(this.route.snapshot.paramMap.get('projectId')) || 0;
+    if (pId) {
+      this.loadLatestBillOfEntry(pId, true);
+    }
   }
 
   protected fetchAndPatchLatestBillOfEntry(projectId: number): void {
-    this.loadingLatestBoe.set(true);
-    this.billOfEntryService
-      .getLatest(projectId)
-      .pipe(finalize(() => this.loadingLatestBoe.set(false)))
-      .subscribe({
-        next: (latest) => {
-          if (!latest) return;
-          this.latestBillOfEntry.set(latest);
+    this.loadLatestBillOfEntry(projectId, true);
+  }
 
-          const duty =
-            latest.duty !== undefined && latest.duty !== null && !isNaN(Number(latest.duty))
-              ? Number(latest.duty)
-              : latest.total_duty !== undefined && latest.total_duty !== null && !isNaN(Number(latest.total_duty))
-              ? Number(latest.total_duty)
-              : latest.bcd !== undefined && latest.bcd !== null && !isNaN(Number(latest.bcd))
-              ? Number(latest.bcd)
-              : 0;
+  protected patchFromLatestBillOfEntry(latest: LatestBillOfEntry, overwrite = false): void {
+    if (!latest) return;
+    this.latestBillOfEntry.set(latest);
 
-          const igst =
-            latest.igst !== undefined && latest.igst !== null && !isNaN(Number(latest.igst))
-              ? Number(latest.igst)
-              : latest.igst_amount !== undefined && latest.igst_amount !== null && !isNaN(Number(latest.igst_amount))
-              ? Number(latest.igst_amount)
-              : 0;
+    const boeNo =
+      latest.bill_of_entry_no ||
+      latest.bill_of_entry_number ||
+      latest.boe_no ||
+      (latest as any).boe_number ||
+      (latest as any).bill_no ||
+      '';
 
-          const boeNo = latest.bill_of_entry_no || latest.bill_of_entry_number || '';
-          const rawDate = latest.boe_date || latest.date;
-          const boeDate = parseLocalDate(rawDate as string);
+    const rawDate =
+      latest.date ||
+      latest.boe_date ||
+      latest.bill_of_entry_date ||
+      (latest as any).entry_date ||
+      null;
 
-          const currentFormVal = this.clearanceForm.getRawValue();
+    const boeDate = parseLocalDate(rawDate as string);
 
-          this.clearanceForm.patchValue({
-            duty_amount: duty,
-            igst_amount: igst,
-            ...(boeNo && !currentFormVal.bill_of_entry_no ? { bill_of_entry_no: boeNo } : {}),
-            ...(boeDate && !currentFormVal.boe_date ? { boe_date: boeDate } : {}),
-          });
+    const duty =
+      latest.total_duty !== undefined && latest.total_duty !== null && !isNaN(Number(latest.total_duty))
+        ? Number(latest.total_duty)
+        : latest.duty !== undefined && latest.duty !== null && !isNaN(Number(latest.duty))
+        ? Number(latest.duty)
+        : latest.bcd !== undefined && latest.bcd !== null && !isNaN(Number(latest.bcd))
+        ? Number(latest.bcd)
+        : 0;
 
-          // Recompute live total remittance
-          const other = Number(this.clearanceForm.get('other_customs_charges')?.value) || 0;
-          this.liveTotalCustomsAmount.set(duty + igst + other);
-        },
-        error: () => {
-          /* non-fatal */
-        },
-      });
+    const igst =
+      latest.igst !== undefined && latest.igst !== null && !isNaN(Number(latest.igst))
+        ? Number(latest.igst)
+        : latest.igst_amount !== undefined && latest.igst_amount !== null && !isNaN(Number(latest.igst_amount))
+        ? Number(latest.igst_amount)
+        : 0;
+
+    const currentFormVal = this.clearanceForm.getRawValue();
+    const patchObj: Record<string, any> = {};
+
+    if (boeNo && (overwrite || !currentFormVal.bill_of_entry_no)) {
+      patchObj['bill_of_entry_no'] = boeNo;
+    }
+    if (boeDate && (overwrite || !currentFormVal.boe_date)) {
+      patchObj['boe_date'] = boeDate;
+    }
+    if (duty !== undefined && !isNaN(Number(duty)) && (overwrite || !currentFormVal.duty_amount)) {
+      patchObj['duty_amount'] = Number(duty);
+    }
+    if (igst !== undefined && !isNaN(Number(igst)) && (overwrite || !currentFormVal.igst_amount)) {
+      patchObj['igst_amount'] = Number(igst);
+    }
+
+    if (Object.keys(patchObj).length > 0) {
+      this.clearanceForm.patchValue(patchObj);
+    }
+
+    // Recompute live total remittance
+    const other = Number(this.clearanceForm.get('other_customs_charges')?.value) || 0;
+    const curDuty = Number(this.clearanceForm.get('duty_amount')?.value) || 0;
+    const curIgst = Number(this.clearanceForm.get('igst_amount')?.value) || 0;
+    this.liveTotalCustomsAmount.set(curDuty + curIgst + other);
   }
 
   protected openEditDialog(record: CustomsClearance): void {

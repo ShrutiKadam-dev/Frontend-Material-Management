@@ -58,4 +58,48 @@ describe('Step12CustomsClearance', () => {
     expect(component['clearanceForm'].value.bill_of_entry_no).toBe('BOE-998811');
     expect(component['liveTotalCustomsAmount']()).toBe(15400.5 + 28000.75);
   });
+
+  it('should auto-patch bill_of_entry_no and date from latest bill of entry', () => {
+    vi.spyOn(billOfEntryService, 'getLatest').mockReturnValue(
+      of({
+        bill_of_entry_no: 'BOE-2026-445566',
+        date: '2026-09-25',
+        total_duty: 12500,
+        igst: 18000,
+      })
+    );
+
+    component['openCreateDialog']();
+
+    expect(component['clearanceForm'].value.bill_of_entry_no).toBe('BOE-2026-445566');
+    const boeDateVal = component['clearanceForm'].value.boe_date;
+    expect(boeDateVal).toBeInstanceOf(Date);
+    expect((boeDateVal as Date).getFullYear()).toBe(2026);
+    expect((boeDateVal as Date).getMonth()).toBe(8); // September is 8 (0-indexed)
+    expect((boeDateVal as Date).getDate()).toBe(25);
+    expect(component['clearanceForm'].value.duty_amount).toBe(12500);
+    expect(component['clearanceForm'].value.igst_amount).toBe(18000);
+  });
+
+  it('should support alternate property names boe_date and bill_of_entry_number', () => {
+    vi.spyOn(billOfEntryService, 'getLatest').mockReturnValue(
+      of({
+        bill_of_entry_number: 'BOE-ALT-778899',
+        boe_date: '2026-10-15',
+        bcd: 5000,
+        igst_amount: 9000,
+      })
+    );
+
+    component['openCreateDialog']();
+
+    expect(component['clearanceForm'].value.bill_of_entry_no).toBe('BOE-ALT-778899');
+    const boeDateVal = component['clearanceForm'].value.boe_date;
+    expect(boeDateVal).toBeInstanceOf(Date);
+    expect((boeDateVal as Date).getFullYear()).toBe(2026);
+    expect((boeDateVal as Date).getMonth()).toBe(9); // October
+    expect((boeDateVal as Date).getDate()).toBe(15);
+    expect(component['clearanceForm'].value.duty_amount).toBe(5000);
+    expect(component['clearanceForm'].value.igst_amount).toBe(9000);
+  });
 });
