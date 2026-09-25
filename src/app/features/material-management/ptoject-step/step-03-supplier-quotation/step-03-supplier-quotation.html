@@ -112,7 +112,7 @@
             </div>
 
             <!-- Refined Metadata Parameter Chips Strip (Non-redundant) -->
-            @if (supplier() || project()?.supplier_name || q.incoterms || q.validity) {
+            @if (supplier() || project()?.supplier_name || q.incoterms || q.validity || q.warranty_period) {
             <div class="vsc-params-strip">
               @if (supplier(); as s) {
               <div class="param-chip">
@@ -139,6 +139,13 @@
                 <i class="pi pi-clock" aria-hidden="true"></i>
                 <span class="p-lbl">Validity:</span>
                 <span class="p-val">{{ q.validity }}</span>
+              </div>
+              }
+              @if (q.warranty_period) {
+              <div class="param-chip">
+                <i class="pi pi-shield" aria-hidden="true"></i>
+                <span class="p-lbl">Warranty:</span>
+                <span class="p-val">{{ q.warranty_period }}</span>
               </div>
               }
             </div>
@@ -223,7 +230,7 @@
               <div class="qe-col-details">
 
                 <!-- Commercial Terms -->
-                @if (q.payment_terms || q.delivery_period) {
+                @if (q.payment_terms || q.delivery_period || q.warranty_period) {
                 <div class="qe-terms-grid">
                   @if (q.payment_terms) {
                   <div class="qe-term-item">
@@ -235,6 +242,12 @@
                   <div class="qe-term-item">
                     <span class="term-label">Delivery Period</span>
                     <span class="term-val">{{ q.delivery_period }}</span>
+                  </div>
+                  }
+                  @if (q.warranty_period) {
+                  <div class="qe-term-item">
+                    <span class="term-label">Warranty Period</span>
+                    <span class="term-val">{{ q.warranty_period }}</span>
                   </div>
                   }
                 </div>

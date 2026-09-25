@@ -67,4 +67,43 @@ describe('Step03SupplierQuotation', () => {
     (component as any).openDialog();
     expect((component as any).headerForm.get('validity_unit')?.value).toBe('Days');
   });
+
+  it('should include warranty_period in formConfig and require it in headerForm', () => {
+    const warrantyField = (component as any).formConfig.find((f: any) => f.key === 'warranty_period');
+    expect(warrantyField).toBeTruthy();
+    expect(warrantyField.type).toBe('select');
+    expect(warrantyField.required).toBe(true);
+    expect(warrantyField.options.length).toBeGreaterThan(0);
+
+    const control = (component as any).headerForm.get('warranty_period');
+    expect(control).toBeTruthy();
+    expect(control?.valid).toBe(false);
+
+    control?.setValue('12 Months');
+    expect(control?.valid).toBe(true);
+  });
+
+  it('should populate warranty_period on openEditDialog', () => {
+    const mockQuotation = {
+      id: 10,
+      project_id: 3,
+      supplier_id: 2,
+      quotation_number: 'SQ-2026-999',
+      quotation_date: '2026-09-25',
+      quotation_value: '25000.00',
+      currency_unit: 'USD',
+      currency_symbol: '$',
+      validity: '30 Days',
+      incoterms: 'FOB',
+      payment_terms: '100% against delivery',
+      delivery_period: '4 Weeks',
+      warranty_period: '12 Months',
+      remarks: [],
+      attachments: [],
+      items: [],
+    };
+
+    (component as any).openEditDialog(mockQuotation);
+    expect((component as any).headerForm.get('warranty_period')?.value).toBe('12 Months');
+  });
 });

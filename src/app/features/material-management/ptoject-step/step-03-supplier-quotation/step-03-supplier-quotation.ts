@@ -31,6 +31,7 @@ import {
   CURRENCY_OPTIONS,
   INCOTERMS_OPTIONS,
   VALIDITY_UNIT_OPTIONS,
+  WARRANTY_PERIOD_OPTIONS,
   SelectOption,
 } from '../../../../core/constants';
 import {
@@ -100,6 +101,7 @@ export class Step03SupplierQuotation implements OnInit {
   protected readonly incotermsOptions = INCOTERMS_OPTIONS;
   protected readonly currencyOptions = CURRENCY_OPTIONS;
   protected readonly validityUnitOptions = VALIDITY_UNIT_OPTIONS;
+  protected readonly warrantyPeriodOptions = WARRANTY_PERIOD_OPTIONS;
 
   /**
    * Declarative form configuration for Step 03.
@@ -165,8 +167,15 @@ export class Step03SupplierQuotation implements OnInit {
       label: 'Delivery Period',
       type: 'text',
       required: true,
-      colSpan: 2,
       placeholder: 'e.g. 5 Weeks',
+    },
+    {
+      key: 'warranty_period',
+      label: 'Warranty Period',
+      type: 'select',
+      required: true,
+      options: WARRANTY_PERIOD_OPTIONS as SelectOption[],
+      placeholder: 'Select Warranty Period',
     },
   ];
 
@@ -217,6 +226,7 @@ export class Step03SupplierQuotation implements OnInit {
     incoterms: ['', [Validators.required]],
     payment_terms: ['', [Validators.required]],
     delivery_period: ['', [Validators.required]],
+    warranty_period: ['', [Validators.required]],
     remark: [''],
   });
 
@@ -286,6 +296,7 @@ export class Step03SupplierQuotation implements OnInit {
       incoterms: '',
       payment_terms: '',
       delivery_period: '',
+      warranty_period: '',
       remark: '',
     });
     this.items.set([]);
@@ -340,6 +351,7 @@ export class Step03SupplierQuotation implements OnInit {
       incoterms: quotation.incoterms ?? 'FOB',
       payment_terms: quotation.payment_terms ?? '50% Advance, 50% against Delivery',
       delivery_period: quotation.delivery_period ?? '5 Weeks',
+      warranty_period: quotation.warranty_period ?? '',
       remark: quotation.remark ?? '',
     });
     this.items.set(quotation.items ? quotation.items.map((it) => ({ ...it })) : []);
@@ -585,6 +597,7 @@ export class Step03SupplierQuotation implements OnInit {
         incoterms: raw.incoterms,
         payment_terms: raw.payment_terms,
         delivery_period: raw.delivery_period,
+        warranty_period: raw.warranty_period,
         remarks: remarksPayload,
         items: formattedItems,
       };
@@ -627,6 +640,7 @@ export class Step03SupplierQuotation implements OnInit {
         incoterms: raw.incoterms,
         payment_terms: raw.payment_terms,
         delivery_period: raw.delivery_period,
+        warranty_period: raw.warranty_period,
         remarks: remarksPayload,
         items: formattedItems,
       };

@@ -14,6 +14,9 @@ export interface OrderConfirmationItem {
 }
 
 export interface LatestSupplierQuotation {
+  currency_unit?: string;
+  currency_symbol?: string;
+  currency?: string;
   incoterms?: string;
   shipping_terms?: string;
   payment_terms?: string;
@@ -31,6 +34,9 @@ export interface LatestSupplierQuotation {
 }
 
 export interface LatestOrderConfirmation {
+  currency_unit?: string;
+  currency_symbol?: string;
+  currency?: string;
   payment_terms?: string;
   warranty_period?: string;
   shipping_terms?: string;
@@ -58,6 +64,9 @@ export interface OrderConfirmation {
   ref_no: string;
   reference_number?: string;
   order_no?: string;
+  currency_unit?: string;
+  currency_symbol?: string;
+  currency?: string;
   shipping_terms: string;
   incoterms?: string;
   delivery_terms?: string;
@@ -80,6 +89,9 @@ export interface OrderConfirmationCreateInput {
   order_confirmation_date: string;
   email: string;
   ref_no: string;
+  currency_unit?: string;
+  currency_symbol?: string;
+  currency?: string;
   shipping_terms: string;
   warranty_period: string;
   delivery_period: string;
@@ -96,6 +108,9 @@ export interface OrderConfirmationUpdateInput {
   order_confirmation_date?: string;
   email?: string;
   ref_no?: string;
+  currency_unit?: string;
+  currency_symbol?: string;
+  currency?: string;
   shipping_terms?: string;
   warranty_period?: string;
   delivery_period?: string;

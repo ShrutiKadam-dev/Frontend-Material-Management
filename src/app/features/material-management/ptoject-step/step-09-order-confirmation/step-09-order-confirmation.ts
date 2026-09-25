@@ -44,9 +44,12 @@ import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/r
 import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 import {
+  CURRENCY_OPTIONS,
   INCOTERMS_OPTIONS,
   VALIDITY_UNIT_OPTIONS,
   WARRANTY_PERIOD_OPTIONS,
+  SelectOption,
+  getCurrencySymbol,
 } from '../../../../core/constants/dropdown-options.constant';
 
 @Component({
@@ -104,13 +107,15 @@ export class Step09OrderConfirmation implements OnInit {
   /* ── Dropdown Constants ─────────────────────────────────── */
   protected readonly incotermsOptions = INCOTERMS_OPTIONS;
   protected readonly validityUnitOptions = VALIDITY_UNIT_OPTIONS;
-  protected readonly warrantyPeriodOptions = WARRANTY_PERIOD_OPTIONS;
+  protected readonly currencyOptions = CURRENCY_OPTIONS;
+  protected warrantyPeriodOptions: SelectOption<string>[] = [...WARRANTY_PERIOD_OPTIONS];
 
   /* ── Reactive Forms ────────────────────────────────────── */
   protected readonly headerForm = this.fb.group({
     order_confirmation_date: [null as Date | null, [Validators.required]],
     email: ['', [Validators.required, Validators.email]],
     ref_no: ['', [Validators.required, Validators.minLength(2)]],
+    currency_unit: ['INR', [Validators.required]],
     shipping_terms: ['', [Validators.required]],
     warranty_period: ['', [Validators.required]],
     delivery_period: ['', [Validators.required]],
@@ -130,6 +135,18 @@ export class Step09OrderConfirmation implements OnInit {
     this.headerForm.valueChanges,
     { initialValue: this.headerForm.getRawValue() }
   );
+
+  /** Reactive signal tracking live currency selection changes in the form */
+  private readonly currencyUnitSignal = toSignal(
+    this.headerForm.controls.currency_unit.valueChanges,
+    { initialValue: this.headerForm.controls.currency_unit.value }
+  );
+
+  /** Active currency symbol for the dialog */
+  protected readonly activeCurrencySymbol = computed(() => {
+    const code = this.currencyUnitSignal() || this.headerForm.controls.currency_unit.value || 'INR';
+    return getCurrencySymbol(code);
+  });
 
   /* ── Derived Summaries ─────────────────────────────────── */
   protected readonly filteredOrders = computed(() => {
@@ -159,9 +176,10 @@ export class Step09OrderConfirmation implements OnInit {
   /** Total Net Amount of items in Dialog */
   protected readonly dialogTotalNetValue = computed(() => {
     return this.items().reduce((sum, item) => {
-      const qty = Number(item.quantity) || 0;
-      const price = Number(item.unit_price) || 0;
-      return sum + qty * price;
+      const net = item.net_amount != null && !isNaN(Number(item.net_amount)) && Number(item.net_amount) > 0
+        ? Number(item.net_amount)
+        : (Number(item.quantity) || 0) * (Number(item.unit_price) || 0);
+      return sum + net;
     }, 0);
   });
 
@@ -210,15 +228,88 @@ export class Step09OrderConfirmation implements OnInit {
       });
   }
 
-  protected loadLatestSupplierQuotation(projectId: number): void {
+  protected loadLatestSupplierQuotation(projectId: number, autoPatchIfOpen = false): void {
     this.orderConfirmationService
       .getLatestSupplierQuotation(projectId)
       .subscribe({
         next: (data) => {
           this.latestQuotation.set(data);
+          if (autoPatchIfOpen && !this.editingOrder() && this.dialogVisible() && data) {
+            this.patchFromLatestQuotation(data, false);
+          }
         },
         error: () => {/* non-fatal */ },
       });
+  }
+
+  private normalizeWarrantyPeriod(val?: string): string {
+    if (!val) return '';
+    const trimmed = String(val).trim();
+    if (!trimmed) return '';
+    const matched = this.warrantyPeriodOptions.find(
+      (opt) =>
+        opt.value.toLowerCase() === trimmed.toLowerCase() ||
+        opt.label.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (matched) {
+      return matched.value;
+    }
+    this.warrantyPeriodOptions = [...this.warrantyPeriodOptions, { label: trimmed, value: trimmed }];
+    return trimmed;
+  }
+
+  private patchFromLatestQuotation(latest: LatestSupplierQuotation, overwrite = false): void {
+    if (!latest) return;
+
+    const normalizedWarranty = this.normalizeWarrantyPeriod(latest.warranty_period);
+    const deliveryPeriod = latest.delivery_period ? String(latest.delivery_period).trim() : '';
+    const shippingTerms = latest.shipping_terms || latest.incoterms || '';
+    const paymentTerms = latest.payment_terms || '';
+    const currencyUnit = latest.currency_unit || latest.currency || '';
+
+    const currentVal = this.headerForm.getRawValue();
+    const patchObj: Record<string, any> = {};
+
+    if (currencyUnit && (overwrite || !currentVal.currency_unit || currentVal.currency_unit === 'INR')) {
+      patchObj['currency_unit'] = currencyUnit.toUpperCase();
+    }
+    if (normalizedWarranty && (overwrite || !currentVal.warranty_period)) {
+      patchObj['warranty_period'] = normalizedWarranty;
+    }
+    if (deliveryPeriod && (overwrite || !currentVal.delivery_period)) {
+      patchObj['delivery_period'] = deliveryPeriod;
+    }
+    if (shippingTerms && (overwrite || !currentVal.shipping_terms)) {
+      patchObj['shipping_terms'] = shippingTerms;
+    }
+    if (paymentTerms && (overwrite || !currentVal.payment_terms)) {
+      patchObj['payment_terms'] = paymentTerms;
+    }
+
+    if (Object.keys(patchObj).length > 0) {
+      this.headerForm.patchValue(patchObj);
+    }
+
+    if ((overwrite || this.items().length === 0) && Array.isArray(latest.items) && latest.items.length > 0) {
+      const mappedItems: OrderConfirmationItem[] = latest.items.map((it) => {
+        const name = it.material_name || it.description || 'Material Item';
+        const qty = it.quantity != null ? (!isNaN(Number(it.quantity)) ? Number(it.quantity) : it.quantity) : 1;
+        const price = it.unit_price != null ? (!isNaN(Number(it.unit_price)) ? Number(it.unit_price) : it.unit_price) : 0;
+        const hsn = it.hsn_code || it.hsn_sac || '';
+        const net = it.net_amount != null && !isNaN(Number(it.net_amount))
+          ? Number(it.net_amount)
+          : Number(qty) * Number(price);
+        return {
+          material_name: name,
+          description: name,
+          hsn_code: hsn,
+          quantity: qty,
+          unit_price: price,
+          net_amount: net,
+        };
+      });
+      this.items.set(mappedItems);
+    }
   }
 
   /* ── Dialog Management ─────────────────────────────────── */
@@ -227,40 +318,34 @@ export class Step09OrderConfirmation implements OnInit {
     this.editingOrder.set(null);
     this.errorMessage.set(null);
 
-    // Map items from latest supplier quotation if available
-    const mappedItems: OrderConfirmationItem[] = (latest?.items || []).map((it) => {
-      const name = it.material_name || it.description || 'Material Item';
-      const qty = it.quantity || 1;
-      const price = it.unit_price || 0;
-      const hsn = it.hsn_code || '';
-      return {
-        material_name: name,
-        description: name,
-        hsn_code: hsn,
-        quantity: qty,
-        unit_price: price,
-        net_amount: Number(qty) * Number(price),
-      };
-    });
-
     this.headerForm.reset({
       order_confirmation_date: null,
       email: '',
       ref_no: '',
-      shipping_terms: latest?.incoterms || latest?.shipping_terms || '',
-      payment_terms: latest?.payment_terms || '',
-      warranty_period: latest?.warranty_period || '',
-      delivery_period: latest?.delivery_period || '',
+      currency_unit: latest?.currency_unit || latest?.currency || 'INR',
+      shipping_terms: '',
+      warranty_period: '',
+      delivery_period: '',
+      payment_terms: '',
       remark: '',
     });
 
-    this.items.set(mappedItems);
+    this.items.set([]);
     this.attachments.set([]);
     this.existingAttachments.set([]);
     this.dialogRemarks.set([]);
     this.editingItemIndex.set(null);
     this.rowForm.reset();
     this.dialogVisible.set(true);
+
+    if (latest) {
+      this.patchFromLatestQuotation(latest, true);
+    }
+
+    const projectId = this.projectId();
+    if (projectId) {
+      this.loadLatestSupplierQuotation(projectId, true);
+    }
   }
 
   protected openEditDialog(order: OrderConfirmation): void {
@@ -273,8 +358,9 @@ export class Step09OrderConfirmation implements OnInit {
       ),
       email: order.email || '',
       ref_no: order.ref_no || order.reference_number || order.order_no || '',
+      currency_unit: order.currency_unit || order.currency || 'INR',
       shipping_terms: order.shipping_terms || order.incoterms || order.delivery_terms || '',
-      warranty_period: order.warranty_period || '',
+      warranty_period: this.normalizeWarrantyPeriod(order.warranty_period),
       delivery_period: order.delivery_period || '',
       payment_terms: order.payment_terms || '',
       remark: order.remark || '',
@@ -451,7 +537,9 @@ export class Step09OrderConfirmation implements OnInit {
       hsn_code: it.hsn_code || it.hsn_sac || '',
       quantity: Number(it.quantity),
       unit_price: Number(it.unit_price || 0),
-      net_amount: Number(it.quantity) * Number(it.unit_price || 0),
+      net_amount: it.net_amount != null && !isNaN(Number(it.net_amount))
+        ? Number(it.net_amount)
+        : Number(it.quantity) * Number(it.unit_price || 0),
     }));
 
     this.submitting.set(true);
@@ -465,6 +553,8 @@ export class Step09OrderConfirmation implements OnInit {
         order_confirmation_date: dateStr,
         email: val.email,
         ref_no: val.ref_no,
+        currency_unit: val.currency_unit,
+        currency_symbol: this.getCurrencySymbol(val.currency_unit),
         shipping_terms: val.shipping_terms,
         warranty_period: val.warranty_period,
         delivery_period: val.delivery_period,
@@ -498,6 +588,8 @@ export class Step09OrderConfirmation implements OnInit {
         order_confirmation_date: dateStr,
         email: val.email,
         ref_no: val.ref_no,
+        currency_unit: val.currency_unit,
+        currency_symbol: this.getCurrencySymbol(val.currency_unit),
         shipping_terms: val.shipping_terms,
         warranty_period: val.warranty_period,
         delivery_period: val.delivery_period,
@@ -556,6 +648,9 @@ export class Step09OrderConfirmation implements OnInit {
 
   /* ── Calculation Helpers ───────────────────────────────── */
   protected calculateItemNet(item: OrderConfirmationItem): number {
+    if (item.net_amount !== undefined && item.net_amount !== null && !isNaN(Number(item.net_amount)) && Number(item.net_amount) > 0) {
+      return Number(item.net_amount);
+    }
     const qty = Number(item.quantity) || 0;
     const price = Number(item.unit_price) || 0;
     return qty * price;
@@ -570,6 +665,18 @@ export class Step09OrderConfirmation implements OnInit {
     }
     if (!order.items || order.items.length === 0) return 0;
     return order.items.reduce((sum, it) => sum + this.calculateItemNet(it), 0);
+  }
+
+  protected getCurrencySymbol(code?: string): string {
+    return getCurrencySymbol(code);
+  }
+
+  protected getOrderCurrencySymbol(order?: OrderConfirmation): string {
+    if (!order) return this.activeCurrencySymbol();
+    if (order.currency_symbol) return order.currency_symbol;
+    const unit = order.currency_unit || order.currency;
+    if (unit) return getCurrencySymbol(unit);
+    return '₹';
   }
 
   /* ── Validation Helpers ────────────────────────────────── */

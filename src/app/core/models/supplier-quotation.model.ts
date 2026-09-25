@@ -24,6 +24,7 @@ export interface SupplierQuotation {
   incoterms: string;
   payment_terms: string;
   delivery_period: string;
+  warranty_period?: string;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
   attachments: Attachment[];
@@ -45,6 +46,7 @@ export interface SupplierQuotationCreateInput {
   incoterms: string;
   payment_terms: string;
   delivery_period: string;
+  warranty_period?: string;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
   items: SupplierQuotationItem[];
@@ -63,6 +65,7 @@ export interface SupplierQuotationUpdateInput {
   incoterms?: string;
   payment_terms?: string;
   delivery_period?: string;
+  warranty_period?: string;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
   items?: SupplierQuotationItem[];
