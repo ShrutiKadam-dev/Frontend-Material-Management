@@ -145,11 +145,7 @@
                         <i class="pi pi-wallet"></i>
                     </span>
                     <h3>No Supplier Payment records yet</h3>
-                    <p>Disburse vendor milestones with payment %, currency selection, amount paid, transaction UTRs, and bank realization vouchers.
-                        @if (latestPoOrInvoice(); as bench) {
-                        <br /><strong>Latest {{ bench.type }} ({{ bench.ref }})</strong> with value {{ bench.currency }} {{ bench.total | number:'1.2-2' }} is available to benchmark payments.
-                        }
-                    </p>
+                    <p>Disburse vendor milestones with payment %, currency selection, amount paid, transaction UTRs, and bank realization vouchers.</p>
                     <button pButton type="button" icon="pi pi-plus" label="Record First Supplier Payment"
                         class="create-cost-sheet-btn" (click)="openCreatePaymentDialog()"></button>
                 </div>
@@ -174,7 +170,7 @@
                                 {{ payment.payment_date | date:'dd-MM-yyyy' }}
                             </span>
                             <span class="vsc-title font-mono">
-                                {{ payment.transaction_details }}
+                                {{ getCleanTransactionDetails(payment) }}
                             </span>
                         </div>
 
@@ -205,15 +201,43 @@
                     <!-- Card Body -->
                     <div class="vsc-body">
                         <!-- Operational Parameters Strip -->
-                        @if (payment.pending_amount != null) {
                         <div class="vsc-params-strip">
+                            @if (payment.pending_amount != null) {
                             <div class="param-chip param-chip--highlight">
                                 <i class="pi pi-hourglass" aria-hidden="true"></i>
                                 <span class="p-lbl">Pending Balance:</span>
                                 <span class="p-val font-mono">{{ payment.currency }} {{ payment.pending_amount | number:'1.2-2' }}</span>
                             </div>
+                            }
+                            @if (getPaymentExchangeRate(payment); as rate) {
+                            <div class="param-chip">
+                                <i class="pi pi-dollar" aria-hidden="true"></i>
+                                <span class="p-lbl">FX Rate:</span>
+                                <span class="p-val font-mono">{{ rate }}</span>
+                            </div>
+                            }
+                            @if (getPaymentTotalWithExchange(payment); as totEx) {
+                            <div class="param-chip">
+                                <i class="pi pi-arrows-h" aria-hidden="true"></i>
+                                <span class="p-lbl">Converted (Total):</span>
+                                <span class="p-val font-mono">INR {{ totEx | number:'1.2-2' }}</span>
+                            </div>
+                            }
+                            @if (getPaymentBankCharges(payment); as charges) {
+                            <div class="param-chip">
+                                <i class="pi pi-percentage" aria-hidden="true"></i>
+                                <span class="p-lbl">Bank Charges:</span>
+                                <span class="p-val font-mono">{{ charges.currency }} {{ charges.amount | number:'1.2-2' }}</span>
+                            </div>
+                            }
+                            @if (getPaymentTotalWithBankCharges(payment); as totAll) {
+                            <div class="param-chip" style="background: #ecfdf5; border-color: #a7f3d0; color: #065f46;">
+                                <i class="pi pi-check-circle" aria-hidden="true" style="color: #059669;"></i>
+                                <span class="p-lbl" style="color: #047857; font-weight: 700;">Total Outflow:</span>
+                                <span class="p-val font-mono" style="font-weight: 800; color: #065f46;">INR {{ totAll | number:'1.2-2' }}</span>
+                            </div>
+                            }
                         </div>
-                        }
 
                         <!-- Financial Settlement Table -->
                         <div class="items-table-wrap">
@@ -240,7 +264,7 @@
                                     <tr>
                                         <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{ payment.total_supplier_value ? 2 : 1 }}</td>
                                         <td><strong style="color: #059669;">Amount Paid / Remitted</strong></td>
-                                        <td class="font-mono">{{ payment.transaction_details }}</td>
+                                        <td class="font-mono">{{ getCleanTransactionDetails(payment) }}</td>
                                         <td style="text-align: center;" class="font-mono font-bold" style="color: #059669;">
                                             {{ payment.payment_percentage != null ? (payment.payment_percentage + '%') : '—' }}
                                         </td>
@@ -248,6 +272,47 @@
                                             {{ payment.currency }} {{ payment.amount_paid | number:'1.2-2' }}
                                         </td>
                                     </tr>
+
+                                    @if (getPaymentExchangeRate(payment); as rate) {
+                                    <tr>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{ payment.total_supplier_value ? 3 : 2 }}</td>
+                                        <td>
+                                            <strong>Converted at Exchange Rate</strong>
+                                            <span style="font-size: 0.76rem; color: var(--color-muted); display: block;">Rate: {{ rate }}</span>
+                                        </td>
+                                        <td class="font-mono">{{ payment.currency }} {{ payment.amount_paid | number:'1.2-2' }} × {{ rate }}</td>
+                                        <td style="text-align: center;" class="font-mono" style="color: #0284c7;">FX Conversion</td>
+                                        <td class="text-right font-mono font-bold" style="color: #0284c7;">
+                                            INR {{ (getPaymentTotalWithExchange(payment) || 0) | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                    }
+
+                                    @if (getPaymentBankCharges(payment); as charges) {
+                                    <tr>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">
+                                            {{ (payment.total_supplier_value ? 2 : 1) + (getPaymentExchangeRate(payment) ? 1 : 0) + 1 }}
+                                        </td>
+                                        <td>
+                                            <strong>Bank Remittance &amp; Processing Charges</strong>
+                                        </td>
+                                        <td class="font-mono">{{ charges.currency }} Charges</td>
+                                        <td style="text-align: center;" class="font-mono" style="color: #d97706;">Bank Fee</td>
+                                        <td class="text-right font-mono font-bold" style="color: #d97706;">
+                                            {{ charges.currency }} {{ charges.amount | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                    }
+
+                                    @if (getPaymentExchangeRate(payment) || getPaymentBankCharges(payment)) {
+                                    <tr style="background: #f0fdf4; border-top: 1.5px dashed #a7f3d0;">
+                                        <td style="text-align: center; color: #059669; font-weight: 700;">★</td>
+                                        <td colspan="3"><strong style="color: #047857;">Total Settlement Outflow (Converted + Bank Charges)</strong></td>
+                                        <td class="text-right font-mono font-bold" style="color: #047857; font-size: 0.98rem;">
+                                            INR {{ (getPaymentTotalWithBankCharges(payment) || 0) | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                    }
                                 </tbody>
                                 <tfoot>
                                     <tr class="tfoot-grand-total-row">
@@ -435,10 +500,101 @@
                     </div>
                 </div>
 
-                <!-- Section 3: Attachments (Upload First) -->
+                <!-- Section 3: Foreign Exchange & Bank Charges Breakdown -->
                 <div class="dlg-section">
                     <p class="dlg-section-label">
-                        <i class="pi pi-paperclip"></i> 3. Payment Advice &amp; Supporting Documents
+                        <i class="pi pi-dollar"></i> 3. Foreign Exchange &amp; Bank Charges Breakdown
+                    </p>
+
+                    <div class="dlg-grid">
+                        <!-- Exchange Rate -->
+                        <div class="field">
+                            <label for="dlg-exchange-rate">Exchange Rate (to INR)</label>
+                            <input id="dlg-exchange-rate" pInputText type="number" step="0.0001" min="0"
+                                formControlName="exchange_rate" placeholder="e.g. 86.50" class="font-mono"
+                                (input)="onExchangeRateChange($any($event.target).value)" />
+                            <span class="field-helper" style="font-size: 0.76rem; color: var(--color-muted); margin-top: 3px; display: block;">
+                                Multiplied by Amount Paid ({{ paymentForm.get('currency')?.value || 'INR' }})
+                            </span>
+                        </div>
+
+                        <!-- Total (Exchange * Amount Paid) -->
+                        <div class="field">
+                            <label for="dlg-total-with-exchange">Total (Exchange × Amount Paid)</label>
+                            <input id="dlg-total-with-exchange" pInputText type="number" step="0.01"
+                                formControlName="total_with_exchange" placeholder="0.00" class="font-mono" readonly
+                                style="background: var(--surface-100, #f8fafc); font-weight: 700; color: #1e293b;" />
+                            <span class="field-helper" style="font-size: 0.76rem; color: #0284c7; margin-top: 3px; display: block;">
+                                Auto-calculated: {{ (paymentForm.get('exchange_rate')?.value || 1) }} × {{ (paymentForm.get('amount_paid')?.value || 0) | number:'1.2-2' }}
+                            </span>
+                        </div>
+
+                        <!-- Combined Bank Charges Field: Currency + Amount in ONE Grid Cell -->
+                        <div class="field">
+                            <label for="dlg-bank-charges">Bank Charges</label>
+                            <div class="input-unit-group" style="display: flex; gap: 8px; align-items: center;">
+                                <p-select id="dlg-bank-charges-curr" formControlName="bank_charges_currency" [options]="currencyOptions"
+                                    optionLabel="label" optionValue="value" [style]="{ width: '100px', flex: '0 0 100px', height: '38px' }"
+                                    appendTo="body" (onChange)="recalculateForexAndBankCharges()" aria-label="Bank Charges Currency"></p-select>
+                                <input id="dlg-bank-charges" pInputText type="number" step="0.01" min="0"
+                                    formControlName="bank_charges" placeholder="e.g. 15000.00" class="font-mono"
+                                    style="flex: 1; min-width: 0;"
+                                    (input)="onBankChargesChange($any($event.target).value)" />
+                            </div>
+                            <span class="field-helper" style="font-size: 0.76rem; color: var(--color-muted); margin-top: 3px; display: block;">
+                                Bank charges currency &amp; remittance amount
+                            </span>
+                        </div>
+
+                        <!-- Total Outflow (Total (Exchange * Amount Paid) + Bank Charges) -->
+                        <div class="field">
+                            <label for="dlg-total-with-charges" style="font-weight: 700; color: #047857;">
+                                Total Outflow (Exchange × Amount + Charges)
+                            </label>
+                            <input id="dlg-total-with-charges" pInputText type="number" step="0.01"
+                                formControlName="total_with_bank_charges" placeholder="0.00" class="font-mono" readonly
+                                style="background: #ecfdf5; font-weight: 800; font-size: 1.05rem; color: #065f46; border-color: #6ee7b7;" />
+                            <span class="field-helper" style="font-size: 0.76rem; color: #047857; margin-top: 3px; display: block;">
+                                Total Outflow = Converted Amount + Bank Charges
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Live Forex & Charges Banner -->
+                    @if (paymentForm.get('amount_paid')?.value) {
+                    <div class="settlement-calc-banner" style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfeff 100%); border-color: #a7f3d0; margin-top: 10px;">
+                        <div class="scb-item">
+                            <span class="scb-label">Amount Paid:</span>
+                            <span class="scb-val">{{ paymentForm.get('currency')?.value || 'INR' }} {{ paymentForm.get('amount_paid')?.value || 0 | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="scb-op">×</div>
+                        <div class="scb-item">
+                            <span class="scb-label">FX Rate:</span>
+                            <span class="scb-val">{{ paymentForm.get('exchange_rate')?.value || 1 }}</span>
+                        </div>
+                        <div class="scb-op">=</div>
+                        <div class="scb-item">
+                            <span class="scb-label">Converted:</span>
+                            <span class="scb-val" style="color: #0284c7;">INR {{ paymentForm.get('total_with_exchange')?.value || 0 | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="scb-op">+</div>
+                        <div class="scb-item">
+                            <span class="scb-label">Bank Charges:</span>
+                            <span class="scb-val" style="color: #d97706;">{{ paymentForm.get('bank_charges_currency')?.value || 'INR' }} {{ paymentForm.get('bank_charges')?.value || 0 | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="scb-op">=</div>
+                        <div class="scb-item scb-item--result" style="background: #059669; color: #fff;">
+                            <span class="scb-label" style="color: rgba(255,255,255,0.9);">Total Outflow:</span>
+                            <span class="scb-val" style="color: #fff; font-weight: 850;">INR {{ paymentForm.get('total_with_bank_charges')?.value || 0 | number:'1.2-2' }}</span>
+                        </div>
+                    </div>
+                    }
+                </div>
+
+                <!-- Section 4: Attachments (Upload First) -->
+                <div class="dlg-section">
+                    <p class="dlg-section-label">
+                        <i class="pi pi-paperclip"></i> 4. Payment Advice &amp; Supporting Documents
                     </p>
 
                     <!-- Existing Attachments -->

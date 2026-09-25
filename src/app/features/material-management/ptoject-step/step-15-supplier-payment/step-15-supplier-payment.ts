@@ -26,8 +26,6 @@ import { TooltipModule } from 'primeng/tooltip';
 import { SupplierPaymentService } from '../../../../core/services/supplier-payment';
 import { ProjectService } from '../../../../core/services/project';
 import { SupplierService } from '../../../../core/services/supplier';
-import { PurchaseOrderService } from '../../../../core/services/purchase-order';
-import { SupplierInvoiceService } from '../../../../core/services/supplier-invoice';
 import { AttachmentService } from '../../../../core/services/attachment';
 import { DropdownService } from '../../../../core/services/dropdown.service';
 import {
@@ -38,8 +36,6 @@ import {
 import { Attachment } from '../../../../core/models/attachment.model';
 import { Supplier } from '../../../../core/models/supplier.model';
 import { Project } from '../../../../core/models/project.model';
-import { PurchaseOrder } from '../../../../core/models/purchase-order.model';
-import { SupplierInvoice } from '../../../../core/models/supplier-invoice.model';
 import { SelectOption } from '../../../../core/models/select-option.model';
 import { MessageService } from 'primeng/api';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
@@ -74,8 +70,6 @@ export class Step15SupplierPayment implements OnInit {
   private readonly supplierPaymentService = inject(SupplierPaymentService);
   private readonly projectService = inject(ProjectService);
   private readonly supplierService = inject(SupplierService);
-  private readonly poService = inject(PurchaseOrderService);
-  private readonly supplierInvoiceService = inject(SupplierInvoiceService);
   private readonly attachmentService = inject(AttachmentService);
   private readonly dropdownService = inject(DropdownService);
 
@@ -84,8 +78,6 @@ export class Step15SupplierPayment implements OnInit {
   protected readonly project = signal<Project | null>(null);
   protected readonly supplier = signal<Supplier | null>(null);
   protected readonly payments = signal<SupplierPayment[]>([]);
-  protected readonly purchaseOrders = signal<PurchaseOrder[]>([]);
-  protected readonly supplierInvoices = signal<SupplierInvoice[]>([]);
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
@@ -114,7 +106,93 @@ export class Step15SupplierPayment implements OnInit {
     transaction_details: ['', [Validators.required]],
     pending_amount: [null, [Validators.min(0)]],
     remark: [''],
+    bank_charges_currency: ['INR'],
+    bank_charges: [null, [Validators.min(0)]],
+    exchange_rate: [null, [Validators.min(0.0001)]],
+    total_with_exchange: [null, [Validators.min(0)]],
+    total_with_bank_charges: [null, [Validators.min(0)]],
   });
+
+  // ── Forex & Bank Charges Metadata Helpers ──────────────────────
+  protected extractPaymentForexMeta(payment: SupplierPayment): {
+    exchange_rate?: number | null;
+    bank_charges_currency?: string | null;
+    bank_charges?: number | null;
+    total_with_exchange?: number | null;
+    total_with_bank_charges?: number | null;
+    clean_transaction_details: string;
+  } {
+    const rawTx = payment.transaction_details || '';
+    const match = rawTx.match(/<!--fx-meta:({.*?})-->/);
+    if (match) {
+      try {
+        const meta = JSON.parse(match[1]);
+        const cleanTx = rawTx.replace(/<!--fx-meta:({.*?})-->/, '').trim();
+        return {
+          exchange_rate: meta.exchange_rate != null ? Number(meta.exchange_rate) : undefined,
+          bank_charges_currency: meta.bank_charges_currency || undefined,
+          bank_charges: meta.bank_charges != null ? Number(meta.bank_charges) : undefined,
+          total_with_exchange: meta.total_with_exchange != null ? Number(meta.total_with_exchange) : undefined,
+          total_with_bank_charges: meta.total_with_bank_charges != null ? Number(meta.total_with_bank_charges) : undefined,
+          clean_transaction_details: cleanTx,
+        };
+      } catch {
+        // fallback
+      }
+    }
+    return {
+      exchange_rate: payment.exchange_rate,
+      bank_charges_currency: payment.bank_charges_currency,
+      bank_charges: payment.bank_charges,
+      total_with_exchange: payment.total_with_exchange,
+      total_with_bank_charges: payment.total_with_bank_charges,
+      clean_transaction_details: rawTx,
+    };
+  }
+
+  protected getCleanTransactionDetails(payment: SupplierPayment): string {
+    return this.extractPaymentForexMeta(payment).clean_transaction_details;
+  }
+
+  protected getPaymentExchangeRate(payment: SupplierPayment): number | null {
+    const meta = this.extractPaymentForexMeta(payment);
+    return payment.exchange_rate ?? meta.exchange_rate ?? null;
+  }
+
+  protected getPaymentBankCharges(payment: SupplierPayment): { currency: string; amount: number } | null {
+    const meta = this.extractPaymentForexMeta(payment);
+    const amount = payment.bank_charges ?? meta.bank_charges;
+    if (amount != null && amount > 0) {
+      return {
+        currency: payment.bank_charges_currency ?? meta.bank_charges_currency ?? 'INR',
+        amount: Number(amount),
+      };
+    }
+    return null;
+  }
+
+  protected getPaymentTotalWithExchange(payment: SupplierPayment): number | null {
+    const meta = this.extractPaymentForexMeta(payment);
+    if (payment.total_with_exchange != null) return Number(payment.total_with_exchange);
+    if (meta.total_with_exchange != null) return Number(meta.total_with_exchange);
+    const rate = this.getPaymentExchangeRate(payment);
+    if (rate != null && rate > 0 && payment.amount_paid) {
+      return Math.round(Number(payment.amount_paid) * rate * 100) / 100;
+    }
+    return null;
+  }
+
+  protected getPaymentTotalWithBankCharges(payment: SupplierPayment): number | null {
+    const meta = this.extractPaymentForexMeta(payment);
+    if (payment.total_with_bank_charges != null) return Number(payment.total_with_bank_charges);
+    if (meta.total_with_bank_charges != null) return Number(meta.total_with_bank_charges);
+    const totEx = this.getPaymentTotalWithExchange(payment) ?? (payment.amount_paid ? Number(payment.amount_paid) : null);
+    const charges = this.getPaymentBankCharges(payment);
+    if (totEx != null) {
+      return Math.round((totEx + (charges?.amount || 0)) * 100) / 100;
+    }
+    return null;
+  }
 
   // ── Filtered Records ───────────────────────────────────────────
   protected readonly filteredPayments = computed(() => {
@@ -123,48 +201,19 @@ export class Step15SupplierPayment implements OnInit {
     if (!query) return list;
 
     return list.filter((p) => {
+      const cleanTx = this.getCleanTransactionDetails(p);
       return (
         String(p.id).includes(query) ||
         (p.currency && p.currency.toLowerCase().includes(query)) ||
-        (p.transaction_details && p.transaction_details.toLowerCase().includes(query)) ||
+        (cleanTx && cleanTx.toLowerCase().includes(query)) ||
         (p.remark && p.remark.toLowerCase().includes(query)) ||
         (p.payment_date && p.payment_date.toLowerCase().includes(query))
       );
     });
   });
 
-  // ── Benchmark Supplier Commitment Reference ─────────────────────
-  protected readonly latestPoOrInvoice = computed(() => {
-    const invoices = this.supplierInvoices();
-    if (invoices.length > 0) {
-      const inv = invoices[invoices.length - 1];
-      return {
-        type: 'Supplier Invoice',
-        ref: inv.invoice_no || `INV #${inv.id}`,
-        date: inv.invoice_date,
-        total: Number(inv.total_amount) || Number(inv.total_net_amount) || 0,
-        currency: inv.currency || 'INR',
-      };
-    }
-    const pos = this.purchaseOrders();
-    if (pos.length > 0) {
-      const po = pos[pos.length - 1];
-      return {
-        type: 'Purchase Order',
-        ref: po.po_no || po.po_number || `PO #${po.id}`,
-        date: po.po_date,
-        total: Number(po.total_net_amount) || Number(po.total_amount) || 0,
-        currency: this.project()?.currency || 'INR',
-      };
-    }
-    return null;
-  });
-
   // ── KPI Summary Signals ────────────────────────────────────────
   protected readonly totalCommitmentValue = computed(() => {
-    const bench = this.latestPoOrInvoice();
-    if (bench && bench.total > 0) return bench.total;
-
     const list = this.payments();
     if (!list.length) return 0;
     return list.reduce((sum, p) => Math.max(sum, Number(p.total_supplier_value) || 0), 0);
@@ -221,19 +270,7 @@ export class Step15SupplierPayment implements OnInit {
       error: () => {/* non-fatal */ },
     });
 
-    // 2. Fetch Purchase Orders (Step 08 reference)
-    this.poService.getByProject(pId).subscribe({
-      next: (pos) => this.purchaseOrders.set(pos),
-      error: () => {/* non-fatal */ },
-    });
-
-    // 3. Fetch Supplier Invoices (Step 10 reference)
-    this.supplierInvoiceService.getByProject(pId).subscribe({
-      next: (invs) => this.supplierInvoices.set(invs),
-      error: () => {/* non-fatal */ },
-    });
-
-    // 4. Fetch Supplier Payments (Step 15 records)
+    // 2. Fetch Supplier Payments (Step 15 records)
     this.supplierPaymentService
       .getSupplierPayments(pId)
       .pipe(finalize(() => this.loading.set(false)))
@@ -253,8 +290,11 @@ export class Step15SupplierPayment implements OnInit {
     this.existingAttachments.set([]);
     this.dialogRemarks.set([]);
 
+    const defaultCurrency = this.project()?.currency || 'INR';
+    const defaultRate = defaultCurrency === 'INR' ? 1 : null;
+
     this.paymentForm.reset({
-      currency: this.project()?.currency || 'INR',
+      currency: defaultCurrency,
       payment_percentage: null,
       total_supplier_value: null,
       amount_paid: null,
@@ -262,6 +302,11 @@ export class Step15SupplierPayment implements OnInit {
       transaction_details: '',
       pending_amount: null,
       remark: '',
+      bank_charges_currency: 'INR',
+      bank_charges: null,
+      exchange_rate: defaultRate,
+      total_with_exchange: null,
+      total_with_bank_charges: null,
     });
 
     this.paymentDialogVisible.set(true);
@@ -276,6 +321,12 @@ export class Step15SupplierPayment implements OnInit {
     );
 
     const payDate = parseLocalDate(payment.payment_date);
+    const parsedMeta = this.extractPaymentForexMeta(payment);
+    const exRate = payment.exchange_rate ?? parsedMeta.exchange_rate ?? null;
+    const bcCurr = payment.bank_charges_currency ?? parsedMeta.bank_charges_currency ?? 'INR';
+    const bcAmt = payment.bank_charges ?? parsedMeta.bank_charges ?? null;
+    const totEx = payment.total_with_exchange ?? parsedMeta.total_with_exchange ?? (exRate && payment.amount_paid ? Math.round(payment.amount_paid * exRate * 100) / 100 : null);
+    const totAll = payment.total_with_bank_charges ?? parsedMeta.total_with_bank_charges ?? ((totEx ?? payment.amount_paid ?? 0) + (bcAmt ?? 0));
 
     this.paymentForm.reset({
       currency: payment.currency || 'INR',
@@ -283,15 +334,58 @@ export class Step15SupplierPayment implements OnInit {
       total_supplier_value: payment.total_supplier_value ?? null,
       amount_paid: payment.amount_paid ?? null,
       payment_date: payDate,
-      transaction_details: payment.transaction_details || '',
+      transaction_details: parsedMeta.clean_transaction_details || payment.transaction_details || '',
       pending_amount: payment.pending_amount ?? null,
       remark: payment.remark || '',
+      bank_charges_currency: bcCurr,
+      bank_charges: bcAmt,
+      exchange_rate: exRate,
+      total_with_exchange: totEx,
+      total_with_bank_charges: totAll,
     });
 
     this.paymentDialogVisible.set(true);
   }
 
   // ── Dynamic Percentage & Amount Calculations ───────────────────
+  protected recalculateForexAndBankCharges(): void {
+    const amountPaid = Number(this.paymentForm.get('amount_paid')?.value) || 0;
+    const rateVal = this.paymentForm.get('exchange_rate')?.value;
+    const rate = rateVal != null && rateVal !== '' && !isNaN(Number(rateVal)) ? Number(rateVal) : null;
+    const chargesVal = this.paymentForm.get('bank_charges')?.value;
+    const charges = chargesVal != null && chargesVal !== '' && !isNaN(Number(chargesVal)) ? Number(chargesVal) : 0;
+
+    let totalWithExchange: number | null = null;
+    let totalWithBankCharges: number | null = null;
+
+    if (amountPaid > 0) {
+      if (rate != null && rate > 0) {
+        totalWithExchange = Math.round(amountPaid * rate * 100) / 100;
+      } else {
+        totalWithExchange = amountPaid;
+      }
+    }
+
+    if (totalWithExchange != null) {
+      totalWithBankCharges = Math.round((totalWithExchange + charges) * 100) / 100;
+    } else if (charges > 0) {
+      totalWithBankCharges = charges;
+    }
+
+    this.paymentForm.patchValue({
+      total_with_exchange: totalWithExchange,
+      total_with_bank_charges: totalWithBankCharges,
+    }, { emitEvent: false });
+  }
+
+  protected onExchangeRateChange(rate: number | null): void {
+    this.recalculateForexAndBankCharges();
+  }
+
+  protected onBankChargesChange(charges: number | null): void {
+    this.recalculateForexAndBankCharges();
+  }
+
   protected onPercentageChange(pct: number | null): void {
     const total = Number(this.paymentForm.get('total_supplier_value')?.value) || 0;
     if (pct != null && total > 0) {
@@ -301,6 +395,7 @@ export class Step15SupplierPayment implements OnInit {
         amount_paid: calculatedAmount,
         pending_amount: pending,
       }, { emitEvent: false });
+      this.recalculateForexAndBankCharges();
     }
   }
 
@@ -314,6 +409,7 @@ export class Step15SupplierPayment implements OnInit {
         pending_amount: pending,
       }, { emitEvent: false });
     }
+    this.recalculateForexAndBankCharges();
   }
 
   protected onTotalValueChange(total: number | null): void {
@@ -343,6 +439,16 @@ export class Step15SupplierPayment implements OnInit {
     const val = this.paymentForm.getRawValue();
     const payDateStr = this.formatDate(val.payment_date);
 
+    const userTx = String(val.transaction_details || '').trim();
+    const fxMetaObj = {
+      exchange_rate: val.exchange_rate != null && val.exchange_rate !== '' ? Number(val.exchange_rate) : null,
+      bank_charges_currency: val.bank_charges_currency || 'INR',
+      bank_charges: val.bank_charges != null && val.bank_charges !== '' ? Number(val.bank_charges) : null,
+      total_with_exchange: val.total_with_exchange != null ? Number(val.total_with_exchange) : null,
+      total_with_bank_charges: val.total_with_bank_charges != null ? Number(val.total_with_bank_charges) : null,
+    };
+    const txWithMeta = `${userTx} <!--fx-meta:${JSON.stringify(fxMetaObj)}-->`;
+
     const payload: SupplierPaymentCreateInput = {
       project_id: pId,
       currency: val.currency || 'INR',
@@ -350,9 +456,14 @@ export class Step15SupplierPayment implements OnInit {
       total_supplier_value: val.total_supplier_value != null ? Number(val.total_supplier_value) : undefined,
       amount_paid: Number(val.amount_paid) || 0,
       payment_date: payDateStr,
-      transaction_details: String(val.transaction_details).trim(),
+      transaction_details: txWithMeta,
       pending_amount: val.pending_amount != null ? Number(val.pending_amount) : undefined,
       remarks: serializeStepRemarks(this.dialogRemarks()),
+      exchange_rate: fxMetaObj.exchange_rate,
+      bank_charges_currency: fxMetaObj.bank_charges_currency,
+      bank_charges: fxMetaObj.bank_charges,
+      total_with_exchange: fxMetaObj.total_with_exchange,
+      total_with_bank_charges: fxMetaObj.total_with_bank_charges,
     };
 
     const files = this.selectedFiles();

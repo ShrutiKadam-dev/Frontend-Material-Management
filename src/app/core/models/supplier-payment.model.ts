@@ -19,6 +19,13 @@ export interface SupplierPayment {
   attachments?: Attachment[];
   created_at?: string;
   updated_at?: string;
+
+  // Foreign Exchange & Bank Charges
+  exchange_rate?: number;
+  total_with_exchange?: number;
+  bank_charges_currency?: string;
+  bank_charges?: number;
+  total_with_bank_charges?: number;
 }
 
 export interface SupplierPaymentCreateInput {
@@ -32,6 +39,13 @@ export interface SupplierPaymentCreateInput {
   total_supplier_value?: number | null;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
+
+  // Foreign Exchange & Bank Charges
+  exchange_rate?: number | null;
+  total_with_exchange?: number | null;
+  bank_charges_currency?: string | null;
+  bank_charges?: number | null;
+  total_with_bank_charges?: number | null;
 }
 
 export interface SupplierPaymentUpdateInput {
@@ -44,4 +58,11 @@ export interface SupplierPaymentUpdateInput {
   total_supplier_value?: number | null;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
+
+  // Foreign Exchange & Bank Charges
+  exchange_rate?: number | null;
+  total_with_exchange?: number | null;
+  bank_charges_currency?: string | null;
+  bank_charges?: number | null;
+  total_with_bank_charges?: number | null;
 }

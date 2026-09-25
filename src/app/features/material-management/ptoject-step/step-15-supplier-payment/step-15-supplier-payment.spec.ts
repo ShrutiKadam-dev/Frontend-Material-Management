@@ -8,8 +8,6 @@ import { Step15SupplierPayment } from './step-15-supplier-payment';
 import { SupplierPaymentService } from '../../../../core/services/supplier-payment';
 import { ProjectService } from '../../../../core/services/project';
 import { SupplierService } from '../../../../core/services/supplier';
-import { PurchaseOrderService } from '../../../../core/services/purchase-order';
-import { SupplierInvoiceService } from '../../../../core/services/supplier-invoice';
 import { API_BASE_URL } from '../../../../core/tokens/api-base-url.token';
 import { SupplierPayment } from '../../../../core/models/supplier-payment.model';
 import { MessageService } from 'primeng/api';
@@ -53,29 +51,6 @@ describe('Step15SupplierPayment', () => {
     address: 'Houston, TX',
   };
 
-  const mockPos = [
-    {
-      id: 1,
-      project_id: 101,
-      po_no: 'PO-2026-001',
-      po_number: 'PO-2026-001',
-      po_title: 'PO for HVAC Unit',
-      poc_name: 'John Doe',
-      email: 'john@alphahvac.com',
-      delivery_term: 'FOB',
-      payment_terms: 'Net 30',
-      warranty_period: '12 Months',
-      delivery_date: '2026-09-30',
-      gst_rate: 18,
-      total_net_amount: 50000,
-      total_amount: 50000,
-      po_date: '2026-09-05',
-      items: [],
-      created_at: '2026-09-05T00:00:00Z',
-      updated_at: '2026-09-05T00:00:00Z',
-    },
-  ];
-
   beforeEach(async () => {
     const activatedRouteMock = {
       snapshot: {
@@ -100,14 +75,6 @@ describe('Step15SupplierPayment', () => {
       getSupplierById: vi.fn().mockReturnValue(of(mockSupplier)),
     };
 
-    const poServiceMock = {
-      getByProject: vi.fn().mockReturnValue(of(mockPos)),
-    };
-
-    const supplierInvoiceServiceMock = {
-      getByProject: vi.fn().mockReturnValue(of([])),
-    };
-
     await TestBed.configureTestingModule({
       imports: [Step15SupplierPayment],
       providers: [
@@ -117,8 +84,6 @@ describe('Step15SupplierPayment', () => {
         { provide: SupplierPaymentService, useValue: supplierPaymentServiceMock },
         { provide: ProjectService, useValue: projectServiceMock },
         { provide: SupplierService, useValue: supplierServiceMock },
-        { provide: PurchaseOrderService, useValue: poServiceMock },
-        { provide: SupplierInvoiceService, useValue: supplierInvoiceServiceMock },
         { provide: API_BASE_URL, useValue: 'http://localhost:3000' },
         MessageService,
       ],
@@ -157,5 +122,34 @@ describe('Step15SupplierPayment', () => {
     component['onPercentageChange'](50);
     expect(component['paymentForm'].get('amount_paid')?.value).toBe(25000);
     expect(component['paymentForm'].get('pending_amount')?.value).toBe(25000);
+  });
+
+  it('should calculate total_with_exchange and total_with_bank_charges dynamically', () => {
+    component['openCreatePaymentDialog']();
+    component['paymentForm'].patchValue({
+      amount_paid: 10000,
+      exchange_rate: 86.5,
+      bank_charges_currency: 'INR',
+      bank_charges: 1250,
+    });
+    component['recalculateForexAndBankCharges']();
+    expect(component['paymentForm'].get('total_with_exchange')?.value).toBe(865000);
+    expect(component['paymentForm'].get('total_with_bank_charges')?.value).toBe(866250);
+  });
+
+  it('should extract clean transaction details and metadata from payment record', () => {
+    const paymentWithMeta: SupplierPayment = {
+      id: 2,
+      project_id: 101,
+      currency: 'USD',
+      amount_paid: 5000,
+      payment_date: '2026-09-10',
+      transaction_details: 'UTR #AXIS98765432 <!--fx-meta:{"exchange_rate":85,"bank_charges":500,"bank_charges_currency":"INR","total_with_exchange":425000,"total_with_bank_charges":425500}-->',
+    };
+    expect(component['getCleanTransactionDetails'](paymentWithMeta)).toBe('UTR #AXIS98765432');
+    expect(component['getPaymentExchangeRate'](paymentWithMeta)).toBe(85);
+    expect(component['getPaymentBankCharges'](paymentWithMeta)).toEqual({ currency: 'INR', amount: 500 });
+    expect(component['getPaymentTotalWithExchange'](paymentWithMeta)).toBe(425000);
+    expect(component['getPaymentTotalWithBankCharges'](paymentWithMeta)).toBe(425500);
   });
 });
