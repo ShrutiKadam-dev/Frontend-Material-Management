@@ -48,10 +48,16 @@
                 <i class="pi pi-building"></i>
             </div>
             <div class="kpi-content">
-                <span class="kpi-label">Total Supplier Value</span>
-                <span class="kpi-num">{{ project()?.currency || 'INR' }} {{ totalCommitmentValue() | number:'1.2-2'
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                    <span class="kpi-label">Total Supplier Value</span>
+                    @if (latestOrderConfirmation()?.total_amount) {
+                    <span class="afb-badge" style="font-size: 0.65rem; padding: 1px 5px;"><i class="pi pi-sparkles"></i>
+                        Auto-Fetched</span>
+                    }
+                </div>
+                <span class="kpi-num">{{ cardCurrency() }} {{ totalCommitmentValue() | number:'1.2-2'
                     }}</span>
-                <span class="kpi-hint">PO &amp; Invoice commitments</span>
+
             </div>
         </div>
 
@@ -62,9 +68,8 @@
             </div>
             <div class="kpi-content">
                 <span class="kpi-label">Amount Paid</span>
-                <span class="kpi-num font-emerald">{{ project()?.currency || 'INR' }} {{ totalDisbursed() |
-                    number:'1.2-2' }}</span>
-                <span class="kpi-hint hint-success">{{ payments().length }} remittance(s) cleared</span>
+                <span class="kpi-num font-emerald">{{ cardCurrency() }} {{ totalDisbursed() | number:'1.2-2' }}</span>
+                <span class="kpi-hint hint-success">{{ latestPaymentStatusMessage() || (payments().length + ' remittance(s) cleared') }}</span>
             </div>
         </div>
 
@@ -76,10 +81,9 @@
             <div class="kpi-content">
                 <span class="kpi-label">Pending Amount</span>
                 <span class="kpi-num font-amber" [class.text-danger]="totalPending() > 0">
-                    {{ project()?.currency || 'INR' }} {{ totalPending() | number:'1.2-2' }}
+                    {{ cardCurrency() }} {{ totalPending() | number:'1.2-2' }}
                 </span>
-                <span class="kpi-hint" [class.hint-success]="totalPending() <= 0">{{ totalPending() > 0 ? 'Remaining to
-                    disburse' : 'Fully Settled' }}</span>
+                <span class="kpi-hint" [class.hint-success]="totalPending() <= 0">{{ totalPending() > 0 ? (pendingPercentage() + '% remaining to disburse') : 'Fully Settled (100%)' }}</span>
             </div>
         </div>
 
@@ -90,9 +94,9 @@
             </div>
             <div class="kpi-content">
                 <span class="kpi-label">Disbursement Rate</span>
-                <span class="kpi-num">{{ disbursementRate() }}%</span>
-                <span class="kpi-hint hint-success">{{ totalPending() <= 0 ? 'Fully Disbursed'
-                        : 'Settlement in Progress' }}</span>
+                <span class="kpi-num">{{ cumulativePaidPercentage() }}%</span>
+                <span class="kpi-hint hint-success">{{ isPaymentCompleted() ? 'Fully Disbursed (100%)'
+                    : 'Settlement in Progress' }}</span>
             </div>
         </div>
     </section>
@@ -171,9 +175,19 @@
                             @if (idx === 0 && !searchQuery()) {
                             <span class="vsc-latest-pill">Latest</span>
                             }
+                            @if (payment.payment_status) {
+                            <span class="vsc-status-pill"
+                                [class.status-completed]="payment.payment_status === 'completed' || payment.is_payment_completed"
+                                [class.status-partial]="payment.payment_status === 'partial'">
+                                <i class="pi"
+                                    [class.pi-check-circle]="payment.payment_status === 'completed' || payment.is_payment_completed"
+                                    [class.pi-clock]="payment.payment_status === 'partial'"></i>
+                                {{ (payment.payment_status === 'completed' || payment.is_payment_completed) ? 'Fully Settled' : 'Partial Milestone' }}
+                            </span>
+                            }
                             <span class="vsc-date">
                                 <i class="pi pi-calendar-check" aria-hidden="true"></i>
-                                {{ payment.payment_date | date:'dd-MM-yyyy' }}
+                                {{ formatDisplayDate(payment.payment_date) }}
                             </span>
                             <span class="vsc-title font-mono">
                                 {{ getCleanTransactionDetails(payment) }}
@@ -185,11 +199,18 @@
                             <span class="vsc-count-pill"
                                 style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;">
                                 <i class="pi pi-percentage"></i>
-                                {{ payment.payment_percentage }}% Paid
+                                {{ payment.payment_percentage }}% Tranche
+                            </span>
+                            }
+                            @if (payment.cumulative_payment_percentage != null) {
+                            <span class="vsc-count-pill"
+                                style="background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;">
+                                <i class="pi pi-chart-line"></i>
+                                {{ payment.cumulative_payment_percentage }}% Cum.
                             </span>
                             }
                             <span class="vsc-cost-pill font-mono font-bold">
-                                {{ payment.currency }} {{ payment.amount_paid | number:'1.2-2' }}
+                                {{ payment.currency || cardCurrency() }} {{ payment.amount_paid | number:'1.2-2' }}
                             </span>
 
                             <div class="actions-cell">
@@ -213,8 +234,20 @@
                             <div class="param-chip param-chip--highlight">
                                 <i class="pi pi-hourglass" aria-hidden="true"></i>
                                 <span class="p-lbl">Pending Balance:</span>
-                                <span class="p-val font-mono">{{ payment.currency }} {{ payment.pending_amount |
+                                <span class="p-val font-mono">{{ payment.currency || cardCurrency() }} {{
+                                    payment.pending_amount |
                                     number:'1.2-2' }}</span>
+                                @if (payment.pending_percentage != null) {
+                                <span class="p-val font-mono" style="color: #b45309; font-size: 0.74rem;">({{
+                                    payment.pending_percentage }}% left)</span>
+                                }
+                            </div>
+                            }
+                            @if (payment.payment_status_message) {
+                            <div class="param-chip" style="background: #f8fafc; border-color: #e2e8f0;">
+                                <i class="pi pi-info-circle" aria-hidden="true" style="color: #64748b;"></i>
+                                <span class="p-val" style="color: #475569; font-weight: 600;">{{
+                                    payment.payment_status_message }}</span>
                             </div>
                             }
                             @if (getPaymentExchangeRate(payment); as rate) {
@@ -249,7 +282,8 @@
                             @if (getPaymentTotalWithBankCharges(payment); as totAll) {
                             <div class="param-chip" style="background: #ecfdf5; border-color: #a7f3d0; color: #065f46;">
                                 <i class="pi pi-check-circle" aria-hidden="true" style="color: #059669;"></i>
-                                <span class="p-lbl" style="color: #047857; font-weight: 700;">Total Outflow (INR):</span>
+                                <span class="p-lbl" style="color: #047857; font-weight: 700;">Total Outflow
+                                    (INR):</span>
                                 <span class="p-val font-mono" style="font-weight: 800; color: #065f46;">INR {{ totAll |
                                     number:'1.2-2' }}</span>
                             </div>
@@ -269,21 +303,22 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @if (payment.total_supplier_value) {
+                                    @if (getPaymentCommitmentValue(payment) > 0) {
                                     <tr>
                                         <td style="text-align: center; color: var(--color-muted); font-weight: 700;">1
                                         </td>
                                         <td><strong style="color: var(--color-heading);">Total Supplier Commitment
                                                 Value</strong></td>
-                                        <td><span class="ref-badge">PO / Invoiced Benchmark</span></td>
+                                        <td><span class="ref-badge">{{ latestOrderConfirmation()?.total_amount ? 'Order Confirmation Benchmark' : 'PO / Invoiced Benchmark' }}</span></td>
                                         <td style="text-align: center;" class="font-mono">100.0%</td>
-                                        <td class="text-right font-mono font-bold">{{ payment.currency }} {{
-                                            payment.total_supplier_value | number:'1.2-2' }}</td>
+                                        <td class="text-right font-mono font-bold">{{ payment.currency || cardCurrency()
+                                            }} {{
+                                            getPaymentCommitmentValue(payment) | number:'1.2-2' }}</td>
                                     </tr>
                                     }
                                     <tr>
                                         <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{
-                                            payment.total_supplier_value ? 2 : 1 }}</td>
+                                            getPaymentCommitmentValue(payment) > 0 ? 2 : 1 }}</td>
                                         <td><strong style="color: #059669;">Amount Paid / Remitted</strong></td>
                                         <td class="font-mono">{{ getCleanTransactionDetails(payment) }}</td>
                                         <td style="text-align: center;" class="font-mono font-bold"
@@ -292,21 +327,23 @@
                                             '—' }}
                                         </td>
                                         <td class="text-right font-mono font-bold" style="color: #059669;">
-                                            {{ payment.currency }} {{ payment.amount_paid | number:'1.2-2' }}
+                                            {{ payment.currency || cardCurrency() }} {{ payment.amount_paid |
+                                            number:'1.2-2' }}
                                         </td>
                                     </tr>
 
                                     @if (getPaymentExchangeRate(payment); as rate) {
                                     <tr>
                                         <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{
-                                            payment.total_supplier_value ? 3 : 2 }}</td>
+                                            getPaymentCommitmentValue(payment) > 0 ? 3 : 2 }}</td>
                                         <td>
                                             <strong>Converted at Exchange Rate</strong>
                                             <span
                                                 style="font-size: 0.76rem; color: var(--color-muted); display: block;">Rate:
                                                 {{ rate }}</span>
                                         </td>
-                                        <td class="font-mono">{{ payment.currency }} {{ payment.amount_paid |
+                                        <td class="font-mono">{{ payment.currency || cardCurrency() }} {{
+                                            payment.amount_paid |
                                             number:'1.2-2' }} × {{ rate }}</td>
                                         <td style="text-align: center;" class="font-mono" style="color: #0284c7;">FX
                                             Conversion</td>
@@ -319,7 +356,8 @@
                                     @if (getPaymentBankCharges(payment); as charges) {
                                     <tr>
                                         <td style="text-align: center; color: var(--color-muted); font-weight: 700;">
-                                            {{ (payment.total_supplier_value ? 2 : 1) + (getPaymentExchangeRate(payment)
+                                            {{ (getPaymentCommitmentValue(payment) > 0 ? 2 : 1) +
+                                            (getPaymentExchangeRate(payment)
                                             ? 1 : 0) + 1 }}
                                         </td>
                                         <td>
@@ -337,21 +375,41 @@
                                     @if (getPaymentSwiftCharges(payment); as swift) {
                                     <tr>
                                         <td style="text-align: center; color: var(--color-muted); font-weight: 700;">
-                                            {{ (payment.total_supplier_value ? 2 : 1) + (getPaymentExchangeRate(payment)
+                                            {{ (getPaymentCommitmentValue(payment) > 0 ? 2 : 1) +
+                                            (getPaymentExchangeRate(payment)
                                             ? 1 : 0) + (getPaymentBankCharges(payment) ? 1 : 0) + 1 }}
                                         </td>
                                         <td>
                                             <strong>SWIFT / Wire Transmission Charges</strong>
                                         </td>
                                         <td class="font-mono">SWIFT Wire</td>
-                                        <td style="text-align: center;" class="font-mono" style="color: #7c3aed;">Wire Fee</td>
+                                        <td style="text-align: center;" class="font-mono" style="color: #7c3aed;">Wire
+                                            Fee</td>
                                         <td class="text-right font-mono font-bold" style="color: #7c3aed;">
                                             INR {{ swift | number:'1.2-2' }}
                                         </td>
                                     </tr>
                                     }
 
-                                    @if (getPaymentExchangeRate(payment) || getPaymentBankCharges(payment) || getPaymentSwiftCharges(payment)) {
+                                    @if (payment.cumulative_payment_percentage != null) {
+                                    <tr style="background: #f8fafc; border-top: 1px dashed var(--color-border);">
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">Σ
+                                        </td>
+                                        <td colspan="2"><strong style="color: #1e40af;">Cumulative Disbursed Through
+                                                This Tranche</strong></td>
+                                        <td style="text-align: center;" class="font-mono font-bold"
+                                            style="color: #1e40af;">
+                                            {{ payment.cumulative_payment_percentage }}%
+                                        </td>
+                                        <td class="text-right font-mono font-bold" style="color: #1e40af;">
+                                            {{ payment.currency || cardCurrency() }} {{ (payment.total_paid_amount ||
+                                            payment.amount_paid) | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                    }
+
+                                    @if (getPaymentExchangeRate(payment) || getPaymentBankCharges(payment) ||
+                                    getPaymentSwiftCharges(payment)) {
                                     <tr style="background: #f0fdf4; border-top: 1.5px dashed #a7f3d0;">
                                         <td style="text-align: center; color: #059669; font-weight: 700;">★</td>
                                         <td colspan="3"><strong style="color: #047857;">Total Settlement Outflow
@@ -383,7 +441,8 @@
                                         <td style="text-align: right; font-family: monospace; font-size: 1.05rem; font-weight: 850; padding: 10px 14px; border-top: 2px solid var(--color-border); white-space: nowrap;"
                                             [class.tfoot-balance-pending]="(payment.pending_amount || 0) > 0"
                                             [class.tfoot-balance-settled]="(payment.pending_amount || 0) <= 0">
-                                            {{ payment.currency }} {{ (payment.pending_amount || 0) | number:'1.2-2' }}
+                                            {{ payment.currency || cardCurrency() }} {{ (payment.pending_amount || 0) |
+                                            number:'1.2-2' }}
                                         </td>
                                     </tr>
                                 </tfoot>
@@ -448,6 +507,55 @@
         <form [formGroup]="paymentForm" (ngSubmit)="onSubmitPayment()" novalidate id="supplier-payment-form">
             <div class="dlg-body">
 
+                <!-- Milestone Settlement Overview Strip (Tranche 2+ Context) -->
+                @if (totalCommitmentValue() > 0 && dialogPreviouslyPaid() > 0) {
+                <div class="milestone-settlement-card" role="region" aria-label="Disbursement Milestone Status">
+                    <!-- Visual Segmented Progress Bar -->
+                    <div class="msc-progress-container"
+                        [attr.aria-label]="dialogPreviouslyPaidPct() + '% paid, ' + dialogAvailablePendingPct() + '% remaining'">
+                        <div class="msc-progress-bar">
+                            <div class="msc-bar-paid" [style.width.%]="dialogPreviouslyPaidPct()"></div>
+                            <div class="msc-bar-pending" [style.width.%]="dialogAvailablePendingPct()"></div>
+                        </div>
+                    </div>
+
+                    <!-- Clean 3-Column Metrics Strip -->
+                    <div class="msc-metrics-strip">
+                        <div class="msc-metric-col">
+                            <span class="msc-m-lbl">Total Commitment</span>
+                            <span class="msc-m-val font-mono">{{ cardCurrency() }} {{ totalCommitmentValue() |
+                                number:'1.2-2' }}</span>
+                        </div>
+                        <div class="msc-metric-divider"></div>
+                        <div class="msc-metric-col">
+                            <span class="msc-m-lbl">Previously Disbursed</span>
+                            <span class="msc-m-val font-mono text-emerald">
+                                {{ cardCurrency() }} {{ dialogPreviouslyPaid() | number:'1.2-2' }}
+                                <span class="msc-m-tag tag-emerald">{{ dialogPreviouslyPaidPct() }}%</span>
+                            </span>
+                        </div>
+                        <div class="msc-metric-divider"></div>
+                        <div class="msc-metric-col msc-metric-col--highlight">
+                            <span class="msc-m-lbl">Outstanding Balance</span>
+                            <span class="msc-m-val font-mono text-amber">
+                                {{ cardCurrency() }} {{ dialogAvailablePending() | number:'1.2-2' }}
+                                <span class="msc-m-tag tag-amber">{{ dialogAvailablePendingPct() }}% Max</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                }
+
+                <!-- Auto-Sync Notice for Total Commitment Value -->
+                @if (!editingPayment() && totalCommitmentValue() > 0) {
+                <div class="cost-sheet-sync-pill" role="status">
+                    <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
+                    <span>
+                        Total Commitment Value auto-fetched from <strong>{{ latestOrderConfirmation()?.total_amount ? 'Latest Order Confirmation' : 'Order Confirmation & PO Commitments' }}</strong> ({{ cardCurrency() }} {{ totalCommitmentValue() | number:'1.2-2' }}).
+                    </span>
+                </div>
+                }
+
                 <!-- Section 1: Supplier Commitment & Currency -->
                 <div class="dlg-section">
                     <p class="dlg-section-label">
@@ -466,24 +574,58 @@
                         </div>
 
                         <div class="field">
-                            <label for="dlg-pay-total">Total Commitment Value (PO/Invoice)</label>
+                            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                                <label for="dlg-pay-total">Total Commitment Value (PO/Invoice)</label>
+                                @if (totalCommitmentValue() > 0) {
+                                <span class="afb-badge" style="font-size: 0.68rem; padding: 1px 6px;">
+                                    <i class="pi pi-sparkles"></i> Auto-Fetched
+                                </span>
+                                }
+                            </div>
                             <input id="dlg-pay-total" pInputText type="number" step="0.01"
                                 formControlName="total_supplier_value" placeholder="e.g. 50000.00" class="font-mono"
                                 (input)="onTotalValueChange($any($event.target).value)" />
+                            @if (totalCommitmentValue() > 0) {
+                            <span class="field-helper"
+                                style="font-size: 0.74rem; color: #0284c7; margin-top: 3px; display: flex; align-items: center; gap: 4px;">
+                                <i class="pi pi-sparkles"></i> Auto-fetched from {{ latestOrderConfirmation()?.total_amount ? 'Latest Order Confirmation' : 'Order Confirmation & PO Commitments' }}
+                            </span>
+                            }
                         </div>
 
                         <div class="field field--span2">
-                            <label for="dlg-pay-pct">Payment Percentage (%)</label>
-                            <input id="dlg-pay-pct" pInputText type="number" step="0.1" min="0" max="100"
-                                formControlName="payment_percentage" placeholder="e.g. 20, 50, 100" class="font-mono"
-                                (input)="onPercentageChange($any($event.target).value)"
-                                [class.ng-invalid]="isFieldInvalid(paymentForm, 'payment_percentage')" />
+                            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                                <label for="dlg-pay-pct">Payment Percentage (%)</label>
+                                @if (payments().length > 0 && dialogAvailablePendingPct() > 0) {
+                                <span class="font-mono text-muted" style="font-size: 0.74rem;">
+                                    Max allowed: {{ dialogAvailablePendingPct() }}%
+                                </span>
+                                }
+                            </div>
+                            <input id="dlg-pay-pct" pInputText type="number" step="0.1" min="0"
+                                [max]="dialogAvailablePendingPct()" formControlName="payment_percentage"
+                                placeholder="e.g. 20, 50" class="font-mono"
+                                (input)="onPercentageChange($any($event.target).value)" (blur)="onPercentageBlur()"
+                                [class.ng-invalid]="isFieldInvalid(paymentForm, 'payment_percentage') || isPercentageExceeding()" />
+                            @if (isPercentageExceeding()) {
+                            <p class="field-error">
+                                <i class="pi pi-exclamation-triangle"></i>
+                                Percentage exceeds remaining balance ({{ dialogAvailablePendingPct() }}%). Maximum
+                                allowed is {{ dialogAvailablePendingPct() }}%.
+                            </p>
+                            } @else if (isFieldInvalid(paymentForm, 'payment_percentage')) {
+                            <p class="field-error">{{ getFieldError(paymentForm, 'payment_percentage') }}</p>
+                            } @else {
                             <span class="field-helper"
                                 style="font-size: 0.76rem; color: var(--color-muted); margin-top: 3px; display: block;">
+                                @if (payments().length > 0 && dialogPreviouslyPaid() > 0) {
+                                Previous payments: {{ dialogPreviouslyPaidPct() }}% ({{ cardCurrency() }} {{
+                                dialogPreviouslyPaid() | number:'1.2-2' }}). Enter percentage to disburse in this
+                                tranche (up to {{ dialogAvailablePendingPct() }}%).
+                                } @else {
                                 Entering % will automatically calculate the Amount Paid.
+                                }
                             </span>
-                            @if (isFieldInvalid(paymentForm, 'payment_percentage')) {
-                            <p class="field-error">{{ getFieldError(paymentForm, 'payment_percentage') }}</p>
                             }
                         </div>
                     </div>
@@ -497,13 +639,27 @@
 
                     <div class="dlg-grid">
                         <div class="field">
-                            <label for="dlg-pay-amount">Amount Paid <span class="req"
-                                    aria-hidden="true">*</span></label>
-                            <input id="dlg-pay-amount" pInputText type="number" step="0.01"
-                                formControlName="amount_paid" placeholder="0.00" class="font-mono"
-                                (input)="onAmountPaidChange($any($event.target).value)"
-                                [class.ng-invalid]="isFieldInvalid(paymentForm, 'amount_paid')" />
-                            @if (isFieldInvalid(paymentForm, 'amount_paid')) {
+                            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                                <label for="dlg-pay-amount">Amount Paid <span class="req"
+                                        aria-hidden="true">*</span></label>
+                                @if (dialogAvailablePending() > 0) {
+                                <span class="font-mono text-muted" style="font-size: 0.74rem;">
+                                    Max: {{ cardCurrency() }} {{ dialogAvailablePending() | number:'1.2-2' }}
+                                </span>
+                                }
+                            </div>
+                            <input id="dlg-pay-amount" pInputText type="number" step="0.01" min="0.01"
+                                [max]="dialogAvailablePending()" formControlName="amount_paid" placeholder="0.00"
+                                class="font-mono" (input)="onAmountPaidChange($any($event.target).value)"
+                                (blur)="onAmountPaidBlur()"
+                                [class.ng-invalid]="isFieldInvalid(paymentForm, 'amount_paid') || isAmountExceeding()" />
+                            @if (isAmountExceeding()) {
+                            <p class="field-error">
+                                <i class="pi pi-exclamation-triangle"></i>
+                                Payment exceeds outstanding balance of {{ cardCurrency() }} {{ dialogAvailablePending()
+                                | number:'1.2-2' }}. Maximum payable is {{ dialogAvailablePending() | number:'1.2-2' }}.
+                            </p>
+                            } @else if (isFieldInvalid(paymentForm, 'amount_paid')) {
                             <p class="field-error">{{ getFieldError(paymentForm, 'amount_paid') }}</p>
                             }
                         </div>
@@ -539,19 +695,27 @@
                     <!-- Live Settlement Balance Pill Bar -->
                     <div class="settlement-calc-banner">
                         <div class="scb-item">
-                            <span class="scb-label">Commitment Value:</span>
+                            <span class="scb-label">Total Commitment:</span>
                             <span class="scb-val">{{ paymentForm.get('currency')?.value || 'INR' }} {{
                                 paymentForm.get('total_supplier_value')?.value || 0 | number:'1.2-2' }}</span>
                         </div>
+                        @if (dialogPreviouslyPaid() > 0) {
                         <div class="scb-op">-</div>
                         <div class="scb-item">
-                            <span class="scb-label">Amount Paid:</span>
+                            <span class="scb-label">Previously Paid:</span>
+                            <span class="scb-val" style="color: #64748b;">{{ paymentForm.get('currency')?.value || 'INR'
+                                }} {{ dialogPreviouslyPaid() | number:'1.2-2' }}</span>
+                        </div>
+                        }
+                        <div class="scb-op">-</div>
+                        <div class="scb-item">
+                            <span class="scb-label">This Disbursement:</span>
                             <span class="scb-val" style="color: #059669;">{{ paymentForm.get('currency')?.value || 'INR'
                                 }} {{ paymentForm.get('amount_paid')?.value || 0 | number:'1.2-2' }}</span>
                         </div>
                         <div class="scb-op">=</div>
                         <div class="scb-item scb-item--result" [class.scb-item--zero]="getDialogPendingBalance() <= 0">
-                            <span class="scb-label">Remaining Pending:</span>
+                            <span class="scb-label">Balance After This:</span>
                             <span class="scb-val">{{ paymentForm.get('currency')?.value || 'INR' }} {{
                                 getDialogPendingBalance() | number:'1.2-2' }}</span>
                         </div>
@@ -624,21 +788,25 @@
 
                         <!-- Total Outflow (Total (Exchange * Amount Paid) + Bank Charges + SWIFT Charges) -->
                         <div class="field" style="grid-column: 1 / -1;">
-                            <label for="dlg-total-with-charges" style="font-weight: 700; color: #047857; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                            <label for="dlg-total-with-charges"
+                                style="font-weight: 700; color: #047857; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
                                 <span><i class="pi pi-wallet" style="margin-right: 4px;"></i> Total Outflow (INR)</span>
-                                <span style="font-weight: 600; font-size: 0.74rem; color: #065f46; background: #d1fae5; padding: 2px 8px; border-radius: 4px; border: 1px solid #a7f3d0;">
+                                <span
+                                    style="font-weight: 600; font-size: 0.74rem; color: #065f46; background: #d1fae5; padding: 2px 8px; border-radius: 4px; border: 1px solid #a7f3d0;">
                                     Converted Principal + Bank &amp; SWIFT Charges
                                 </span>
                             </label>
                             <div class="input-unit-group" style="display: flex; align-items: center;">
-                                <span style="background: #d1fae5; color: #065f46; font-weight: 800; padding: 0 14px; height: 40px; display: flex; align-items: center; border: 1.5px solid #6ee7b7; border-right: none; border-radius: 6px 0 0 6px; font-size: 0.85rem; letter-spacing: 0.5px;">INR</span>
+                                <span
+                                    style="background: #d1fae5; color: #065f46; font-weight: 800; padding: 0 14px; height: 40px; display: flex; align-items: center; border: 1.5px solid #6ee7b7; border-right: none; border-radius: 6px 0 0 6px; font-size: 0.85rem; letter-spacing: 0.5px;">INR</span>
                                 <input id="dlg-total-with-charges" pInputText type="number" step="0.01"
                                     formControlName="total_outflow" placeholder="0.00" class="font-mono" readonly
                                     style="background: #ecfdf5; font-weight: 800; font-size: 1.1rem; color: #065f46; border: 1.5px solid #6ee7b7; border-radius: 0 6px 6px 0; flex: 1; height: 40px;" />
                             </div>
                             <span class="field-helper"
                                 style="font-size: 0.76rem; color: #047857; margin-top: 4px; display: block;">
-                                Total net debit from your bank account = Converted Payment (INR) + Bank Charges + SWIFT Charges
+                                Total net debit from your bank account = Converted Payment (INR) + Bank Charges + SWIFT
+                                Charges
                             </span>
                         </div>
                     </div>
@@ -678,7 +846,8 @@
                         </div>
                         <div class="scb-op">=</div>
                         <div class="scb-item scb-item--result" style="background: #059669; color: #fff;">
-                            <span class="scb-label" style="color: rgba(255,255,255,0.92); font-weight: 600;">Total Outflow (INR):</span>
+                            <span class="scb-label" style="color: rgba(255,255,255,0.92); font-weight: 600;">Total
+                                Outflow (INR):</span>
                             <span class="scb-val" style="color: #fff; font-weight: 850;">INR {{
                                 paymentForm.get('total_outflow')?.value || 0 | number:'1.2-2' }}</span>
                         </div>
@@ -737,8 +906,7 @@
                         (dragover)="onDragOver($event)" role="button" tabindex="0"
                         aria-label="Upload payment advice documents">
                         <i class="pi pi-upload" aria-hidden="true"></i>
-                        <span>{{ (selectedFiles().length || existingAttachments().length) ? 'Add more files' : 'Click to
-                            upload payment advice, debit voucher or drag & drop here' }}</span>
+                        <span>{{ (selectedFiles().length || existingAttachments().length) ? 'Add more files' : 'Click to upload payment advice, debit voucher or drag & drop here' }}</span>
                         @if (!selectedFiles().length && !existingAttachments().length) {
                         <span class="file-hint">PDF, DOCX, XLSX, Images up to 25 MB</span>
                         }
@@ -761,7 +929,8 @@
                 <button pButton type="submit" form="supplier-payment-form"
                     [icon]="saving() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
                     [label]="saving() ? 'Saving…' : (editingPayment() ? 'Update Payment Record' : 'Record Supplier Payment')"
-                    class="create-cost-sheet-btn" [disabled]="saving() || paymentForm.invalid"></button>
+                    class="create-cost-sheet-btn"
+                    [disabled]="saving() || paymentForm.invalid || isAmountExceeding() || isPercentageExceeding()"></button>
             </div>
         </ng-template>
     </p-dialog>

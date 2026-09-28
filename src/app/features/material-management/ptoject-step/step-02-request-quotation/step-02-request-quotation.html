@@ -226,6 +226,14 @@
 
     <div class="dlg-body">
 
+      <!-- Auto-Fetch Notice from Step 01 Customer Query -->
+      @if (!editingRequest() && items().length > 0) {
+      <div class="cost-sheet-sync-pill" role="status">
+        <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
+        <span>Auto-imported from <strong>Latest Customer Query</strong> · {{ items().length }} material items pre-filled.</span>
+      </div>
+      }
+
       <!-- ── 1. Supplier + Date + Contacted ──────────────── -->
       <div class="dlg-section">
         <p class="dlg-section-label"><i class="pi pi-calendar"></i> 1. Request Details & Supplier</p>

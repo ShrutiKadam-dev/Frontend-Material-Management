@@ -53,11 +53,11 @@ import { parseStepRemarks } from '../../../core/utils/remark.utils';
               <div class="timeline-meta-bar">
                 <span class="timeline-timestamp">
                   <i class="pi pi-clock" aria-hidden="true"></i>
-                  {{ rmk.created_at | date: 'dd-MM-yyyy, hh:mm a' }}
+                  {{ safeDate(rmk.created_at) | date: 'dd-MM-yyyy, hh:mm a' }}
                 </span>
                 @if (canDelete()) {
                 <button type="button" class="timeline-delete-btn" pTooltip="Delete remark" tooltipPosition="left"
-                  [attr.aria-label]="'Delete remark from ' + (rmk.created_at | date: 'dd-MM-yyyy')"
+                  [attr.aria-label]="'Delete remark from ' + (safeDate(rmk.created_at) | date: 'dd-MM-yyyy')"
                   (click)="onDeleteQuick(rmk.id)">
                   <i class="pi pi-trash" aria-hidden="true"></i>
                 </button>
@@ -111,7 +111,7 @@ import { parseStepRemarks } from '../../../core/utils/remark.utils';
             <div class="timeline-meta-bar">
               <span class="timeline-timestamp">
                 <i class="pi pi-clock" aria-hidden="true"></i>
-                {{ rmk.created_at | date: 'dd-MM-yyyy, hh:mm a' }}
+                {{ safeDate(rmk.created_at) | date: 'dd-MM-yyyy, hh:mm a' }}
               </span>
               <button type="button" class="dlg-remark-remove" [attr.aria-label]="'Remove remark ' + (i + 1)"
                 pTooltip="Remove remark" tooltipPosition="top" (click)="onRemoveDialog(i)">
@@ -204,5 +204,22 @@ export class StepRemarksComponent {
     };
     this.newText.set('');
     return newItem;
+  }
+
+  protected safeDate(val?: string | Date | null): Date | null {
+    if (!val) return null;
+    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+    const str = String(val).trim();
+    if (!str) return null;
+    const matchDmy = str.match(/^(\d{2})[-/](\d{2})[-/](\d{4})/);
+    if (matchDmy) {
+      const day = parseInt(matchDmy[1], 10);
+      const month = parseInt(matchDmy[2], 10) - 1;
+      const year = parseInt(matchDmy[3], 10);
+      const d = new Date(year, month, day);
+      return !isNaN(d.getTime()) ? d : null;
+    }
+    const d = new Date(str);
+    return !isNaN(d.getTime()) ? d : null;
   }
 }

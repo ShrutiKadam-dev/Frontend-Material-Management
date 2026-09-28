@@ -323,6 +323,14 @@
 
     <div class="dlg-body">
 
+      <!-- Auto-Fetch Notice from Step 01 Customer Query -->
+      @if (!editingQuotation() && items().length > 0) {
+      <div class="cost-sheet-sync-pill" role="status">
+        <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
+        <span>Auto-imported from <strong>Latest Customer Query</strong> · {{ items().length }} material items pre-filled.</span>
+      </div>
+      }
+
       <!-- ── 1. Declarative Header Form Grid ───────────── -->
       <div class="dlg-section">
         <p class="dlg-section-label"><i class="pi pi-file-check"></i> 1. Quotation Details & Terms</p>

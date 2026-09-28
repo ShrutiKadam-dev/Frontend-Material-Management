@@ -13,7 +13,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -28,11 +28,13 @@ import { ProjectService } from '../../../../core/services/project';
 import { SupplierService } from '../../../../core/services/supplier';
 import { AttachmentService } from '../../../../core/services/attachment';
 import { DropdownService } from '../../../../core/services/dropdown.service';
+import { OrderConfirmationService } from '../../../../core/services/order-confirmation';
 import {
   SupplierPayment,
   SupplierPaymentCreateInput,
   SupplierPaymentUpdateInput,
 } from '../../../../core/models/supplier-payment.model';
+import { LatestOrderConfirmation } from '../../../../core/models/order-confirmation.model';
 import { Attachment } from '../../../../core/models/attachment.model';
 import { Supplier } from '../../../../core/models/supplier.model';
 import { Project } from '../../../../core/models/project.model';
@@ -54,7 +56,6 @@ import { StepRemarksComponent } from '../../../../shared/components/step-remarks
     DatePickerModule,
     SelectModule,
     TooltipModule,
-    DatePipe,
     DecimalPipe,
     StepRemarksComponent,
   ],
@@ -72,11 +73,13 @@ export class Step15SupplierPayment implements OnInit {
   private readonly supplierService = inject(SupplierService);
   private readonly attachmentService = inject(AttachmentService);
   private readonly dropdownService = inject(DropdownService);
+  private readonly orderConfirmationService = inject(OrderConfirmationService);
 
   // ── State Signals ──────────────────────────────────────────────
   protected readonly projectId = signal<number | null>(null);
   protected readonly project = signal<Project | null>(null);
   protected readonly supplier = signal<Supplier | null>(null);
+  protected readonly latestOrderConfirmation = signal<LatestOrderConfirmation | null>(null);
   protected readonly payments = signal<SupplierPayment[]>([]);
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -127,18 +130,24 @@ export class Step15SupplierPayment implements OnInit {
   } {
     const rawTx = payment.transaction_details || '';
     const match = rawTx.match(/<!--fx-meta:({.*?})-->/);
-    const paymentOutflow = payment.total_outflow ?? payment.total_with_bank_charges;
+    const rawOutflow = payment.total_outflow ?? payment.total_with_bank_charges;
+    const paymentOutflow = rawOutflow != null && (rawOutflow as any) !== '' && !isNaN(Number(rawOutflow)) ? Number(rawOutflow) : undefined;
+    const paymentExRate = payment.exchange_rate != null && (payment.exchange_rate as any) !== '' && !isNaN(Number(payment.exchange_rate)) ? Number(payment.exchange_rate) : undefined;
+    const paymentBankCharges = payment.bank_charges != null && (payment.bank_charges as any) !== '' && !isNaN(Number(payment.bank_charges)) ? Number(payment.bank_charges) : undefined;
+    const paymentSwift = payment.swift_charges != null && (payment.swift_charges as any) !== '' && !isNaN(Number(payment.swift_charges)) ? Number(payment.swift_charges) : undefined;
+    const paymentTotEx = payment.total_with_exchange != null && (payment.total_with_exchange as any) !== '' && !isNaN(Number(payment.total_with_exchange)) ? Number(payment.total_with_exchange) : undefined;
+
     if (match) {
       try {
         const meta = JSON.parse(match[1]);
         const cleanTx = rawTx.replace(/<!--fx-meta:({.*?})-->/, '').trim();
         const metaOutflow = meta.total_outflow != null ? Number(meta.total_outflow) : (meta.total_with_bank_charges != null ? Number(meta.total_with_bank_charges) : undefined);
         return {
-          exchange_rate: payment.exchange_rate ?? (meta.exchange_rate != null ? Number(meta.exchange_rate) : undefined),
+          exchange_rate: paymentExRate ?? (meta.exchange_rate != null ? Number(meta.exchange_rate) : undefined),
           bank_charges_currency: payment.bank_charges_currency ?? meta.bank_charges_currency ?? undefined,
-          bank_charges: payment.bank_charges ?? (meta.bank_charges != null ? Number(meta.bank_charges) : undefined),
-          swift_charges: payment.swift_charges ?? (meta.swift_charges != null ? Number(meta.swift_charges) : undefined),
-          total_with_exchange: payment.total_with_exchange ?? (meta.total_with_exchange != null ? Number(meta.total_with_exchange) : undefined),
+          bank_charges: paymentBankCharges ?? (meta.bank_charges != null ? Number(meta.bank_charges) : undefined),
+          swift_charges: paymentSwift ?? (meta.swift_charges != null ? Number(meta.swift_charges) : undefined),
+          total_with_exchange: paymentTotEx ?? (meta.total_with_exchange != null ? Number(meta.total_with_exchange) : undefined),
           total_outflow: paymentOutflow ?? metaOutflow,
           total_with_bank_charges: paymentOutflow ?? metaOutflow,
           clean_transaction_details: cleanTx,
@@ -148,11 +157,11 @@ export class Step15SupplierPayment implements OnInit {
       }
     }
     return {
-      exchange_rate: payment.exchange_rate,
+      exchange_rate: paymentExRate,
       bank_charges_currency: payment.bank_charges_currency,
-      bank_charges: payment.bank_charges,
-      swift_charges: payment.swift_charges,
-      total_with_exchange: payment.total_with_exchange,
+      bank_charges: paymentBankCharges,
+      swift_charges: paymentSwift,
+      total_with_exchange: paymentTotEx,
       total_outflow: paymentOutflow,
       total_with_bank_charges: paymentOutflow,
       clean_transaction_details: rawTx,
@@ -231,28 +240,156 @@ export class Step15SupplierPayment implements OnInit {
     });
   });
 
+  // ── Latest Payment Record ──────────────────────────────────────
+  protected readonly latestPayment = computed<SupplierPayment | null>(() => {
+    const list = this.payments();
+    if (!list.length) return null;
+    return [...list].sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0))[0] || null;
+  });
+
+  // ── Currency Signal for Cards ──────────────────────────────────
+  protected readonly cardCurrency = computed(() => {
+    const lp = this.latestPayment();
+    return (
+      lp?.currency ||
+      this.latestOrderConfirmation()?.currency_unit ||
+      this.latestOrderConfirmation()?.currency ||
+      this.project()?.currency ||
+      'INR'
+    );
+  });
+
   // ── KPI Summary Signals ────────────────────────────────────────
   protected readonly totalCommitmentValue = computed(() => {
+    const lp = this.latestPayment();
+    if (lp?.total_supplier_value != null && !isNaN(Number(lp.total_supplier_value)) && Number(lp.total_supplier_value) > 0) {
+      return Number(lp.total_supplier_value);
+    }
+    const oc = this.latestOrderConfirmation();
+    if (oc?.total_amount != null && !isNaN(Number(oc.total_amount)) && Number(oc.total_amount) > 0) {
+      return Number(oc.total_amount);
+    }
     const list = this.payments();
-    if (!list.length) return 0;
-    return list.reduce((sum, p) => Math.max(sum, Number(p.total_supplier_value) || 0), 0);
+    if (list.length) {
+      const maxFromPayments = list.reduce((sum, p) => Math.max(sum, Number(p.total_supplier_value) || 0), 0);
+      if (maxFromPayments > 0) {
+        return maxFromPayments;
+      }
+    }
+    if (oc?.total_amount != null && !isNaN(Number(oc.total_amount))) {
+      return Number(oc.total_amount);
+    }
+    return 0;
   });
 
   protected readonly totalDisbursed = computed(() => {
+    const lp = this.latestPayment();
+    if (lp?.total_paid_amount != null && !isNaN(Number(lp.total_paid_amount))) {
+      return Number(lp.total_paid_amount);
+    }
     return this.payments().reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0);
   });
 
   protected readonly totalPending = computed(() => {
+    const lp = this.latestPayment();
+    if (lp?.pending_amount != null && !isNaN(Number(lp.pending_amount))) {
+      return Math.max(0, Number(lp.pending_amount));
+    }
     const total = this.totalCommitmentValue();
     const paid = this.totalDisbursed();
     return Math.max(0, total - paid);
   });
 
-  protected readonly disbursementRate = computed(() => {
+  protected readonly cumulativePaidPercentage = computed(() => {
+    const lp = this.latestPayment();
+    if (lp?.cumulative_payment_percentage != null && !isNaN(Number(lp.cumulative_payment_percentage))) {
+      return Math.min(100, Math.round(Number(lp.cumulative_payment_percentage) * 10) / 10);
+    }
     const total = this.totalCommitmentValue();
     if (total <= 0) return 0;
-    const rate = (this.totalDisbursed() / total) * 100;
-    return Math.min(100, Math.round(rate));
+    return Math.min(100, Math.round(((this.totalDisbursed() / total) * 100) * 10) / 10);
+  });
+
+  protected readonly pendingPercentage = computed(() => {
+    const lp = this.latestPayment();
+    if (lp?.pending_percentage != null && !isNaN(Number(lp.pending_percentage))) {
+      return Math.max(0, Math.round(Number(lp.pending_percentage) * 10) / 10);
+    }
+    return Math.max(0, Math.round((100 - this.cumulativePaidPercentage()) * 10) / 10);
+  });
+
+  protected readonly disbursementRate = computed(() => {
+    return Math.round(this.cumulativePaidPercentage());
+  });
+
+  protected readonly latestPaymentStatusMessage = computed(() => {
+    const lp = this.latestPayment();
+    if (lp?.payment_status_message) {
+      return lp.payment_status_message;
+    }
+    if (this.payments().length > 0) {
+      return `${this.cumulativePaidPercentage()}% paid, ${this.pendingPercentage()}% pending`;
+    }
+    return null;
+  });
+
+  protected readonly isPaymentCompleted = computed(() => {
+    const lp = this.latestPayment();
+    if (lp?.is_payment_completed !== undefined) {
+      return Boolean(lp.is_payment_completed);
+    }
+    return this.totalPending() <= 0.01 && this.totalCommitmentValue() > 0;
+  });
+
+  protected getPaymentCommitmentValue(payment: SupplierPayment): number {
+    return Number(payment.total_supplier_value) || this.totalCommitmentValue() || 0;
+  }
+
+  // ── Dialog Contextual Milestone Signals ────────────────────────
+  protected readonly currentAmountPaid = signal<number | null>(null);
+  protected readonly currentPercentage = signal<number | null>(null);
+
+  protected readonly dialogPreviouslyPaid = computed(() => {
+    const editing = this.editingPayment();
+    if (editing) {
+      return this.payments()
+        .filter((p) => p.id !== editing.id)
+        .reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0);
+    }
+    return this.totalDisbursed();
+  });
+
+  protected readonly dialogPreviouslyPaidPct = computed(() => {
+    const total = this.totalCommitmentValue();
+    if (total <= 0) return 0;
+    return Math.min(100, Math.round(((this.dialogPreviouslyPaid() / total) * 100) * 10) / 10);
+  });
+
+  protected readonly dialogAvailablePending = computed(() => {
+    const total = this.totalCommitmentValue();
+    return Math.max(0, Math.round((total - this.dialogPreviouslyPaid()) * 100) / 100);
+  });
+
+  protected readonly dialogAvailablePendingPct = computed(() => {
+    const total = this.totalCommitmentValue();
+    if (total <= 0) return 0;
+    return Math.max(0, Math.round((100 - this.dialogPreviouslyPaidPct()) * 10) / 10);
+  });
+
+  protected readonly isAmountExceeding = computed(() => {
+    if (this.editingPayment()) return false;
+    const avail = this.dialogAvailablePending();
+    if (avail <= 0) return false;
+    const currentPaid = this.currentAmountPaid();
+    return currentPaid != null && currentPaid > (avail + 0.01);
+  });
+
+  protected readonly isPercentageExceeding = computed(() => {
+    if (this.editingPayment()) return false;
+    const availPct = this.dialogAvailablePendingPct();
+    if (availPct <= 0) return false;
+    const currentPct = this.currentPercentage();
+    return currentPct != null && currentPct > (availPct + 0.01);
   });
 
   // ── Lifecycle ──────────────────────────────────────────────────
@@ -289,7 +426,13 @@ export class Step15SupplierPayment implements OnInit {
       error: () => {/* non-fatal */ },
     });
 
-    // 2. Fetch Supplier Payments (Step 15 records)
+    // 2. Fetch Latest Order Confirmation for committed value & currency
+    this.orderConfirmationService.getLatestOrderConfirmation(pId).subscribe({
+      next: (latest) => this.latestOrderConfirmation.set(latest),
+      error: () => {/* non-fatal */ },
+    });
+
+    // 3. Fetch Supplier Payments (Step 15 records)
     this.supplierPaymentService
       .getSupplierPayments(pId)
       .pipe(finalize(() => this.loading.set(false)))
@@ -309,25 +452,61 @@ export class Step15SupplierPayment implements OnInit {
     this.existingAttachments.set([]);
     this.dialogRemarks.set([]);
 
-    const defaultCurrency = this.project()?.currency || 'INR';
-    const defaultRate = defaultCurrency === 'INR' ? 1 : null;
+    const lp = this.latestPayment();
+    const defaultCurrency = lp?.currency || this.cardCurrency();
+    const defaultTotal = this.totalCommitmentValue() || null;
+    const availPending = this.dialogAvailablePending();
+    const availPendingPct = this.dialogAvailablePendingPct();
+
+    let defaultRate: number | null = null;
+    if (lp?.exchange_rate != null && !isNaN(Number(lp.exchange_rate))) {
+      defaultRate = Number(lp.exchange_rate);
+    } else {
+      defaultRate = defaultCurrency === 'INR' ? 1 : null;
+    }
+
+    const defaultBankChargesCurr = lp?.bank_charges_currency || 'INR';
+
+    // User view: Payment percentage and amount should NOT be pre-patched.
+    // It depends on the user how much they want to disburse in this tranche.
+    const defaultPending = availPending > 0 ? availPending : null;
 
     this.paymentForm.reset({
       currency: defaultCurrency,
       payment_percentage: null,
-      total_supplier_value: null,
+      total_supplier_value: defaultTotal,
       amount_paid: null,
       payment_date: null,
       transaction_details: '',
-      pending_amount: null,
+      pending_amount: defaultPending,
       remark: '',
-      bank_charges_currency: 'INR',
+      bank_charges_currency: defaultBankChargesCurr,
       bank_charges: null,
       swift_charges: null,
       exchange_rate: defaultRate,
       total_with_exchange: null,
       total_outflow: null,
     });
+
+    this.currentAmountPaid.set(null);
+    this.currentPercentage.set(null);
+
+    // Apply strict maximum validators based on available outstanding balance
+    if (availPending > 0) {
+      this.paymentForm.get('amount_paid')?.setValidators([
+        Validators.required,
+        Validators.min(0.01),
+        Validators.max(availPending),
+      ]);
+      this.paymentForm.get('amount_paid')?.updateValueAndValidity();
+    }
+    if (availPendingPct > 0) {
+      this.paymentForm.get('payment_percentage')?.setValidators([
+        Validators.min(0),
+        Validators.max(availPendingPct),
+      ]);
+      this.paymentForm.get('payment_percentage')?.updateValueAndValidity();
+    }
 
     this.paymentDialogVisible.set(true);
   }
@@ -346,27 +525,62 @@ export class Step15SupplierPayment implements OnInit {
     const bcCurr = payment.bank_charges_currency ?? parsedMeta.bank_charges_currency ?? 'INR';
     const bcAmt = payment.bank_charges ?? parsedMeta.bank_charges ?? null;
     const swiftAmt = payment.swift_charges ?? parsedMeta.swift_charges ?? null;
-    const totEx = payment.total_with_exchange ?? parsedMeta.total_with_exchange ?? (exRate && payment.amount_paid ? Math.round(payment.amount_paid * exRate * 100) / 100 : null);
-    const totAll = payment.total_with_bank_charges ?? parsedMeta.total_with_bank_charges ?? ((totEx ?? payment.amount_paid ?? 0) + (bcAmt ?? 0) + (swiftAmt ?? 0));
+    const amtPaid = payment.amount_paid != null ? Number(payment.amount_paid) : null;
+    const totEx = payment.total_with_exchange ?? parsedMeta.total_with_exchange ?? (exRate && amtPaid ? Math.round(amtPaid * Number(exRate) * 100) / 100 : null);
+    const totAll = payment.total_with_bank_charges ?? parsedMeta.total_with_bank_charges ?? ((totEx ?? amtPaid ?? 0) + (Number(bcAmt) || 0) + (Number(swiftAmt) || 0));
 
     this.paymentForm.reset({
-      currency: payment.currency || 'INR',
-      payment_percentage: payment.payment_percentage ?? null,
-      total_supplier_value: payment.total_supplier_value ?? null,
-      amount_paid: payment.amount_paid ?? null,
+      currency: payment.currency || this.cardCurrency(),
+      payment_percentage: payment.payment_percentage != null ? Number(payment.payment_percentage) : null,
+      total_supplier_value: payment.total_supplier_value != null ? Number(payment.total_supplier_value) : (this.totalCommitmentValue() || null),
+      amount_paid: amtPaid,
       payment_date: payDate,
       transaction_details: parsedMeta.clean_transaction_details || payment.transaction_details || '',
-      pending_amount: payment.pending_amount ?? null,
+      pending_amount: payment.pending_amount != null ? Number(payment.pending_amount) : null,
       remark: payment.remark || '',
       bank_charges_currency: bcCurr,
-      bank_charges: bcAmt,
-      swift_charges: swiftAmt,
-      exchange_rate: exRate,
-      total_with_exchange: totEx,
-      total_outflow: totAll,
+      bank_charges: bcAmt != null ? Number(bcAmt) : null,
+      swift_charges: swiftAmt != null ? Number(swiftAmt) : null,
+      exchange_rate: exRate != null ? Number(exRate) : null,
+      total_with_exchange: totEx != null ? Number(totEx) : null,
+      total_outflow: totAll != null ? Number(totAll) : null,
     });
 
+    this.paymentForm.get('amount_paid')?.setValidators([Validators.required, Validators.min(0.01)]);
+    this.paymentForm.get('payment_percentage')?.setValidators([Validators.min(0), Validators.max(100)]);
+    this.paymentForm.get('amount_paid')?.updateValueAndValidity();
+    this.paymentForm.get('payment_percentage')?.updateValueAndValidity();
+
+    this.currentAmountPaid.set(amtPaid);
+    this.currentPercentage.set(payment.payment_percentage != null ? Number(payment.payment_percentage) : null);
+
     this.paymentDialogVisible.set(true);
+  }
+
+  // ── Blur Validation Handlers ───────────────────────────────────
+  protected onPercentageBlur(): void {
+    if (this.isPercentageExceeding()) {
+      const availPct = this.dialogAvailablePendingPct();
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Limit Exceeded',
+        detail: `Entered percentage exceeds remaining balance (${availPct}%). Maximum allowed is ${availPct}%.`,
+        life: 4500,
+      });
+    }
+  }
+
+  protected onAmountPaidBlur(): void {
+    if (this.isAmountExceeding()) {
+      const avail = this.dialogAvailablePending();
+      const curr = this.paymentForm.get('currency')?.value || this.cardCurrency();
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Limit Exceeded',
+        detail: `Payment exceeds outstanding balance of ${curr} ${avail.toFixed(2)}. Maximum payable is ${avail.toFixed(2)}.`,
+        life: 4500,
+      });
+    }
   }
 
   // ── Dynamic Percentage & Amount Calculations ───────────────────
@@ -415,10 +629,68 @@ export class Step15SupplierPayment implements OnInit {
   }
 
   protected onPercentageChange(pct: number | null): void {
-    const total = Number(this.paymentForm.get('total_supplier_value')?.value) || 0;
-    if (pct != null && total > 0) {
-      const calculatedAmount = Math.round(((total * pct) / 100) * 100) / 100;
-      const pending = Math.max(0, Math.round((total - calculatedAmount) * 100) / 100);
+    const pVal = pct != null && (pct as any) !== '' && !isNaN(Number(pct)) ? Number(pct) : null;
+    this.currentPercentage.set(pVal);
+
+    const total = Number(this.paymentForm.get('total_supplier_value')?.value) || this.totalCommitmentValue() || 0;
+    const previouslyPaid = this.dialogPreviouslyPaid();
+    if (pVal != null && total > 0) {
+      const calculatedAmount = Math.round(((total * pVal) / 100) * 100) / 100;
+      this.currentAmountPaid.set(calculatedAmount);
+      const totalPaidAfterThis = previouslyPaid + calculatedAmount;
+      const pending = Math.max(0, Math.round((total - totalPaidAfterThis) * 100) / 100);
+      this.paymentForm.patchValue({
+        amount_paid: calculatedAmount,
+        pending_amount: pending,
+      }, { emitEvent: false });
+      this.recalculateForexAndBankCharges();
+    } else if (pVal == null) {
+      this.currentAmountPaid.set(null);
+      const pending = Math.max(0, Math.round((total - previouslyPaid) * 100) / 100);
+      this.paymentForm.patchValue({
+        amount_paid: null,
+        pending_amount: pending,
+      }, { emitEvent: false });
+      this.recalculateForexAndBankCharges();
+    }
+  }
+
+  protected onAmountPaidChange(paid: number | null): void {
+    const aVal = paid != null && (paid as any) !== '' && !isNaN(Number(paid)) ? Number(paid) : null;
+    this.currentAmountPaid.set(aVal);
+
+    const total = Number(this.paymentForm.get('total_supplier_value')?.value) || this.totalCommitmentValue() || 0;
+    const previouslyPaid = this.dialogPreviouslyPaid();
+    const currentPaid = aVal || 0;
+    if (total > 0 && aVal != null && aVal > 0) {
+      const calculatedPct = Math.round(((currentPaid / total) * 100) * 10) / 10;
+      this.currentPercentage.set(calculatedPct);
+      const totalPaidAfterThis = previouslyPaid + currentPaid;
+      const pending = Math.max(0, Math.round((total - totalPaidAfterThis) * 100) / 100);
+      this.paymentForm.patchValue({
+        payment_percentage: calculatedPct,
+        pending_amount: pending,
+      }, { emitEvent: false });
+    } else if (!aVal) {
+      this.currentPercentage.set(null);
+      const pending = Math.max(0, Math.round((total - previouslyPaid) * 100) / 100);
+      this.paymentForm.patchValue({
+        payment_percentage: null,
+        pending_amount: pending,
+      }, { emitEvent: false });
+    }
+    this.recalculateForexAndBankCharges();
+  }
+
+  protected onTotalValueChange(total: number | null): void {
+    const totVal = Number(total) || 0;
+    const pct = this.currentPercentage() ?? Number(this.paymentForm.get('payment_percentage')?.value);
+    const previouslyPaid = this.dialogPreviouslyPaid();
+    if (totVal > 0 && !isNaN(pct) && pct > 0) {
+      const calculatedAmount = Math.round(((totVal * pct) / 100) * 100) / 100;
+      this.currentAmountPaid.set(calculatedAmount);
+      const totalPaidAfterThis = previouslyPaid + calculatedAmount;
+      const pending = Math.max(0, Math.round((totVal - totalPaidAfterThis) * 100) / 100);
       this.paymentForm.patchValue({
         amount_paid: calculatedAmount,
         pending_amount: pending,
@@ -427,30 +699,37 @@ export class Step15SupplierPayment implements OnInit {
     }
   }
 
-  protected onAmountPaidChange(paid: number | null): void {
-    const total = Number(this.paymentForm.get('total_supplier_value')?.value) || 0;
-    if (paid != null && total > 0) {
-      const calculatedPct = Math.round(((paid / total) * 100) * 10) / 10;
-      const pending = Math.max(0, Math.round((total - paid) * 100) / 100);
-      this.paymentForm.patchValue({
-        payment_percentage: Math.min(100, calculatedPct),
-        pending_amount: pending,
-      }, { emitEvent: false });
-    }
+  protected fillRemainingPayment(): void {
+    const availPending = this.dialogAvailablePending();
+    const availPendingPct = this.dialogAvailablePendingPct();
+    this.currentAmountPaid.set(availPending);
+    this.currentPercentage.set(availPendingPct);
+    this.paymentForm.patchValue({
+      payment_percentage: availPendingPct,
+      amount_paid: availPending,
+      pending_amount: 0,
+    });
     this.recalculateForexAndBankCharges();
   }
 
-  protected onTotalValueChange(total: number | null): void {
-    const paid = Number(this.paymentForm.get('amount_paid')?.value) || 0;
-    const totVal = Number(total) || 0;
-    if (totVal > 0) {
-      const pending = Math.max(0, Math.round((totVal - paid) * 100) / 100);
-      const calculatedPct = paid > 0 ? Math.round(((paid / totVal) * 100) * 10) / 10 : null;
-      this.paymentForm.patchValue({
-        pending_amount: pending,
-        payment_percentage: calculatedPct,
-      }, { emitEvent: false });
+  protected extractErrorMessage(err: unknown, fallback: string): string {
+    if (!err) return fallback;
+    if (typeof err === 'string') return err;
+    const e = err as any;
+    if (e?.error) {
+      if (typeof e.error === 'string') return e.error;
+      if (e.error.error) {
+        if (typeof e.error.error === 'string') return e.error.error;
+        if (e.error.error.message) return e.error.error.message;
+      }
+      if (e.error.message) return e.error.message;
+      if (e.error.detail) {
+        if (typeof e.error.detail === 'string') return e.error.detail;
+        if (Array.isArray(e.error.detail) && e.error.detail[0]?.msg) return e.error.detail[0].msg;
+      }
     }
+    if (e?.message) return e.message;
+    return fallback;
   }
 
   protected onSubmitPayment(): void {
@@ -460,13 +739,39 @@ export class Step15SupplierPayment implements OnInit {
       return;
     }
 
+    const val = this.paymentForm.getRawValue();
+    const existing = this.editingPayment();
+    const availPending = this.dialogAvailablePending();
+    const availPendingPct = this.dialogAvailablePendingPct();
+
+    // Guard against exceeding outstanding balance
+    if (!existing && availPending > 0 && Number(val.amount_paid) > (availPending + 0.01)) {
+      const errorMsg = `Payment exceeds outstanding balance of ${val.currency || this.cardCurrency()} ${availPending.toFixed(2)}`;
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Payment Limit Exceeded',
+        detail: errorMsg,
+        life: 5000,
+      });
+      return;
+    }
+
+    if (!existing && availPendingPct > 0 && Number(val.payment_percentage) > (availPendingPct + 0.01)) {
+      const errorMsg = `Payment percentage exceeds remaining balance of ${availPendingPct.toFixed(1)}%`;
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Payment Limit Exceeded',
+        detail: errorMsg,
+        life: 5000,
+      });
+      return;
+    }
+
     const pId = this.projectId();
     if (!pId) return;
 
     this.saving.set(true);
-    const val = this.paymentForm.getRawValue();
     const payDateStr = this.formatDate(val.payment_date);
-
     const userTx = String(val.transaction_details || '').trim();
 
     const payload: SupplierPaymentCreateInput = {
@@ -488,7 +793,6 @@ export class Step15SupplierPayment implements OnInit {
     };
 
     const files = this.selectedFiles();
-    const existing = this.editingPayment();
 
     if (existing) {
       this.supplierPaymentService
@@ -496,12 +800,27 @@ export class Step15SupplierPayment implements OnInit {
         .pipe(finalize(() => this.saving.set(false)))
         .subscribe({
           next: () => {
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Payment Updated',
+              detail: `Disbursement record #${existing.id} updated successfully.`,
+              life: 4000,
+            });
             this.paymentDialogVisible.set(false);
             this.loadAllStep15Data();
           },
           error: (err) => {
             console.error('Failed to update supplier payment', err);
-            this.errorMessage.set('Failed to update supplier payment. Please try again.');
+            const msg = this.extractErrorMessage(err, 'Failed to update supplier payment. Please try again.');
+            const code = (err as any)?.error?.error?.code || (err as any)?.error?.code;
+            const isLimitExceeded = code === 'PAYMENT_EXCEEDS_OUTSTANDING_BALANCE' || msg.toLowerCase().includes('exceeds outstanding balance');
+            this.messageService.add({
+              severity: 'error',
+              summary: isLimitExceeded ? 'Payment Limit Exceeded' : 'Payment Error',
+              detail: msg,
+              life: 6000,
+            });
+            this.errorMessage.set(msg);
           },
         });
     } else {
@@ -510,12 +829,27 @@ export class Step15SupplierPayment implements OnInit {
         .pipe(finalize(() => this.saving.set(false)))
         .subscribe({
           next: () => {
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Payment Recorded',
+              detail: `Supplier payment of ${payload.currency} ${Number(payload.amount_paid).toFixed(2)} recorded successfully.`,
+              life: 4000,
+            });
             this.paymentDialogVisible.set(false);
             this.loadAllStep15Data();
           },
           error: (err) => {
             console.error('Failed to create supplier payment', err);
-            this.errorMessage.set('Failed to record supplier payment. Please try again.');
+            const msg = this.extractErrorMessage(err, 'Failed to record supplier payment. Please try again.');
+            const code = (err as any)?.error?.error?.code || (err as any)?.error?.code;
+            const isLimitExceeded = code === 'PAYMENT_EXCEEDS_OUTSTANDING_BALANCE' || msg.toLowerCase().includes('exceeds outstanding balance');
+            this.messageService.add({
+              severity: 'error',
+              summary: isLimitExceeded ? 'Payment Limit Exceeded' : 'Payment Error',
+              detail: msg,
+              life: 6000,
+            });
+            this.errorMessage.set(msg);
           },
         });
     }
@@ -549,9 +883,10 @@ export class Step15SupplierPayment implements OnInit {
   // ── Live Calculation Helper for Modal ──────────────────────────
   protected getDialogPendingBalance(): number {
     const val = this.paymentForm.getRawValue();
-    const total = Number(val.total_supplier_value) || 0;
-    const paid = Number(val.amount_paid) || 0;
-    return Math.max(0, total - paid);
+    const total = Number(val.total_supplier_value) || this.totalCommitmentValue() || 0;
+    const currentPaid = Number(val.amount_paid) || 0;
+    const previouslyPaid = this.dialogPreviouslyPaid();
+    return Math.max(0, Math.round((total - (previouslyPaid + currentPaid)) * 100) / 100);
   }
 
   // ── File Management ────────────────────────────────────────────
@@ -625,6 +960,29 @@ export class Step15SupplierPayment implements OnInit {
 
   private formatDate(date: Date | string | null | undefined): string {
     return formatLocalDate(date);
+  }
+
+  protected formatDisplayDate(date: Date | string | null | undefined): string {
+    if (!date) return '—';
+    if (typeof date === 'string') {
+      const trimmed = date.trim();
+      if (!trimmed) return '—';
+      // If already DD-MM-YYYY, return directly without pipe conversion
+      if (/^\d{2}-\d{2}-\d{4}$/.test(trimmed)) {
+        return trimmed;
+      }
+      // If YYYY-MM-DD
+      const matchYmd = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (matchYmd) {
+        return `${matchYmd[3]}-${matchYmd[2]}-${matchYmd[1]}`;
+      }
+    }
+    const parsed = parseLocalDate(date);
+    if (!parsed) return typeof date === 'string' ? date : '—';
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const year = parsed.getFullYear();
+    return `${day}-${month}-${year}`;
   }
 
   protected quickAddPaymentRemark(item: SupplierPayment, text: string): void {

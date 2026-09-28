@@ -307,7 +307,7 @@
         @if (latestQuotation(); as quote) {
         @if (!editingOrder()) {
         <div class="cost-sheet-sync-pill" role="status">
-          <i class="pi pi-check-circle" aria-hidden="true"></i>
+          <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
           <span>Auto-imported from <strong>Latest Supplier Quotation</strong> · {{ items().length }} items with commercial terms pre-filled.</span>
         </div>
         }

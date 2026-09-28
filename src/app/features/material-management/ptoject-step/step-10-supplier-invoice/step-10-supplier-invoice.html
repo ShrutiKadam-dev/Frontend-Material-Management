@@ -800,7 +800,7 @@
         @if (latestOrderConfirmation(); as oc) {
         @if (!editingProforma()) {
         <div class="cost-sheet-sync-pill" role="status">
-          <i class="pi pi-check-circle" aria-hidden="true"></i>
+          <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
           <span>
             Auto-imported from <strong>Latest Order Confirmation</strong> · {{ proformaItems().length }} items with
             commercial terms pre-filled.
@@ -1126,7 +1126,7 @@
         @if (latestOrderConfirmation(); as oc) {
         @if (!editingInvoice()) {
         <div class="cost-sheet-sync-pill" role="status">
-          <i class="pi pi-check-circle" aria-hidden="true"></i>
+          <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
           <span>
             Auto-imported from <strong>Latest Order Confirmation</strong> · {{ invoiceItems().length }} items with
             commercial terms pre-filled.
@@ -1455,7 +1455,7 @@
         @if (!editingPackingList()) {
         @if (latestProformaInvoice(); as pi) {
         <div class="cost-sheet-sync-pill" role="status">
-          <i class="pi pi-check-circle" aria-hidden="true"></i>
+          <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
           <span>
             Auto-imported from <strong>Latest Proforma Invoice</strong> · {{ packingListItems().length }} items with
             commercial terms pre-filled.
@@ -1463,7 +1463,7 @@
         </div>
         } @else if (latestOrderConfirmation(); as oc) {
         <div class="cost-sheet-sync-pill" role="status">
-          <i class="pi pi-check-circle" aria-hidden="true"></i>
+          <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
           <span>
             Auto-imported from <strong>Latest Order Confirmation</strong> · {{ packingListItems().length }} items with
             commercial terms pre-filled.

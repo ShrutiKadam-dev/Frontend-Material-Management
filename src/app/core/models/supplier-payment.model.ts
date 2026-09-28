@@ -27,7 +27,15 @@ export interface SupplierPayment {
   bank_charges?: number;
   swift_charges?: number;
   total_outflow?: number;
-  total_with_bank_charges?: number;
+  total_with_bank_charges?: number | string;
+
+  // Milestone Settlement Fields
+  cumulative_payment_percentage?: number | string;
+  pending_percentage?: number | string;
+  total_paid_amount?: number | string;
+  payment_status?: string;
+  payment_status_message?: string;
+  is_payment_completed?: boolean;
 }
 
 export interface SupplierPaymentCreateInput {

@@ -167,7 +167,7 @@
                             }
                             <span class="vsc-date">
                                 <i class="pi pi-calendar-check" aria-hidden="true"></i>
-                                Payment Date: {{ payment.payment_date | date:'dd-MM-yyyy' }}
+                                Payment Date: {{ formatDisplayDate(payment.payment_date) }}
                             </span>
                             <h2 class="vsc-title">Payment Voucher #{{ payment.id }} — {{ payment.invoice_no }}</h2>
                         </div>
@@ -210,7 +210,7 @@
                             <div class="param-chip">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
                                 <span class="p-lbl">Invoice Date:</span>
-                                <span class="p-val">{{ payment.invoice_date | date:'dd-MM-yyyy' }}</span>
+                                <span class="p-val">{{ formatDisplayDate(payment.invoice_date) }}</span>
                             </div>
                             @if (payment.tds > 0) {
                             <div class="param-chip">
@@ -252,7 +252,7 @@
                                         <td style="text-align: center; color: var(--color-muted); font-weight: 700;">2</td>
                                         <td><strong style="color: #059669;">Direct Payment Realized</strong></td>
                                         <td><span class="ref-badge" style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;">Bank Receipt</span></td>
-                                        <td>Payment Date: {{ payment.payment_date | date:'dd-MM-yyyy' }}</td>
+                                        <td>Payment Date: {{ formatDisplayDate(payment.payment_date) }}</td>
                                         <td class="text-right font-mono font-bold" style="color: #059669;">₹ {{ payment.payment_amount | number:'1.2-2' }}</td>
                                     </tr>
                                     @if (payment.tds > 0) {
@@ -368,7 +368,7 @@
                 @if (latestTaxInvoice(); as inv) {
                 @if (!editingPayment()) {
                 <div class="cost-sheet-sync-pill" role="status">
-                    <i class="pi pi-check-circle" aria-hidden="true"></i>
+                    <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
                     <span>
                         Auto-imported from <strong>Latest Customer Tax Invoice</strong> · commercial terms pre-filled.
                     </span>

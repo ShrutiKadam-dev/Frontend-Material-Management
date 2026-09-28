@@ -101,6 +101,9 @@ export class OrderConfirmationService {
           }
           if (!data || typeof data !== 'object') return null;
 
+          const rawTotal = data.total_amount ?? data.amount ?? data.total_value ?? data.total_net_amount;
+          const totalAmount = rawTotal != null && rawTotal !== '' && !isNaN(Number(rawTotal)) ? Number(rawTotal) : undefined;
+
           const incoterms = data.incoterms || data.shipping_terms || data.delivery_terms || '';
           const shippingTerms = data.shipping_terms || data.delivery_terms || data.incoterms || '';
           const deliveryTerms = data.delivery_terms || data.shipping_terms || data.incoterms || '';
@@ -112,6 +115,7 @@ export class OrderConfirmationService {
           const currencySymbol = data.currency_symbol || (currencyUnit ? getCurrencySymbol(currencyUnit) : '');
 
           return {
+            total_amount: totalAmount,
             currency_unit: currencyUnit,
             currency_symbol: currencySymbol,
             currency: currencyUnit,

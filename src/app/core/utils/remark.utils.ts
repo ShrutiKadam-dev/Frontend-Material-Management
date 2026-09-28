@@ -1,5 +1,26 @@
 import { StepRemarkItem } from '../models/step-remark.model';
 
+function normalizeRemarkCreatedAt(val?: string): string {
+  if (!val) return new Date().toISOString();
+  const trimmed = val.trim();
+  if (!trimmed) return new Date().toISOString();
+  const matchDmy = trimmed.match(/^(\d{2})[-/](\d{2})[-/](\d{4})/);
+  if (matchDmy) {
+    const day = parseInt(matchDmy[1], 10);
+    const month = parseInt(matchDmy[2], 10) - 1;
+    const year = parseInt(matchDmy[3], 10);
+    const d = new Date(year, month, day);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString();
+    }
+  }
+  const d = new Date(trimmed);
+  if (!isNaN(d.getTime())) {
+    return d.toISOString();
+  }
+  return trimmed;
+}
+
 /**
  * Standard parser for remarks as an array of strings: `['Remark 1', 'Remark 2']`.
  * Converts string array into StepRemarkItem[] for timeline and UI display.
@@ -8,6 +29,8 @@ export function parseStepRemarks(rawRemark?: unknown, defaultDate?: string): Ste
   if (!rawRemark) {
     return [];
   }
+
+  const safeDefaultDate = normalizeRemarkCreatedAt(defaultDate);
 
   // Standard approach: Array of strings: ['Remark 1', 'Remark 2']
   if (Array.isArray(rawRemark)) {
@@ -19,7 +42,7 @@ export function parseStepRemarks(rawRemark?: unknown, defaultDate?: string): Ste
           return {
             id: `rmk-${idx + 1}`,
             text: trimmed,
-            created_at: defaultDate || new Date().toISOString(),
+            created_at: safeDefaultDate,
           };
         }
         if (item && typeof item === 'object') {
@@ -27,7 +50,7 @@ export function parseStepRemarks(rawRemark?: unknown, defaultDate?: string): Ste
           const text = String(rec['text'] ?? rec['remark'] ?? '').trim();
           if (!text) return null;
           const id = rec['id'] ? String(rec['id']) : `rmk-${idx + 1}`;
-          const createdAt = rec['created_at'] ? String(rec['created_at']) : defaultDate || new Date().toISOString();
+          const createdAt = rec['created_at'] ? normalizeRemarkCreatedAt(String(rec['created_at'])) : safeDefaultDate;
           return {
             id,
             text,
@@ -57,7 +80,7 @@ export function parseStepRemarks(rawRemark?: unknown, defaultDate?: string): Ste
       {
         id: 'rmk-1',
         text: trimmed,
-        created_at: defaultDate || new Date().toISOString(),
+        created_at: safeDefaultDate,
       },
     ];
   }

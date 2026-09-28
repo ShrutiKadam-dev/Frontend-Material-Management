@@ -13,7 +13,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { finalize } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -51,7 +51,6 @@ import { StepRemarksComponent } from '../../../../shared/components/step-remarks
     TextareaModule,
     DatePickerModule,
     TooltipModule,
-    DatePipe,
     DecimalPipe,
     StepRemarksComponent,
   ],
@@ -495,5 +494,26 @@ export class Step14CustomerPayment implements OnInit {
         });
       },
     });
+  }
+
+  protected formatDisplayDate(date: Date | string | null | undefined): string {
+    if (!date) return '—';
+    if (typeof date === 'string') {
+      const trimmed = date.trim();
+      if (!trimmed) return '—';
+      if (/^\d{2}-\d{2}-\d{4}$/.test(trimmed)) {
+        return trimmed;
+      }
+      const matchYmd = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (matchYmd) {
+        return `${matchYmd[3]}-${matchYmd[2]}-${matchYmd[1]}`;
+      }
+    }
+    const parsed = parseLocalDate(date);
+    if (!parsed) return typeof date === 'string' ? date : '—';
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const year = parsed.getFullYear();
+    return `${day}-${month}-${year}`;
   }
 }

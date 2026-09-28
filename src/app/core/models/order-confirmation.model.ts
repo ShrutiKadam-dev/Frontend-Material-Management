@@ -34,6 +34,7 @@ export interface LatestSupplierQuotation {
 }
 
 export interface LatestOrderConfirmation {
+  total_amount?: number;
   currency_unit?: string;
   currency_symbol?: string;
   currency?: string;
