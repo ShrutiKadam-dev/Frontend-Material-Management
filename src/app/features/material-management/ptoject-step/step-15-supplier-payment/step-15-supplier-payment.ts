@@ -108,9 +108,10 @@ export class Step15SupplierPayment implements OnInit {
     remark: [''],
     bank_charges_currency: ['INR'],
     bank_charges: [null, [Validators.min(0)]],
+    swift_charges: [null, [Validators.min(0)]],
     exchange_rate: [null, [Validators.min(0.0001)]],
     total_with_exchange: [null, [Validators.min(0)]],
-    total_with_bank_charges: [null, [Validators.min(0)]],
+    total_outflow: [null, [Validators.min(0)]],
   });
 
   // ── Forex & Bank Charges Metadata Helpers ──────────────────────
@@ -118,22 +119,28 @@ export class Step15SupplierPayment implements OnInit {
     exchange_rate?: number | null;
     bank_charges_currency?: string | null;
     bank_charges?: number | null;
+    swift_charges?: number | null;
     total_with_exchange?: number | null;
+    total_outflow?: number | null;
     total_with_bank_charges?: number | null;
     clean_transaction_details: string;
   } {
     const rawTx = payment.transaction_details || '';
     const match = rawTx.match(/<!--fx-meta:({.*?})-->/);
+    const paymentOutflow = payment.total_outflow ?? payment.total_with_bank_charges;
     if (match) {
       try {
         const meta = JSON.parse(match[1]);
         const cleanTx = rawTx.replace(/<!--fx-meta:({.*?})-->/, '').trim();
+        const metaOutflow = meta.total_outflow != null ? Number(meta.total_outflow) : (meta.total_with_bank_charges != null ? Number(meta.total_with_bank_charges) : undefined);
         return {
-          exchange_rate: meta.exchange_rate != null ? Number(meta.exchange_rate) : undefined,
-          bank_charges_currency: meta.bank_charges_currency || undefined,
-          bank_charges: meta.bank_charges != null ? Number(meta.bank_charges) : undefined,
-          total_with_exchange: meta.total_with_exchange != null ? Number(meta.total_with_exchange) : undefined,
-          total_with_bank_charges: meta.total_with_bank_charges != null ? Number(meta.total_with_bank_charges) : undefined,
+          exchange_rate: payment.exchange_rate ?? (meta.exchange_rate != null ? Number(meta.exchange_rate) : undefined),
+          bank_charges_currency: payment.bank_charges_currency ?? meta.bank_charges_currency ?? undefined,
+          bank_charges: payment.bank_charges ?? (meta.bank_charges != null ? Number(meta.bank_charges) : undefined),
+          swift_charges: payment.swift_charges ?? (meta.swift_charges != null ? Number(meta.swift_charges) : undefined),
+          total_with_exchange: payment.total_with_exchange ?? (meta.total_with_exchange != null ? Number(meta.total_with_exchange) : undefined),
+          total_outflow: paymentOutflow ?? metaOutflow,
+          total_with_bank_charges: paymentOutflow ?? metaOutflow,
           clean_transaction_details: cleanTx,
         };
       } catch {
@@ -144,8 +151,10 @@ export class Step15SupplierPayment implements OnInit {
       exchange_rate: payment.exchange_rate,
       bank_charges_currency: payment.bank_charges_currency,
       bank_charges: payment.bank_charges,
+      swift_charges: payment.swift_charges,
       total_with_exchange: payment.total_with_exchange,
-      total_with_bank_charges: payment.total_with_bank_charges,
+      total_outflow: paymentOutflow,
+      total_with_bank_charges: paymentOutflow,
       clean_transaction_details: rawTx,
     };
   }
@@ -171,6 +180,15 @@ export class Step15SupplierPayment implements OnInit {
     return null;
   }
 
+  protected getPaymentSwiftCharges(payment: SupplierPayment): number | null {
+    const meta = this.extractPaymentForexMeta(payment);
+    const amount = payment.swift_charges ?? meta.swift_charges;
+    if (amount != null && Number(amount) > 0) {
+      return Number(amount);
+    }
+    return null;
+  }
+
   protected getPaymentTotalWithExchange(payment: SupplierPayment): number | null {
     const meta = this.extractPaymentForexMeta(payment);
     if (payment.total_with_exchange != null) return Number(payment.total_with_exchange);
@@ -184,12 +202,13 @@ export class Step15SupplierPayment implements OnInit {
 
   protected getPaymentTotalWithBankCharges(payment: SupplierPayment): number | null {
     const meta = this.extractPaymentForexMeta(payment);
-    if (payment.total_with_bank_charges != null) return Number(payment.total_with_bank_charges);
-    if (meta.total_with_bank_charges != null) return Number(meta.total_with_bank_charges);
+    const directOutflow = payment.total_outflow ?? payment.total_with_bank_charges ?? meta.total_outflow ?? meta.total_with_bank_charges;
+    if (directOutflow != null) return Number(directOutflow);
     const totEx = this.getPaymentTotalWithExchange(payment) ?? (payment.amount_paid ? Number(payment.amount_paid) : null);
     const charges = this.getPaymentBankCharges(payment);
+    const swift = this.getPaymentSwiftCharges(payment);
     if (totEx != null) {
-      return Math.round((totEx + (charges?.amount || 0)) * 100) / 100;
+      return Math.round((totEx + (charges?.amount || 0) + (swift || 0)) * 100) / 100;
     }
     return null;
   }
@@ -304,9 +323,10 @@ export class Step15SupplierPayment implements OnInit {
       remark: '',
       bank_charges_currency: 'INR',
       bank_charges: null,
+      swift_charges: null,
       exchange_rate: defaultRate,
       total_with_exchange: null,
-      total_with_bank_charges: null,
+      total_outflow: null,
     });
 
     this.paymentDialogVisible.set(true);
@@ -325,8 +345,9 @@ export class Step15SupplierPayment implements OnInit {
     const exRate = payment.exchange_rate ?? parsedMeta.exchange_rate ?? null;
     const bcCurr = payment.bank_charges_currency ?? parsedMeta.bank_charges_currency ?? 'INR';
     const bcAmt = payment.bank_charges ?? parsedMeta.bank_charges ?? null;
+    const swiftAmt = payment.swift_charges ?? parsedMeta.swift_charges ?? null;
     const totEx = payment.total_with_exchange ?? parsedMeta.total_with_exchange ?? (exRate && payment.amount_paid ? Math.round(payment.amount_paid * exRate * 100) / 100 : null);
-    const totAll = payment.total_with_bank_charges ?? parsedMeta.total_with_bank_charges ?? ((totEx ?? payment.amount_paid ?? 0) + (bcAmt ?? 0));
+    const totAll = payment.total_with_bank_charges ?? parsedMeta.total_with_bank_charges ?? ((totEx ?? payment.amount_paid ?? 0) + (bcAmt ?? 0) + (swiftAmt ?? 0));
 
     this.paymentForm.reset({
       currency: payment.currency || 'INR',
@@ -339,9 +360,10 @@ export class Step15SupplierPayment implements OnInit {
       remark: payment.remark || '',
       bank_charges_currency: bcCurr,
       bank_charges: bcAmt,
+      swift_charges: swiftAmt,
       exchange_rate: exRate,
       total_with_exchange: totEx,
-      total_with_bank_charges: totAll,
+      total_outflow: totAll,
     });
 
     this.paymentDialogVisible.set(true);
@@ -354,6 +376,8 @@ export class Step15SupplierPayment implements OnInit {
     const rate = rateVal != null && rateVal !== '' && !isNaN(Number(rateVal)) ? Number(rateVal) : null;
     const chargesVal = this.paymentForm.get('bank_charges')?.value;
     const charges = chargesVal != null && chargesVal !== '' && !isNaN(Number(chargesVal)) ? Number(chargesVal) : 0;
+    const swiftVal = this.paymentForm.get('swift_charges')?.value;
+    const swift = swiftVal != null && swiftVal !== '' && !isNaN(Number(swiftVal)) ? Number(swiftVal) : 0;
 
     let totalWithExchange: number | null = null;
     let totalWithBankCharges: number | null = null;
@@ -367,14 +391,14 @@ export class Step15SupplierPayment implements OnInit {
     }
 
     if (totalWithExchange != null) {
-      totalWithBankCharges = Math.round((totalWithExchange + charges) * 100) / 100;
-    } else if (charges > 0) {
-      totalWithBankCharges = charges;
+      totalWithBankCharges = Math.round((totalWithExchange + charges + swift) * 100) / 100;
+    } else if (charges > 0 || swift > 0) {
+      totalWithBankCharges = Math.round((charges + swift) * 100) / 100;
     }
 
     this.paymentForm.patchValue({
       total_with_exchange: totalWithExchange,
-      total_with_bank_charges: totalWithBankCharges,
+      total_outflow: totalWithBankCharges,
     }, { emitEvent: false });
   }
 
@@ -383,6 +407,10 @@ export class Step15SupplierPayment implements OnInit {
   }
 
   protected onBankChargesChange(charges: number | null): void {
+    this.recalculateForexAndBankCharges();
+  }
+
+  protected onSwiftChargesChange(charges: number | null): void {
     this.recalculateForexAndBankCharges();
   }
 
@@ -440,30 +468,23 @@ export class Step15SupplierPayment implements OnInit {
     const payDateStr = this.formatDate(val.payment_date);
 
     const userTx = String(val.transaction_details || '').trim();
-    const fxMetaObj = {
-      exchange_rate: val.exchange_rate != null && val.exchange_rate !== '' ? Number(val.exchange_rate) : null,
-      bank_charges_currency: val.bank_charges_currency || 'INR',
-      bank_charges: val.bank_charges != null && val.bank_charges !== '' ? Number(val.bank_charges) : null,
-      total_with_exchange: val.total_with_exchange != null ? Number(val.total_with_exchange) : null,
-      total_with_bank_charges: val.total_with_bank_charges != null ? Number(val.total_with_bank_charges) : null,
-    };
-    const txWithMeta = `${userTx} <!--fx-meta:${JSON.stringify(fxMetaObj)}-->`;
 
     const payload: SupplierPaymentCreateInput = {
       project_id: pId,
       currency: val.currency || 'INR',
-      payment_percentage: val.payment_percentage != null ? Number(val.payment_percentage) : undefined,
-      total_supplier_value: val.total_supplier_value != null ? Number(val.total_supplier_value) : undefined,
+      payment_percentage: val.payment_percentage != null && val.payment_percentage !== '' ? Number(val.payment_percentage) : null,
+      total_supplier_value: val.total_supplier_value != null && val.total_supplier_value !== '' ? Number(val.total_supplier_value) : null,
       amount_paid: Number(val.amount_paid) || 0,
       payment_date: payDateStr,
-      transaction_details: txWithMeta,
-      pending_amount: val.pending_amount != null ? Number(val.pending_amount) : undefined,
+      transaction_details: userTx,
+      pending_amount: val.pending_amount != null && val.pending_amount !== '' ? Number(val.pending_amount) : null,
       remarks: serializeStepRemarks(this.dialogRemarks()),
-      exchange_rate: fxMetaObj.exchange_rate,
-      bank_charges_currency: fxMetaObj.bank_charges_currency,
-      bank_charges: fxMetaObj.bank_charges,
-      total_with_exchange: fxMetaObj.total_with_exchange,
-      total_with_bank_charges: fxMetaObj.total_with_bank_charges,
+      exchange_rate: val.exchange_rate != null && val.exchange_rate !== '' ? Number(val.exchange_rate) : null,
+      total_with_exchange: val.total_with_exchange != null && val.total_with_exchange !== '' ? Number(val.total_with_exchange) : null,
+      bank_charges_currency: val.bank_charges_currency || 'INR',
+      bank_charges: val.bank_charges != null && val.bank_charges !== '' ? Number(val.bank_charges) : null,
+      swift_charges: val.swift_charges != null && val.swift_charges !== '' ? Number(val.swift_charges) : null,
+      total_outflow: val.total_outflow != null && val.total_outflow !== '' ? Number(val.total_outflow) : null,
     };
 
     const files = this.selectedFiles();

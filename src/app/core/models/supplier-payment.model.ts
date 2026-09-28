@@ -25,6 +25,8 @@ export interface SupplierPayment {
   total_with_exchange?: number;
   bank_charges_currency?: string;
   bank_charges?: number;
+  swift_charges?: number;
+  total_outflow?: number;
   total_with_bank_charges?: number;
 }
 
@@ -45,7 +47,8 @@ export interface SupplierPaymentCreateInput {
   total_with_exchange?: number | null;
   bank_charges_currency?: string | null;
   bank_charges?: number | null;
-  total_with_bank_charges?: number | null;
+  swift_charges?: number | null;
+  total_outflow?: number | null;
 }
 
 export interface SupplierPaymentUpdateInput {
@@ -64,5 +67,8 @@ export interface SupplierPaymentUpdateInput {
   total_with_exchange?: number | null;
   bank_charges_currency?: string | null;
   bank_charges?: number | null;
-  total_with_bank_charges?: number | null;
+  swift_charges?: number | null;
+  total_outflow?: number | null;
 }
+
+

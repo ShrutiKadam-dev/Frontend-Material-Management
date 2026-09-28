@@ -124,17 +124,46 @@ describe('Step15SupplierPayment', () => {
     expect(component['paymentForm'].get('pending_amount')?.value).toBe(25000);
   });
 
-  it('should calculate total_with_exchange and total_with_bank_charges dynamically', () => {
+  it('should calculate total_with_exchange and total_with_bank_charges dynamically including swift_charges', () => {
     component['openCreatePaymentDialog']();
     component['paymentForm'].patchValue({
       amount_paid: 10000,
       exchange_rate: 86.5,
       bank_charges_currency: 'INR',
       bank_charges: 1250,
+      swift_charges: 750,
     });
     component['recalculateForexAndBankCharges']();
     expect(component['paymentForm'].get('total_with_exchange')?.value).toBe(865000);
-    expect(component['paymentForm'].get('total_with_bank_charges')?.value).toBe(866250);
+    expect(component['paymentForm'].get('total_outflow')?.value).toBe(867000);
+  });
+
+  it('should submit clean payload without fx-meta comment', () => {
+    component['openCreatePaymentDialog']();
+    component['paymentForm'].patchValue({
+      currency: 'USD',
+      amount_paid: 10000,
+      payment_date: new Date('2026-09-28'),
+      transaction_details: 'UTR #AXIS98765432',
+      exchange_rate: 86.5,
+      bank_charges_currency: 'INR',
+      bank_charges: 1250,
+      swift_charges: 750,
+      total_with_exchange: 865000,
+      total_outflow: 867000,
+    });
+
+    const createSpy = vi.spyOn(component['supplierPaymentService'], 'createSupplierPayment').mockReturnValue(of({} as any));
+    component['onSubmitPayment']();
+
+    expect(createSpy).toHaveBeenCalled();
+    const payload = createSpy.mock.calls[0][0];
+    expect(payload.transaction_details).toBe('UTR #AXIS98765432');
+    expect(payload.transaction_details).not.toContain('<!--fx-meta:');
+    expect(payload.swift_charges).toBe(750);
+    expect(payload.bank_charges).toBe(1250);
+    expect(payload.total_outflow).toBe(867000);
+    expect((payload as any).total_with_bank_charges).toBeUndefined();
   });
 
   it('should extract clean transaction details and metadata from payment record', () => {
@@ -144,12 +173,13 @@ describe('Step15SupplierPayment', () => {
       currency: 'USD',
       amount_paid: 5000,
       payment_date: '2026-09-10',
-      transaction_details: 'UTR #AXIS98765432 <!--fx-meta:{"exchange_rate":85,"bank_charges":500,"bank_charges_currency":"INR","total_with_exchange":425000,"total_with_bank_charges":425500}-->',
+      transaction_details: 'UTR #AXIS98765432 <!--fx-meta:{"exchange_rate":85,"bank_charges":500,"bank_charges_currency":"INR","swift_charges":300,"total_with_exchange":425000,"total_with_bank_charges":425800}-->',
     };
     expect(component['getCleanTransactionDetails'](paymentWithMeta)).toBe('UTR #AXIS98765432');
     expect(component['getPaymentExchangeRate'](paymentWithMeta)).toBe(85);
     expect(component['getPaymentBankCharges'](paymentWithMeta)).toEqual({ currency: 'INR', amount: 500 });
+    expect(component['getPaymentSwiftCharges'](paymentWithMeta)).toBe(300);
     expect(component['getPaymentTotalWithExchange'](paymentWithMeta)).toBe(425000);
-    expect(component['getPaymentTotalWithBankCharges'](paymentWithMeta)).toBe(425500);
+    expect(component['getPaymentTotalWithBankCharges'](paymentWithMeta)).toBe(425800);
   });
 });
