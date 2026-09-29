@@ -85,7 +85,7 @@
 
               <span class="vsc-date">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                {{ q.quotation_date | date: 'dd-MM-yyyy' }}
+                {{ q.quotation_date | appDate }}
               </span>
 
               @if (q.customer_name || customer()?.name || project()?.customer_name) {

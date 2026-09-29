@@ -41,6 +41,7 @@ export interface CustomerPayment {
   cumulative_payment_percentage?: number | string;
   pending_amount?: number | string;
   pending_percentage?: number | string;
+  remaining_amount_before_transaction?: number | string;
   total_paid_amount?: number | string;
   payment_status?: string; // e.g. 'completed' | 'partial'
   payment_status_message?: string;

@@ -8,7 +8,6 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DatePipe } from '@angular/common';
 import { finalize } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -36,6 +35,7 @@ import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
 import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
+import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
@@ -50,7 +50,7 @@ import { StepRemarksComponent } from '../../../../shared/components/step-remarks
     DatePickerModule,
     TooltipModule,
     TableModule,
-    DatePipe,
+    AppDatePipe,
     StepRemarksComponent,
   ],
   templateUrl: './step-01-customer-query.html',

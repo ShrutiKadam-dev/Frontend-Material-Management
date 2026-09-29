@@ -40,6 +40,7 @@ import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
 import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
+import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
@@ -54,6 +55,7 @@ import { StepRemarksComponent } from '../../../../shared/components/step-remarks
     TooltipModule,
     TableModule,
     DatePipe,
+    AppDatePipe,
     DecimalPipe,
     StepRemarksComponent,
   ],

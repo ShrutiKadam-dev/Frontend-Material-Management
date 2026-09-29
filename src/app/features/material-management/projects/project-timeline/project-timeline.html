@@ -156,10 +156,14 @@
                 </div>
               }
 
-              @if (step.completed_at) {
-                <p class="card-completed">
-                  <i class="pi pi-calendar-check" aria-hidden="true"></i>
-                  Completed {{ step.completed_at | date: 'dd-MM-yyyy' }}
+              @if (getStepDate(step); as stepDateInfo) {
+                <p
+                  class="card-completed"
+                  [class.card-completed--active]="step.status === 'in_progress'"
+                  [class.card-completed--pending]="step.status === 'pending' || step.status === 'skipped'"
+                >
+                  <i class="pi" [class.pi-calendar-check]="step.status === 'completed'" [class.pi-calendar]="step.status !== 'completed'" aria-hidden="true"></i>
+                  {{ stepDateInfo.label }} {{ stepDateInfo.date }}
                 </p>
               }
             </div>

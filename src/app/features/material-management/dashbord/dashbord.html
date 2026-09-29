@@ -283,7 +283,7 @@
               <span class="price-value">₹{{ (project.total_value || 0) | number:'1.2-2' }}</span>
             </div>
             <span class="price-date">
-              {{ project.target_delivery_date ? ('Target delivery ' + (project.target_delivery_date | date:'d MMMM yyyy')) : ('Last updated ' + ((project.updated_at || project.created_at) | date:'d MMMM yyyy')) }}
+              {{ project.target_delivery_date ? ('Target delivery ' + (project.target_delivery_date | appDate:'d MMMM yyyy')) : ('Last updated ' + ((project.updated_at || project.created_at) | appDate:'d MMMM yyyy')) }}
             </span>
           </div>
         </div>
@@ -359,7 +359,7 @@
           @if (project.target_delivery_date) {
           <span class="delivery-pill" [class.delivery-pill--overdue]="project.health_status === 'delayed'">
             <i class="pi pi-calendar" aria-hidden="true"></i>
-            Target: {{ project.target_delivery_date | date:'dd-MM-yyyy' }}
+            Target: {{ project.target_delivery_date | appDate }}
           </span>
           } @else {
           <span class="delivery-pill delivery-pill--muted">

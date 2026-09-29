@@ -12,7 +12,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import { MessageService } from 'primeng/api';
@@ -51,6 +51,7 @@ import {
   SelectOption,
   getCurrencySymbol,
 } from '../../../../core/constants/dropdown-options.constant';
+import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
 
 @Component({
   selector: 'app-step-09-order-confirmation',
@@ -64,7 +65,7 @@ import {
     SelectModule,
     TooltipModule,
     TableModule,
-    DatePipe,
+    AppDatePipe,
     DecimalPipe,
     StepRemarksComponent,
   ],

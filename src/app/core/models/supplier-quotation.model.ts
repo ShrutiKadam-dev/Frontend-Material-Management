@@ -3,10 +3,29 @@ import { Attachment } from './attachment.model';
 export interface SupplierQuotationItem {
   id?: number;
   material_name: string;
+  material_number?: string;
   hsn_code?: string;
   quantity: string | number;
   unit_price?: string | number;
   net_amount?: string | number;
+}
+
+export interface SupplierQuotationParsedExcel {
+  quotation_number?: string;
+  quotation_date?: string;
+  currency_unit?: string;
+  currency_symbol?: string;
+  quotation_value?: string | number;
+  total_net_amount?: number;
+  validity?: string;
+  incoterms?: string;
+  payment_terms?: string;
+  delivery_period?: string;
+  warranty_period?: string;
+  remark?: string;
+  project_id?: number;
+  supplier_id?: number;
+  items: SupplierQuotationItem[];
 }
 
 export interface SupplierQuotation {

@@ -6,6 +6,7 @@ import { API_BASE_URL } from '../tokens/api-base-url.token';
 import {
   SupplierQuotation,
   SupplierQuotationCreateInput,
+  SupplierQuotationParsedExcel,
   SupplierQuotationUpdateInput,
 } from '../models/supplier-quotation.model';
 
@@ -15,6 +16,29 @@ import {
 export class SupplierQuotationService {
   private readonly http = inject(HttpClient);
   private readonly apiBaseUrl = inject(API_BASE_URL);
+
+  /**
+   * Uploads and parses a supplier quotation Excel workbook (.xlsx, .xls)
+   * POST /api/v1/supplier-quotations/parse-excel
+   */
+  parseExcel(
+    file: File,
+    projectId?: number,
+    supplierId?: number,
+  ): Observable<SupplierQuotationParsedExcel> {
+    const fd = new FormData();
+    fd.append('file', file, file.name);
+    if (projectId) {
+      fd.append('project_id', String(projectId));
+    }
+    if (supplierId) {
+      fd.append('supplier_id', String(supplierId));
+    }
+    return this.http.post<SupplierQuotationParsedExcel>(
+      `${this.apiBaseUrl}/api/v1/supplier-quotations/parse-excel`,
+      fd,
+    );
+  }
 
   getByProject(projectId: number): Observable<SupplierQuotation[]> {
     return this.http.get<SupplierQuotation[]>(

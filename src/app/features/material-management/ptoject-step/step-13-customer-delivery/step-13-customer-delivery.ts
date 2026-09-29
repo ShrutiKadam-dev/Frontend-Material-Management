@@ -14,7 +14,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { DatePipe, DecimalPipe, UpperCasePipe } from '@angular/common';
+import { DecimalPipe, UpperCasePipe } from '@angular/common';
 import { finalize } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -58,6 +58,7 @@ import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
 import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
+import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 import { WARRANTY_PERIOD_OPTIONS } from '../../../../core/constants/dropdown-options.constant';
 
@@ -80,7 +81,7 @@ export type Step13Tab =
     SelectModule,
     TooltipModule,
     TableModule,
-    DatePipe,
+    AppDatePipe,
     DecimalPipe,
     UpperCasePipe,
     StepRemarksComponent,

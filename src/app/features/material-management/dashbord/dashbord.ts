@@ -17,9 +17,11 @@ import { ProjectService } from '../../../core/services/project';
 import { DashboardMetric, DashboardOverviewStats, DashboardProject } from '../../../core/models/dashboard.model';
 import { Project } from '../../../core/models/project.model';
 
+import { AppDatePipe } from '../../../core/pipes/app-date.pipe';
+
 @Component({
   selector: 'app-dashbord',
-  imports: [RouterLink, ButtonModule, TooltipModule, DatePipe, DecimalPipe],
+  imports: [RouterLink, ButtonModule, TooltipModule, DatePipe, AppDatePipe, DecimalPipe],
   templateUrl: './dashbord.html',
   styleUrl: './dashbord.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

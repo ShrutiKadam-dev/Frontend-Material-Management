@@ -42,7 +42,8 @@ import { SelectOption } from '../../../../core/models/select-option.model';
 import { MessageService } from 'primeng/api';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
-import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
+import { formatDisplayDate, formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
+import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
@@ -57,6 +58,7 @@ import { StepRemarksComponent } from '../../../../shared/components/step-remarks
     SelectModule,
     TooltipModule,
     DecimalPipe,
+    AppDatePipe,
     StepRemarksComponent,
   ],
   templateUrl: './step-15-supplier-payment.html',
@@ -1026,26 +1028,7 @@ export class Step15SupplierPayment implements OnInit {
   }
 
   protected formatDisplayDate(date: Date | string | null | undefined): string {
-    if (!date) return '—';
-    if (typeof date === 'string') {
-      const trimmed = date.trim();
-      if (!trimmed) return '—';
-      // If already DD-MM-YYYY, return directly without pipe conversion
-      if (/^\d{2}-\d{2}-\d{4}$/.test(trimmed)) {
-        return trimmed;
-      }
-      // If YYYY-MM-DD
-      const matchYmd = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (matchYmd) {
-        return `${matchYmd[3]}-${matchYmd[2]}-${matchYmd[1]}`;
-      }
-    }
-    const parsed = parseLocalDate(date);
-    if (!parsed) return typeof date === 'string' ? date : '—';
-    const day = String(parsed.getDate()).padStart(2, '0');
-    const month = String(parsed.getMonth() + 1).padStart(2, '0');
-    const year = parsed.getFullYear();
-    return `${day}-${month}-${year}`;
+    return formatDisplayDate(date);
   }
 
   protected quickAddPaymentRemark(item: SupplierPayment, text: string): void {

@@ -190,7 +190,7 @@
                             }
                             <span class="vsc-date">
                                 <i class="pi pi-calendar-check" aria-hidden="true"></i>
-                                {{ formatDisplayDate(payment.payment_date) }}
+                                {{ payment.payment_date | appDate }}
                             </span>
                             <span class="vsc-title font-mono">
                                 {{ getCleanTransactionDetails(payment) }}

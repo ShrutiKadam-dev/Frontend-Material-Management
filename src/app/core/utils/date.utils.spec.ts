@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatDisplayDate,
   formatLocalDate,
   formatLocalDateTime,
   parseLocalDate,
@@ -100,4 +101,50 @@ describe('date.utils', () => {
       expect(parseLocalDateTime('')).toBeNull();
     });
   });
+
+  describe('formatDisplayDate', () => {
+    it('should preserve and return DD-MM-YYYY string as-is', () => {
+      expect(formatDisplayDate('16-05-2025')).toBe('16-05-2025');
+      expect(formatDisplayDate('01-12-2026')).toBe('01-12-2026');
+    });
+
+    it('should format YYYY-MM-DD string to DD-MM-YYYY', () => {
+      expect(formatDisplayDate('2025-05-16')).toBe('16-05-2025');
+    });
+
+    it('should format DD/MM/YYYY or DD.MM.YYYY string to DD-MM-YYYY', () => {
+      expect(formatDisplayDate('16/05/2025')).toBe('16-05-2025');
+      expect(formatDisplayDate('16.05.2025')).toBe('16-05-2025');
+    });
+
+    it('should format local Date object to DD-MM-YYYY', () => {
+      const d = new Date(2025, 4, 16);
+      expect(formatDisplayDate(d)).toBe('16-05-2025');
+    });
+
+    it('should format ISO datetime string to DD-MM-YYYY', () => {
+      expect(formatDisplayDate('2026-09-22T03:46:19.783392')).toBe('22-09-2026');
+    });
+
+    it('should format SQL datetime string with space separator', () => {
+      expect(formatDisplayDate('2026-09-22 03:46:19.783392')).toBe('22-09-2026');
+    });
+
+    it('should support d MMMM yyyy format', () => {
+      expect(formatDisplayDate('16-05-2025', 'd MMMM yyyy')).toBe('16 May 2025');
+      expect(formatDisplayDate('2025-05-16', 'd MMMM yyyy')).toBe('16 May 2025');
+    });
+
+    it('should support dd-MM-yyyy, HH:mm format', () => {
+      expect(formatDisplayDate('2026-09-10T14:30:00', 'dd-MM-yyyy, HH:mm')).toBe('10-09-2026, 14:30');
+    });
+
+    it('should return fallback for null, undefined, or empty string', () => {
+      expect(formatDisplayDate(null)).toBe('—');
+      expect(formatDisplayDate(undefined)).toBe('—');
+      expect(formatDisplayDate('')).toBe('—');
+      expect(formatDisplayDate(null, 'dd-MM-yyyy', '')).toBe('');
+    });
+  });
 });
+

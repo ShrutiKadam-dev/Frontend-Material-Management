@@ -182,4 +182,62 @@ describe('Step14CustomerPayment', () => {
     } as CustomerPayment;
     expect(component['calculateSettlementBalance'](completedPayment)).toBe(0);
   });
+
+  it('should accurately process milestone payment with remaining_amount_before_transaction', () => {
+    const payment = {
+      id: 6,
+      project_id: 10,
+      customer_id: 2,
+      invoice_no: '5654656',
+      invoice_date: '10-09-2026',
+      invoice_value: '100.00',
+      payment_amount: '10.00',
+      amount_paid: '10.00',
+      payment_date: '30-09-2026',
+      tds: '0.00',
+      ld: '0.00',
+      liquidated_damages: '0.00',
+      payment_percentage: '10.00',
+      cumulative_payment_percentage: '70.00',
+      pending_amount: '30.00',
+      pending_percentage: '30.00',
+      remaining_amount_before_transaction: '40.00',
+      total_paid_amount: '70.00',
+      payment_status: 'partial',
+      payment_status_message: '70.00% paid, 30.00% pending',
+      is_payment_completed: false,
+    } as unknown as CustomerPayment;
+
+    // Remaining before transaction: 40.00
+    expect(component['getRemainingBeforeTransaction'](payment)).toBe(40);
+
+    // Prior settled before this transaction: 100 - 40 = 60.00
+    expect(component['getPreviouslySettledBeforeTransaction'](payment)).toBe(60);
+
+    // Settlement balance left after this transaction: 30.00
+    expect(component['calculateSettlementBalance'](payment)).toBe(30);
+
+    // Cumulative paid so far: 70.00
+    expect(component['getCumulativePaidAmount'](payment)).toBe(70);
+
+    // Cumulative percentage: 70%
+    expect(component['getCumulativePercentage'](payment)).toBe(70);
+
+    // Current receipt payment percentage: 10%
+    expect(component['getPaymentPercentage'](payment)).toBe(10);
+
+    // Remaining percentage: 30%
+    expect(component['getRemainingPercentage'](payment)).toBe(30);
+  });
+
+  it('should autofill full remaining balance with fillRemainingPayment', () => {
+    component['openCreatePaymentDialog']();
+    // dialogMaxPayable is 3000
+    expect(component['dialogMaxPayable']()).toBe(3000);
+
+    component['fillRemainingPayment']();
+    expect(component['paymentForm'].get('payment_amount')?.value).toBe(3000);
+    expect(component['currentPaymentAmount']()).toBe(3000);
+    expect(component['isAmountExceeding']()).toBe(false);
+  });
 });

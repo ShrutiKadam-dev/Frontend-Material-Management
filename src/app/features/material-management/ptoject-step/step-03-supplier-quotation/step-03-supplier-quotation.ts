@@ -9,7 +9,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { finalize } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -38,6 +38,7 @@ import {
   SupplierQuotation,
   SupplierQuotationCreateInput,
   SupplierQuotationItem,
+  SupplierQuotationParsedExcel,
   SupplierQuotationUpdateInput,
 } from '../../../../core/models/supplier-quotation.model';
 import { StepFormFieldConfig } from '../../../../core/models/step-form-config.model';
@@ -47,6 +48,7 @@ import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
 import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
+import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
@@ -61,8 +63,8 @@ import { StepRemarksComponent } from '../../../../shared/components/step-remarks
     TooltipModule,
     TableModule,
     SelectModule,
-    DatePipe,
     DecimalPipe,
+    AppDatePipe,
     StepRemarksComponent,
   ],
   templateUrl: './step-03-supplier-quotation.html',
@@ -90,6 +92,11 @@ export class Step03SupplierQuotation implements OnInit {
   protected readonly submitting = signal(false);
   protected readonly downloadingAttachmentId = signal<number | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
+
+  /** Excel document parse & auto-fill signals */
+  protected readonly parsingExcel = signal(false);
+  protected readonly excelAutoFilled = signal(false);
+  protected readonly excelFileName = signal<string | null>(null);
 
   /** Timeline remarks list for active dialog */
   protected readonly dialogRemarks = signal<StepRemarkItem[]>([]);
@@ -286,6 +293,8 @@ export class Step03SupplierQuotation implements OnInit {
 
   protected openDialog(): void {
     this.editingQuotation.set(null);
+    this.excelAutoFilled.set(false);
+    this.excelFileName.set(null);
     this.headerForm.reset({
       quotation_number: '',
       quotation_date: null,
@@ -311,6 +320,8 @@ export class Step03SupplierQuotation implements OnInit {
     // Auto-fetch material items from latest Customer Query (Step 1)
     this.customerQueryService.getLatest(this.projectId()).subscribe({
       next: (res: any) => {
+        // Avoid overwriting if user already auto-filled via Excel
+        if (this.excelAutoFilled()) return;
         const query = Array.isArray(res) ? res[0] : res;
         if (query?.items && Array.isArray(query.items) && query.items.length > 0) {
           const autoItems: SupplierQuotationItem[] = query.items.map((item: any) => ({
@@ -327,6 +338,8 @@ export class Step03SupplierQuotation implements OnInit {
 
   protected openEditDialog(quotation: SupplierQuotation): void {
     this.editingQuotation.set(quotation);
+    this.excelAutoFilled.set(false);
+    this.excelFileName.set(null);
 
     // Parse currency unit and quotation value
     let curr = quotation.currency_unit || '';
@@ -367,6 +380,208 @@ export class Step03SupplierQuotation implements OnInit {
   protected closeDialog(): void {
     this.dialogVisible.set(false);
     this.editingQuotation.set(null);
+    this.excelAutoFilled.set(false);
+    this.excelFileName.set(null);
+  }
+
+  /* ── Excel Document Upload & Auto-Fill (Direct / Indirect) ─ */
+
+  protected onExcelFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const lower = file.name.toLowerCase();
+    if (!lower.endsWith('.xlsx') && !lower.endsWith('.xls')) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Invalid File',
+        detail: 'Please upload an Excel quotation spreadsheet (.xlsx or .xls).',
+        life: 4000,
+      });
+      input.value = '';
+      return;
+    }
+
+    this.parsingExcel.set(true);
+
+    this.supplierQuotationService
+      .parseExcel(file, this.projectId(), this.project()?.supplier_id)
+      .pipe(
+        finalize(() => {
+          this.parsingExcel.set(false);
+          input.value = '';
+        })
+      )
+      .subscribe({
+        next: (parsed) => {
+          this.populateFromParsedExcel(parsed, file);
+        },
+        error: (err) => {
+          const detail =
+            err?.error?.error?.message ||
+            err?.error?.message ||
+            err?.message ||
+            'Failed to parse supplier quotation Excel file. Please verify file format.';
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Parsing Failed',
+            detail,
+            life: 5000,
+          });
+        },
+      });
+  }
+
+  protected populateFromParsedExcel(parsed: SupplierQuotationParsedExcel, file: File): void {
+    // If dialog is not open yet, open it cleanly
+    if (!this.dialogVisible()) {
+      this.editingQuotation.set(null);
+      this.existingAttachments.set([]);
+      this.attachments.set([]);
+      this.dialogRemarks.set([]);
+      this.addRowVisible.set(false);
+      this.editingIndex.set(null);
+      this.errorMessage.set(null);
+      this.dialogVisible.set(true);
+    }
+
+    this.excelAutoFilled.set(true);
+    this.excelFileName.set(file.name);
+
+    // 1. Quotation Number
+    const qNum = (parsed.quotation_number ?? '').trim();
+
+    // 2. Quotation Date
+    const parsedDate = parsed.quotation_date ? this.parseDate(parsed.quotation_date) : null;
+    const qDate = parsedDate || this.headerForm.controls.quotation_date.value || new Date();
+
+    // 3. Currency Unit & Symbol
+    let curr = (parsed.currency_unit || '').trim().toUpperCase();
+    if (!curr && parsed.currency_symbol) {
+      const sym = parsed.currency_symbol.trim();
+      const symbolMap: Record<string, string> = {
+        '€': 'EUR',
+        '$': 'USD',
+        '₹': 'INR',
+        '£': 'GBP',
+        '¥': 'JPY',
+      };
+      curr = symbolMap[sym] || '';
+    }
+    const foundCurr = CURRENCY_OPTIONS.find((c) => c.value === curr);
+    const finalCurr = foundCurr ? foundCurr.value : (this.headerForm.controls.currency_unit.value || 'EUR');
+
+    // 4. Quotation Value
+    let rawVal = parsed.quotation_value !== undefined && parsed.quotation_value !== null
+      ? String(parsed.quotation_value).replace(/,/g, '').trim()
+      : '';
+    if (!rawVal && parsed.total_net_amount !== undefined && parsed.total_net_amount !== null && parsed.total_net_amount > 0) {
+      rawVal = String(parsed.total_net_amount).replace(/,/g, '').trim();
+    }
+
+    // 5. Validity
+    const { value: valNum, unit: valUnit } = this.parseValidityString(parsed.validity, qDate);
+
+    // 6. Incoterms
+    let inco = (parsed.incoterms || '').trim().toUpperCase();
+    const foundInco = INCOTERMS_OPTIONS.find((o) => o.value === inco || o.label.toUpperCase().startsWith(inco));
+    const finalInco = foundInco ? foundInco.value : (inco || this.headerForm.controls.incoterms.value || 'EXW');
+
+    // 7. Payment Terms
+    const paymentTerms = (parsed.payment_terms || '').trim() || this.headerForm.controls.payment_terms.value || '30 days after delivery';
+
+    // 8. Delivery Period
+    const deliveryPeriod = (parsed.delivery_period || '').trim() || this.headerForm.controls.delivery_period.value || '15 weeks';
+
+    // 9. Warranty Period
+    const warrantyPeriod = (parsed.warranty_period || '').trim() || this.headerForm.controls.warranty_period.value || '12 Months';
+
+    // 10. Remark
+    const remark = (parsed.remark || '').trim();
+
+    this.headerForm.patchValue({
+      quotation_number: qNum || this.headerForm.controls.quotation_number.value,
+      quotation_date: qDate,
+      currency_unit: finalCurr,
+      quotation_value: rawVal || this.headerForm.controls.quotation_value.value,
+      validity_value: valNum,
+      validity_unit: valUnit,
+      incoterms: finalInco,
+      payment_terms: paymentTerms,
+      delivery_period: deliveryPeriod,
+      warranty_period: warrantyPeriod,
+      remark: remark || this.headerForm.controls.remark.value,
+    });
+
+    // 11. Material Items
+    if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
+      const parsedItems: SupplierQuotationItem[] = parsed.items.map((it) => {
+        const qty = it.quantity !== undefined && it.quantity !== null && String(it.quantity).trim() !== ''
+          ? String(it.quantity).trim()
+          : '1';
+        const price = it.unit_price !== undefined && it.unit_price !== null && String(it.unit_price).trim() !== ''
+          ? String(it.unit_price).trim()
+          : undefined;
+        const net = it.net_amount !== undefined && it.net_amount !== null && String(it.net_amount).trim() !== ''
+          ? Number(it.net_amount)
+          : (price ? this.calculateNet(qty, price) ?? undefined : undefined);
+
+        return {
+          material_name: (it.material_name || '').trim(),
+          material_number: (it.material_number || '').trim() || undefined,
+          hsn_code: (it.hsn_code || '').trim() || undefined,
+          quantity: qty,
+          unit_price: price,
+          net_amount: net,
+        };
+      });
+      this.items.set(parsedItems);
+
+      // If quotation value was empty, derive from totalNetAmount
+      if (!this.headerForm.controls.quotation_value.value && this.totalNetAmount() > 0) {
+        this.headerForm.controls.quotation_value.setValue(String(this.totalNetAmount()));
+      }
+    }
+
+    // 12. Add uploaded Excel spreadsheet to attachments list so it's persisted with the quotation
+    const alreadyAttached = this.attachments().some((f) => f.name === file.name && f.size === file.size);
+    if (!alreadyAttached) {
+      this.attachments.update((list) => [...list, file]);
+    }
+
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Quotation Auto-Filled',
+      detail: `Imported ${parsed.items?.length ?? 0} items from ${file.name}. Review fields and submit.`,
+      life: 4500,
+    });
+  }
+
+  protected parseValidityString(rawValidity?: string | null, quotationDate?: Date | null): { value: string; unit: string } {
+    if (!rawValidity) {
+      return { value: '60', unit: 'Days' };
+    }
+    const trimmed = String(rawValidity).trim();
+
+    // Check if rawValidity is a date string (e.g. 19.10.2024 or 2024-10-19)
+    const parsedDate = parseLocalDate(trimmed);
+    if (parsedDate && !isNaN(parsedDate.getTime())) {
+      const baseDate = quotationDate || new Date();
+      const diffMs = parsedDate.getTime() - baseDate.getTime();
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays > 0) {
+        return { value: String(diffDays), unit: 'Days' };
+      }
+    }
+
+    // Standard compound validity parsing like "60 Days" or "30"
+    const parsed = this.dropdownService.parseValidity(trimmed, '60', 'Days');
+    const num = parseInt(parsed.value, 10);
+    return {
+      value: !isNaN(num) && num > 0 ? String(num) : '60',
+      unit: parsed.unit || 'Days',
+    };
   }
 
   /* ── Currency & Calculation Helpers ─────────────────── */
@@ -823,11 +1038,47 @@ export class Step03SupplierQuotation implements OnInit {
     this.router.navigate(['/projects', this.projectId(), 'steps']);
   }
 
+  /**
+   * Formats any date string (DD-MM-YYYY, YYYY-MM-DD, ISO 8601, or Date)
+   * into clean DD-MM-YYYY format for card display, avoiding Angular DatePipe InvalidPipeArgument errors.
+   */
+  protected formatDateDisplay(dateVal?: string | Date | null): string {
+    if (!dateVal) return '—';
+    if (typeof dateVal === 'string') {
+      const trimmed = dateVal.trim();
+      if (!trimmed) return '—';
+      // Match DD-MM-YYYY, DD/MM/YYYY, or DD.MM.YYYY
+      const matchDmy = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+      if (matchDmy) {
+        const d = matchDmy[1].padStart(2, '0');
+        const m = matchDmy[2].padStart(2, '0');
+        const y = matchDmy[3];
+        return `${d}-${m}-${y}`;
+      }
+      // Match YYYY-MM-DD, YYYY/MM/DD, or YYYY.MM.DD
+      const matchYmd = trimmed.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+      if (matchYmd) {
+        const y = matchYmd[1];
+        const m = matchYmd[2].padStart(2, '0');
+        const d = matchYmd[3].padStart(2, '0');
+        return `${d}-${m}-${y}`;
+      }
+    }
+    const parsed = this.parseDate(dateVal);
+    if (!parsed || isNaN(parsed.getTime())) {
+      return typeof dateVal === 'string' ? dateVal : '—';
+    }
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const year = parsed.getFullYear();
+    return `${day}-${month}-${year}`;
+  }
+
   private formatDate(date: Date | string | null | undefined): string {
     return formatLocalDate(date);
   }
 
-  private parseDate(dateStr?: string | Date | null): Date | null {
+  protected parseDate(dateStr?: string | Date | null): Date | null {
     return parseLocalDate(dateStr);
   }
 }

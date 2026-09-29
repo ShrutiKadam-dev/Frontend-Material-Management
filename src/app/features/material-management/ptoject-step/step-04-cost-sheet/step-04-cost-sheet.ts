@@ -9,7 +9,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { finalize } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -34,6 +34,8 @@ import { SupplierQuotation } from '../../../../core/models/supplier-quotation.mo
 import { Project } from '../../../../core/models/project.model';
 import { Customer } from '../../../../core/models/customer.model';
 
+import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
+
 @Component({
   selector: 'app-step-04-cost-sheet',
   imports: [
@@ -44,7 +46,7 @@ import { Customer } from '../../../../core/models/customer.model';
     TooltipModule,
     TableModule,
     SelectModule,
-    DatePipe,
+    AppDatePipe,
     DecimalPipe,
   ],
   templateUrl: './step-04-cost-sheet.html',

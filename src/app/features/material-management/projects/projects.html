@@ -152,8 +152,8 @@
             <span class="price-value">₹{{ (project.total_value || 0) | number:'1.2-2' }}</span>
           </div>
           <span class="price-date">
-            {{ project.target_delivery_date ? ('Target delivery ' + (project.target_delivery_date | date:'d MMMM yyyy'))
-            : ('Last updated ' + ((project.updated_at || project.created_at) | date:'d MMMM yyyy')) }}
+            {{ project.target_delivery_date ? ('Target delivery ' + (project.target_delivery_date | appDate:'d MMMM yyyy'))
+            : ('Last updated ' + ((project.updated_at || project.created_at) | appDate:'d MMMM yyyy')) }}
           </span>
         </div>
       </div>
@@ -272,7 +272,7 @@
           </td>
           <td>
             <strong class="tbl-project-title" (click)="openDetailsDialog(p)">{{ p.project_title }}</strong>
-            <span class="tbl-date-sub">{{ p.created_at | date:'dd-MM-yyyy' }}</span>
+            <span class="tbl-date-sub">{{ p.created_at | appDate }}</span>
           </td>
           <td>
             <div class="tbl-party-cell">

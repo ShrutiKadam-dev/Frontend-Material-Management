@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { finalize } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -48,6 +48,7 @@ import {
   parseLocalDate,
   parseLocalDateTime,
 } from '../../../../core/utils/date.utils';
+import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
@@ -62,7 +63,7 @@ import { StepRemarksComponent } from '../../../../shared/components/step-remarks
     TooltipModule,
     TableModule,
     SelectModule,
-    DatePipe,
+    AppDatePipe,
     DecimalPipe,
     StepRemarksComponent,
   ],

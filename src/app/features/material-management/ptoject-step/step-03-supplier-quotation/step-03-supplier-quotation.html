@@ -1,5 +1,9 @@
 <section class="base-page step-page" aria-labelledby="step-page-title">
 
+  <!-- Hidden File Input for Excel Auto-Fill (Direct & Indirect Workflow) -->
+  <input #excelUploadInput type="file" accept=".xlsx, .xls" class="visually-hidden"
+    (change)="onExcelFileSelected($event)" />
+
   <!-- ── Page header ──────────────────────────────────── -->
   <div class="page-header">
     <div class="header-left">
@@ -28,6 +32,10 @@
       <div class="header-step-pill" aria-hidden="true">
         Step <strong>03</strong> of 15
       </div>
+      <!-- <button pButton type="button" icon="pi pi-file-excel" label="Auto-Fill via Excel"
+        class="p-button-outlined auto-fill-header-btn" [loading]="parsingExcel()"
+        pTooltip="Upload an Excel quotation spreadsheet (.xlsx, .xls) to auto-fill quotation data"
+        tooltipPosition="bottom" (click)="excelUploadInput.click()"></button> -->
       <button pButton type="button" icon="pi pi-plus" label="New Supplier Quotation" class="header-primary-btn"
         (click)="openDialog()"></button>
     </div>
@@ -61,8 +69,14 @@
             <i class="pi pi-file-edit"></i>
           </span>
           <h3>No supplier quotations yet</h3>
-          <p>Log received quotations from suppliers to proceed with cost sheet analysis.</p>
-          <button pButton type="button" icon="pi pi-plus" label="New Quotation" (click)="openDialog()"></button>
+          <p>Log received quotations from suppliers either automatically by uploading an Excel document or by entering
+            details manually.</p>
+          <div class="empty-cta-actions">
+            <button pButton type="button" icon="pi pi-file-excel" label="Auto-Fill via Excel"
+              class="p-button-outlined empty-excel-btn" [loading]="parsingExcel()"
+              (click)="excelUploadInput.click()"></button>
+            <button pButton type="button" icon="pi pi-plus" label="Manual Entry" (click)="openDialog()"></button>
+          </div>
         </div>
         } @else {
         <div class="query-list">
@@ -73,7 +87,7 @@
             <div class="query-entry-header">
               <span class="qe-date">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                {{ q.quotation_date | date: 'dd-MM-yyyy' }}
+                {{ q.quotation_date | appDate }}
               </span>
               @if (q.quotation_number) {
               <span class="qe-ref">
@@ -185,7 +199,16 @@
                   <ng-template pTemplate="body" let-item let-i="rowIndex">
                     <tr>
                       <td style="text-align: center; color: #64748b; font-weight: 700;">{{ i + 1 }}</td>
-                      <td><strong>{{ item.material_name }}</strong></td>
+                      <td>
+                        <div class="mat-cell-content">
+                          <strong class="mat-name-text">{{ item.material_name }}</strong>
+                          @if (item.material_number) {
+                          <span class="mat-num-chip" [title]="'Part / Drawing: ' + item.material_number">
+                            <i class="pi pi-hashtag" aria-hidden="true"></i> {{ item.material_number }}
+                          </span>
+                          }
+                        </div>
+                      </td>
                       <td><span class="ref-badge">{{ item.hsn_code || '—' }}</span></td>
                       <td style="text-align: right; font-weight: 700;">
                         <span class="qty-badge">{{ item.quantity }}</span>
@@ -323,11 +346,40 @@
 
     <div class="dlg-body">
 
+      <!-- Direct vs Indirect Choice Banner inside Dialog (when creating new quotation) -->
+      @if (!editingQuotation() && !excelAutoFilled()) {
+      <div class="autofill-banner-card">
+        <div class="autofill-banner-left">
+          <div class="autofill-icon-wrap" aria-hidden="true">
+            <i class="pi pi-file-excel"></i>
+          </div>
+          <div class="autofill-info">
+            <h4 class="autofill-title">Auto-Fill from Excel or Enter Manually</h4>
+            <p class="autofill-desc">
+              Have an official supplier quote? Upload the Excel spreadsheet (.xlsx, .xls) to automatically populate
+              quotation details, commercial terms, and the materials table.
+            </p>
+          </div>
+        </div>
+        <button pButton type="button" icon="pi pi-upload" label="Upload & Auto-Fill"
+          class="p-button-outlined autofill-cta-btn" [loading]="parsingExcel()"
+          (click)="excelUploadInput.click()"></button>
+      </div>
+      }
+
+      <!-- Excel Auto-Filled Success Banner -->
+      @if (excelAutoFilled()) {
+      <div class="cost-sheet-sync-pill excel-sync-pill" role="status">
+        <span class="afb-badge"><i class="pi pi-file-excel"></i> Auto-Filled via Excel</span>
+        <span>Populated from <strong>{{ excelFileName() }}</strong> · {{ items().length }} items loaded. Review and
+          adjust any values before submitting.</span>
+      </div>
+      } @else if (!editingQuotation() && items().length > 0) {
       <!-- Auto-Fetch Notice from Step 01 Customer Query -->
-      @if (!editingQuotation() && items().length > 0) {
       <div class="cost-sheet-sync-pill" role="status">
         <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-        <span>Auto-imported from <strong>Latest Customer Query</strong> · {{ items().length }} material items pre-filled.</span>
+        <span>Auto-imported from <strong>Latest Customer Query</strong> · {{ items().length }} material items
+          pre-filled.</span>
       </div>
       }
 
@@ -405,8 +457,14 @@
       <!-- ── 2. Material Items (Fast Entry + Paginator) ── -->
       <div class="dlg-section">
         <div class="dlg-section-header">
-          <p class="dlg-section-label"><i class="pi pi-box"></i> 2. Quoted Materials & Pricing</p>
-          <span class="card-count-badge">{{ items().length }} {{ items().length === 1 ? 'item' : 'items' }}</span>
+          <div class="dlg-section-title-wrap">
+            <p class="dlg-section-label"><i class="pi pi-box"></i> 2. Quoted Materials & Pricing</p>
+            <span class="card-count-badge">{{ items().length }} {{ items().length === 1 ? 'item' : 'items' }}</span>
+          </div>
+          <button pButton type="button" icon="pi pi-file-excel" label="Auto-Fill via Excel"
+            class="p-button-outlined p-button-sm autofill-btn"
+            pTooltip="Upload an Excel quotation document (.xlsx, .xls) to auto-fill materials and pricing"
+            tooltipPosition="left" [loading]="parsingExcel()" (click)="excelUploadInput.click()"></button>
         </div>
 
         <!-- Fast Inline Entry Row -->
@@ -482,7 +540,16 @@
           <ng-template pTemplate="body" let-item let-i="rowIndex">
             <tr>
               <td style="text-align: center; color: #64748b; font-weight: 700;">{{ i + 1 }}</td>
-              <td><strong>{{ item.material_name }}</strong></td>
+              <td>
+                <div class="mat-cell-content">
+                  <strong class="mat-name-text">{{ item.material_name }}</strong>
+                  @if (item.material_number) {
+                  <span class="mat-num-chip" [title]="'Part / Drawing: ' + item.material_number">
+                    <i class="pi pi-hashtag" aria-hidden="true"></i> {{ item.material_number }}
+                  </span>
+                  }
+                </div>
+              </td>
               <td><span class="ref-badge">{{ item.hsn_code || '—' }}</span></td>
               <td style="text-align: right; font-weight: 700;">
                 <span class="qty-badge">{{ item.quantity }}</span>

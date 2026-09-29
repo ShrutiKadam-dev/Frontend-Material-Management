@@ -88,7 +88,7 @@
 
               <span class="vsc-date">
                 <i class="pi pi-calendar" aria-hidden="true"></i>
-                {{ po.po_date | date: 'dd-MM-yyyy' }}
+                {{ po.po_date | appDate }}
               </span>
 
               <h2 class="vsc-title">{{ po.po_title || 'Customer Purchase Order' }}</h2>
@@ -147,7 +147,7 @@
               <div class="param-chip">
                 <i class="pi pi-calendar-plus" aria-hidden="true"></i>
                 <span class="p-lbl">Delivery Date:</span>
-                <span class="p-val">{{ po.delivery_date | date: 'dd-MM-yyyy' }}</span>
+                <span class="p-val">{{ po.delivery_date | appDate }}</span>
               </div>
               }
               @if (po.delivery_term || po.delivery_terms) {

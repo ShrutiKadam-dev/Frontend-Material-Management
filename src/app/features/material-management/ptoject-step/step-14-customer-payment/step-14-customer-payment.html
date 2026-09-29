@@ -182,48 +182,34 @@
                                 <i class="pi"
                                     [class.pi-check-circle]="payment.payment_status === 'completed' || payment.is_payment_completed"
                                     [class.pi-clock]="payment.payment_status === 'partial'"></i>
-                                {{ (payment.payment_status === 'completed' || payment.is_payment_completed) ? 'Fully
-                                Settled' : 'Partial Realization' }}
+                                {{ (payment.payment_status === 'completed' || payment.is_payment_completed) ? 'Fully Settled' : 'Partial Realization' }}
                             </span>
                             }
                             <span class="vsc-date">
                                 <i class="pi pi-calendar-check" aria-hidden="true"></i>
-                                Payment Date: {{ formatDisplayDate(payment.payment_date) }}
+                                Payment Date: {{ payment.payment_date | appDate }}
                             </span>
                         </div>
                         <div class="vsc-header-right">
-                            <span class="vsc-count-pill"
-                                style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;"
-                                [pTooltip]="payment.cumulative_payment_percentage && payment.payment_percentage && payment.cumulative_payment_percentage !== payment.payment_percentage ? ('This payment: ' + payment.payment_percentage + '% • Total paid: ' + payment.cumulative_payment_percentage + '%') : ('Paid: ' + getPaymentPercentage(payment) + '%')"
-                                tooltipPosition="bottom">
-                                <i class="pi pi-percentage"></i>
-                                {{ getPaymentPercentage(payment) }}% Paid
-                            </span>
                             <span class="vsc-cost-pill font-mono font-bold"
-                                [pTooltip]="'Payment Realized: ₹ ' + (payment.payment_amount | number:'1.2-2')"
+                                [pTooltip]="'Payment Realized in this transaction: ₹ ' + (getPaymentAmount(payment) | number:'1.2-2') + ' (' + getPaymentPercentage(payment) + '% of invoice)'"
                                 tooltipPosition="bottom">
                                 <i class="pi pi-check-circle" aria-hidden="true"></i>
-                                Paid: ₹ {{ payment.payment_amount | number:'1.2-2' }}
+                                Paid: ₹ {{ getPaymentAmount(payment) | number:'1.2-2' }}
                             </span>
 
                             @if (calculateSettlementBalance(payment) > 0 && !payment.is_payment_completed) {
-                            <span class="vsc-count-pill vsc-count-pill--pending"
-                                [pTooltip]="'Remaining Percentage: ' + getRemainingPercentage(payment) + '%'"
-                                tooltipPosition="bottom">
-                                <i class="pi pi-hourglass" aria-hidden="true"></i>
-                                {{ getRemainingPercentage(payment) }}% Remaining
-                            </span>
-                            <span class="vsc-count-pill vsc-count-pill--pending font-mono"
-                                [pTooltip]="'Remaining Balance: ₹ ' + (calculateSettlementBalance(payment) | number:'1.2-2')"
+                            <span class="vsc-count-pill vsc-count-pill--pending font-mono font-bold"
+                                [pTooltip]="'Remaining Balance after this receipt: ₹ ' + (calculateSettlementBalance(payment) | number:'1.2-2') + ' (' + getRemainingPercentage(payment) + '% remaining)'"
                                 tooltipPosition="bottom">
                                 <i class="pi pi-clock" aria-hidden="true"></i>
                                 Remaining: ₹ {{ calculateSettlementBalance(payment) | number:'1.2-2' }}
                             </span>
                             } @else {
-                            <span class="vsc-count-pill vsc-count-pill--settled" pTooltip="Invoice fully settled (0% Remaining)"
+                            <span class="vsc-count-pill vsc-count-pill--settled font-bold" pTooltip="Invoice fully settled (0% Remaining)"
                                 tooltipPosition="bottom">
                                 <i class="pi pi-verified" aria-hidden="true"></i>
-                                Fully Settled (0% Remaining)
+                                Fully Settled
                             </span>
                             }
 
@@ -242,28 +228,91 @@
 
                     <!-- Card Body -->
                     <div class="vsc-body">
-                        <!-- Operational Parameters Strip -->
+                        <!-- 1. CLEAR 3-BOX FINANCIAL FLOW (Instant Visual Comprehension) -->
+                        <div class="payment-flow-container">
+                            <div class="payment-flow-boxes">
+                                <!-- Box 1: Balance Before Payment -->
+                                <div class="flow-box flow-box--before">
+                                    <div class="flow-box-header">
+                                        <span class="flow-box-lbl">1. Before Payment</span>
+                                        <span class="flow-box-tag">Due</span>
+                                    </div>
+                                    <span class="flow-box-val font-mono">₹ {{ getRemainingBeforeTransaction(payment) | number:'1.2-2' }}</span>
+                                    <span class="flow-box-hint">
+                                        @if (getPreviouslySettledBeforeTransaction(payment) > 0) {
+                                        ₹ {{ getPreviouslySettledBeforeTransaction(payment) | number:'1.2-2' }} settled earlier
+                                        } @else {
+                                        Opening invoice balance
+                                        }
+                                    </span>
+                                </div>
+
+                                <!-- Operator 1: Minus Paid -->
+                                <div class="flow-operator" aria-hidden="true">−</div>
+
+                                <!-- Box 2: Paid in This Transaction -->
+                                <div class="flow-box flow-box--paid">
+                                    <div class="flow-box-header">
+                                        <span class="flow-box-lbl">2. Paid This Time</span>
+                                        <span class="flow-box-tag">{{ getPaymentPercentage(payment) }}%</span>
+                                    </div>
+                                    <span class="flow-box-val font-mono">₹ {{ getPaymentAmount(payment) | number:'1.2-2' }}</span>
+                                    <span class="flow-box-hint">
+                                        @if ((payment.tds || 0) > 0 || (payment.ld || 0) > 0) {
+                                        + ₹ {{ ((payment.tds || 0) + (payment.ld || 0)) | number:'1.2-2' }} Deductions
+                                        } @else {
+                                        Direct bank receipt
+                                        }
+                                    </span>
+                                </div>
+
+                                <!-- Operator 2: Equals Remaining -->
+                                <div class="flow-operator" aria-hidden="true">=</div>
+
+                                <!-- Box 3: Remaining Balance -->
+                                <div class="flow-box"
+                                    [class.flow-box--remaining]="calculateSettlementBalance(payment) > 0 && !payment.is_payment_completed"
+                                    [class.flow-box--settled]="calculateSettlementBalance(payment) <= 0 || payment.is_payment_completed">
+                                    <div class="flow-box-header">
+                                        <span class="flow-box-lbl">{{ (calculateSettlementBalance(payment) <= 0 || payment.is_payment_completed) ? '3. Net Status' : '3. Remaining Balance' }}</span>
+                                        <span class="flow-box-tag">{{ getRemainingPercentage(payment) }}% Due</span>
+                                    </div>
+                                    <span class="flow-box-val font-mono">₹ {{ calculateSettlementBalance(payment) | number:'1.2-2' }}</span>
+                                    <span class="flow-box-hint">
+                                        {{ (calculateSettlementBalance(payment) <= 0 || payment.is_payment_completed) ? 'Invoice 100% Cleared!' : 'Pending collection' }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Milestone Progress Track -->
+                            <div class="milestone-progress-wrap" [pTooltip]="'Progress: ' + getCumulativePercentage(payment) + '% paid of total invoice ₹ ' + (payment.invoice_value | number:'1.2-2')" tooltipPosition="top">
+                                <div class="milestone-track" role="progressbar" [attr.aria-valuenow]="getCumulativePercentage(payment)" aria-valuemin="0" aria-valuemax="100">
+                                    <div class="milestone-fill" [style.width.%]="getCumulativePercentage(payment)"></div>
+                                </div>
+                                <div class="milestone-legend">
+                                    <span>Invoice #{{ payment.invoice_no }}: <strong>₹ {{ payment.invoice_value | number:'1.2-2' }}</strong></span>
+                                    <span class="ml-item--paid"><i class="pi pi-check-circle" style="font-size: 0.7rem;"></i> Total Paid So Far: ₹ {{ getCumulativePaidAmount(payment) | number:'1.2-2' }} ({{ getCumulativePercentage(payment) }}%)</span>
+                                    <span class="ml-item--pending"><i class="pi pi-clock" style="font-size: 0.7rem;"></i> Balance Due: ₹ {{ calculateSettlementBalance(payment) | number:'1.2-2' }} ({{ getRemainingPercentage(payment) }}%)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Operational Parameters Strip -->
                         <div class="vsc-params-strip">
                             <div class="param-chip">
                                 <i class="pi pi-calendar" aria-hidden="true"></i>
                                 <span class="p-lbl">Invoice Date:</span>
-                                <span class="p-val">{{ formatDisplayDate(payment.invoice_date) }}</span>
+                                <span class="p-val">{{ payment.invoice_date | appDate }}</span>
+                            </div>
+                            <div class="param-chip">
+                                <i class="pi pi-calendar-check" aria-hidden="true"></i>
+                                <span class="p-lbl">Receipt Date:</span>
+                                <span class="p-val">{{ payment.payment_date | appDate }}</span>
                             </div>
                             @if (payment.payment_status_message) {
                             <div class="param-chip" style="background: #f0fdf4; border-color: #bbf7d0; color: #166534;">
                                 <i class="pi pi-info-circle" aria-hidden="true"></i>
-                                <span class="p-lbl">Status:</span>
                                 <span class="p-val font-bold">{{ payment.payment_status_message }}</span>
-                            </div>
-                            }
-                            @if (payment.pending_amount != null && calculateSettlementBalance(payment) > 0 &&
-                            !payment.is_payment_completed) {
-                            <div class="param-chip param-chip--highlight">
-                                <i class="pi pi-hourglass" aria-hidden="true"></i>
-                                <span class="p-lbl">Remaining:</span>
-                                <span class="p-val font-mono">₹ {{ calculateSettlementBalance(payment) | number:'1.2-2'
-                                    }}</span>
-                                <span class="p-val font-mono" style="color: #b45309; font-size: 0.74rem;">({{ getRemainingPercentage(payment) }}% left)</span>
                             </div>
                             }
                             @if (payment.tds > 0) {
@@ -282,98 +331,84 @@
                             }
                         </div>
 
-                        <!-- Financial Settlement Table -->
+                        <!-- 3. Financial Settlement Breakdown Table -->
                         <div class="items-table-wrap">
                             <table class="items-table">
                                 <thead>
                                     <tr>
                                         <th style="width: 50px; text-align: center;">#</th>
-                                        <th>Settlement Component</th>
-                                        <th style="width: 180px;">Category</th>
-                                        <th style="width: 200px;">Reference / Note</th>
-                                        <th style="width: 180px; text-align: right;">Amount</th>
+                                        <th>Settlement Item</th>
+                                        <th style="width: 170px;">Type</th>
+                                        <th style="width: 220px;">Reference / Note</th>
+                                        <th style="width: 170px; text-align: right;">Amount</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">1
-                                        </td>
-                                        <td><strong style="color: var(--color-heading);">Customer Tax Invoice
-                                                Value</strong></td>
-                                        <td><span class="ref-badge">Total Invoiced (Step 13)</span></td>
-                                        <td class="font-mono">Invoice #{{ payment.invoice_no }}</td>
-                                        <td class="text-right font-mono font-bold">₹ {{ payment.invoice_value |
-                                            number:'1.2-2' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">2
-                                        </td>
+                                    <tr style="background: #f8fafc;">
+                                        <td style="text-align: center; color: #0284c7; font-weight: 700;">1</td>
                                         <td>
-                                            <strong style="color: #059669;">Direct Payment Realized</strong>
-                                            <span
-                                                style="font-size: 0.75rem; color: #047857; margin-left: 6px; font-weight: 600;">({{
-                                                getPaymentPercentage(payment) }}% paid)</span>
+                                            <strong style="color: #0369a1;">Balance Due Before This Payment</strong>
+                                            <span style="font-size: 0.72rem; color: #64748b; margin-left: 6px;">(Opening Due)</span>
                                         </td>
-                                        <td><span class="ref-badge"
-                                                style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;">Bank
-                                                Receipt</span></td>
-                                        <td>Payment Date: {{ formatDisplayDate(payment.payment_date) }}</td>
-                                        <td class="text-right font-mono font-bold" style="color: #059669;">₹ {{
-                                            payment.payment_amount | number:'1.2-2' }}</td>
+                                        <td><span class="ref-badge" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">Opening Due</span></td>
+                                        <td>
+                                            <span>Invoice #{{ payment.invoice_no }} (Total: ₹ {{ payment.invoice_value | number:'1.2-2' }})</span>
+                                            @if (getPreviouslySettledBeforeTransaction(payment) > 0) {
+                                            <span style="color: #64748b; font-size: 0.73rem; display: block;">
+                                                Prior Settled: ₹ {{ getPreviouslySettledBeforeTransaction(payment) | number:'1.2-2' }}
+                                            </span>
+                                            }
+                                        </td>
+                                        <td class="text-right font-mono font-bold" style="color: #0369a1;">₹ {{ getRemainingBeforeTransaction(payment) | number:'1.2-2' }}</td>
                                     </tr>
+
+                                    <tr>
+                                        <td style="text-align: center; color: #059669; font-weight: 700;">2</td>
+                                        <td>
+                                            <strong style="color: #059669;">Less: Direct Payment Realized</strong>
+                                            <span style="font-size: 0.75rem; color: #047857; margin-left: 6px; font-weight: 600;">({{ getPaymentPercentage(payment) }}% of invoice)</span>
+                                        </td>
+                                        <td><span class="ref-badge" style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;">Bank Receipt</span></td>
+                                        <td>Receipt Date: {{ payment.payment_date | appDate }}</td>
+                                        <td class="text-right font-mono font-bold" style="color: #059669;">− ₹ {{ getPaymentAmount(payment) | number:'1.2-2' }}</td>
+                                    </tr>
+
                                     @if (payment.tds > 0) {
                                     <tr>
-                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">3
-                                        </td>
-                                        <td><strong>Tax Deducted at Source (TDS)</strong></td>
-                                        <td><span class="ref-badge">Statutory Deduction</span></td>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">3</td>
+                                        <td><strong>Less: Tax Deducted at Source (TDS)</strong></td>
+                                        <td><span class="ref-badge">Statutory Tax</span></td>
                                         <td>Income Tax / GST TDS</td>
-                                        <td class="text-right font-mono">₹ {{ payment.tds | number:'1.2-2' }}</td>
+                                        <td class="text-right font-mono font-bold" style="color: #dc2626;">− ₹ {{ payment.tds | number:'1.2-2' }}</td>
                                     </tr>
                                     }
+
                                     @if (payment.ld > 0) {
                                     <tr>
-                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{
-                                            payment.tds > 0 ? 4 : 3 }}</td>
-                                        <td><strong>Liquidated Damages (LD)</strong></td>
-                                        <td><span class="ref-badge"
-                                                style="background: #fef2f2; color: #b91c1c; border-color: #fecaca;">Contract
-                                                Penalty</span></td>
+                                        <td style="text-align: center; color: var(--color-muted); font-weight: 700;">{{ payment.tds > 0 ? 4 : 3 }}</td>
+                                        <td><strong>Less: Liquidated Damages (LD)</strong></td>
+                                        <td><span class="ref-badge" style="background: #fef2f2; color: #b91c1c; border-color: #fecaca;">Penalty</span></td>
                                         <td>Delay / SLA Deductions</td>
-                                        <td class="text-right font-mono">₹ {{ payment.ld | number:'1.2-2' }}</td>
+                                        <td class="text-right font-mono font-bold" style="color: #dc2626;">− ₹ {{ payment.ld | number:'1.2-2' }}</td>
                                     </tr>
                                     }
                                 </tbody>
                                 <tfoot>
-                                    <tr class="tfoot-subtotal-row">
-                                        <td colspan="4"
-                                            style="text-align: right; font-weight: 600; color: var(--color-muted); padding: 8px 14px;">
-                                            Total Recovered & Deducted (Payment + TDS + LD):
-                                        </td>
-                                        <td
-                                            style="text-align: right; font-family: monospace; font-weight: 750; color: var(--color-heading); padding: 8px 14px;">
-                                            ₹ {{ (payment.payment_amount + (payment.tds || 0) + (payment.ld || 0)) |
-                                            number:'1.2-2' }}
-                                        </td>
-                                    </tr>
                                     <tr class="tfoot-grand-total-row">
                                         <td colspan="4"
-                                            style="text-align: right; font-weight: 800; padding: 10px 14px; border-top: 2px solid var(--color-border);"
+                                            style="text-align: right; font-weight: 800; padding: 12px 14px; border-top: 2px solid var(--color-border);"
                                             [class.tfoot-balance-pending]="calculateSettlementBalance(payment) > 0 && !payment.is_payment_completed"
                                             [class.tfoot-balance-settled]="calculateSettlementBalance(payment) <= 0 || payment.is_payment_completed">
-                                            <div
-                                                style="display: flex; align-items: center; justify-content: flex-end; gap: 7px;">
+                                            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 7px;">
                                                 <span class="total-icon-badge" aria-hidden="true">
                                                     <i class="pi"
                                                         [class.pi-clock]="calculateSettlementBalance(payment) > 0 && !payment.is_payment_completed"
                                                         [class.pi-verified]="calculateSettlementBalance(payment) <= 0 || payment.is_payment_completed"></i>
                                                 </span>
-                                                <span>{{ (calculateSettlementBalance(payment) > 0 &&
-                                                    !payment.is_payment_completed) ? ('Remaining Balance (' + getRemainingPercentage(payment) + '%):') :
-                                                    'Net Status: Fully Paid & Settled (0% Remaining)' }}</span>
+                                                <span>{{ (calculateSettlementBalance(payment) > 0 && !payment.is_payment_completed) ? ('Remaining Balance Due (' + getRemainingPercentage(payment) + '% Pending):') : 'Net Status: Fully Paid & Settled (0% Remaining)' }}</span>
                                             </div>
                                         </td>
-                                        <td style="text-align: right; font-family: monospace; font-size: 1.05rem; font-weight: 850; padding: 10px 14px; border-top: 2px solid var(--color-border); white-space: nowrap;"
+                                        <td style="text-align: right; font-family: monospace; font-size: 1.1rem; font-weight: 850; padding: 12px 14px; border-top: 2px solid var(--color-border); white-space: nowrap;"
                                             [class.tfoot-balance-pending]="calculateSettlementBalance(payment) > 0 && !payment.is_payment_completed"
                                             [class.tfoot-balance-settled]="calculateSettlementBalance(payment) <= 0 || payment.is_payment_completed">
                                             ₹ {{ calculateSettlementBalance(payment) | number:'1.2-2' }}
@@ -501,14 +536,22 @@
 
                     <div class="dlg-grid">
                         <div class="field">
-                            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                            <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px;">
                                 <label for="pay-amt">Payment Amount Received (₹) <span class="req"
                                         aria-hidden="true">*</span></label>
-                                @if (dialogAvailableBalance() > 0) {
-                                <span class="font-mono text-muted" style="font-size: 0.74rem;">
-                                    Max: ₹ {{ dialogAvailableBalance() | number:'1.2-2' }}
-                                </span>
-                                }
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    @if (dialogAvailableBalance() > 0) {
+                                    <span class="font-mono text-muted" style="font-size: 0.74rem;">
+                                        Opening Due: ₹ {{ dialogAvailableBalance() | number:'1.2-2' }}
+                                    </span>
+                                    }
+                                    @if (dialogMaxPayable() > 0 && currentPaymentAmount() !== dialogMaxPayable()) {
+                                    <button type="button" class="btn-fill-remaining" (click)="fillRemainingPayment()"
+                                        pTooltip="Auto-fill full remaining payable amount" tooltipPosition="top">
+                                        <i class="pi pi-bolt"></i> Pay Full (₹ {{ dialogMaxPayable() | number:'1.2-2' }})
+                                    </button>
+                                    }
+                                </div>
                             </div>
                             <input id="pay-amt" pInputText type="number" step="0.01" min="0.01"
                                 [max]="dialogMaxPayable()" formControlName="payment_amount" placeholder="0.00"
@@ -558,44 +601,55 @@
                         </div>
                     </div>
 
-                    <!-- Live Settlement Balance Pill Bar -->
-                    <div class="settlement-calc-banner">
-                        <div class="scb-item">
-                            <span class="scb-label">Invoice Value:</span>
-                            <span class="scb-val">₹ {{ (currentInvoiceValue() || paymentForm.get('invoice_value')?.value
-                                || 0) | number:'1.2-2' }}</span>
+                    <!-- Live 3-Card Settlement Calculation Preview -->
+                    <div class="dlg-calc-flow">
+                        <!-- Card 1: Balance Before Payment -->
+                        <div class="dcf-card dcf-card--opening">
+                            <span class="dcf-lbl">1. Balance Due Before</span>
+                            <span class="dcf-val font-mono">₹ {{ dialogAvailableBalance() | number:'1.2-2' }}</span>
+                            <span class="dcf-hint">
+                                @if (dialogPreviouslySettled() > 0) {
+                                Inv ₹ {{ (currentInvoiceValue() || paymentForm.get('invoice_value')?.value || 0) | number:'1.2-2' }} (₹ {{ dialogPreviouslySettled() | number:'1.2-2' }} settled)
+                                } @else {
+                                Total Invoice: ₹ {{ (currentInvoiceValue() || paymentForm.get('invoice_value')?.value || 0) | number:'1.2-2' }}
+                                }
+                            </span>
                         </div>
-                        @if (dialogPreviouslySettled() > 0) {
-                        <div class="scb-op">-</div>
-                        <div class="scb-item">
-                            <span class="scb-label">Previously Settled:</span>
-                            <span class="scb-val" style="color: #64748b;">₹ {{ dialogPreviouslySettled() |
-                                number:'1.2-2' }}</span>
+
+                        <!-- Minus Operator -->
+                        <div class="dcf-operator" aria-hidden="true">−</div>
+
+                        <!-- Card 2: Settled in this receipt -->
+                        <div class="dcf-card dcf-card--paying">
+                            <span class="dcf-lbl">2. Paid / Settled Now</span>
+                            <span class="dcf-val font-mono">₹ {{ ((currentPaymentAmount() || 0) + (currentTds() || 0) + (currentLd() || 0)) | number:'1.2-2' }}</span>
+                            <span class="dcf-hint">
+                                @if (currentTds() > 0 || currentLd() > 0) {
+                                Bank: ₹ {{ (currentPaymentAmount() || 0) | number:'1.2-2' }} + Ded: ₹ {{ ((currentTds() || 0) + (currentLd() || 0)) | number:'1.2-2' }}
+                                } @else {
+                                {{ getDialogLivePercentage() }}% of Invoice
+                                }
+                            </span>
                         </div>
-                        }
-                        <div class="scb-op">-</div>
-                        <div class="scb-item">
-                            <span class="scb-label">Paid ({{ getDialogLivePercentage() }}%):</span>
-                            <span class="scb-val" style="color: #059669;">₹ {{ (currentPaymentAmount() ||
-                                paymentForm.get('payment_amount')?.value || 0) | number:'1.2-2' }}</span>
-                        </div>
-                        <div class="scb-op">-</div>
-                        <div class="scb-item">
-                            <span class="scb-label">TDS:</span>
-                            <span class="scb-val">₹ {{ (currentTds() || paymentForm.get('tds')?.value || 0) |
-                                number:'1.2-2' }}</span>
-                        </div>
-                        <div class="scb-op">-</div>
-                        <div class="scb-item">
-                            <span class="scb-label">LD:</span>
-                            <span class="scb-val">₹ {{ (currentLd() || paymentForm.get('ld')?.value || 0) |
-                                number:'1.2-2' }}</span>
-                        </div>
-                        <div class="scb-op">=</div>
-                        <div class="scb-item scb-item--result" [class.scb-item--zero]="getDialogLiveBalance() <= 0"
-                            [class.text-danger]="isAmountExceeding()">
-                            <span class="scb-label">Remaining Balance ({{ getDialogLiveRemainingPercentage() }}%):</span>
-                            <span class="scb-val">₹ {{ getDialogLiveBalance() | number:'1.2-2' }}</span>
+
+                        <!-- Equals Operator -->
+                        <div class="dcf-operator" aria-hidden="true">=</div>
+
+                        <!-- Card 3: Remaining Balance -->
+                        <div class="dcf-card dcf-card--closing"
+                            [class.dcf-card--zero]="getDialogLiveBalance() <= 0 && !isAmountExceeding()"
+                            [class.dcf-card--error]="isAmountExceeding()">
+                            <span class="dcf-lbl">3. Balance Remaining</span>
+                            <span class="dcf-val font-mono">₹ {{ getDialogLiveBalance() | number:'1.2-2' }}</span>
+                            <span class="dcf-hint">
+                                @if (isAmountExceeding()) {
+                                Exceeds Available Due!
+                                } @else if (getDialogLiveBalance() <= 0) {
+                                ✓ Fully Cleared (100%)
+                                } @else {
+                                {{ getDialogLiveRemainingPercentage() }}% Pending Due
+                                }
+                            </span>
                         </div>
                     </div>
 
@@ -603,9 +657,9 @@
                     <div class="scb-exceed-warning" role="alert">
                         <i class="pi pi-exclamation-triangle"></i>
                         <span>
-                            <strong>Amount Exceeds Balance:</strong> Total payment & deductions (₹ {{
+                            <strong>Amount Exceeds Outstanding:</strong> Total payment & deductions (₹ {{
                             (currentPaymentAmount() || 0) + currentTds() + currentLd() | number:'1.2-2' }}) exceed the
-                            available remaining balance of ₹ {{ dialogAvailableBalance() | number:'1.2-2' }}.
+                            available balance of ₹ {{ dialogAvailableBalance() | number:'1.2-2' }}.
                         </span>
                     </div>
                     }

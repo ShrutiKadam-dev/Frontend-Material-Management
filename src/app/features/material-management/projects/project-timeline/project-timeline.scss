@@ -543,6 +543,14 @@
   gap: 6px;
   margin: 12px 0 0;
 
+  &--active {
+    color: var(--color-primary);
+  }
+
+  &--pending {
+    color: var(--color-muted);
+  }
+
   .pi {
     font-size: 0.82rem;
   }

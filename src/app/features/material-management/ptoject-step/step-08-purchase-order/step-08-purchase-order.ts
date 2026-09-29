@@ -12,7 +12,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import { MessageService } from 'primeng/api';
@@ -48,6 +48,7 @@ import {
   VALIDITY_UNIT_OPTIONS,
   WARRANTY_PERIOD_OPTIONS,
 } from '../../../../core/constants/dropdown-options.constant';
+import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
 
 @Component({
   selector: 'app-step-08-purchase-order',
@@ -61,7 +62,7 @@ import {
     SelectModule,
     TooltipModule,
     TableModule,
-    DatePipe,
+    AppDatePipe,
     DecimalPipe,
     StepRemarksComponent,
   ],

@@ -38,7 +38,8 @@ import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
-import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
+import { formatDisplayDate, formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
+import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
 @Component({
@@ -52,6 +53,7 @@ import { StepRemarksComponent } from '../../../../shared/components/step-remarks
     DatePickerModule,
     TooltipModule,
     DecimalPipe,
+    AppDatePipe,
     StepRemarksComponent,
   ],
   templateUrl: './step-14-customer-payment.html',
@@ -133,6 +135,17 @@ export class Step14CustomerPayment implements OnInit {
 
   protected readonly dialogPreviouslySettled = computed(() => {
     const editing = this.editingPayment();
+    if (
+      editing &&
+      editing.remaining_amount_before_transaction != null &&
+      editing.remaining_amount_before_transaction !== '' &&
+      !isNaN(Number(editing.remaining_amount_before_transaction))
+    ) {
+      const invVal = Number(editing.invoice_value) || this.dialogTotalInvoiceValue();
+      const remBefore = Number(editing.remaining_amount_before_transaction);
+      return Math.max(0, Math.round((invVal - remBefore) * 100) / 100);
+    }
+
     const list = this.payments();
     const currentInvNo = this.currentInvoiceNo().toLowerCase();
 
@@ -164,6 +177,15 @@ export class Step14CustomerPayment implements OnInit {
   });
 
   protected readonly dialogAvailableBalance = computed(() => {
+    const editing = this.editingPayment();
+    if (
+      editing &&
+      editing.remaining_amount_before_transaction != null &&
+      editing.remaining_amount_before_transaction !== '' &&
+      !isNaN(Number(editing.remaining_amount_before_transaction))
+    ) {
+      return Math.max(0, Math.round(Number(editing.remaining_amount_before_transaction) * 100) / 100);
+    }
     const total = this.dialogTotalInvoiceValue();
     const prev = this.dialogPreviouslySettled();
     return Math.max(0, Math.round((total - prev) * 100) / 100);
@@ -542,14 +564,85 @@ export class Step14CustomerPayment implements OnInit {
   }
 
   // ── Calculation Helpers ────────────────────────────────────────
-  protected getPaymentPercentage(p: CustomerPayment): number {
-    if (p.is_payment_completed || this.calculateSettlementBalance(p) <= 0) {
-      if (p.cumulative_payment_percentage != null && !isNaN(Number(p.cumulative_payment_percentage))) {
-        return Math.min(100, Math.max(0, Math.round(Number(p.cumulative_payment_percentage) * 10) / 10));
-      }
-      return 100;
+  /**
+   * Retrieves the remaining / outstanding balance before this specific transaction took place.
+   * If provided directly by backend as `remaining_amount_before_transaction`, uses that value.
+   * Otherwise falls back to: pending_amount + (payment_amount + tds + ld), or invoice_value.
+   */
+  protected getRemainingBeforeTransaction(p: CustomerPayment): number {
+    if (
+      p.remaining_amount_before_transaction != null &&
+      p.remaining_amount_before_transaction !== '' &&
+      !isNaN(Number(p.remaining_amount_before_transaction))
+    ) {
+      return Math.max(0, Math.round(Number(p.remaining_amount_before_transaction) * 100) / 100);
     }
-    if (p.payment_percentage != null && !isNaN(Number(p.payment_percentage))) {
+    const inv = Number(p.invoice_value) || this.totalInvoiced();
+    if (p.pending_amount != null && p.pending_amount !== '' && !isNaN(Number(p.pending_amount))) {
+      const paid = Number(p.payment_amount ?? p.amount_paid) || 0;
+      const tds = Number(p.tds) || 0;
+      const ld = Number(p.ld ?? p.liquidated_damages) || 0;
+      const derived = Number(p.pending_amount) + paid + tds + ld;
+      return Math.min(inv, Math.max(0, Math.round(derived * 100) / 100));
+    }
+    return inv;
+  }
+
+  /**
+   * Calculates the amount settled prior to this transaction.
+   * Total Invoice Value - Remaining Amount Before Transaction.
+   */
+  protected getPreviouslySettledBeforeTransaction(p: CustomerPayment): number {
+    const inv = Number(p.invoice_value) || this.totalInvoiced();
+    const remBefore = this.getRemainingBeforeTransaction(p);
+    return Math.max(0, Math.round((inv - remBefore) * 100) / 100);
+  }
+
+  /**
+   * Returns cumulative total amount paid up to and including this transaction.
+   */
+  protected getCumulativePaidAmount(p: CustomerPayment): number {
+    if (
+      p.total_paid_amount != null &&
+      p.total_paid_amount !== '' &&
+      !isNaN(Number(p.total_paid_amount))
+    ) {
+      return Number(p.total_paid_amount);
+    }
+    const prev = this.getPreviouslySettledBeforeTransaction(p);
+    const thisPaid = Number(p.payment_amount ?? p.amount_paid) || 0;
+    return Math.round((prev + thisPaid) * 100) / 100;
+  }
+
+  /**
+   * Returns cumulative percentage paid up to and including this transaction.
+   */
+  protected getCumulativePercentage(p: CustomerPayment): number {
+    if (
+      p.cumulative_payment_percentage != null &&
+      p.cumulative_payment_percentage !== '' &&
+      !isNaN(Number(p.cumulative_payment_percentage))
+    ) {
+      return Math.min(100, Math.max(0, Math.round(Number(p.cumulative_payment_percentage) * 10) / 10));
+    }
+    const inv = Number(p.invoice_value) || this.totalInvoiced();
+    if (inv <= 0) return 0;
+    const cumPaid = this.getCumulativePaidAmount(p);
+    return Math.min(100, Math.round((cumPaid / inv) * 1000) / 10);
+  }
+
+  /**
+   * Returns amount paid in this transaction.
+   */
+  protected getPaymentAmount(p: CustomerPayment): number {
+    return Number(p.payment_amount ?? p.amount_paid) || 0;
+  }
+
+  /**
+   * Percentage paid in this specific transaction.
+   */
+  protected getPaymentPercentage(p: CustomerPayment): number {
+    if (p.payment_percentage != null && p.payment_percentage !== '' && !isNaN(Number(p.payment_percentage))) {
       const pct = Number(p.payment_percentage);
       if (pct > 0 && pct <= 100) {
         return Math.round(pct * 10) / 10;
@@ -561,11 +654,14 @@ export class Step14CustomerPayment implements OnInit {
     return Math.min(100, Math.round((paid / inv) * 1000) / 10);
   }
 
+  /**
+   * Remaining percentage after this transaction.
+   */
   protected getRemainingPercentage(p: CustomerPayment): number {
     if (p.is_payment_completed || this.calculateSettlementBalance(p) <= 0) {
       return 0;
     }
-    if (p.pending_percentage != null && !isNaN(Number(p.pending_percentage))) {
+    if (p.pending_percentage != null && p.pending_percentage !== '' && !isNaN(Number(p.pending_percentage))) {
       const pct = Number(p.pending_percentage);
       if (pct >= 0 && pct <= 100) {
         return Math.round(pct * 10) / 10;
@@ -577,22 +673,33 @@ export class Step14CustomerPayment implements OnInit {
     return Math.min(100, Math.max(0, Math.round((balance / inv) * 1000) / 10));
   }
 
+  /**
+   * Outstanding / pending balance left after this transaction.
+   */
   protected calculateSettlementBalance(p: CustomerPayment): number {
-    const inv = Number(p.invoice_value) || 0;
-    const paid = Number(p.payment_amount ?? p.amount_paid) || 0;
-    const tds = Number(p.tds) || 0;
-    const ld = Number(p.ld ?? p.liquidated_damages) || 0;
-    const mathBalance = Math.max(0, Math.round((inv - paid - tds - ld) * 100) / 100);
-
     if (p.is_payment_completed) {
       return 0;
     }
-    if (p.pending_amount != null && !isNaN(Number(p.pending_amount))) {
+    if (p.pending_amount != null && p.pending_amount !== '' && !isNaN(Number(p.pending_amount))) {
       const backendPending = Number(p.pending_amount);
       if (backendPending <= 0) return 0;
-      return Math.min(backendPending, mathBalance);
+      return Math.round(backendPending * 100) / 100;
     }
-    return mathBalance;
+    const remBefore = this.getRemainingBeforeTransaction(p);
+    const paid = Number(p.payment_amount ?? p.amount_paid) || 0;
+    const tds = Number(p.tds) || 0;
+    const ld = Number(p.ld ?? p.liquidated_damages) || 0;
+    return Math.max(0, Math.round((remBefore - paid - tds - ld) * 100) / 100);
+  }
+
+  /**
+   * One-click autofill for paying the full remaining balance in the dialog.
+   */
+  protected fillRemainingPayment(): void {
+    const maxPay = this.dialogMaxPayable();
+    if (maxPay <= 0) return;
+    this.paymentForm.patchValue({ payment_amount: maxPay });
+    this.currentPaymentAmount.set(maxPay);
   }
 
   protected getDialogLiveBalance(): number {
@@ -769,23 +876,6 @@ export class Step14CustomerPayment implements OnInit {
   }
 
   protected formatDisplayDate(date: Date | string | null | undefined): string {
-    if (!date) return '—';
-    if (typeof date === 'string') {
-      const trimmed = date.trim();
-      if (!trimmed) return '—';
-      if (/^\d{2}-\d{2}-\d{4}$/.test(trimmed)) {
-        return trimmed;
-      }
-      const matchYmd = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (matchYmd) {
-        return `${matchYmd[3]}-${matchYmd[2]}-${matchYmd[1]}`;
-      }
-    }
-    const parsed = parseLocalDate(date);
-    if (!parsed) return typeof date === 'string' ? date : '—';
-    const day = String(parsed.getDate()).padStart(2, '0');
-    const month = String(parsed.getMonth() + 1).padStart(2, '0');
-    const year = parsed.getFullYear();
-    return `${day}-${month}-${year}`;
+    return formatDisplayDate(date);
   }
 }

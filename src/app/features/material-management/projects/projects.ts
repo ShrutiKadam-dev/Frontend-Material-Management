@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { finalize } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -26,6 +26,8 @@ import { CustomerService } from '../../../core/services/customer';
 import { SupplierService } from '../../../core/services/supplier';
 import { ProjectService } from '../../../core/services/project';
 
+import { AppDatePipe } from '../../../core/pipes/app-date.pipe';
+
 export type HealthFilter = 'all' | 'on_track' | 'delayed' | 'in_progress' | 'completed';
 export type ViewMode = 'grid' | 'table';
 
@@ -40,7 +42,7 @@ export type ViewMode = 'grid' | 'table';
     DatePickerModule,
     TooltipModule,
     TableModule,
-    DatePipe,
+    AppDatePipe,
     DecimalPipe,
   ],
   templateUrl: './projects.html',
