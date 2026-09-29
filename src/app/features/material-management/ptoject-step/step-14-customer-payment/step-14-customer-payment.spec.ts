@@ -105,4 +105,81 @@ describe('Step14CustomerPayment', () => {
     expect(component['paymentForm'].get('payment_amount')?.value).toBeNull();
     expect(component['paymentForm'].get('payment_date')?.value).toBeNull();
   });
+
+  it('should detect when entered payment amount exceeds remaining balance and block submission', () => {
+    component['openCreatePaymentDialog']();
+    // Available remaining balance is 3000 (from mockPayments: 50000 - 45000 paid - 2000 deductions = 3000)
+    expect(component['dialogAvailableBalance']()).toBe(3000);
+
+    // Enter valid amount within balance
+    component['paymentForm'].patchValue({ payment_amount: 2500 });
+    component['onPaymentAmountInput']('2500');
+    expect(component['isAmountExceeding']()).toBe(false);
+
+    // Enter amount exceeding remaining balance
+    component['paymentForm'].patchValue({ payment_amount: 5000 });
+    component['onPaymentAmountInput']('5000');
+    expect(component['isAmountExceeding']()).toBe(true);
+
+    // Attempting submit should block
+    const createSpy = vi.spyOn(mockPaymentService, 'createCustomerPayment');
+    component['onSubmitPayment']();
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it('should calculate live Remaining Balance following Invoice Value - Paid - TDS - LD logic', () => {
+    component['openCreatePaymentDialog']();
+    // Available remaining balance before this payment is 3000
+    expect(component['dialogAvailableBalance']()).toBe(3000);
+
+    // Enter Paid: 2000, TDS: 500, LD: 300 -> Remaining Balance should be 3000 - 2000 - 500 - 300 = 200
+    component['paymentForm'].patchValue({
+      payment_amount: 2000,
+      tds: 500,
+      ld: 300,
+    });
+    component['onPaymentAmountInput']('2000');
+    component['onTdsInput']('500');
+    component['onLdInput']('300');
+
+    expect(component['getDialogLiveBalance']()).toBe(200);
+    expect(component['isAmountExceeding']()).toBe(false);
+
+    // If total payment + deductions exceed remaining balance (e.g. Paid: 2500 + TDS: 400 + LD: 300 = 3200 > 3000)
+    component['paymentForm'].patchValue({
+      payment_amount: 2500,
+      tds: 400,
+      ld: 300,
+    });
+    component['onPaymentAmountInput']('2500');
+    component['onTdsInput']('400');
+    component['onLdInput']('300');
+
+    expect(component['getDialogLiveBalance']()).toBe(-200);
+    expect(component['isAmountExceeding']()).toBe(true);
+  });
+
+  it('should compute settlement card balance as Invoice Value - Paid - TDS - LD', () => {
+    const payment = {
+      id: 2,
+      project_id: 1,
+      invoice_no: 'INV-2026-002',
+      invoice_date: '2026-09-10',
+      invoice_value: 10000,
+      payment_amount: 7000,
+      payment_date: '2026-09-11',
+      tds: 1000,
+      ld: 500,
+    } as CustomerPayment;
+
+    // 10000 - 7000 - 1000 - 500 = 1500
+    expect(component['calculateSettlementBalance'](payment)).toBe(1500);
+
+    // Completed payment should return 0
+    const completedPayment = {
+      ...payment,
+      is_payment_completed: true,
+    } as CustomerPayment;
+    expect(component['calculateSettlementBalance'](completedPayment)).toBe(0);
+  });
 });

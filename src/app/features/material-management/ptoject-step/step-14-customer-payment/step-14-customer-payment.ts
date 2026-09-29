@@ -102,16 +102,108 @@ export class Step14CustomerPayment implements OnInit {
     remark: [''],
   });
 
-  // ── Computed Filtered Records ──────────────────────────────────
+  // ── Dialog Contextual Remaining Balance & Validation Signals ──
+  protected readonly currentInvoiceNo = signal<string>('');
+  protected readonly currentInvoiceValue = signal<number | null>(null);
+  protected readonly currentPaymentAmount = signal<number | null>(null);
+  protected readonly currentTds = signal<number>(0);
+  protected readonly currentLd = signal<number>(0);
+
+  constructor() {
+    this.paymentForm.valueChanges.subscribe((val) => {
+      this.currentInvoiceNo.set(val?.invoice_no ? String(val.invoice_no).trim() : '');
+      this.currentInvoiceValue.set(
+        val?.invoice_value != null && val?.invoice_value !== '' && !isNaN(Number(val.invoice_value))
+          ? Number(val.invoice_value)
+          : null,
+      );
+      this.currentPaymentAmount.set(
+        val?.payment_amount != null && val?.payment_amount !== '' && !isNaN(Number(val.payment_amount))
+          ? Number(val.payment_amount)
+          : null,
+      );
+      this.currentTds.set(
+        val?.tds != null && val?.tds !== '' && !isNaN(Number(val.tds)) ? Number(val.tds) : 0,
+      );
+      this.currentLd.set(
+        val?.ld != null && val?.ld !== '' && !isNaN(Number(val.ld)) ? Number(val.ld) : 0,
+      );
+    });
+  }
+
+  protected readonly dialogPreviouslySettled = computed(() => {
+    const editing = this.editingPayment();
+    const list = this.payments();
+    const currentInvNo = this.currentInvoiceNo().toLowerCase();
+
+    // Filter payments for the same invoice, or all project payments if no invoice_no is set
+    const filtered = list.filter((p) => {
+      if (editing && p.id === editing.id) return false;
+      if (currentInvNo && p.invoice_no) {
+        return p.invoice_no.trim().toLowerCase() === currentInvNo;
+      }
+      return true;
+    });
+
+    return filtered.reduce(
+      (sum, p) =>
+        sum +
+        (Number(p.payment_amount ?? p.amount_paid) || 0) +
+        (Number(p.tds) || 0) +
+        (Number(p.ld ?? p.liquidated_damages) || 0),
+      0,
+    );
+  });
+
+  protected readonly dialogTotalInvoiceValue = computed(() => {
+    const formVal = this.currentInvoiceValue();
+    if (formVal != null && formVal > 0) return formVal;
+    const latestTax = this.latestTaxInvoice();
+    if (latestTax && latestTax.net_total > 0) return latestTax.net_total;
+    return this.totalInvoiced();
+  });
+
+  protected readonly dialogAvailableBalance = computed(() => {
+    const total = this.dialogTotalInvoiceValue();
+    const prev = this.dialogPreviouslySettled();
+    return Math.max(0, Math.round((total - prev) * 100) / 100);
+  });
+
+  protected readonly dialogMaxPayable = computed(() => {
+    const avail = this.dialogAvailableBalance();
+    const tds = this.currentTds();
+    const ld = this.currentLd();
+    return Math.max(0, Math.round((avail - tds - ld) * 100) / 100);
+  });
+
+  protected readonly isAmountExceeding = computed(() => {
+    const avail = this.dialogAvailableBalance();
+    const payAmt = this.currentPaymentAmount();
+    const tds = this.currentTds();
+    const ld = this.currentLd();
+    if (payAmt == null || payAmt <= 0) return false;
+    return (payAmt + tds + ld) > (avail + 0.01) || payAmt > (avail + 0.01);
+  });
+
+  // ── Latest Payment Record ──────────────────────────────────────
+  protected readonly latestPayment = computed<CustomerPayment | null>(() => {
+    const list = this.payments();
+    if (!list.length) return null;
+    return [...list].sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0))[0] || null;
+  });
+
+  // ── Computed Filtered Records (Sorted Newest First) ───────────
   protected readonly filteredPayments = computed(() => {
     const list = this.payments();
     const query = this.searchQuery().trim().toLowerCase();
-    if (!query) return list;
+    const sorted = [...list].sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+    if (!query) return sorted;
 
-    return list.filter((p) => {
+    return sorted.filter((p) => {
       return (
         String(p.id).includes(query) ||
         (p.invoice_no && p.invoice_no.toLowerCase().includes(query)) ||
+        (p.payment_status && p.payment_status.toLowerCase().includes(query)) ||
         (p.remark && p.remark.toLowerCase().includes(query)) ||
         (p.payment_date && p.payment_date.toLowerCase().includes(query))
       );
@@ -130,7 +222,11 @@ export class Step14CustomerPayment implements OnInit {
   });
 
   protected readonly totalPaymentReceived = computed(() => {
-    return this.payments().reduce((sum, p) => sum + (Number(p.payment_amount) || 0), 0);
+    const lp = this.latestPayment();
+    if (lp?.total_paid_amount != null && !isNaN(Number(lp.total_paid_amount))) {
+      return Number(lp.total_paid_amount);
+    }
+    return this.payments().reduce((sum, p) => sum + (Number(p.payment_amount ?? p.amount_paid) || 0), 0);
   });
 
   protected readonly totalTdsDeducted = computed(() => {
@@ -138,7 +234,7 @@ export class Step14CustomerPayment implements OnInit {
   });
 
   protected readonly totalLdDeducted = computed(() => {
-    return this.payments().reduce((sum, p) => sum + (Number(p.ld) || 0), 0);
+    return this.payments().reduce((sum, p) => sum + (Number(p.ld ?? p.liquidated_damages) || 0), 0);
   });
 
   protected readonly totalDeductions = computed(() => {
@@ -146,17 +242,50 @@ export class Step14CustomerPayment implements OnInit {
   });
 
   protected readonly totalOutstandingBalance = computed(() => {
+    const lp = this.latestPayment();
+    if (lp?.is_payment_completed) {
+      return 0;
+    }
     const inv = this.totalInvoiced();
     const paid = this.totalPaymentReceived();
     const ded = this.totalDeductions();
-    return Math.max(0, inv - paid - ded);
+    const mathOutstanding = Math.max(0, Math.round((inv - paid - ded) * 100) / 100);
+    if (lp?.pending_amount != null && !isNaN(Number(lp.pending_amount))) {
+      const backendPending = Number(lp.pending_amount);
+      if (backendPending <= 0) return 0;
+      return Math.min(backendPending, mathOutstanding);
+    }
+    return mathOutstanding;
   });
 
   protected readonly realizationRate = computed(() => {
+    const lp = this.latestPayment();
+    if (lp?.cumulative_payment_percentage != null && !isNaN(Number(lp.cumulative_payment_percentage))) {
+      return Math.min(100, Math.round(Number(lp.cumulative_payment_percentage) * 10) / 10);
+    }
     const inv = this.totalInvoiced();
     if (inv <= 0) return 0;
     const rate = ((this.totalPaymentReceived() + this.totalDeductions()) / inv) * 100;
     return Math.min(100, Math.round(rate));
+  });
+
+  protected readonly isPaymentCompleted = computed(() => {
+    const lp = this.latestPayment();
+    if (lp?.is_payment_completed !== undefined) {
+      return Boolean(lp.is_payment_completed);
+    }
+    return this.totalOutstandingBalance() <= 0.01 && this.totalInvoiced() > 0;
+  });
+
+  protected readonly latestPaymentStatusMessage = computed(() => {
+    const lp = this.latestPayment();
+    if (lp?.payment_status_message) {
+      return lp.payment_status_message;
+    }
+    if (this.payments().length > 0) {
+      return this.isPaymentCompleted() ? 'Payment completed' : `${this.realizationRate()}% settled`;
+    }
+    return null;
   });
 
   // ── Lifecycle ──────────────────────────────────────────────────
@@ -232,6 +361,12 @@ export class Step14CustomerPayment implements OnInit {
       remark: '',
     });
 
+    this.currentInvoiceNo.set(invoice?.invoice_no || '');
+    this.currentInvoiceValue.set(invoice?.net_total ?? null);
+    this.currentPaymentAmount.set(null);
+    this.currentTds.set(0);
+    this.currentLd.set(0);
+
     this.paymentDialogVisible.set(true);
   }
 
@@ -243,24 +378,96 @@ export class Step14CustomerPayment implements OnInit {
 
     const payDate = parseLocalDate(payment.payment_date);
 
+    const payAmt = Number(payment.payment_amount ?? payment.amount_paid ?? 0);
+    const ldAmt = Number(payment.ld ?? payment.liquidated_damages ?? 0);
+    const invNo = payment.invoice_no || payment.invoice_number || '';
+
     this.paymentForm.reset({
-      invoice_no: payment.invoice_no || '',
+      invoice_no: invNo,
       invoice_date: payment.invoice_date || '',
       invoice_value: payment.invoice_value ?? null,
-      payment_amount: payment.payment_amount ?? null,
+      payment_amount: payAmt || null,
       payment_date: payDate,
       tds: payment.tds ?? 0,
-      ld: payment.ld ?? 0,
+      ld: ldAmt,
       remark: payment.remark || '',
     });
 
+    this.currentInvoiceNo.set(invNo);
+    this.currentInvoiceValue.set(payment.invoice_value ?? null);
+    this.currentPaymentAmount.set(payAmt || null);
+    this.currentTds.set(payment.tds ?? 0);
+    this.currentLd.set(ldAmt);
+
     this.paymentDialogVisible.set(true);
+  }
+
+  protected onInvoiceNoInput(val: string): void {
+    this.currentInvoiceNo.set(val ? val.trim() : '');
+  }
+
+  protected onPaymentAmountInput(val: string): void {
+    const num = val !== '' && !isNaN(Number(val)) ? Number(val) : null;
+    this.currentPaymentAmount.set(num);
+  }
+
+  protected onTdsInput(val: string): void {
+    const num = val !== '' && !isNaN(Number(val)) ? Number(val) : 0;
+    this.currentTds.set(num);
+  }
+
+  protected onLdInput(val: string): void {
+    const num = val !== '' && !isNaN(Number(val)) ? Number(val) : 0;
+    this.currentLd.set(num);
+  }
+
+  protected onInvoiceValueInput(val: string): void {
+    const num = val !== '' && !isNaN(Number(val)) ? Number(val) : null;
+    this.currentInvoiceValue.set(num);
+  }
+
+  protected onPaymentAmountBlur(): void {
+    if (this.isAmountExceeding()) {
+      const avail = this.dialogAvailableBalance();
+      const maxPay = this.dialogMaxPayable();
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Limit Exceeded',
+        detail: `Payment exceeds remaining balance of ₹ ${avail.toFixed(2)}. Maximum payable is ₹ ${maxPay.toFixed(2)}.`,
+        life: 4500,
+      });
+    }
+  }
+
+  protected onDeductionBlur(): void {
+    if (this.isAmountExceeding()) {
+      const avail = this.dialogAvailableBalance();
+      const maxPay = this.dialogMaxPayable();
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Limit Exceeded',
+        detail: `Total deductions with payment exceed remaining balance of ₹ ${avail.toFixed(2)}. Maximum payable after deductions is ₹ ${maxPay.toFixed(2)}.`,
+        life: 4500,
+      });
+    }
   }
 
   protected onSubmitPayment(): void {
     if (this.saving()) return;
     if (this.paymentForm.invalid) {
       this.paymentForm.markAllAsTouched();
+      return;
+    }
+
+    if (this.isAmountExceeding()) {
+      const avail = this.dialogAvailableBalance();
+      const maxPay = this.dialogMaxPayable();
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Cannot Submit: Balance Exceeded',
+        detail: `Payment amount exceeds the remaining balance of ₹ ${avail.toFixed(2)}. Maximum payable is ₹ ${maxPay.toFixed(2)}.`,
+        life: 5000,
+      });
       return;
     }
 
@@ -273,13 +480,18 @@ export class Step14CustomerPayment implements OnInit {
 
     const payload: CustomerPaymentCreateInput = {
       project_id: pId,
+      customer_id: this.customer()?.id || this.project()?.customer_id,
       invoice_no: String(val.invoice_no).trim(),
+      invoice_number: String(val.invoice_no).trim(),
       invoice_date: String(val.invoice_date).trim(),
       invoice_value: Number(val.invoice_value) || 0,
       payment_amount: Number(val.payment_amount) || 0,
+      amount_paid: Number(val.payment_amount) || 0,
       payment_date: payDateStr,
       tds: Number(val.tds) || 0,
       ld: Number(val.ld) || 0,
+      liquidated_damages: Number(val.ld) || 0,
+      payment_percentage: this.getDialogLivePercentage(),
       remarks: serializeStepRemarks(this.dialogRemarks()),
     };
 
@@ -330,21 +542,81 @@ export class Step14CustomerPayment implements OnInit {
   }
 
   // ── Calculation Helpers ────────────────────────────────────────
+  protected getPaymentPercentage(p: CustomerPayment): number {
+    if (p.is_payment_completed || this.calculateSettlementBalance(p) <= 0) {
+      if (p.cumulative_payment_percentage != null && !isNaN(Number(p.cumulative_payment_percentage))) {
+        return Math.min(100, Math.max(0, Math.round(Number(p.cumulative_payment_percentage) * 10) / 10));
+      }
+      return 100;
+    }
+    if (p.payment_percentage != null && !isNaN(Number(p.payment_percentage))) {
+      const pct = Number(p.payment_percentage);
+      if (pct > 0 && pct <= 100) {
+        return Math.round(pct * 10) / 10;
+      }
+    }
+    const inv = Number(p.invoice_value) || this.totalInvoiced();
+    const paid = Number(p.payment_amount ?? p.amount_paid) || 0;
+    if (inv <= 0 || paid <= 0) return 0;
+    return Math.min(100, Math.round((paid / inv) * 1000) / 10);
+  }
+
+  protected getRemainingPercentage(p: CustomerPayment): number {
+    if (p.is_payment_completed || this.calculateSettlementBalance(p) <= 0) {
+      return 0;
+    }
+    if (p.pending_percentage != null && !isNaN(Number(p.pending_percentage))) {
+      const pct = Number(p.pending_percentage);
+      if (pct >= 0 && pct <= 100) {
+        return Math.round(pct * 10) / 10;
+      }
+    }
+    const inv = Number(p.invoice_value) || this.totalInvoiced();
+    const balance = this.calculateSettlementBalance(p);
+    if (inv <= 0 || balance <= 0) return 0;
+    return Math.min(100, Math.max(0, Math.round((balance / inv) * 1000) / 10));
+  }
+
   protected calculateSettlementBalance(p: CustomerPayment): number {
     const inv = Number(p.invoice_value) || 0;
-    const paid = Number(p.payment_amount) || 0;
+    const paid = Number(p.payment_amount ?? p.amount_paid) || 0;
     const tds = Number(p.tds) || 0;
-    const ld = Number(p.ld) || 0;
-    return Math.max(0, inv - paid - tds - ld);
+    const ld = Number(p.ld ?? p.liquidated_damages) || 0;
+    const mathBalance = Math.max(0, Math.round((inv - paid - tds - ld) * 100) / 100);
+
+    if (p.is_payment_completed) {
+      return 0;
+    }
+    if (p.pending_amount != null && !isNaN(Number(p.pending_amount))) {
+      const backendPending = Number(p.pending_amount);
+      if (backendPending <= 0) return 0;
+      return Math.min(backendPending, mathBalance);
+    }
+    return mathBalance;
   }
 
   protected getDialogLiveBalance(): number {
+    const avail = this.dialogAvailableBalance();
+    const paid = this.currentPaymentAmount() || 0;
+    const tds = this.currentTds();
+    const ld = this.currentLd();
+    return Math.round((avail - paid - tds - ld) * 100) / 100;
+  }
+
+  protected getDialogLivePercentage(): number {
     const val = this.paymentForm.getRawValue();
     const inv = Number(val.invoice_value) || 0;
     const paid = Number(val.payment_amount) || 0;
-    const tds = Number(val.tds) || 0;
-    const ld = Number(val.ld) || 0;
-    return inv - paid - tds - ld;
+    if (inv <= 0 || paid <= 0) return 0;
+    return Math.round((paid / inv) * 1000) / 10;
+  }
+
+  protected getDialogLiveRemainingPercentage(): number {
+    const total = this.dialogTotalInvoiceValue();
+    if (total <= 0) return 0;
+    const remBal = this.getDialogLiveBalance();
+    if (remBal <= 0) return 0;
+    return Math.min(100, Math.max(0, Math.round((remBal / total) * 1000) / 10));
   }
 
   // ── File Management ────────────────────────────────────────────

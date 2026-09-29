@@ -76,23 +76,64 @@ export class CustomerPaymentService {
         map((res) => {
           const list = Array.isArray(res) ? res : res?.data || [];
           return list.map((item) => {
-            const invVal = Number(item.invoice_value ?? (item as any).invoice_amount ?? (item as any).net_total ?? 0);
-            const payAmt = Number(item.payment_amount ?? (item as any).amount ?? 0);
-            const ldAmt = Number(item.ld ?? 0);
-            const tdsAmt = Number(item.tds ?? 0);
+            const raw = item as unknown as Record<string, unknown>;
+            const invVal = Number(raw['invoice_value'] ?? raw['invoice_amount'] ?? raw['net_total'] ?? 0);
+            const payAmt = Number(raw['payment_amount'] ?? raw['amount_paid'] ?? raw['amount'] ?? 0);
+            const ldAmt = Number(raw['ld'] ?? raw['liquidated_damages'] ?? 0);
+            const tdsAmt = Number(raw['tds'] ?? 0);
             const totalDed = ldAmt + tdsAmt;
-            const balance = item.balance_amount !== undefined
-              ? Number(item.balance_amount)
-              : Math.max(0, invVal - payAmt - totalDed);
+
+            const pendingAmt = raw['pending_amount'] != null && !isNaN(Number(raw['pending_amount']))
+              ? Number(raw['pending_amount'])
+              : (raw['balance_amount'] !== undefined && !isNaN(Number(raw['balance_amount']))
+                ? Number(raw['balance_amount'])
+                : Math.max(0, invVal - payAmt - totalDed));
+
+            const totalPaid = raw['total_paid_amount'] != null && !isNaN(Number(raw['total_paid_amount']))
+              ? Number(raw['total_paid_amount'])
+              : payAmt;
+
+            const cumPercent = raw['cumulative_payment_percentage'] != null && !isNaN(Number(raw['cumulative_payment_percentage']))
+              ? Number(raw['cumulative_payment_percentage'])
+              : undefined;
+
+            const payPercent = raw['payment_percentage'] != null && !isNaN(Number(raw['payment_percentage']))
+              ? Number(raw['payment_percentage'])
+              : undefined;
+
+            const pendPercent = raw['pending_percentage'] != null && !isNaN(Number(raw['pending_percentage']))
+              ? Number(raw['pending_percentage'])
+              : undefined;
+
+            const isCompleted = raw['is_payment_completed'] !== undefined
+              ? Boolean(raw['is_payment_completed'])
+              : (raw['payment_status'] === 'completed' || pendingAmt <= 0.01);
+
+            const status = String(raw['payment_status'] || (isCompleted ? 'completed' : 'partial'));
+            const statusMsg = raw['payment_status_message'] ? String(raw['payment_status_message']) : undefined;
+
+            const invoiceNo = String(raw['invoice_no'] ?? raw['invoice_number'] ?? '');
 
             return {
               ...item,
+              invoice_no: invoiceNo,
+              invoice_number: invoiceNo,
               invoice_value: invVal,
               payment_amount: payAmt,
+              amount_paid: payAmt,
               ld: ldAmt,
+              liquidated_damages: ldAmt,
               tds: tdsAmt,
               total_deductions: totalDed,
-              balance_amount: balance,
+              balance_amount: pendingAmt,
+              pending_amount: pendingAmt,
+              total_paid_amount: totalPaid,
+              cumulative_payment_percentage: cumPercent,
+              payment_percentage: payPercent,
+              pending_percentage: pendPercent,
+              is_payment_completed: isCompleted,
+              payment_status: status,
+              payment_status_message: statusMsg,
             };
           });
         }),
@@ -117,7 +158,13 @@ export class CustomerPaymentService {
     files: File[] = [],
   ): Observable<CustomerPayment> {
     const fd = new FormData();
-    fd.append('data', JSON.stringify(payload));
+    const cleanPayload: Record<string, unknown> = {
+      ...payload,
+      invoice_number: payload.invoice_number || payload.invoice_no,
+      amount_paid: payload.amount_paid ?? payload.payment_amount,
+      liquidated_damages: payload.liquidated_damages ?? payload.ld,
+    };
+    fd.append('data', JSON.stringify(cleanPayload));
     files.forEach((f) => fd.append('file', f, f.name));
     return this.http.post<CustomerPayment>(
       `${this.apiBaseUrl}/api/v1/customer-payments`,
@@ -134,7 +181,13 @@ export class CustomerPaymentService {
     files: File[] = [],
   ): Observable<CustomerPayment> {
     const fd = new FormData();
-    fd.append('data', JSON.stringify(payload));
+    const cleanPayload: Record<string, unknown> = {
+      ...payload,
+      ...(payload.invoice_no ? { invoice_number: payload.invoice_no } : {}),
+      ...(payload.payment_amount !== undefined ? { amount_paid: payload.payment_amount } : {}),
+      ...(payload.ld !== undefined ? { liquidated_damages: payload.ld } : {}),
+    };
+    fd.append('data', JSON.stringify(cleanPayload));
     files.forEach((f) => fd.append('file', f, f.name));
     return this.http.patch<CustomerPayment>(
       `${this.apiBaseUrl}/api/v1/customer-payments/${id}`,

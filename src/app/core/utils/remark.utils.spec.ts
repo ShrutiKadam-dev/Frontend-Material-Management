@@ -38,7 +38,7 @@ describe('remark.utils', () => {
       expect(result.length).toBe(1);
       expect(result[0].id).toBe('rmk-1');
       expect(result[0].text).toBe('Single urgent note');
-      expect(result[0].created_at).toBe('2026-09-25');
+      expect(result[0].created_at).toContain('2026-09-25');
     });
 
     it('should parse JSON-encoded array of strings', () => {

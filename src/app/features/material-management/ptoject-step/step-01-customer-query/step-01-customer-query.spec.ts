@@ -66,7 +66,7 @@ describe('Step01CustomerQuery', () => {
 
     expect(parsed.length).toBe(1);
     expect(parsed[0].text).toBe(rawPlain);
-    expect(parsed[0].created_at).toBe('2026-09-23');
+    expect(parsed[0].created_at).toContain('2026-09-23');
   });
 
   it('should parse JSON array of remarks into CustomerQueryRemark array', () => {

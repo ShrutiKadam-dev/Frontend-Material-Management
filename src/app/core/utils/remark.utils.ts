@@ -51,10 +51,14 @@ export function parseStepRemarks(rawRemark?: unknown, defaultDate?: string): Ste
           if (!text) return null;
           const id = rec['id'] ? String(rec['id']) : `rmk-${idx + 1}`;
           const createdAt = rec['created_at'] ? normalizeRemarkCreatedAt(String(rec['created_at'])) : safeDefaultDate;
+          const user = rec['user'] ? String(rec['user']) : undefined;
+          const userId = rec['user_id'] != null ? Number(rec['user_id']) : undefined;
           return {
             id,
             text,
             created_at: createdAt,
+            user,
+            user_id: userId,
           };
         }
         return null;

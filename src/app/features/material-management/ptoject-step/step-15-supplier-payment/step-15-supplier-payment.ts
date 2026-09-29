@@ -377,19 +377,17 @@ export class Step15SupplierPayment implements OnInit {
   });
 
   protected readonly isAmountExceeding = computed(() => {
-    if (this.editingPayment()) return false;
     const avail = this.dialogAvailablePending();
-    if (avail <= 0) return false;
     const currentPaid = this.currentAmountPaid();
-    return currentPaid != null && currentPaid > (avail + 0.01);
+    if (currentPaid == null || currentPaid <= 0) return false;
+    return currentPaid > (avail + 0.01);
   });
 
   protected readonly isPercentageExceeding = computed(() => {
-    if (this.editingPayment()) return false;
     const availPct = this.dialogAvailablePendingPct();
-    if (availPct <= 0) return false;
     const currentPct = this.currentPercentage();
-    return currentPct != null && currentPct > (availPct + 0.01);
+    if (currentPct == null || currentPct <= 0) return false;
+    return currentPct > (availPct + 0.01);
   });
 
   // ── Lifecycle ──────────────────────────────────────────────────
@@ -581,6 +579,16 @@ export class Step15SupplierPayment implements OnInit {
         life: 4500,
       });
     }
+  }
+
+  protected onCurrencyChange(curr: string): void {
+    if (curr === 'INR') {
+      const currentRate = this.paymentForm.get('exchange_rate')?.value;
+      if (!currentRate || currentRate === 1) {
+        this.paymentForm.patchValue({ exchange_rate: 1 }, { emitEvent: false });
+      }
+    }
+    this.recalculateForexAndBankCharges();
   }
 
   // ── Dynamic Percentage & Amount Calculations ───────────────────
@@ -880,6 +888,52 @@ export class Step15SupplierPayment implements OnInit {
     }
   }
 
+  // ── Calculation Helpers ────────────────────────────────────────
+  protected getPaymentPercentage(p: SupplierPayment): number {
+    if (p.is_payment_completed || this.getPaymentPendingAmount(p) <= 0) {
+      if (p.cumulative_payment_percentage != null && !isNaN(Number(p.cumulative_payment_percentage))) {
+        return Math.min(100, Math.max(0, Math.round(Number(p.cumulative_payment_percentage) * 10) / 10));
+      }
+      return 100;
+    }
+    if (p.payment_percentage != null && !isNaN(Number(p.payment_percentage))) {
+      const pct = Number(p.payment_percentage);
+      if (pct > 0 && pct <= 100) {
+        return Math.round(pct * 10) / 10;
+      }
+    }
+    const total = this.getPaymentCommitmentValue(p);
+    const paid = Number(p.amount_paid) || 0;
+    if (total <= 0 || paid <= 0) return 0;
+    return Math.min(100, Math.round((paid / total) * 1000) / 10);
+  }
+
+  protected getPaymentPendingAmount(p: SupplierPayment): number {
+    if (p.is_payment_completed) return 0;
+    if (p.pending_amount != null && !isNaN(Number(p.pending_amount))) {
+      return Math.max(0, Number(p.pending_amount));
+    }
+    const total = this.getPaymentCommitmentValue(p);
+    const paid = Number(p.amount_paid) || 0;
+    return Math.max(0, Math.round((total - paid) * 100) / 100);
+  }
+
+  protected getRemainingPercentage(p: SupplierPayment): number {
+    if (p.is_payment_completed || this.getPaymentPendingAmount(p) <= 0) {
+      return 0;
+    }
+    if (p.pending_percentage != null && !isNaN(Number(p.pending_percentage))) {
+      const pct = Number(p.pending_percentage);
+      if (pct >= 0 && pct <= 100) {
+        return Math.round(pct * 10) / 10;
+      }
+    }
+    const total = this.getPaymentCommitmentValue(p);
+    const pending = this.getPaymentPendingAmount(p);
+    if (total <= 0 || pending <= 0) return 0;
+    return Math.min(100, Math.max(0, Math.round((pending / total) * 1000) / 10));
+  }
+
   // ── Live Calculation Helper for Modal ──────────────────────────
   protected getDialogPendingBalance(): number {
     const val = this.paymentForm.getRawValue();
@@ -887,6 +941,15 @@ export class Step15SupplierPayment implements OnInit {
     const currentPaid = Number(val.amount_paid) || 0;
     const previouslyPaid = this.dialogPreviouslyPaid();
     return Math.max(0, Math.round((total - (previouslyPaid + currentPaid)) * 100) / 100);
+  }
+
+  protected getDialogPendingPercentage(): number {
+    const val = this.paymentForm.getRawValue();
+    const total = Number(val.total_supplier_value) || this.totalCommitmentValue() || 0;
+    if (total <= 0) return 0;
+    const pendingBal = this.getDialogPendingBalance();
+    if (pendingBal <= 0) return 0;
+    return Math.min(100, Math.max(0, Math.round((pendingBal / total) * 1000) / 10));
   }
 
   // ── File Management ────────────────────────────────────────────

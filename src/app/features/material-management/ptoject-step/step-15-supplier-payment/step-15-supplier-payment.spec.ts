@@ -103,25 +103,25 @@ describe('Step15SupplierPayment', () => {
     expect(component['disbursementRate']()).toBe(40);
   });
 
-  it('should open create dialog with all fields empty for user entry', () => {
+  it('should open create dialog and pre-populate commitment value from OC template', () => {
     component['openCreatePaymentDialog']();
     expect(component['paymentDialogVisible']()).toBe(true);
     expect(component['paymentForm'].get('currency')?.value).toBe('USD');
-    expect(component['paymentForm'].get('total_supplier_value')?.value).toBeNull();
+    expect(component['paymentForm'].get('total_supplier_value')?.value).toBe(50000);
     expect(component['paymentForm'].get('payment_percentage')?.value).toBeNull();
     expect(component['paymentForm'].get('amount_paid')?.value).toBeNull();
     expect(component['paymentForm'].get('payment_date')?.value).toBeNull();
     expect(component['paymentForm'].get('transaction_details')?.value).toBe('');
-    expect(component['paymentForm'].get('pending_amount')?.value).toBeNull();
+    expect(component['paymentForm'].get('pending_amount')?.value).toBe(30000);
     expect(component['paymentForm'].get('remark')?.value).toBe('');
   });
 
-  it('should dynamically calculate amount_paid and pending_amount when percentage is changed on entered total value', () => {
+  it('should dynamically calculate amount_paid and remaining pending_amount considering previously disbursed payments', () => {
     component['openCreatePaymentDialog']();
     component['paymentForm'].patchValue({ total_supplier_value: 50000 });
     component['onPercentageChange'](50);
     expect(component['paymentForm'].get('amount_paid')?.value).toBe(25000);
-    expect(component['paymentForm'].get('pending_amount')?.value).toBe(25000);
+    expect(component['paymentForm'].get('pending_amount')?.value).toBe(5000);
   });
 
   it('should calculate total_with_exchange and total_with_bank_charges dynamically including swift_charges', () => {
