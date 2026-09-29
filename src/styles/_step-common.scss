@@ -1408,7 +1408,7 @@
 .cost-sheet-sync-pill {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   background: #eff6ff;
   border: 1px solid #bfdbfe;
@@ -1435,6 +1435,14 @@
     color: #3b82f6;
   }
 
+  .afb-content {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+  }
+
   span {
     color: #1e40af;
     font-size: 0.8rem;
@@ -1448,6 +1456,21 @@
   strong {
     color: #1d4ed8;
     font-weight: 700;
+  }
+
+  .afb-fields {
+    color: #1e3a8a;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    flex-wrap: wrap;
+
+    strong {
+      color: #1d4ed8;
+      font-weight: 700;
+    }
   }
 
   .afb-badge,

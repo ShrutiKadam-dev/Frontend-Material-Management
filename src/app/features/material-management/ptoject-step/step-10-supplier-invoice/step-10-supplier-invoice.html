@@ -801,10 +801,10 @@
         @if (!editingProforma()) {
         <div class="cost-sheet-sync-pill" role="status">
           <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-          <span>
-            Auto-imported from <strong>Latest Order Confirmation</strong> · {{ proformaItems().length }} items with
-            commercial terms pre-filled.
-          </span>
+          <div class="afb-content">
+            <span>Auto-imported from <strong>Latest Order Confirmation</strong> · {{ proformaItems().length }} items with commercial terms pre-filled.</span>
+            <span class="afb-fields"><strong>Auto-filled fields:</strong> Delivery Terms, Payment Terms, Warranty Period, Delivery Period, Material Items.</span>
+          </div>
         </div>
         }
         }
@@ -1127,10 +1127,10 @@
         @if (!editingInvoice()) {
         <div class="cost-sheet-sync-pill" role="status">
           <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-          <span>
-            Auto-imported from <strong>Latest Order Confirmation</strong> · {{ invoiceItems().length }} items with
-            commercial terms pre-filled.
-          </span>
+          <div class="afb-content">
+            <span>Auto-imported from <strong>Latest Order Confirmation</strong> · {{ invoiceItems().length }} items with commercial terms pre-filled.</span>
+            <span class="afb-fields"><strong>Auto-filled fields:</strong> Delivery Terms, Payment Terms, Warranty Period, Delivery Period, Material Items.</span>
+          </div>
         </div>
         }
         }
@@ -1456,18 +1456,18 @@
         @if (latestProformaInvoice(); as pi) {
         <div class="cost-sheet-sync-pill" role="status">
           <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-          <span>
-            Auto-imported from <strong>Latest Proforma Invoice</strong> · {{ packingListItems().length }} items with
-            commercial terms pre-filled.
-          </span>
+          <div class="afb-content">
+            <span>Auto-imported from <strong>Latest Proforma Invoice</strong> · {{ packingListItems().length }} items with commercial terms pre-filled.</span>
+            <span class="afb-fields"><strong>Auto-filled fields:</strong> Material Items (Material Name, HSN Code, Quantity, Unit Price, Weight).</span>
+          </div>
         </div>
         } @else if (latestOrderConfirmation(); as oc) {
         <div class="cost-sheet-sync-pill" role="status">
           <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-          <span>
-            Auto-imported from <strong>Latest Order Confirmation</strong> · {{ packingListItems().length }} items with
-            commercial terms pre-filled.
-          </span>
+          <div class="afb-content">
+            <span>Auto-imported from <strong>Latest Order Confirmation</strong> · {{ packingListItems().length }} items with commercial terms pre-filled.</span>
+            <span class="afb-fields"><strong>Auto-filled fields:</strong> Material Items (Material Name, HSN Code, Quantity, Unit Price, Weight).</span>
+          </div>
         </div>
         }
         }

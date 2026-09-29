@@ -1081,9 +1081,10 @@
                 @if (!editingInvoice() && latestPoTemplate(); as po) {
                 <div class="cost-sheet-sync-pill" role="status">
                     <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-                    <span>
-                        Auto-imported from <strong>Latest Purchase Order</strong> · {{ po.items?.length || invoiceItemsList().length }} items with commercial terms pre-filled.
-                    </span>
+                    <div class="afb-content">
+                        <span>Auto-imported from <strong>Latest Purchase Order</strong> · {{ po.items?.length || invoiceItemsList().length }} items with commercial terms pre-filled.</span>
+                        <span class="afb-fields"><strong>Auto-filled fields:</strong> GST Rate, Material Items (Quantity, Unit Price, Amount).</span>
+                    </div>
                 </div>
                 }
 
@@ -1442,13 +1443,19 @@
                     @if (latestSupplierPackingListTemplate(); as spl) {
                     <div class="cost-sheet-sync-pill" role="status">
                         <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-                        <span>Auto-imported from <strong>Latest Supplier Packing List</strong> · Total weight, gross weight & items pre-filled.</span>
+                        <div class="afb-content">
+                            <span>Auto-imported from <strong>Latest Supplier Packing List</strong> · Total weight, gross weight & items pre-filled.</span>
+                            <span class="afb-fields"><strong>Auto-filled fields:</strong> Net Weight, Gross Weight, Total Packs, Packing Condition, Material Items.</span>
+                        </div>
                     </div>
                     }
                     @if (latestPoTemplate(); as po) {
                     <div class="cost-sheet-sync-pill" role="status" [style.margin-top.px]="latestSupplierPackingListTemplate() ? 6 : null">
                         <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-                        <span>Auto-imported from <strong>Latest Purchase Order</strong> · {{ po.items?.length || packingItemsList().length }} items with commercial terms pre-filled.</span>
+                        <div class="afb-content">
+                            <span>Auto-imported from <strong>Latest Purchase Order</strong> · {{ po.items?.length || packingItemsList().length }} items with commercial terms pre-filled.</span>
+                            <span class="afb-fields"><strong>Auto-filled fields:</strong> Material Items (Material Name, HSN Code, Quantity).</span>
+                        </div>
                     </div>
                     }
                 }
@@ -1768,9 +1775,10 @@
                 @if (!editingChallan() && latestPoTemplate(); as po) {
                 <div class="cost-sheet-sync-pill" role="status">
                     <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-                    <span>
-                        Auto-imported from <strong>Latest Purchase Order</strong> · {{ po.items?.length || challanItemsList().length }} items with commercial terms pre-filled.
-                    </span>
+                    <div class="afb-content">
+                        <span>Auto-imported from <strong>Latest Purchase Order</strong> · {{ po.items?.length || challanItemsList().length }} items with commercial terms pre-filled.</span>
+                        <span class="afb-fields"><strong>Auto-filled fields:</strong> GST Rate, Material Items (Quantity, Unit Price, Amount).</span>
+                    </div>
                 </div>
                 }
 
@@ -2129,9 +2137,10 @@
                 @if (!editingWarranty() && (latestPoTemplate() || latestTaxInvoiceTemplate() || (taxInvoices().length > 0))) {
                 <div class="cost-sheet-sync-pill" role="status">
                     <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-                    <span>
-                        Auto-imported from <strong>Latest Purchase Order</strong> · commercial terms pre-filled.
-                    </span>
+                    <div class="afb-content">
+                        <span>Auto-imported from <strong>Latest Purchase Order & Tax Invoice</strong> · commercial terms pre-filled.</span>
+                        <span class="afb-fields"><strong>Auto-filled fields:</strong> PO No., PO Date, Warranty Period, Invoice No., Invoice Date.</span>
+                    </div>
                 </div>
                 }
 

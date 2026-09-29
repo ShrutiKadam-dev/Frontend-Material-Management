@@ -307,7 +307,10 @@
         @if (!editingOrder()) {
         <div class="cost-sheet-sync-pill" role="status">
           <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-          <span>Auto-imported from <strong>Latest Supplier Quotation</strong> · {{ items().length }} items with commercial terms pre-filled.</span>
+          <div class="afb-content">
+            <span>Auto-imported from <strong>Latest Supplier Quotation</strong> · {{ items().length }} items with commercial terms pre-filled.</span>
+            <span class="afb-fields"><strong>Auto-filled fields:</strong> Currency, Shipping Terms, Delivery Period, Payment Terms, Warranty Period, Material Items.</span>
+          </div>
         </div>
         }
         }

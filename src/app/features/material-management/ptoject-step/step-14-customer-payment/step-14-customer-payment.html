@@ -481,9 +481,10 @@
                 @if (!editingPayment()) {
                 <div class="cost-sheet-sync-pill" role="status">
                     <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-                    <span>
-                        Auto-imported from <strong>Latest Customer Tax Invoice</strong> · commercial terms pre-filled.
-                    </span>
+                    <div class="afb-content">
+                        <span>Auto-imported from <strong>Latest Customer Tax Invoice</strong> · commercial terms pre-filled.</span>
+                        <span class="afb-fields"><strong>Auto-filled fields:</strong> Invoice No., Invoice Date, Invoice Value.</span>
+                    </div>
                 </div>
                 }
                 }

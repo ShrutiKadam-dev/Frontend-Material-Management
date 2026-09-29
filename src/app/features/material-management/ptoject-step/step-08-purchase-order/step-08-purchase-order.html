@@ -332,9 +332,10 @@
         @if (!editingPO()) {
         <div class="cost-sheet-sync-pill" role="status">
           <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-          <span>
-            Auto-imported from <strong>Latest Bid Submission</strong> · {{ items().length }} items with commercial terms pre-filled.
-          </span>
+          <div class="afb-content">
+            <span>Auto-imported from <strong>Latest Bid Submission</strong> · {{ items().length }} items with commercial terms pre-filled.</span>
+            <span class="afb-fields"><strong>Auto-filled fields:</strong> Delivery Terms, Payment Terms, Warranty Period, GST Rate, Material Items.</span>
+          </div>
         </div>
         }
         }

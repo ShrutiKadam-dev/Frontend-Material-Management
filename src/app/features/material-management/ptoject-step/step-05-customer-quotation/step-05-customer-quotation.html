@@ -286,9 +286,10 @@
         @if (!editingQuotation()) {
         <div class="cost-sheet-sync-pill" role="status">
           <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-          <span>
-            Auto-imported from <strong>Latest Cost Sheet</strong> · {{ items().length }} items with commercial terms pre-filled.
-          </span>
+          <div class="afb-content">
+            <span>Auto-imported from <strong>Latest Cost Sheet</strong> · {{ items().length }} items with commercial terms pre-filled.</span>
+            <span class="afb-fields"><strong>Auto-filled fields:</strong> Quotation Value, Material Items (Description, Code, Quantity, Unit Price, Net Total).</span>
+          </div>
         </div>
         }
         }

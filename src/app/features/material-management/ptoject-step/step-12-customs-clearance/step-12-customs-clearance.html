@@ -525,7 +525,10 @@
       @if (!editingClearance()) {
       <div class="cost-sheet-sync-pill" role="status">
         <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-        <span>Auto-imported from <strong>Latest Bill of Entry</strong> · commercial terms pre-filled.</span>
+        <div class="afb-content">
+          <span>Auto-imported from <strong>Latest Bill of Entry</strong> · commercial terms pre-filled.</span>
+          <span class="afb-fields"><strong>Auto-filled fields:</strong> Bill of Entry No., BOE Date, Duty Amount, IGST Amount.</span>
+        </div>
       </div>
       }
       }

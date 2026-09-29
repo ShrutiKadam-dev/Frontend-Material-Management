@@ -378,8 +378,10 @@
       <!-- Auto-Fetch Notice from Step 01 Customer Query -->
       <div class="cost-sheet-sync-pill" role="status">
         <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-        <span>Auto-imported from <strong>Latest Customer Query</strong> · {{ items().length }} material items
-          pre-filled.</span>
+        <div class="afb-content">
+          <span>Auto-imported from <strong>Latest Customer Query</strong> · {{ items().length }} material items pre-filled.</span>
+          <span class="afb-fields"><strong>Auto-filled fields:</strong> Material Items (Material Name, HSN Code, Quantity).</span>
+        </div>
       </div>
       }
 

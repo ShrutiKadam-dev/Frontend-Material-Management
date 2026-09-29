@@ -569,11 +569,12 @@
                 @if (!editingPayment() && totalCommitmentValue() > 0) {
                 <div class="cost-sheet-sync-pill" role="status">
                     <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
-                    <span>
-                        Total Commitment Value auto-fetched from <strong>{{ latestOrderConfirmation()?.total_amount ?
+                    <div class="afb-content">
+                        <span>Total Commitment Value auto-fetched from <strong>{{ latestOrderConfirmation()?.total_amount ?
                             'Latest Order Confirmation' : 'Order Confirmation & PO Commitments' }}</strong> ({{
-                        cardCurrency() }} {{ totalCommitmentValue() | number:'1.2-2' }}).
-                    </span>
+                        cardCurrency() }} {{ totalCommitmentValue() | number:'1.2-2' }}).</span>
+                        <span class="afb-fields"><strong>Auto-filled fields:</strong> Total Supplier Commitment Value, Currency.</span>
+                    </div>
                 </div>
                 }
 
