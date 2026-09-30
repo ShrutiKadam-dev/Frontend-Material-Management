@@ -33,14 +33,19 @@ export interface PhaseInfo {
   title: string;
   shortTitle: string;
   stepRange: string;
-  description: string;
   badgeClass: string;
 }
 
 export interface FormattedStepRemark {
+  id?: number;
+  sequence: number;
   remark: string;
   user?: string;
+  displayUser: string;
+  userInitials: string;
+  userId?: number;
   date?: string;
+  source: 'audit' | 'data';
 }
 
 export const PIPELINE_PHASES: PhaseInfo[] = [
@@ -49,7 +54,6 @@ export const PIPELINE_PHASES: PhaseInfo[] = [
     title: 'Inquiry & Sourcing',
     shortTitle: 'Phase 1: Sourcing',
     stepRange: 'Steps 1–5',
-    description: 'Customer inquiry, supplier RFQ, quote, cost sheet & client quote',
     badgeClass: 'phase-pill--sourcing',
   },
   {
@@ -57,7 +61,6 @@ export const PIPELINE_PHASES: PhaseInfo[] = [
     title: 'Tender & Purchase Orders',
     shortTitle: 'Phase 2: Orders',
     stepRange: 'Steps 6–9',
-    description: 'Tender, bid docs, client PO & supplier confirmation',
     badgeClass: 'phase-pill--bidding',
   },
   {
@@ -65,7 +68,6 @@ export const PIPELINE_PHASES: PhaseInfo[] = [
     title: 'Logistics & Customs',
     shortTitle: 'Phase 3: Logistics',
     stepRange: 'Steps 10–12',
-    description: 'Supplier invoice, freight logistics & customs clearance',
     badgeClass: 'phase-pill--logistics',
   },
   {
@@ -73,7 +75,6 @@ export const PIPELINE_PHASES: PhaseInfo[] = [
     title: 'Delivery & Settlement',
     shortTitle: 'Phase 4: Settlement',
     stepRange: 'Steps 13–15',
-    description: 'Customer delivery, customer realization & supplier payment',
     badgeClass: 'phase-pill--settlement',
   },
 ];
@@ -251,9 +252,41 @@ export class ProjectTimeline implements OnInit {
       next: (p) => {
         this.project.set(p);
         this.loadCustomerAndSupplier(p);
+
+        // Enrich total_value and metadata from /api/v1/projects
+        this.projectService.getProjects().subscribe({
+          next: (allProjects) => {
+            const match = allProjects.find((item) => item.id === id);
+            if (match) {
+              this.project.update((cur) => {
+                if (!cur) return match;
+                return {
+                  ...cur,
+                  total_value: match.total_value !== undefined && match.total_value !== null ? Number(match.total_value) : cur.total_value,
+                  currency: match.currency || cur.currency || 'INR',
+                  created_at: cur.created_at || match.created_at,
+                  updated_at: match.updated_at || cur.updated_at,
+                  customer_name: match.customer_name || cur.customer_name,
+                  supplier_name: match.supplier_name || cur.supplier_name,
+                };
+              });
+            }
+          },
+          error: () => { },
+        });
       },
       error: () => {
-        // Non-fatal if project details cannot be retrieved
+        // Fallback to fetch from list if direct by-id endpoint fails
+        this.projectService.getProjects().subscribe({
+          next: (allProjects) => {
+            const match = allProjects.find((item) => item.id === id);
+            if (match) {
+              this.project.set(match);
+              this.loadCustomerAndSupplier(match);
+            }
+          },
+          error: () => { },
+        });
       },
     });
 
@@ -273,13 +306,13 @@ export class ProjectTimeline implements OnInit {
     if (p.customer_id) {
       this.customerService.getCustomerById(p.customer_id).subscribe({
         next: (cust) => this.customer.set(cust),
-        error: () => {/* fallback gracefully */},
+        error: () => {/* fallback gracefully */ },
       });
     }
     if (p.supplier_id) {
       this.supplierService.getSupplierById(p.supplier_id).subscribe({
         next: (supp) => this.supplier.set(supp),
-        error: () => {/* fallback gracefully */},
+        error: () => {/* fallback gracefully */ },
       });
     }
   }
@@ -332,13 +365,28 @@ export class ProjectTimeline implements OnInit {
   // ── Step Remarks Support ──────────────────────────────────────────
   protected getStepRemarks(step: ProjectStep): FormattedStepRemark[] {
     const list: FormattedStepRemark[] = [];
+    let seq = 1;
+
     if (step.remarks && Array.isArray(step.remarks)) {
       for (const r of step.remarks) {
-        if (r && r.remark) {
+        if (r && r.remark && r.remark.trim()) {
+          const rawUser = r.user || (r.user_id ? `User #${r.user_id}` : undefined);
+          const isPlaceholder = !r.user || r.user === 'string string' || !r.user.trim();
+          const displayUser = isPlaceholder
+            ? (r.user_id ? `Admin (User #${r.user_id})` : 'Audit Member')
+            : (r.user?.trim() || 'Audit Member');
+          const initials = this.extractInitials(displayUser);
+
           list.push({
-            remark: r.remark,
-            user: r.user || (r.user_id ? `User #${r.user_id}` : undefined),
+            id: r.id,
+            sequence: seq++,
+            remark: r.remark.trim(),
+            user: rawUser,
+            displayUser,
+            userInitials: initials,
+            userId: r.user_id,
             date: r.created_at ? formatDisplayDate(r.created_at, 'dd-MM-yyyy HH:mm') : undefined,
+            source: 'audit',
           });
         }
       }
@@ -348,13 +396,34 @@ export class ProjectTimeline implements OnInit {
       const dataRemarks = (step.data as Record<string, unknown>)['remarks'] as unknown[];
       for (const dr of dataRemarks) {
         if (typeof dr === 'string' && dr.trim()) {
-          if (!list.some((item) => item.remark === dr)) {
-            list.push({ remark: dr });
+          const trimmed = dr.trim();
+          if (!list.some((item) => item.remark === trimmed)) {
+            list.push({
+              sequence: seq++,
+              remark: trimmed,
+              user: 'Form Entry',
+              displayUser: 'Step Data Log',
+              userInitials: 'SD',
+              source: 'data',
+            });
           }
         }
       }
     }
     return list;
+  }
+
+  private extractInitials(name: string): string {
+    if (!name) return 'ST';
+    const clean = name.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+    const parts = clean.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    if (parts.length === 1 && parts[0].length >= 2) {
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+    return (name[0] || 'ST').toUpperCase();
   }
 
   protected getRemarksCount(step: ProjectStep): number {

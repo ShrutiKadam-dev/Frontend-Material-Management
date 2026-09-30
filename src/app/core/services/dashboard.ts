@@ -86,6 +86,8 @@ export class DashboardService {
         target_delivery_date: p['target_delivery_date'] ? String(p['target_delivery_date']) : null,
         customer_payment_status: p['customer_payment_status'] ? String(p['customer_payment_status']) : undefined,
         supplier_payment_status: p['supplier_payment_status'] ? String(p['supplier_payment_status']) : undefined,
+        created_at: p['created_at'] ? String(p['created_at']) : undefined,
+        updated_at: p['updated_at'] ? String(p['updated_at']) : undefined,
       }))
       : [];
 
@@ -242,6 +244,8 @@ export class DashboardService {
             target_delivery_date: proj.target_delivery_date,
             customer_payment_status: proj.customer_payment_status,
             supplier_payment_status: proj.supplier_payment_status,
+            created_at: proj.created_at,
+            updated_at: proj.updated_at,
           };
         });
 

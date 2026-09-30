@@ -268,10 +268,12 @@
               {{ project.nickname || project.project_nickname }}
             </span>
             }
+            @if (project.health_status === 'delayed' || project.health_status === 'at_risk') {
             <span class="mpc-chip mpc-chip--status" [class]="'mpc-chip mpc-chip--status ' + getHealthBadgeClass(project.health_status)">
               <span class="status-dot" aria-hidden="true"></span>
               {{ getHealthLabel(project.health_status) }}
             </span>
+            }
             <span class="mpc-chip mpc-chip--phase" [class]="'mpc-chip mpc-chip--phase ' + getStatusBadgeClass(project.status)">
               {{ getStatusLabel(project.status) }}
             </span>
@@ -282,9 +284,14 @@
               <span class="price-currency">{{ project.currency || 'INR' }}</span>
               <span class="price-value">₹{{ (project.total_value || 0) | number:'1.2-2' }}</span>
             </div>
-            <span class="price-date">
-              {{ project.target_delivery_date ? ('Target delivery ' + (project.target_delivery_date | appDate:'d MMMM yyyy')) : ('Last updated ' + ((project.updated_at || project.created_at) | appDate:'d MMMM yyyy')) }}
-            </span>
+            <div class="price-dates-stack" style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+              <span class="price-date" [title]="'Created on ' + (project.created_at | appDate:'d MMM yyyy')">
+                Created: {{ project.created_at | appDate:'d MMM yyyy' }}
+              </span>
+              <span class="price-date" [title]="'Last updated on ' + ((project.updated_at || project.created_at) | appDate:'d MMM yyyy')">
+                Updated: {{ (project.updated_at || project.created_at) | appDate:'d MMM yyyy' }}
+              </span>
+            </div>
           </div>
         </div>
 

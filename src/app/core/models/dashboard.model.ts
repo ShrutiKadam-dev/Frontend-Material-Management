@@ -23,6 +23,8 @@ export interface DashboardProject {
   target_delivery_date?: string | null;
   customer_payment_status?: string;
   supplier_payment_status?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface DashboardOverviewStats {
