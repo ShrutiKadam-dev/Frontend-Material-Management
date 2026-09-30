@@ -355,8 +355,11 @@
           <h3>No Commercial Invoices recorded yet</h3>
           <p>
             Record supplier commercial invoices against project material procurement.
-            @if (latestOrderConfirmation()) {
-            <br /><strong>Latest Order Confirmation</strong> is available to automatically pre-populate line items and
+            @if (proformaNotFoundMessage(); as notFoundMsg) {
+            <br /><span class="empty-hint-notice"><i class="pi pi-info-circle"></i> {{ notFoundMsg }}</span>
+            }
+            @if (invoiceDataSource(); as source) {
+            <br /><strong>{{ source === 'proforma' ? 'Latest Proforma Invoice' : 'Latest Order Confirmation' }}</strong> is available to automatically pre-populate line items and
             terms.
             }
           </p>
@@ -1123,13 +1126,24 @@
         }
 
         <!-- Auto-sync banner -->
-        @if (latestOrderConfirmation(); as oc) {
         @if (!editingInvoice()) {
+        @if (invoiceDataSource(); as source) {
         <div class="cost-sheet-sync-pill" role="status">
           <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
           <div class="afb-content">
-            <span>Auto-imported from <strong>Latest Order Confirmation</strong> · {{ invoiceItems().length }} items with commercial terms pre-filled.</span>
+            <span>Auto-imported from <strong>{{ source === 'proforma' ? 'Latest Proforma Invoice' : 'Latest Order Confirmation' }}</strong> · {{ invoiceItems().length }} items with commercial terms pre-filled.</span>
+            @if (source === 'order' && proformaNotFoundMessage(); as notFoundMsg) {
+            <span class="afb-notice"><i class="pi pi-info-circle"></i> Notice: {{ notFoundMsg }} (Fallback to Order Confirmation applied)</span>
+            }
             <span class="afb-fields"><strong>Auto-filled fields:</strong> Delivery Terms, Payment Terms, Warranty Period, Delivery Period, Material Items.</span>
+          </div>
+        </div>
+        } @else if (proformaNotFoundMessage(); as notFoundMsg) {
+        <div class="cost-sheet-sync-pill cost-sheet-sync-pill--info" role="status">
+          <span class="afb-badge afb-badge--info"><i class="pi pi-info-circle"></i> Notice</span>
+          <div class="afb-content">
+            <span>{{ notFoundMsg }}</span>
+            <span class="afb-fields">Please enter commercial invoice details manually.</span>
           </div>
         </div>
         }

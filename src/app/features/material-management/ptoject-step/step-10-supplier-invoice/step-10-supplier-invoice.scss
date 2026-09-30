@@ -1,1 +1,48 @@
 // Step 10 Supplier Invoices & Packing List styles are inherited from global step-common design system
+
+.afb-notice {
+  align-items: center;
+  color: #b45309;
+  display: inline-flex;
+  font-size: 0.77rem;
+  font-weight: 600;
+  gap: 5px;
+  line-height: 1.4;
+  margin-top: 2px;
+
+  .pi {
+    color: #d97706;
+    font-size: 0.8rem;
+  }
+}
+
+.empty-hint-notice {
+  align-items: center;
+  color: #b45309;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 600;
+  gap: 5px;
+  margin-top: 4px;
+
+  .pi {
+    color: #d97706;
+    font-size: 0.8rem;
+  }
+}
+
+.cost-sheet-sync-pill--info {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+
+  .afb-badge--info {
+    background: #fef3c7;
+    border-color: #fde68a;
+    color: #b45309;
+  }
+
+  .pi {
+    color: #d97706;
+  }
+}

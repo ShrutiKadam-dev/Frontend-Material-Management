@@ -12,6 +12,36 @@ export interface ProformaInvoiceItem {
   weight?: number | string;
   gross_weight?: number | string;
 }
+export interface LatestProformaInvoice {
+  id?: number;
+  project_id?: number;
+  proforma_invoice_no?: string;
+  invoice_no?: string;
+  proforma_invoice_date?: string;
+  delivery_period?: string;
+  delivery_terms?: string;
+  shipping_terms?: string;
+  incoterms?: string;
+  payment_terms?: string;
+  warranty_period?: string;
+  total_amount?: number | string;
+  currency?: string;
+  currency_unit?: string;
+  currency_symbol?: string;
+  items?: Array<{
+    id?: number;
+    material_name?: string;
+    description?: string;
+    hsn_code?: string;
+    hsn_sac?: string;
+    quantity?: number | string;
+    unit_price?: number | string;
+    net_amount?: number | string;
+  }>;
+  error_message?: string;
+  error_code?: string;
+  is_not_found?: boolean;
+}
 
 export interface ProformaInvoice {
   id: number;

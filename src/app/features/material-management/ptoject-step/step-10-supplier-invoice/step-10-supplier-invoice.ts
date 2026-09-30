@@ -13,7 +13,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { DecimalPipe } from '@angular/common';
-import { finalize } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -35,6 +35,7 @@ import { DropdownService } from '../../../../core/services/dropdown.service';
 
 import { LatestOrderConfirmation } from '../../../../core/models/order-confirmation.model';
 import {
+  LatestProformaInvoice,
   ProformaInvoice,
   ProformaInvoiceCreateInput,
   ProformaInvoiceItem,
@@ -113,11 +114,12 @@ export class Step10SupplierInvoice implements OnInit {
   protected readonly supplierInvoices = signal<SupplierInvoice[]>([]);
   protected readonly packingLists = signal<PackingList[]>([]);
   protected readonly latestOrderConfirmation = signal<LatestOrderConfirmation | null>(null);
-  protected readonly latestProformaInvoice = signal<ProformaInvoice | null>(null);
+  protected readonly latestProformaInvoice = signal<LatestProformaInvoice | null>(null);
   protected readonly loading = signal(true);
   protected readonly submitting = signal(false);
   protected readonly downloadingAttachmentId = signal<number | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly proformaNotFoundMessage = signal<string | null>(null);
 
   /* ── Dropdown Constants ─────────────────────────────────── */
   protected readonly incotermsOptions = INCOTERMS_OPTIONS;
@@ -210,6 +212,34 @@ export class Step10SupplierInvoice implements OnInit {
     return this.packingListItems().reduce((sum, it) => sum + this.calculateRowWeight(it), 0);
   });
 
+  protected readonly invoiceDataSource = computed<'proforma' | 'order' | null>(() => {
+    const p = this.latestProformaInvoice();
+    if (
+      p &&
+      !p.is_not_found &&
+      ((p.items && p.items.length > 0) ||
+        (p.delivery_terms && p.delivery_terms.trim()) ||
+        (p.payment_terms && p.payment_terms.trim()) ||
+        (p.warranty_period && p.warranty_period.trim()) ||
+        (p.delivery_period && p.delivery_period.trim()))
+    ) {
+      return 'proforma';
+    }
+    const o = this.latestOrderConfirmation();
+    if (
+      o &&
+      ((o.items && o.items.length > 0) ||
+        (o.delivery_terms && o.delivery_terms.trim()) ||
+        (o.shipping_terms && o.shipping_terms.trim()) ||
+        (o.payment_terms && o.payment_terms.trim()) ||
+        (o.warranty_period && o.warranty_period.trim()) ||
+        (o.delivery_period && o.delivery_period.trim()))
+    ) {
+      return 'order';
+    }
+    return null;
+  });
+
   /* ── Lifecycle ─────────────────────────────────────────── */
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('projectId'));
@@ -250,8 +280,18 @@ export class Step10SupplierInvoice implements OnInit {
 
     // 2. Load latest Proforma Invoice
     this.proformaService.getLatest(projectId).subscribe({
-      next: (latest) => this.latestProformaInvoice.set(latest),
-      error: () => {/* non-fatal */ },
+      next: (latest) => {
+        this.latestProformaInvoice.set(latest);
+        if (latest?.is_not_found && latest.error_message) {
+          this.proformaNotFoundMessage.set(latest.error_message);
+        } else if (latest && !latest.is_not_found) {
+          this.proformaNotFoundMessage.set(null);
+        }
+      },
+      error: (err) => {
+        const msg = err?.error?.error?.message || err?.error?.message || null;
+        if (msg) this.proformaNotFoundMessage.set(msg);
+      },
     });
 
     // 3. Load Proforma Invoices list
@@ -492,36 +532,133 @@ export class Step10SupplierInvoice implements OnInit {
      2] INVOICE (SUPPLIER INVOICE) DIALOG & SUBMIT
   ════════════════════════════════════════════════════════════ */
   protected openCreateInvoiceDialog(): void {
-    const latest = this.latestOrderConfirmation();
     this.editingInvoice.set(null);
     this.errorMessage.set(null);
-
-    const defaultItems: SupplierInvoiceItem[] = (latest?.items || []).map((it) => ({
-      material_name: it.material_name || it.description || 'Material Item',
-      description: it.description || it.material_name || '',
-      hsn_code: it.hsn_code || it.hsn_sac || '',
-      quantity: it.quantity || 1,
-      unit_price: it.unit_price || 0,
-      net_amount: (Number(it.quantity) || 1) * (Number(it.unit_price) || 0),
-    }));
 
     this.invoiceForm.reset({
       invoice_no: '',
       invoice_date: null,
-      delivery_terms: latest?.delivery_terms || latest?.shipping_terms || latest?.incoterms || '',
-      payment_terms: latest?.payment_terms || '',
-      warranty_period: latest?.warranty_period || '',
-      delivery_period: latest?.delivery_period || '',
+      delivery_terms: '',
+      payment_terms: '',
+      warranty_period: '',
+      delivery_period: '',
       remark: '',
     });
 
-    this.invoiceItems.set(defaultItems);
     this.attachments.set([]);
     this.existingAttachments.set([]);
     this.dialogRemarks.set([]);
     this.editingItemIndex.set(null);
     this.rowForm.reset();
+
+    // 1. Immediately patch using current state (Proforma Invoice else Order Confirmation)
+    this.patchInvoiceFormFromSource(this.latestProformaInvoice(), this.latestOrderConfirmation());
     this.invoiceDialogVisible.set(true);
+
+    // 2. Concurrently call both GET /api/v1/proforma-invoices/latest and GET /api/v1/order-confirmations/latest
+    const projectId = this.projectId();
+    if (projectId) {
+      forkJoin({
+        proforma: this.proformaService.getLatest(projectId),
+        order: this.orderConfirmationService.getLatestOrderConfirmation(projectId),
+      }).subscribe({
+        next: ({ proforma, order }) => {
+          if (proforma) {
+            this.latestProformaInvoice.set(proforma);
+            if (proforma.is_not_found && proforma.error_message) {
+              this.proformaNotFoundMessage.set(proforma.error_message);
+            } else if (!proforma.is_not_found) {
+              this.proformaNotFoundMessage.set(null);
+            }
+          }
+          if (order) this.latestOrderConfirmation.set(order);
+
+          // Update form if user hasn't modified fields yet
+          if (this.invoiceForm.pristine) {
+            this.patchInvoiceFormFromSource(proforma, order);
+          }
+        },
+        error: () => {/* non-fatal */ },
+      });
+    }
+  }
+
+  protected patchInvoiceFormFromSource(
+    proforma: LatestProformaInvoice | null,
+    order: LatestOrderConfirmation | null,
+  ): void {
+    const hasProformaData = Boolean(
+      proforma &&
+        !proforma.is_not_found &&
+        ((proforma.items && proforma.items.length > 0) ||
+          (proforma.delivery_terms && proforma.delivery_terms.trim()) ||
+          (proforma.payment_terms && proforma.payment_terms.trim()) ||
+          (proforma.warranty_period && proforma.warranty_period.trim()) ||
+          (proforma.delivery_period && proforma.delivery_period.trim()))
+    );
+
+    const hasOrderData = Boolean(
+      order &&
+        ((order.items && order.items.length > 0) ||
+          (order.delivery_terms && order.delivery_terms.trim()) ||
+          (order.shipping_terms && order.shipping_terms.trim()) ||
+          (order.payment_terms && order.payment_terms.trim()) ||
+          (order.warranty_period && order.warranty_period.trim()) ||
+          (order.delivery_period && order.delivery_period.trim()))
+    );
+
+    // Primary: Proforma Invoice, fallback: Order Confirmation
+    const termsSource = hasProformaData ? proforma : hasOrderData ? order : null;
+
+    const deliveryTerms =
+      termsSource?.delivery_terms ||
+      (termsSource as LatestOrderConfirmation)?.shipping_terms ||
+      (termsSource as LatestOrderConfirmation)?.incoterms ||
+      '';
+    const paymentTerms = termsSource?.payment_terms || '';
+    const warrantyPeriod = termsSource?.warranty_period || '';
+    const deliveryPeriod = termsSource?.delivery_period || '';
+
+    this.invoiceForm.patchValue({
+      delivery_terms: deliveryTerms,
+      payment_terms: paymentTerms,
+      warranty_period: warrantyPeriod,
+      delivery_period: deliveryPeriod,
+    });
+
+    // Material items: prefer proforma items, else order items
+    const rawItems =
+      proforma && !proforma.is_not_found && proforma.items && proforma.items.length > 0
+        ? proforma.items
+        : order?.items && order.items.length > 0
+        ? order.items
+        : [];
+
+    const defaultItems: SupplierInvoiceItem[] = rawItems.map((it) => ({
+      material_name: it.material_name || it.description || 'Material Item',
+      description: it.description || it.material_name || '',
+      hsn_code: it.hsn_code || (it as { hsn_sac?: string }).hsn_sac || '',
+      quantity:
+        it.quantity != null
+          ? isNaN(Number(it.quantity))
+            ? it.quantity
+            : Number(it.quantity)
+          : 1,
+      unit_price:
+        it.unit_price != null
+          ? isNaN(Number(it.unit_price))
+            ? it.unit_price
+            : Number(it.unit_price)
+          : 0,
+      net_amount:
+        it.net_amount != null
+          ? isNaN(Number(it.net_amount))
+            ? it.net_amount
+            : Number(it.net_amount)
+          : (Number(it.quantity) || 1) * (Number(it.unit_price) || 0),
+    }));
+
+    this.invoiceItems.set(defaultItems);
   }
 
   protected openEditInvoiceDialog(item: SupplierInvoice): void {
