@@ -90,4 +90,90 @@ describe('ProjectTimeline getStepDate', () => {
     const res = (component as any).getStepDate(step);
     expect(res).toBeNull();
   });
+
+  it('should extract remarks from step.remarks array and step.data.remarks', () => {
+    const step: ProjectStep = {
+      id: 30,
+      project_id: 10,
+      step_number: 2,
+      step_name: 'Request Supplier Quotation',
+      description: 'Send RFQ to supplier',
+      status: 'completed',
+      progress_percentage: 100,
+      completed_at: '2026-09-24T23:06:01.142561',
+      data: {
+        quotation_requested_date: '2026-09-23',
+        remarks: ['data-remark-1'],
+        supplier_contacted: true,
+      },
+      remarks: [
+        {
+          id: 39,
+          project_id: 10,
+          step_number: 2,
+          remark: 'dsdf',
+          user: 'string string',
+          created_at: 'Fri, 25 Sep 2026 06:05:37 GMT',
+        },
+        {
+          id: 40,
+          project_id: 10,
+          step_number: 2,
+          remark: 'dfdsf',
+          user: 'string string',
+          created_at: 'Fri, 25 Sep 2026 06:05:37 GMT',
+        },
+      ],
+    };
+
+    const remarks = (component as any).getStepRemarks(step);
+    expect(remarks).toHaveLength(3);
+    expect(remarks[0].remark).toBe('dsdf');
+    expect(remarks[0].user).toBe('string string');
+    expect(remarks[2].remark).toBe('data-remark-1');
+
+    const count = (component as any).getRemarksCount(step);
+    expect(count).toBe(3);
+  });
+
+  it('should extract step data badges correctly', () => {
+    const step: ProjectStep = {
+      id: 30,
+      project_id: 10,
+      step_number: 2,
+      step_name: 'Request Supplier Quotation',
+      description: 'Send RFQ to supplier',
+      status: 'completed',
+      progress_percentage: 100,
+      completed_at: '2026-09-24T23:06:01.142561',
+      data: {
+        quotation_requested_date: '2026-09-23',
+        supplier_contacted: true,
+      },
+    };
+
+    const badges = (component as any).getStepDataBadges(step);
+    expect(badges).toHaveLength(2);
+    expect(badges[0]).toEqual({ icon: 'pi pi-check-circle', label: 'Supplier Contacted' });
+    expect(badges[1].label).toContain('RFQ: 23-09-2026');
+  });
+
+  it('should categorize steps into the correct phases', () => {
+    const phase1 = (component as any).getPhaseForStep(2);
+    expect(phase1.id).toBe('phase-1');
+    expect(phase1.shortTitle).toBe('Phase 1: Sourcing');
+
+    const phase2 = (component as any).getPhaseForStep(7);
+    expect(phase2.id).toBe('phase-2');
+    expect(phase2.shortTitle).toBe('Phase 2: Orders');
+
+    const phase3 = (component as any).getPhaseForStep(11);
+    expect(phase3.id).toBe('phase-3');
+    expect(phase3.shortTitle).toBe('Phase 3: Logistics');
+
+    const phase4 = (component as any).getPhaseForStep(14);
+    expect(phase4.id).toBe('phase-4');
+    expect(phase4.shortTitle).toBe('Phase 4: Settlement');
+  });
 });
+

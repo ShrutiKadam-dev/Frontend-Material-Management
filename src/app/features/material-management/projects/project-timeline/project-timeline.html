@@ -1,184 +1,329 @@
-<section class="base-page timeline-page" aria-labelledby="timeline-title">
+<section class="base-page timeline-dashboard-page" aria-labelledby="timeline-title">
 
-  <!-- ── Hero header banner ─────────────────────────────── -->
-  <div class="pipeline-hero">
-    <div class="hero-left">
-      <button
-        pButton
-        type="button"
-        icon="pi pi-arrow-left"
-        class="p-button-text back-btn"
-        aria-label="Back to projects"
-        (click)="goBack()"
-      ></button>
-      <div class="hero-text">
-        <p class="eyebrow">Project Pipeline</p>
-        <h1 id="timeline-title">
-          @if (project(); as p) { {{ p.project_title }} }
-          @else { Project Steps }
+  <!-- ── 1. Executive Project Dashboard Header ───────────────────────── -->
+  <header class="project-hero-header app-panel">
+    <!-- Top Action Navigation -->
+    <div class="hero-top-nav">
+      <button pButton type="button" icon="pi pi-arrow-left" label="All Projects" class="p-button-text back-projects-btn"
+        (click)="goBack()" aria-label="Back to projects list">
+      </button>
+
+      <div class="hero-actions">
+        <button pButton type="button" icon="pi pi-refresh" class="p-button-text p-button-secondary refresh-btn"
+          (click)="loadProjectAndSteps()" pTooltip="Reload project data" tooltipPosition="bottom"
+          aria-label="Reload project data">
+        </button>
+
+        @if (!loading() && activeStep(); as active) {
+        <button pButton type="button" [label]="'Continue Step ' + active.step_number + ': ' + active.step_name"
+          icon="pi pi-arrow-right" iconPos="right" class="continue-step-btn" (click)="continueActiveStep()"
+          pTooltip="Jump to active pipeline step" tooltipPosition="bottom">
+        </button>
+        }
+      </div>
+    </div>
+
+    <!-- Main Title & Entity Context Strip -->
+    <div class="hero-main-bar">
+      <div class="hero-title-group">
+        <div class="hero-chips">
+          <span class="project-code-pill" pTooltip="Project Reference Code" tooltipPosition="top">
+            <i class="pi pi-hashtag" aria-hidden="true"></i>
+            {{ projectCode() }}
+          </span>
+
+          @if (project()?.nickname) {
+          <span class="project-nickname-pill" [title]="'Nickname: ' + project()?.nickname">
+            <i class="pi pi-tag" aria-hidden="true"></i>
+            {{ project()?.nickname }}
+          </span>
+          }
+
+          <span class="status-pill status-pill--health"
+            [class.status-pill--delayed]="project()?.health_status === 'delayed' || project()?.health_status === 'at_risk'">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            {{ project()?.health_status === 'delayed' ? 'Attention Needed' : 'On Track' }}
+          </span>
+
+          <span class="status-pill status-pill--phase"
+            [class.status-pill--completed]="progressPercent() === 100 || project()?.status === 'completed'">
+            <i class="pi" [class.pi-check]="progressPercent() === 100" [class.pi-spin]="progressPercent() < 100"
+              [class.pi-spinner]="progressPercent() < 100" aria-hidden="true"></i>
+            {{ progressPercent() === 100 ? 'Completed' : 'Pipeline Active' }}
+          </span>
+        </div>
+
+        <h1 id="timeline-title" class="project-title">
+          {{ project()?.project_title || 'Project Pipeline Dashboard' }}
         </h1>
       </div>
-    </div>
 
-    @if (!loading() && !error() && steps().length) {
-      <div class="hero-stats" aria-label="Overall progress">
-        <div class="stat-bubble">
-          <span class="stat-value">{{ completedCount() }}</span>
-          <span class="stat-label">Done</span>
+      <!-- Quick Context Strip (Customer, Supplier, Valuation & Dates) -->
+      @if (!loading() && project(); as p) {
+      <div class="hero-context-strip">
+        <div class="context-item" [title]="customer()?.name || p.customer_name || ('Customer #' + p.customer_id)">
+          <i class="pi pi-building context-icon context-icon--customer" aria-hidden="true"></i>
+          <div class="context-text">
+            <span class="context-label">Customer</span>
+            <strong class="context-val">{{ customer()?.name || p.customer_name || ('Customer #' + p.customer_id) }}</strong>
+          </div>
         </div>
-        <div class="stat-divider" aria-hidden="true"></div>
-        <div class="stat-bubble">
-          <span class="stat-value">{{ steps().length - completedCount() }}</span>
-          <span class="stat-label">Remaining</span>
+
+        <div class="context-item" [title]="supplier()?.name || p.supplier_name || ('Supplier #' + p.supplier_id)">
+          <i class="pi pi-truck context-icon context-icon--supplier" aria-hidden="true"></i>
+          <div class="context-text">
+            <span class="context-label">Supplier</span>
+            <strong class="context-val">{{ supplier()?.name || p.supplier_name || ('Supplier #' + p.supplier_id) }}</strong>
+          </div>
         </div>
-        <div class="stat-divider" aria-hidden="true"></div>
-        <div class="stat-bubble">
-          <span class="stat-value stat-pct">{{ progressPercent() }}%</span>
-          <span class="stat-label">Complete</span>
+
+        @if (p.total_value) {
+        <div class="context-item">
+          <i class="pi pi-wallet context-icon context-icon--finance" aria-hidden="true"></i>
+          <div class="context-text">
+            <span class="context-label">Contract Value</span>
+            <strong class="context-val val-currency">₹{{ (p.total_value || 0) | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+        }
+
+        <div class="context-item">
+          <i class="pi pi-calendar context-icon context-icon--date" aria-hidden="true"></i>
+          <div class="context-text">
+            <span class="context-label">Initiated</span>
+            <strong class="context-val">{{ p.created_at | appDate:'d MMM yyyy' }}</strong>
+          </div>
         </div>
       </div>
+      }
+    </div>
+
+    <!-- Overall Progress Track & Metrics Counter Row -->
+    @if (!loading() && steps().length) {
+    <div class="hero-progress-row">
+      <div class="progress-bar-group">
+        <div class="progress-bar-meta">
+          <span class="progress-bar-title">Overall 15-Step Pipeline Progress</span>
+          <span class="progress-bar-pct">{{ progressPercent() }}% Complete</span>
+        </div>
+        <div class="progress-track" role="progressbar" [attr.aria-valuenow]="progressPercent()" aria-valuemin="0"
+          aria-valuemax="100">
+          <div class="progress-fill" [style.width.%]="progressPercent()"></div>
+        </div>
+      </div>
+
+      <div class="progress-metric-pills">
+        <span class="metric-pill metric-pill--completed">
+          <i class="pi pi-check" aria-hidden="true"></i>
+          <strong>{{ completedCount() }}</strong> Completed
+        </span>
+        <span class="metric-pill metric-pill--active">
+          <i class="pi pi-spinner pi-spin" aria-hidden="true"></i>
+          <strong>{{ inProgressCount() }}</strong> In Progress
+        </span>
+        <span class="metric-pill metric-pill--pending">
+          <i class="pi pi-clock" aria-hidden="true"></i>
+          <strong>{{ pendingCount() }}</strong> In Queue
+        </span>
+        @if (totalRemarksCount() > 0) {
+        <span class="metric-pill metric-pill--remarks">
+          <i class="pi pi-comments" aria-hidden="true"></i>
+          <strong>{{ totalRemarksCount() }}</strong> Remarks
+        </span>
+        }
+      </div>
+    </div>
+    }
+  </header>
+
+  <!-- ── 2. Loading / Error States ────────────────────────────────────── -->
+  @if (loading() && steps().length === 0) {
+  <div class="center-state loading-state">
+    <div class="loading-ring" aria-hidden="true">
+      <i class="pi pi-spin pi-spinner"></i>
+    </div>
+    <p>Loading project pipeline milestones…</p>
+  </div>
+  } @else if (error()) {
+  <div class="error-state app-panel" role="alert">
+    <i class="pi pi-exclamation-circle error-icon" aria-hidden="true"></i>
+    <h2>Unable to Load Project Steps</h2>
+    <p>{{ error() }}</p>
+    <button pButton type="button" icon="pi pi-refresh" label="Retry Connection" class="continue-step-btn"
+      (click)="loadProjectAndSteps()"></button>
+  </div>
+  } @else {
+
+  <!-- ── 3. High-Density, Perfectly Aligned Vertical Timeline ─────────── -->
+  <div class="vertical-timeline-card app-panel">
+    @for (phase of timelinePhases(); track phase.id; let isLastPhase = $last) {
+    <section class="timeline-phase-group" [class.phase-group--completed]="phase.isCompleted"
+      [class.phase-group--active]="phase.hasActive">
+
+      <!-- Phase Milestone Header Ribbon -->
+      <div class="phase-ribbon">
+        <div class="phase-ribbon-left">
+          <span class="phase-badge" [class]="phase.badgeClass">{{ phase.stepRange }}</span>
+          <h2 class="phase-title">{{ phase.title }}</h2>
+          <span class="phase-desc-hint">— {{ phase.description }}</span>
+        </div>
+
+        <div class="phase-ribbon-right">
+          <span class="phase-done-pill" [class.phase-done-pill--all]="phase.isCompleted">
+            @if (phase.isCompleted) {
+            <i class="pi pi-check" aria-hidden="true"></i>
+            }
+            {{ phase.completedCount }} / {{ phase.totalCount }} Done
+          </span>
+        </div>
+      </div>
+
+      <!-- Timeline Steps (Structured Grid Columns for Clean Alignment) -->
+      <ol class="phase-steps-timeline">
+        @for (step of phase.steps; track step.step_number; let isLastStep = $last) {
+        <li class="timeline-row"
+          [class.timeline-row--completed]="step.status === 'completed'"
+          [class.timeline-row--active]="step.status === 'in_progress'"
+          [class.timeline-row--pending]="step.status === 'pending' || step.status === 'skipped'"
+          [attr.role]="isStepClickable(step.step_number) ? 'button' : null"
+          [attr.tabindex]="isStepClickable(step.step_number) ? 0 : null"
+          (click)="navigateToStep(step.step_number)"
+          (keydown.enter)="navigateToStep(step.step_number)">
+
+          <!-- Col 1: Spine / Node -->
+          <div class="row-spine" aria-hidden="true">
+            <div class="spine-node" [class]="'spine-node--' + step.status">
+              @if (step.status === 'completed') {
+              <i class="pi pi-check node-ico"></i>
+              } @else if (step.status === 'in_progress') {
+              <i class="pi pi-spin pi-spinner node-ico"></i>
+              } @else {
+              <span class="node-num">{{ step.step_number }}</span>
+              }
+            </div>
+            @if (!(isLastPhase && isLastStep)) {
+            <span class="spine-line"></span>
+            }
+          </div>
+
+          <!-- Col 2: Step Tag + Title + Description -->
+          <div class="col-step-info">
+            <span class="row-step-num">Step {{ step.step_number < 10 ? '0' + step.step_number : step.step_number }}</span>
+            <div class="row-text-stack">
+              <strong class="row-step-title" [title]="step.step_name">{{ step.step_name }}</strong>
+              <span class="row-step-desc" [title]="step.description">{{ step.description }}</span>
+            </div>
+          </div>
+
+          <!-- Col 3: Dates, Remarks, Data Chips -->
+          <div class="col-step-badges">
+            @if (getStepDate(step); as stepDateInfo) {
+            <span class="meta-tag meta-tag--date" [class.meta-tag--completed]="step.status === 'completed'">
+              <i class="pi" [class.pi-check-circle]="step.status === 'completed'" [class.pi-calendar]="step.status !== 'completed'" aria-hidden="true"></i>
+              {{ stepDateInfo.date }}
+            </span>
+            }
+
+            @if (getRemarksCount(step) > 0) {
+            <button type="button" class="meta-tag meta-tag--remarks"
+              (click)="openRemarksDialog(step, $event)"
+              pTooltip="View step remarks" tooltipPosition="top" aria-label="View remarks for this step">
+              <i class="pi pi-comments" aria-hidden="true"></i>
+              {{ getRemarksCount(step) }} Remark{{ getRemarksCount(step) === 1 ? '' : 's' }}
+            </button>
+            }
+
+            @for (badge of getStepDataBadges(step); track badge.label) {
+            <span class="meta-tag meta-tag--data">
+              @if (badge.icon) { <i [class]="badge.icon" aria-hidden="true"></i> }
+              {{ badge.label }}
+            </span>
+            }
+          </div>
+
+          <!-- Col 4: Mini Progress Bar -->
+          <div class="col-step-progress" [pTooltip]="step.progress_percentage + '% complete'" tooltipPosition="top">
+            <div class="mini-track">
+              <div class="mini-fill" [style.width.%]="step.progress_percentage"
+                [class.mini-fill--completed]="step.status === 'completed'"></div>
+            </div>
+            <span class="mini-pct">{{ step.progress_percentage }}%</span>
+          </div>
+
+          <!-- Col 5: Status Chip -->
+          <div class="col-step-status">
+            <span class="row-status-chip" [class]="'row-status-chip--' + step.status">
+              <i class="pi" [class]="statusIcon(step.status)" aria-hidden="true"></i>
+              {{ statusLabel(step.status) }}
+            </span>
+          </div>
+
+          <!-- Col 6: Action Arrow -->
+          <div class="col-step-action">
+            <button pButton type="button" icon="pi pi-arrow-right" class="p-button-text p-button-sm open-arrow-btn"
+              pTooltip="Open Step Details" tooltipPosition="top" aria-label="Open step"></button>
+          </div>
+
+        </li>
+        }
+      </ol>
+    </section>
     }
   </div>
-
-  <!-- ── Progress track ─────────────────────────────────── -->
-  @if (!loading() && !error() && steps().length) {
-    <div class="global-progress-wrap">
-      <div
-        class="global-progress-bar"
-        role="progressbar"
-        [attr.aria-valuenow]="progressPercent()"
-        aria-valuemin="0"
-        aria-valuemax="100"
-        [attr.aria-label]="progressPercent() + '% of project pipeline complete'"
-      >
-        <span class="global-progress-fill" [style.width.%]="progressPercent()">
-          <span class="progress-glow" aria-hidden="true"></span>
-        </span>
-      </div>
-    </div>
-  }
-
-  <!-- ── Loading ────────────────────────────────────────── -->
-  @if (loading()) {
-    <div class="center-state" aria-live="polite">
-      <div class="loading-ring" aria-hidden="true">
-        <i class="pi pi-spin pi-spinner"></i>
-      </div>
-      <p>Loading pipeline steps…</p>
-    </div>
-  }
-
-  <!-- ── Error ──────────────────────────────────────────── -->
-  @if (!loading() && error()) {
-    <div class="center-state error-state app-panel" role="alert">
-      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-      <h2>Failed to Load Steps</h2>
-      <p>{{ error() }}</p>
-    </div>
-  }
-
-  <!-- ── Timeline ───────────────────────────────────────── -->
-  @if (!loading() && !error()) {
-    <ol class="timeline" aria-label="Project pipeline steps">
-      @for (step of steps(); track step.step_number; let last = $last) {
-        <li
-          class="tl-item"
-          [class]="'status-' + step.status"
-        >
-
-          <!-- Left spine: number + connector -->
-          <div class="tl-spine" aria-hidden="true">
-            <div class="tl-node">
-              @if (step.status === 'completed') {
-                <i class="pi pi-check node-icon"></i>
-              } @else if (step.status === 'in_progress') {
-                <i class="pi pi-spin pi-spinner node-icon"></i>
-              } @else {
-                <span class="node-num">{{ step.step_number }}</span>
-              }
-            </div>
-            @if (!last) {
-              <span class="tl-connector"></span>
-            }
-          </div>
-
-          <!-- Card -->
-          <div
-            class="tl-card"
-            [class.tl-card--clickable]="isStepClickable(step.step_number)"
-            [class.tl-card--completed]="step.status === 'completed'"
-            [class.tl-card--active]="step.status === 'in_progress'"
-            [attr.role]="isStepClickable(step.step_number) ? 'button' : null"
-            [attr.tabindex]="isStepClickable(step.step_number) ? 0 : null"
-            [attr.aria-label]="isStepClickable(step.step_number) ? 'Open step: ' + step.step_name : null"
-            (click)="navigateToStep(step.step_number)"
-            (keydown.enter)="navigateToStep(step.step_number)"
-            (keydown.space)="navigateToStep(step.step_number)"
-          >
-            <!-- Card accent strip -->
-            <span class="card-accent" aria-hidden="true"></span>
-
-            <!-- Card body -->
-            <div class="card-body">
-              <div class="card-top">
-                <span class="step-tag" aria-label="Step {{ step.step_number }}">
-                  Step {{ step.step_number }}
-                </span>
-                <span class="status-chip chip-{{ step.status }}">
-                  @if (step.status === 'completed') {
-                    <i class="pi pi-check" aria-hidden="true"></i>
-                  } @else if (step.status === 'in_progress') {
-                    <i class="pi pi-circle-fill" aria-hidden="true"></i>
-                  } @else if (step.status === 'skipped') {
-                    <i class="pi pi-minus" aria-hidden="true"></i>
-                  } @else {
-                    <i class="pi pi-clock" aria-hidden="true"></i>
-                  }
-                  {{ statusLabel(step.status) }}
-                </span>
-              </div>
-
-              <h2 class="card-title">{{ step.step_name }}</h2>
-              <p class="card-desc">{{ step.description }}</p>
-
-              @if (step.progress_percentage > 0 || step.status === 'in_progress') {
-                <div class="card-progress">
-                  <div
-                    class="card-progress-track"
-                    role="progressbar"
-                    [attr.aria-valuenow]="step.progress_percentage"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                  >
-                    <span [style.width.%]="step.progress_percentage"></span>
-                  </div>
-                  <span class="card-progress-label">{{ step.progress_percentage }}%</span>
-                </div>
-              }
-
-              @if (getStepDate(step); as stepDateInfo) {
-                <p
-                  class="card-completed"
-                  [class.card-completed--active]="step.status === 'in_progress'"
-                  [class.card-completed--pending]="step.status === 'pending' || step.status === 'skipped'"
-                >
-                  <i class="pi" [class.pi-calendar-check]="step.status === 'completed'" [class.pi-calendar]="step.status !== 'completed'" aria-hidden="true"></i>
-                  {{ stepDateInfo.label }} {{ stepDateInfo.date }}
-                </p>
-              }
-            </div>
-
-            <!-- Chevron for clickable steps -->
-            @if (isStepClickable(step.step_number)) {
-              <div class="card-cta" aria-hidden="true">
-                <span class="cta-label">Open</span>
-                <i class="pi pi-arrow-right"></i>
-              </div>
-            }
-          </div>
-        </li>
-      }
-    </ol>
   }
 
 </section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: STEP REMARKS & AUDIT NOTES DIALOG
+══════════════════════════════════════════════════════════════════════ -->
+<p-dialog [header]="'Step ' + (selectedStepForRemarks()?.step_number || '') + ' Remarks & Audit Notes'"
+  [visible]="remarksDialogVisible()" (visibleChange)="remarksDialogVisible.set($event)" [modal]="true"
+  [blockScroll]="true" [draggable]="false" [resizable]="false" [style]="{ width: '92vw', maxWidth: '560px' }"
+  styleClass="cq-dialog remarks-dialog" appendTo="body">
+
+  @if (selectedStepForRemarks(); as currentStep) {
+  <div class="remarks-dialog-content">
+    <div class="dialog-step-summary">
+      <span class="dlg-badge">Step {{ currentStep.step_number }}</span>
+      <h3 class="dlg-step-title">{{ currentStep.step_name }}</h3>
+      <p class="dlg-step-desc">{{ currentStep.description }}</p>
+    </div>
+
+    <div class="remarks-scroll-list">
+      @if (getStepRemarks(currentStep).length === 0) {
+      <div class="empty-remarks">
+        <i class="pi pi-comments empty-remarks-icon"></i>
+        <p>No remarks logged for this step yet.</p>
+      </div>
+      } @else {
+      @for (item of getStepRemarks(currentStep); track $index) {
+      <div class="remark-item-card">
+        <div class="remark-item-header">
+          <div class="author-block">
+            <div class="author-avatar" aria-hidden="true">
+              <i class="pi pi-user"></i>
+            </div>
+            <span class="author-name">{{ item.user || 'Team Member' }}</span>
+          </div>
+          @if (item.date) {
+          <span class="remark-date">
+            <i class="pi pi-clock"></i> {{ item.date }}
+          </span>
+          }
+        </div>
+        <p class="remark-body-text">{{ item.remark }}</p>
+      </div>
+      }
+      }
+    </div>
+  </div>
+
+  <div class="dlg-footer">
+    <button pButton type="button" label="Close" class="p-button-text cancel-btn"
+      (click)="remarksDialogVisible.set(false)"></button>
+    <button pButton type="button" label="Go to Step" icon="pi pi-arrow-right" iconPos="right" class="continue-step-btn"
+      (click)="remarksDialogVisible.set(false); navigateToStep(currentStep.step_number)"></button>
+  </div>
+  }
+</p-dialog>
