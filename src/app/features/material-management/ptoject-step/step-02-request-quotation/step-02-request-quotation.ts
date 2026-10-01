@@ -34,7 +34,7 @@ import { Attachment } from '../../../../core/models/attachment.model';
 import { Supplier } from '../../../../core/models/supplier.model';
 import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
-import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { createStepRemarkItem, parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
 import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
 import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
@@ -131,11 +131,7 @@ export class Step02RequestQuotation implements OnInit {
   protected addDialogRemark(): void {
     const text = this.newRemarkInput().trim();
     if (!text) return;
-    const newRemark: StepRemarkItem = {
-      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      text,
-      created_at: new Date().toISOString(),
-    };
+    const newRemark: StepRemarkItem = createStepRemarkItem(text);
     this.dialogRemarks.update((list) => [...list, newRemark]);
     this.newRemarkInput.set('');
   }
@@ -481,11 +477,7 @@ export class Step02RequestQuotation implements OnInit {
     const text = (textInput ?? this.getQuickRemarkText(request.id)).trim();
     if (!text || this.quickAddingId() === request.id) return;
 
-    const newRemark: StepRemarkItem = {
-      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      text,
-      created_at: new Date().toISOString(),
-    };
+    const newRemark: StepRemarkItem = createStepRemarkItem(text);
     const currentRemarks = this.getRequestRemarks(request);
     const updatedRemarks = [...currentRemarks, newRemark];
     const remarksPayload = serializeStepRemarks(updatedRemarks);

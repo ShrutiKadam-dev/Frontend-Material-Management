@@ -26,6 +26,9 @@ describe('Step02RequestQuotation', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(Step02RequestQuotation);
+    localStorage.setItem('material-management.auth-session', JSON.stringify({
+      user: { id: 1, name: 'string string' }
+    }));
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
@@ -97,7 +100,9 @@ describe('Step02RequestQuotation', () => {
       supplier_id: 2,
       quotation_requested_date: '2026-09-24',
       supplier_contacted: true,
-      remarks: ['First note'],
+      remarks: [
+        { id: 'rmk-1', remark: 'First note', user: 'string string', user_id: 1, created_at: '2026-09-24T10:00:00.000Z' },
+      ],
       attachments: [],
       items: [],
     } as any;
@@ -108,7 +113,19 @@ describe('Step02RequestQuotation', () => {
     (component as any).quickAddRemark(sampleRequest, 'Second note');
 
     expect(updateSpy).toHaveBeenCalledWith(1, {
-      remarks: ['First note', 'Second note'],
+      remarks: [
+        {
+          remark: 'First note',
+          user: 'string string',
+          user_id: 1,
+          created_at: '2026-09-24T10:00:00.000Z',
+        },
+        expect.objectContaining({
+          remark: 'Second note',
+          user: 'string string',
+          user_id: 1,
+        }),
+      ],
     });
   });
 
@@ -120,7 +137,10 @@ describe('Step02RequestQuotation', () => {
       supplier_id: 2,
       quotation_requested_date: '2026-09-24',
       supplier_contacted: true,
-      remarks: ['First note', 'Second note'],
+      remarks: [
+        { id: 'rmk-1', remark: 'First note', user: 'string string', user_id: 1, created_at: '2026-09-24T10:00:00.000Z' },
+        { id: 'rmk-2', remark: 'Second note', user: 'string string', user_id: 1, created_at: '2026-09-24T11:00:00.000Z' },
+      ],
       attachments: [],
       items: [],
     } as any;
@@ -131,7 +151,14 @@ describe('Step02RequestQuotation', () => {
     (component as any).deleteRemarkFromRequest(sampleRequest, 'rmk-1');
 
     expect(updateSpy).toHaveBeenCalledWith(1, {
-      remarks: ['Second note'],
+      remarks: [
+        {
+          remark: 'Second note',
+          user: 'string string',
+          user_id: 1,
+          created_at: '2026-09-24T11:00:00.000Z',
+        },
+      ],
     });
   });
 });

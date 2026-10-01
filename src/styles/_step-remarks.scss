@@ -99,6 +99,13 @@
   gap: 8px;
 }
 
+.timeline-meta-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .timeline-timestamp {
   display: inline-flex;
   align-items: center;
@@ -110,6 +117,22 @@
   .pi {
     font-size: 0.72rem;
     color: var(--color-muted, #6b6864);
+  }
+}
+
+.timeline-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-primary, #c0522f);
+  background: rgba(192, 82, 47, 0.08);
+  padding: 1px 6px;
+  border-radius: 9999px;
+
+  .pi {
+    font-size: 0.68rem;
   }
 }
 

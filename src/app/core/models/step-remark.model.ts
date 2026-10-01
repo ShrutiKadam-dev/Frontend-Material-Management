@@ -7,5 +7,9 @@ export interface StepRemarkItem {
 }
 
 export interface RemarkPayloadItem {
+  id?: number | string;
   remark: string;
+  user?: string;
+  user_id?: number;
+  created_at?: string;
 }

@@ -1,4 +1,46 @@
-import { StepRemarkItem } from '../models/step-remark.model';
+import { RemarkPayloadItem, StepRemarkItem } from '../models/step-remark.model';
+
+const AUTH_SESSION_KEY = 'material-management.auth-session';
+
+/**
+ * Reads stored session from localStorage to obtain the current user's name and ID.
+ */
+export function getCurrentUserFromStorage(): { user?: string; user_id?: number } | null {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    const raw = localStorage.getItem(AUTH_SESSION_KEY);
+    if (!raw) return null;
+    const session = JSON.parse(raw);
+    const u = session?.user;
+    if (!u) return null;
+    const name = typeof u.name === 'string' && u.name.trim() ? u.name.trim() : undefined;
+    const uid = u.id != null && !isNaN(Number(u.id)) ? Number(u.id) : undefined;
+    return {
+      user: name,
+      user_id: uid,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Creates a new StepRemarkItem with current user details and timestamp.
+ */
+export function createStepRemarkItem(
+  text: string,
+  user?: string,
+  userId?: number
+): StepRemarkItem {
+  const storedUser = getCurrentUserFromStorage();
+  return {
+    id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    text: text.trim(),
+    created_at: new Date().toISOString(),
+    user: user ?? storedUser?.user,
+    user_id: userId ?? storedUser?.user_id,
+  };
+}
 
 function normalizeRemarkCreatedAt(val?: string): string {
   if (!val) return new Date().toISOString();
@@ -22,8 +64,8 @@ function normalizeRemarkCreatedAt(val?: string): string {
 }
 
 /**
- * Standard parser for remarks as an array of strings: `['Remark 1', 'Remark 2']`.
- * Converts string array into StepRemarkItem[] for timeline and UI display.
+ * Standard parser for remarks as an array of strings or objects.
+ * Converts raw remarks into StepRemarkItem[] for timeline and UI display.
  */
 export function parseStepRemarks(rawRemark?: unknown, defaultDate?: string): StepRemarkItem[] {
   if (!rawRemark) {
@@ -32,7 +74,7 @@ export function parseStepRemarks(rawRemark?: unknown, defaultDate?: string): Ste
 
   const safeDefaultDate = normalizeRemarkCreatedAt(defaultDate);
 
-  // Standard approach: Array of strings: ['Remark 1', 'Remark 2']
+  // Standard approach: Array of strings or objects: `['Remark 1']` or `[{ remark: '...', user: '...', user_id: 1 }]`
   if (Array.isArray(rawRemark)) {
     return rawRemark
       .map((item: unknown, idx: number) => {
@@ -93,30 +135,93 @@ export function parseStepRemarks(rawRemark?: unknown, defaultDate?: string): Ste
 }
 
 /**
- * Serializes remarks into standard payload format:
- * Array of strings: `['Remark 1', 'Remark 2']`
+ * Serializes remarks into standard payload format for API updates:
+ * Array of RemarkPayloadItem objects containing remark text, user, user_id, and metadata.
+ * Example:
+ * [
+ *   {
+ *     "remark": "Urgent delivery required",
+ *     "user": "string string",
+ *     "user_id": 1
+ *   }
+ * ]
  */
 export function serializeStepRemarks(
-  remarks?: Array<StepRemarkItem | string | { text?: string; remark?: string }> | null
-): string[] {
+  remarks?: Array<
+    | StepRemarkItem
+    | string
+    | {
+        text?: string;
+        remark?: string;
+        user?: string;
+        user_id?: number;
+        id?: number | string;
+        created_at?: string;
+      }
+  > | null,
+  currentUser?: { user?: string; name?: string; user_id?: number; id?: string | number } | null
+): RemarkPayloadItem[] {
   if (!remarks || !Array.isArray(remarks)) {
     return [];
   }
 
+  const storedUser = getCurrentUserFromStorage();
+  const defaultUser =
+    currentUser?.user ??
+    currentUser?.name ??
+    storedUser?.user;
+  const defaultUserId =
+    currentUser?.user_id != null
+      ? Number(currentUser.user_id)
+      : currentUser?.id != null
+      ? Number(currentUser.id)
+      : storedUser?.user_id;
+
   return remarks
     .map((r) => {
       if (typeof r === 'string') {
-        return r.trim();
+        const text = r.trim();
+        if (!text) return null;
+        const item: RemarkPayloadItem = {
+          remark: text,
+          user: defaultUser,
+          ...(defaultUserId != null ? { user_id: defaultUserId } : {}),
+        };
+        return item;
       }
+
       if (r && typeof r === 'object') {
-        if ('text' in r && typeof r.text === 'string') {
-          return r.text.trim();
+        const text = (
+          ('text' in r && typeof r.text === 'string' ? r.text : '') ||
+          ('remark' in r && typeof r.remark === 'string' ? r.remark : '')
+        ).trim();
+
+        if (!text) return null;
+
+        const resolvedUser = r.user || defaultUser;
+        const resolvedUserId = r.user_id != null ? Number(r.user_id) : defaultUserId;
+
+        const item: RemarkPayloadItem = {
+          remark: text,
+          user: resolvedUser,
+          ...(resolvedUserId != null ? { user_id: resolvedUserId } : {}),
+        };
+
+        if (r.id != null) {
+          const rawId = String(r.id);
+          if (/^\d+$/.test(rawId)) {
+            item.id = Number(rawId);
+          }
         }
-        if ('remark' in r && typeof r.remark === 'string') {
-          return r.remark.trim();
+
+        if (r.created_at) {
+          item.created_at = r.created_at;
         }
+
+        return item;
       }
-      return '';
+
+      return null;
     })
-    .filter((text) => text.length > 0);
+    .filter((item): item is RemarkPayloadItem => item !== null && item.remark.length > 0);
 }

@@ -13,7 +13,11 @@ export interface CustomerQueryRemark {
 }
 
 export interface RemarkPayloadItem {
+  id?: number | string;
   remark: string;
+  user?: string;
+  user_id?: number;
+  created_at?: string;
 }
 
 export interface CustomerQueryRemarkItem {
@@ -48,7 +52,7 @@ export interface CustomerQueryCreateInput {
   qo_amount?: string;
   qo_validity?: string;
   attachments?: string[];
-  remarks: string[];
+  remarks: RemarkPayloadItem[] | string[];
   remark?: string;
   items: CustomerQueryItem[];
 }
@@ -60,7 +64,7 @@ export interface CustomerQueryUpdateInput {
   qo_amount?: string;
   qo_validity?: string;
   attachments?: string[];
-  remarks?: string[];
+  remarks?: RemarkPayloadItem[] | string[];
   remark?: string;
   items?: CustomerQueryItem[];
 }

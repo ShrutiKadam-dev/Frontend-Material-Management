@@ -32,8 +32,8 @@ import {
 import { Attachment } from '../../../../core/models/attachment.model';
 import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
-import { StepRemarkItem } from '../../../../core/models/step-remark.model';
-import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { RemarkPayloadItem, StepRemarkItem } from '../../../../core/models/step-remark.model';
+import { createStepRemarkItem, parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
 import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
 import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
@@ -163,18 +163,14 @@ export class Step01CustomerQuery implements OnInit {
     return parseStepRemarks(rawRemark, defaultDate);
   }
 
-  protected serializeRemarksPayload(remarks: Array<StepRemarkItem | string>): string[] {
+  protected serializeRemarksPayload(remarks: Array<StepRemarkItem | string>): RemarkPayloadItem[] {
     return serializeStepRemarks(remarks);
   }
 
   protected addDialogRemark(): void {
     const text = this.newRemarkInput().trim();
     if (!text) return;
-    const remark: StepRemarkItem = {
-      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      text,
-      created_at: new Date().toISOString(),
-    };
+    const remark: StepRemarkItem = createStepRemarkItem(text);
     this.dialogRemarks.update((list) => [...list, remark]);
     this.newRemarkInput.set('');
   }
@@ -188,11 +184,7 @@ export class Step01CustomerQuery implements OnInit {
     const text = (textInput ?? this.quickRemarkText()).trim();
     if (!query || !text || this.quickAddingRemark()) return;
 
-    const newRemark: StepRemarkItem = {
-      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      text,
-      created_at: new Date().toISOString(),
-    };
+    const newRemark: StepRemarkItem = createStepRemarkItem(text);
 
     const existingRemarks = parseStepRemarks(query.remarks || query.remark, query.qo_date || query.created_at);
     const updatedRemarks = [...existingRemarks, newRemark];

@@ -20,8 +20,8 @@ describe('Step01CustomerQuery', () => {
     customer_id: 2,
     qo_date: '2026-09-23',
     remark: JSON.stringify([
-      { id: 'rmk-1', text: 'First client note', created_at: '2026-09-23T10:00:00.000Z' },
-      { id: 'rmk-2', text: 'Second technical specification note', created_at: '2026-09-23T11:00:00.000Z' },
+      { id: 'rmk-1', text: 'First client note', created_at: '2026-09-23T10:00:00.000Z', user: 'string string', user_id: 1 },
+      { id: 'rmk-2', text: 'Second technical specification note', created_at: '2026-09-23T11:00:00.000Z', user: 'string string', user_id: 1 },
     ]),
     attachments: [],
     items: [{ id: 1, material_name: 'Steel Flange', quantity: 5 }],
@@ -39,6 +39,9 @@ describe('Step01CustomerQuery', () => {
     }).compileComponents();
 
     customerQueryService = TestBed.inject(CustomerQueryService);
+    localStorage.setItem('material-management.auth-session', JSON.stringify({
+      user: { id: 1, name: 'string string' }
+    }));
     fixture = TestBed.createComponent(Step01CustomerQuery);
     component = fixture.componentInstance;
     await fixture.whenStable();
@@ -84,19 +87,22 @@ describe('Step01CustomerQuery', () => {
     expect(parsed[1].text).toBe('Second remark');
   });
 
-  it('should serialize remarks payload as array of strings', () => {
+  it('should serialize remarks payload as array of RemarkPayloadItem objects with user data', () => {
     const remarks = [
-      { id: '1', text: 'Note A', created_at: '2026-09-20' },
-      { id: '2', text: 'Note B', created_at: '2026-09-21' },
+      { id: '1', text: 'Note A', created_at: '2026-09-20', user: 'string string', user_id: 1 },
+      { id: '2', text: 'Note B', created_at: '2026-09-21', user: 'string string', user_id: 1 },
     ];
     const serialized = (component as unknown as {
-      serializeRemarksPayload: (r: typeof remarks) => string[];
+      serializeRemarksPayload: (r: typeof remarks) => unknown[];
     }).serializeRemarksPayload(remarks);
 
-    expect(serialized).toEqual(['Note A', 'Note B']);
+    expect(serialized).toEqual([
+      { id: 1, remark: 'Note A', user: 'string string', user_id: 1, created_at: '2026-09-20' },
+      { id: 2, remark: 'Note B', user: 'string string', user_id: 1, created_at: '2026-09-21' },
+    ]);
 
     const emptySerialized = (component as unknown as {
-      serializeRemarksPayload: (r: typeof remarks) => string[];
+      serializeRemarksPayload: (r: typeof remarks) => unknown[];
     }).serializeRemarksPayload([]);
     expect(emptySerialized).toEqual([]);
   });
@@ -147,9 +153,24 @@ describe('Step01CustomerQuery', () => {
     expect(args[0]).toBe(mockQuery.id);
     expect(args[1]).toEqual({
       remarks: [
-        'First client note',
-        'Second technical specification note',
-        'Additional customer clarification received',
+        {
+          remark: 'First client note',
+          user: 'string string',
+          user_id: 1,
+          created_at: '2026-09-23T10:00:00.000Z',
+        },
+        {
+          remark: 'Second technical specification note',
+          user: 'string string',
+          user_id: 1,
+          created_at: '2026-09-23T11:00:00.000Z',
+        },
+        {
+          remark: 'Additional customer clarification received',
+          user: 'string string',
+          user_id: 1,
+          created_at: expect.any(String),
+        },
       ],
     });
     expect(getByProjSpy).toHaveBeenCalled();
@@ -171,7 +192,14 @@ describe('Step01CustomerQuery', () => {
     expect(updateSpy).toHaveBeenCalled();
     const args = updateSpy.mock.calls[0];
     expect(args[1]).toEqual({
-      remarks: ['Second technical specification note'],
+      remarks: [
+        {
+          remark: 'Second technical specification note',
+          user: 'string string',
+          user_id: 1,
+          created_at: '2026-09-23T11:00:00.000Z',
+        },
+      ],
     });
   });
 

@@ -46,7 +46,7 @@ import { Attachment } from '../../../../core/models/attachment.model';
 import { Supplier } from '../../../../core/models/supplier.model';
 import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
-import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { createStepRemarkItem, parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
 import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
 import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
@@ -889,11 +889,7 @@ export class Step03SupplierQuotation implements OnInit {
   /* ── Quick Add / Delete Remarks on Card ──────────────── */
 
   protected quickAddRemark(quotation: SupplierQuotation, text: string): void {
-    const newRemark: StepRemarkItem = {
-      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      text,
-      created_at: new Date().toISOString(),
-    };
+    const newRemark: StepRemarkItem = createStepRemarkItem(text);
     const currentRemarks = parseStepRemarks(quotation.remarks || quotation.remark, quotation.quotation_date);
     const updatedRemarks = [...currentRemarks, newRemark];
     const remarksPayload = serializeStepRemarks(updatedRemarks);

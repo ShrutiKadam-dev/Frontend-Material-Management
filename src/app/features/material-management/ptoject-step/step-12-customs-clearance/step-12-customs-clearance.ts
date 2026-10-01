@@ -38,7 +38,7 @@ import { Attachment } from '../../../../core/models/attachment.model';
 import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
-import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { createStepRemarkItem, parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
 import { formatLocalDate, parseLocalDate } from '../../../../core/utils/date.utils';
 import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
@@ -621,11 +621,7 @@ export class Step12CustomsClearance implements OnInit {
   }
 
   protected quickAddClearanceRemark(record: CustomsClearance, text: string): void {
-    const newRemark: StepRemarkItem = {
-      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      text,
-      created_at: new Date().toISOString(),
-    };
+    const newRemark: StepRemarkItem = createStepRemarkItem(text);
     const currentRemarks = parseStepRemarks(record.remarks || record.remark, record.boe_date);
     const updatedRemarks = [...currentRemarks, newRemark];
     const remarksPayload = serializeStepRemarks(updatedRemarks);

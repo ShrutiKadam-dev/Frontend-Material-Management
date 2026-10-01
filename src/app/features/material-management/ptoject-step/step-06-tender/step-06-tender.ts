@@ -41,7 +41,7 @@ import { Attachment } from '../../../../core/models/attachment.model';
 import { Customer } from '../../../../core/models/customer.model';
 import { Project } from '../../../../core/models/project.model';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
-import { parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
+import { createStepRemarkItem, parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
 import {
   formatLocalDate,
   formatLocalDateTime,
@@ -508,11 +508,7 @@ export class Step06Tender implements OnInit {
 
   /* ── Remarks Operations ──────────────────────────────── */
   protected quickAddRemark(tender: CustomerTender, text: string): void {
-    const newRemark: StepRemarkItem = {
-      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      text,
-      created_at: new Date().toISOString(),
-    };
+    const newRemark: StepRemarkItem = createStepRemarkItem(text);
     const currentRemarks = parseStepRemarks(tender.remarks || tender.remark, tender.tender_date);
     const updatedRemarks = [...currentRemarks, newRemark];
     const remarksPayload = serializeStepRemarks(updatedRemarks);

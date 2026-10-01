@@ -12,7 +12,7 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TooltipModule } from 'primeng/tooltip';
 import { StepRemarkItem } from '../../../core/models/step-remark.model';
-import { parseStepRemarks } from '../../../core/utils/remark.utils';
+import { createStepRemarkItem, parseStepRemarks } from '../../../core/utils/remark.utils';
 
 @Component({
   selector: 'app-step-remarks',
@@ -51,10 +51,18 @@ import { parseStepRemarks } from '../../../core/utils/remark.utils';
             </div>
             <div class="timeline-entry">
               <div class="timeline-meta-bar">
-                <span class="timeline-timestamp">
-                  <i class="pi pi-clock" aria-hidden="true"></i>
-                  {{ safeDate(rmk.created_at) | date: 'dd-MM-yyyy, hh:mm a' }}
-                </span>
+                <div class="timeline-meta-info">
+                  <span class="timeline-timestamp">
+                    <i class="pi pi-clock" aria-hidden="true"></i>
+                    {{ safeDate(rmk.created_at) | date: 'dd-MM-yyyy, hh:mm a' }}
+                  </span>
+                  @if (rmk.user) {
+                  <span class="timeline-author">
+                    <i class="pi pi-user" aria-hidden="true"></i>
+                    {{ rmk.user }}
+                  </span>
+                  }
+                </div>
                 @if (canDelete()) {
                 <button type="button" class="timeline-delete-btn" pTooltip="Delete remark" tooltipPosition="left"
                   [attr.aria-label]="'Delete remark from ' + (safeDate(rmk.created_at) | date: 'dd-MM-yyyy')"
@@ -109,10 +117,18 @@ import { parseStepRemarks } from '../../../core/utils/remark.utils';
           </div>
           <div class="timeline-entry">
             <div class="timeline-meta-bar">
-              <span class="timeline-timestamp">
-                <i class="pi pi-clock" aria-hidden="true"></i>
-                {{ safeDate(rmk.created_at) | date: 'dd-MM-yyyy, hh:mm a' }}
-              </span>
+              <div class="timeline-meta-info">
+                <span class="timeline-timestamp">
+                  <i class="pi pi-clock" aria-hidden="true"></i>
+                  {{ safeDate(rmk.created_at) | date: 'dd-MM-yyyy, hh:mm a' }}
+                </span>
+                @if (rmk.user) {
+                <span class="timeline-author">
+                  <i class="pi pi-user" aria-hidden="true"></i>
+                  {{ rmk.user }}
+                </span>
+                }
+              </div>
               <button type="button" class="dlg-remark-remove" [attr.aria-label]="'Remove remark ' + (i + 1)"
                 pTooltip="Remove remark" tooltipPosition="top" (click)="onRemoveDialog(i)">
                 <i class="pi pi-times" aria-hidden="true"></i>
@@ -175,11 +191,7 @@ export class StepRemarksComponent {
     const text = this.newText().trim();
     if (!text) return;
     const current = this.parsedRemarks();
-    const newItem: StepRemarkItem = {
-      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      text,
-      created_at: new Date().toISOString(),
-    };
+    const newItem = createStepRemarkItem(text);
     const updated = [...current, newItem];
     this.remarksChange.emit(updated);
     this.newText.set('');
@@ -197,11 +209,7 @@ export class StepRemarksComponent {
   public flushPendingDialogRemark(): StepRemarkItem | null {
     const text = this.newText().trim();
     if (!text) return null;
-    const newItem: StepRemarkItem = {
-      id: `rmk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      text,
-      created_at: new Date().toISOString(),
-    };
+    const newItem = createStepRemarkItem(text);
     this.newText.set('');
     return newItem;
   }

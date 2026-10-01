@@ -1,4 +1,5 @@
 import { Attachment } from './attachment.model';
+import { RemarkPayloadItem } from './step-remark.model';
 
 export interface QuotationRequestItem {
   id?: number;
@@ -13,7 +14,7 @@ export interface QuotationRequest {
   supplier_name?: string;
   quotation_requested_date: string;
   supplier_contacted: boolean;
-  remarks?: string[] | string;
+  remarks?: RemarkPayloadItem[] | string[] | string;
   attachments: Attachment[];
   items: QuotationRequestItem[];
   created_at?: string;
@@ -25,7 +26,7 @@ export interface QuotationRequestCreateInput {
   supplier_id: number;
   quotation_requested_date: string;
   supplier_contacted: boolean;
-  remarks: string[];
+  remarks: RemarkPayloadItem[] | string[];
   items: QuotationRequestItem[];
 }
 
@@ -34,7 +35,7 @@ export interface QuotationRequestUpdateInput {
   supplier_id?: number;
   quotation_requested_date?: string;
   supplier_contacted?: boolean;
-  remarks?: string[];
+  remarks?: RemarkPayloadItem[] | string[];
   items?: QuotationRequestItem[];
 }
 
