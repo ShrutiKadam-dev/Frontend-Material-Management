@@ -1343,31 +1343,27 @@ $pc-info-bg: #edf4fc;
   margin-top: 4px;
 }
 
-.edit-details-btn {
-  width: 100% !important;
-  justify-content: center !important;
-  height: 42px !important;
-  border-radius: 12px !important;
-  font-weight: 750 !important;
-  font-size: 0.88rem !important;
-  box-shadow: 0 2px 8px rgba(192, 82, 47, 0.22);
-}
-
+.details-footer-actions-row,
 .details-footer-secondary-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
 
+  .edit-details-btn,
   .close-details-btn,
   .remove-details-btn {
     width: 100% !important;
     justify-content: center !important;
-    height: 38px !important;
+    height: 40px !important;
     border-radius: 12px !important;
-    font-weight: 650 !important;
-    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
   }
+}
+
+.edit-details-btn {
+  box-shadow: 0 2px 8px rgba(192, 82, 47, 0.22);
 }
 
 .remove-details-btn {
@@ -2013,5 +2009,143 @@ $pc-info-bg: #edf4fc;
   .mpc-financials {
     align-items: flex-start;
     text-align: left;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MODERN SEAMLESS ENTITY CARD (Customers & Suppliers)
+   Zero nested box containment; airy typography-driven layout
+══════════════════════════════════════════════════════════════════ */
+
+.entity-poc-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid #f5f4f0;
+  border-bottom: 1px solid #f5f4f0;
+
+  .poc-lead {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .poc-avatar {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border-radius: 50%;
+    background: #fbf2ed;
+    color: #c0522f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11.5px;
+    flex-shrink: 0;
+  }
+
+  .poc-details {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .poc-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1c1917;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .poc-badge {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #78716c;
+    background: #f5f4f0;
+    border-radius: 4px;
+    padding: 1.5px 6px;
+    letter-spacing: 0.02em;
+  }
+
+  .poc-more-pill {
+    font-size: 11px;
+    font-weight: 700;
+    color: #c0522f;
+    background: #fbf2ed;
+    border-radius: 999px;
+    padding: 2px 7px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+.entity-channels-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 0;
+
+  .entity-channel-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #57534e;
+    text-decoration: none;
+    transition: color 140ms ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    .channel-icon {
+      font-size: 12px;
+      color: #c0522f;
+      flex-shrink: 0;
+    }
+
+    &:hover {
+      color: #c0522f;
+      text-decoration: underline;
+    }
+  }
+}
+
+.entity-profile-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  position: relative;
+}
+
+.entity-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.entity-date-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #a8a29e;
+  margin-left: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+
+  i {
+    font-size: 11px;
+    color: #a8a29e;
   }
 }

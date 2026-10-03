@@ -22,53 +22,6 @@
     </div>
   </header>
 
-  <!-- ── 2. KPI Summary Ribbon ─────────────────────────────────────────── -->
-  <div class="metrics-ribbon" role="region" aria-label="Customers statistics">
-    <!-- Stat 1: Total Accounts -->
-    <div class="metric-card app-panel">
-      <div class="metric-icon-wrap metric-icon-wrap--primary" aria-hidden="true">
-        <i class="pi pi-users"></i>
-      </div>
-      <div class="metric-content">
-        <span class="metric-label">Total Accounts</span>
-        <strong class="metric-value">{{ totalCount() }}</strong>
-      </div>
-    </div>
-
-    <!-- Stat 2: Verified Contacts -->
-    <div class="metric-card app-panel">
-      <div class="metric-icon-wrap metric-icon-wrap--success" aria-hidden="true">
-        <i class="pi pi-check-circle"></i>
-      </div>
-      <div class="metric-content">
-        <span class="metric-label">Verified Contacts</span>
-        <strong class="metric-value">{{ verifiedContactsCount() }}</strong>
-      </div>
-    </div>
-
-    <!-- Stat 3: Valid Addresses -->
-    <div class="metric-card app-panel">
-      <div class="metric-icon-wrap metric-icon-wrap--info" aria-hidden="true">
-        <i class="pi pi-map-marker"></i>
-      </div>
-      <div class="metric-content">
-        <span class="metric-label">Client Locations</span>
-        <strong class="metric-value">{{ withAddressCount() }}</strong>
-      </div>
-    </div>
-
-    <!-- Stat 4: Recently Updated -->
-    <div class="metric-card app-panel">
-      <div class="metric-icon-wrap metric-icon-wrap--accent" aria-hidden="true">
-        <i class="pi pi-history"></i>
-      </div>
-      <div class="metric-content">
-        <span class="metric-label">Active / Recent</span>
-        <strong class="metric-value">{{ recentCount() }}</strong>
-      </div>
-    </div>
-  </div>
-
   <!-- ── 3. Controls Panel (Search & View Mode) ─────────────────────────── -->
   <div class="control-panel app-panel">
     <!-- Search Bar -->
@@ -146,104 +99,91 @@
     @for (customer of filteredCustomers(); track customer.id) {
     <article class="modern-project-card modern-entity-card">
 
-      <!-- 1. Top Row: Chip Group (Left) & Date (Right) -->
-      <div class="mpc-top-row">
-        <div class="mpc-chip-group">
-          <span class="mpc-chip mpc-chip--id" pTooltip="Customer ID" tooltipPosition="top">
-            CUST-{{ customer.id < 10 ? '0' + customer.id : customer.id }} </span>
-              @if (getNickname(customer.name); as nick) {
-              <span class="mpc-chip mpc-chip--nickname" [title]="'Nickname: ' + nick">
-                <i class="pi pi-tag" aria-hidden="true"></i>
-                {{ nick }}
-              </span>
-              }
-        </div>
-
-        <div class="mpc-meta-block">
-          <span class="mpc-date" [title]="'Added: ' + (customer.created_at | date:'dd-MM-yyyy')">
-            <i class="pi pi-calendar" aria-hidden="true"></i>
-            {{ customer.created_at | date:'d MMM yyyy' }}
-          </span>
-        </div>
-      </div>
-
-      <!-- 2. Profile Info Hero: Avatar + Company Name + Location -->
+      <!-- 1. Profile Info Hero: Avatar + Company Name & Nickname + Location + Date (No Customer ID) -->
       <div class="entity-profile-header">
         <div class="entity-avatar-box" aria-hidden="true">
           {{ initials(customer.name) }}
         </div>
         <div class="entity-meta-stack">
-          <h2 class="mpc-title" (click)="openDetailsDialog(customer)" [title]="customer.name" tabindex="0"
-            (keydown.enter)="openDetailsDialog(customer)">
-            {{ getDisplayName(customer.name) }}
-          </h2>
-          @if (getCleanAddr(customer.address); as cleanAddr) {
+          <div class="entity-title-row">
+            <h2 class="mpc-title" (click)="openDetailsDialog(customer)" [title]="customer.name" tabindex="0"
+              (keydown.enter)="openDetailsDialog(customer)">
+              {{ getDisplayName(customer.name) }}
+            </h2>
+            @if (getNickname(customer.name); as nick) {
+            <span class="mpc-nickname-tag" [title]="'Nickname: ' + nick">
+              <i class="pi pi-tag" aria-hidden="true"></i>
+              {{ nick }}
+            </span>
+            }
+          </div>
+          @if (getCleanAddr(customer); as cleanAddr) {
           <div class="mpc-location" [title]="cleanAddr">
             <i class="pi pi-map-marker location-icon" aria-hidden="true"></i>
             <span>{{ cleanAddr }}</span>
           </div>
           }
         </div>
+
+        <span class="entity-date-meta" [title]="'Added: ' + (customer.created_at | date:'dd-MM-yyyy')">
+          <i class="pi pi-calendar" aria-hidden="true"></i>
+          {{ customer.created_at | date:'d MMM yyyy' }}
+        </span>
       </div>
 
-      <!-- 3. Unified Contact & POC Box -->
-      <div class="entity-contact-card" aria-label="Customer contact info">
-        <!-- POC Header Line -->
-        @if (getPrimaryPoc(customer); as primaryPoc) {
-        <div class="poc-header-row">
-          <div class="poc-lead">
-            <div class="poc-icon-box" aria-hidden="true">
-              <i class="pi pi-user"></i>
-            </div>
-            <div class="poc-info">
-              <strong class="poc-name">{{ primaryPoc.name }}</strong>
-              <span class="poc-badge">{{ primaryPoc.designation || 'PRIMARY CONTACT' }}</span>
-            </div>
+      <!-- 2. Primary Contact / POC Line (Clean, No Box Containment) -->
+      @if (getPrimaryPoc(customer); as primaryPoc) {
+      <div class="entity-poc-flow">
+        <div class="poc-lead">
+          <div class="poc-avatar" aria-hidden="true">
+            <i class="pi pi-user"></i>
           </div>
-          @if (getCustomerPocs(customer).length > 1) {
-          <span class="poc-count-badge" pTooltip="Multiple contacts available" tooltipPosition="top">
-            +{{ getCustomerPocs(customer).length - 1 }} more
-          </span>
-          }
+          <div class="poc-details">
+            <span class="poc-name">{{ primaryPoc.name }}</span>
+            <span class="poc-badge">{{ primaryPoc.designation || 'Primary Contact' }}</span>
+          </div>
         </div>
+        @if (getCustomerPocs(customer).length > 1) {
+        <span class="poc-more-pill" pTooltip="Multiple contacts available" tooltipPosition="top">
+          +{{ getCustomerPocs(customer).length - 1 }} more
+        </span>
+        }
+      </div>
+      }
+
+      <!-- 3. Direct Communication Channels (Clean Aligned Flow) -->
+      <div class="entity-channels-flow">
+        @if (customer.email) {
+        <a [href]="'mailto:' + customer.email" class="entity-channel-link" [title]="customer.email">
+          <i class="pi pi-envelope channel-icon" aria-hidden="true"></i>
+          <span>{{ customer.email }}</span>
+        </a>
         }
 
-        <!-- Direct communication channels -->
-        <div class="contact-channels-list">
-          @if (customer.email) {
-          <div class="contact-channel-item">
-            <i class="pi pi-envelope contact-icon" aria-hidden="true"></i>
-            <a [href]="'mailto:' + customer.email" class="contact-link" [title]="customer.email">
-              {{ customer.email }}
-            </a>
-          </div>
-          }
-
-          @if (customer.contact_number) {
-          <div class="contact-channel-item">
-            <i class="pi pi-phone contact-icon" aria-hidden="true"></i>
-            <a [href]="'tel:' + customer.contact_number" class="contact-link" [title]="customer.contact_number">
-              {{ customer.contact_number }}
-            </a>
-          </div>
-          }
-        </div>
+        @if (customer.contact_number) {
+        <a [href]="'tel:' + customer.contact_number" class="entity-channel-link" [title]="customer.contact_number">
+          <i class="pi pi-phone channel-icon" aria-hidden="true"></i>
+          <span>{{ customer.contact_number }}</span>
+        </a>
+        }
       </div>
 
-      <!-- 4. Card Actions Footer (Matching Project Card) -->
-      <div class="mpc-footer">
-        <div class="mpc-footer-actions">
-          <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm edit-card-btn"
-            pTooltip="Edit Customer" tooltipPosition="top" (click)="openEditDialog(customer)"
-            aria-label="Edit customer details"></button>
-
-          <button pButton type="button" icon="pi pi-trash"
-            class="p-button-text p-button-sm p-button-danger remove-card-btn" (click)="deleteCustomer(customer)"
-            pTooltip="Remove Customer" tooltipPosition="top" aria-label="Remove customer"></button>
+      <!-- 4. Card Footer: Ghost Utility Actions & Primary CTA -->
+      <div class="mpc-bottom-bar">
+        <div class="mpc-ghost-actions">
+          <button type="button" class="mpc-ghost-btn" (click)="openEditDialog(customer)" pTooltip="Edit Customer"
+            tooltipPosition="top" aria-label="Edit customer details">
+            <i class="pi pi-pencil" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="mpc-ghost-btn mpc-ghost-btn--danger" (click)="deleteCustomer(customer)"
+            pTooltip="Remove Customer" tooltipPosition="top" aria-label="Remove customer">
+            <i class="pi pi-trash" aria-hidden="true"></i>
+          </button>
         </div>
 
         <button pButton type="button" icon="pi pi-arrow-up-right" iconPos="right" label="View Profile"
-          class="launch-pipeline-btn" (click)="openDetailsDialog(customer)" aria-label="View customer profile"></button>
+          class="mpc-pipeline-cta" (click)="openDetailsDialog(customer)" aria-label="View customer profile">
+        </button>
       </div>
 
     </article>
@@ -327,10 +267,14 @@
 
           <!-- Address Column -->
           <td class="td-address">
-            <div class="address-cell" [title]="getCleanAddr(customer.address)">
+            @if (getCleanAddr(customer); as cleanAddr) {
+            <div class="address-cell" [title]="cleanAddr">
               <i class="pi pi-map-marker cell-icon" aria-hidden="true"></i>
-              <span>{{ getCleanAddr(customer.address) }}</span>
+              <span>{{ cleanAddr }}</span>
             </div>
+            } @else {
+            <span class="text-muted">—</span>
+            }
           </td>
 
           <!-- Created Date Column -->
@@ -453,9 +397,8 @@
               </label>
               <p-iconfield>
                 <p-inputicon class="pi pi-user" />
-                <input pInputText [id]="'poc-name-' + idx" formControlName="name"
-                  placeholder="Enter contact name" class="dialog-input"
-                  [attr.aria-invalid]="poc.get('name')?.invalid && poc.get('name')?.touched" />
+                <input pInputText [id]="'poc-name-' + idx" formControlName="name" placeholder="Enter contact name"
+                  class="dialog-input" [attr.aria-invalid]="poc.get('name')?.invalid && poc.get('name')?.touched" />
               </p-iconfield>
               @if (poc.get('name')?.invalid && (poc.get('name')?.dirty || poc.get('name')?.touched)) {
               <p class="field-error-msg" role="alert">
@@ -701,7 +644,7 @@
         <span class="mpc-chip mpc-chip--nickname"><i class="pi pi-tag" aria-hidden="true"></i> {{ nick }}</span>
       </div>
       }
-      @if (getCleanAddr(customer.address); as cleanAddr) {
+      @if (getCleanAddr(customer); as cleanAddr) {
       <p class="details-hero-address">
         <i class="pi pi-map-marker" aria-hidden="true"></i>
         <span>{{ cleanAddr }}</span>
@@ -774,14 +717,11 @@
     </div>
   </div>
 
-  <!-- Details Footer Actions (Stacked Modern Layout) -->
+  <!-- Details Footer Actions -->
   <div class="details-footer">
-    <button pButton type="button" icon="pi pi-pencil" label="Edit Customer" class="edit-details-btn create-entity-btn"
-      (click)="detailsVisible.set(false); openEditDialog(customer)"></button>
-
-    <div class="details-footer-secondary-row">
-      <button pButton type="button" label="Close" class="close-details-btn p-button-outlined"
-        (click)="detailsVisible.set(false)"></button>
+    <div class="details-footer-actions-row">
+      <button pButton type="button" icon="pi pi-pencil" label="Edit Customer" class="edit-details-btn create-entity-btn"
+        (click)="detailsVisible.set(false); openEditDialog(customer)"></button>
       <button pButton type="button" icon="pi pi-trash" label="Remove Customer"
         class="remove-details-btn p-button-outlined p-button-danger" (click)="deleteCustomer(customer)"></button>
     </div>

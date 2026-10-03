@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   formatStructuredAddress,
+  getEntityFullAddress,
   lookupCityLocation,
   parseAddressString,
   StructuredAddress,
@@ -48,6 +49,40 @@ describe('Address Utilities', () => {
 
       const formatted = formatStructuredAddress(addr);
       expect(formatted).toBe('456 Industrial Way, Ahmedabad, Gujarat - 380001');
+    });
+  });
+
+  describe('getEntityFullAddress', () => {
+    it('should format address from structured fields', () => {
+      const supplier = {
+        street: 'Avenida Beloki 10',
+        city: 'Tolosa',
+        state: 'Guipuzcoa',
+        pincode: '20400',
+        country: 'Spain',
+      };
+      expect(getEntityFullAddress(supplier)).toBe(
+        'Avenida Beloki 10, Tolosa, Guipuzcoa - 20400, Spain',
+      );
+    });
+
+    it('should fallback to clean address string when structured fields are absent', () => {
+      const entity = {
+        address: 'Pimpri MIDC, Pune, Maharashtra - 411018, India\n---\nPOCs:[{"name":"Raj"}]',
+      };
+      expect(getEntityFullAddress(entity)).toBe(
+        'Pimpri MIDC, Pune, Maharashtra - 411018, India',
+      );
+    });
+
+    it('should handle raw string input gracefully', () => {
+      expect(getEntityFullAddress('Main Road, Mumbai')).toBe('Main Road, Mumbai');
+    });
+
+    it('should return empty string for null, undefined, or empty object', () => {
+      expect(getEntityFullAddress(null)).toBe('');
+      expect(getEntityFullAddress(undefined)).toBe('');
+      expect(getEntityFullAddress({})).toBe('');
     });
   });
 

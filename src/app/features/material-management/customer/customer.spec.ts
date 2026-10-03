@@ -136,4 +136,28 @@ describe('Customer', () => {
     expect(lastPayload.pocs[0].email).toBe('rajesh@tatamotors.com');
     expect(lastPayload.pocs[0].contact_number).toBe('9876543210');
   });
+
+  it('should return formatted address for customer with structured address fields', () => {
+    const customer: any = {
+      id: 5,
+      name: 'Test Customer',
+      street: 'Pimpri Plant Gate 2',
+      city: 'Pune',
+      state: 'Maharashtra',
+      pincode: '411018',
+      country: 'India',
+    };
+    expect((component as any).getCleanAddr(customer)).toBe(
+      'Pimpri Plant Gate 2, Pune, Maharashtra - 411018, India',
+    );
+  });
+
+  it('should fallback to legacy address property when structured fields are not present', () => {
+    const customer: any = {
+      id: 6,
+      name: 'Legacy Customer',
+      address: 'Simple Road, City',
+    };
+    expect((component as any).getCleanAddr(customer)).toBe('Simple Road, City');
+  });
 });

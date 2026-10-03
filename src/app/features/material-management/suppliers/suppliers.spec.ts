@@ -136,4 +136,28 @@ describe('Suppliers', () => {
     expect(lastPayload.pocs[0].email).toBe('carlos@pasaban.com');
     expect(lastPayload.pocs[0].contact_number).toBe('9876543210');
   });
+
+  it('should return formatted address for supplier with structured address fields', () => {
+    const supplier: any = {
+      id: 5,
+      name: 'Test Supplier',
+      street: 'Tolosa Factory Road',
+      city: 'Tolosa',
+      state: 'Guipuzcoa',
+      pincode: '20400',
+      country: 'Spain',
+    };
+    expect((component as any).getCleanAddr(supplier)).toBe(
+      'Tolosa Factory Road, Tolosa, Guipuzcoa - 20400, Spain',
+    );
+  });
+
+  it('should fallback to legacy address property when structured fields are not present', () => {
+    const supplier: any = {
+      id: 6,
+      name: 'Legacy Supplier',
+      address: 'Simple Road, City',
+    };
+    expect((component as any).getCleanAddr(supplier)).toBe('Simple Road, City');
+  });
 });

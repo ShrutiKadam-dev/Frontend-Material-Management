@@ -1210,7 +1210,7 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-control);
-  overflow: hidden;
+  overflow: visible;
   width: 100%;
 
   .p-datatable-table-container,
@@ -1897,7 +1897,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-control);
   box-shadow: 0 1px 3px rgba(36, 27, 24, 0.03);
-  overflow: hidden;
+  overflow: visible;
   width: 100%;
 
   .p-datatable-table {
@@ -2112,11 +2112,16 @@
     border-left: none !important;
     border-right: none !important;
     border-top: 1px solid var(--color-border, #e7e4de) !important;
+    border-bottom-left-radius: var(--radius-control, 8px) !important;
+    border-bottom-right-radius: var(--radius-control, 8px) !important;
     display: flex !important;
     flex-wrap: wrap !important;
     gap: 6px !important;
     justify-content: flex-end !important;
     padding: 10px 16px !important;
+    position: relative !important;
+    overflow: visible !important;
+    z-index: 5 !important;
 
     .p-paginator-current {
       color: var(--color-muted, #6b6864) !important;
@@ -2210,6 +2215,7 @@
       margin-left: 8px !important;
       min-width: 64px !important;
       padding: 0 8px 0 10px !important;
+      position: relative !important;
       transition: all 140ms ease !important;
 
       &:hover {
@@ -2257,6 +2263,203 @@
           color: var(--color-muted, #6b6864) !important;
           font-size: 0.7rem !important;
         }
+      }
+
+      /* Allow overlay container to be positioned relative to dropdown */
+      p-overlay {
+        position: static !important;
+      }
+
+      /* ── Dropup Behavior: Force overlay to open ABOVE the paginator button ── */
+      p-overlay > div,
+      .p-overlay {
+        bottom: calc(100% + 4px) !important;
+        top: auto !important;
+        left: auto !important;
+        right: 0 !important;
+        margin: 0 !important;
+        position: absolute !important;
+        transform-origin: bottom right !important;
+        z-index: 1200 !important;
+      }
+
+      .p-select-overlay,
+      .p-dropdown-panel {
+        background: var(--color-surface, #ffffff) !important;
+        border: 1px solid var(--color-border, #e7e4de) !important;
+        border-radius: 8px !important;
+        bottom: calc(100% + 4px) !important;
+        box-shadow: 0 -8px 24px rgba(36, 27, 24, 0.14), 0 -2px 6px rgba(36, 27, 24, 0.08) !important;
+        left: auto !important;
+        margin: 0 !important;
+        min-width: 68px !important;
+        overflow: hidden !important;
+        position: absolute !important;
+        right: 0 !important;
+        top: auto !important;
+        transform-origin: bottom right !important;
+        z-index: 1200 !important;
+      }
+
+      .p-select-list-container {
+        max-height: 180px !important;
+        overflow-y: auto !important;
+      }
+
+      .p-select-list,
+      .p-dropdown-items {
+        list-style: none !important;
+        margin: 0 !important;
+        padding: 4px !important;
+      }
+
+      .p-select-option,
+      .p-dropdown-item {
+        align-items: center !important;
+        border-radius: 6px !important;
+        color: var(--color-heading, #1c1b1a) !important;
+        cursor: pointer !important;
+        display: flex !important;
+        font-size: 0.82rem !important;
+        font-weight: 600 !important;
+        justify-content: center !important;
+        margin: 1px 0 !important;
+        padding: 6px 12px !important;
+        transition: all 120ms ease !important;
+
+        &:hover,
+        &.p-focus {
+          background: var(--color-surface-muted, #faf9f6) !important;
+          color: var(--color-heading, #1c1b1a) !important;
+        }
+
+        &.p-select-option-selected,
+        &.p-highlight {
+          background: rgba(192, 82, 47, 0.1) !important;
+          color: var(--color-primary, #c0522f) !important;
+          font-weight: 750 !important;
+        }
+      }
+    }
+
+    /* ── Option: Left-aligned rows-per-page dropdown ── */
+    &.paginator--rpp-left {
+      .p-paginator-rpp-dropdown,
+      .p-paginator-rpp-options {
+        order: -1 !important;
+        margin-left: 0 !important;
+        margin-right: auto !important;
+
+        p-overlay > div,
+        .p-overlay,
+        .p-select-overlay,
+        .p-dropdown-panel {
+          left: 0 !important;
+          right: auto !important;
+          transform-origin: bottom left !important;
+        }
+      }
+    }
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   UNIVERSAL PAGINATOR DROPUP (Applies Globally to All Paginators)
+   ════════════════════════════════════════════════════════════ */
+.p-paginator {
+  position: relative !important;
+  overflow: visible !important;
+
+  .p-paginator-rpp-dropdown,
+  .p-paginator-rpp-options,
+  .p-select,
+  .p-dropdown {
+    position: relative !important;
+
+    p-overlay {
+      position: static !important;
+    }
+
+    p-overlay > div,
+    .p-overlay {
+      bottom: calc(100% + 4px) !important;
+      top: auto !important;
+      left: auto !important;
+      right: 0 !important;
+      margin: 0 !important;
+      position: absolute !important;
+      transform-origin: bottom right !important;
+      z-index: 1200 !important;
+    }
+
+    .p-select-overlay,
+    .p-dropdown-panel {
+      background: var(--color-surface, #ffffff) !important;
+      border: 1px solid var(--color-border, #e7e4de) !important;
+      border-radius: 8px !important;
+      bottom: calc(100% + 4px) !important;
+      box-shadow: 0 -8px 24px rgba(36, 27, 24, 0.14), 0 -2px 6px rgba(36, 27, 24, 0.08) !important;
+      left: auto !important;
+      margin: 0 !important;
+      min-width: 68px !important;
+      overflow: hidden !important;
+      position: absolute !important;
+      right: 0 !important;
+      top: auto !important;
+      transform-origin: bottom right !important;
+      z-index: 1200 !important;
+    }
+
+    .p-select-list,
+    .p-dropdown-items {
+      list-style: none !important;
+      margin: 0 !important;
+      padding: 4px !important;
+    }
+
+    .p-select-option,
+    .p-dropdown-item {
+      align-items: center !important;
+      border-radius: 6px !important;
+      color: var(--color-heading, #1c1b1a) !important;
+      cursor: pointer !important;
+      display: flex !important;
+      font-size: 0.82rem !important;
+      font-weight: 600 !important;
+      justify-content: center !important;
+      margin: 1px 0 !important;
+      padding: 6px 12px !important;
+      transition: all 120ms ease !important;
+
+      &:hover,
+      &.p-focus {
+        background: var(--color-surface-muted, #faf9f6) !important;
+        color: var(--color-heading, #1c1b1a) !important;
+      }
+
+      &.p-select-option-selected,
+      &.p-highlight {
+        background: rgba(192, 82, 47, 0.1) !important;
+        color: var(--color-primary, #c0522f) !important;
+        font-weight: 750 !important;
+      }
+    }
+  }
+
+  &.paginator--rpp-left {
+    .p-paginator-rpp-dropdown,
+    .p-paginator-rpp-options {
+      order: -1 !important;
+      margin-left: 0 !important;
+      margin-right: auto !important;
+
+      p-overlay > div,
+      .p-overlay,
+      .p-select-overlay,
+      .p-dropdown-panel {
+        left: 0 !important;
+        right: auto !important;
+        transform-origin: bottom left !important;
       }
     }
   }

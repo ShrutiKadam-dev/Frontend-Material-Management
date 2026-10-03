@@ -1,3 +1,5 @@
+import { getCleanAddress } from './contact.model';
+
 export interface StructuredAddress {
   street: string;
   area?: string;
@@ -5,6 +7,16 @@ export interface StructuredAddress {
   state: string;
   pincode: string;
   country: string;
+}
+
+export interface EntityAddressSource {
+  address?: string | null;
+  street?: string | null;
+  area?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  country?: string | null;
 }
 
 /**
@@ -50,6 +62,39 @@ export function formatStructuredAddress(addr: Partial<StructuredAddress>): strin
   }
 
   return parts.join(', ');
+}
+
+/**
+ * Formats the full address of a supplier or customer entity, gracefully handling
+ * segregated address fields (street, area, city, state, pincode, country) as well
+ * as legacy raw address strings.
+ */
+export function getEntityFullAddress(
+  entity: EntityAddressSource | string | null | undefined,
+): string {
+  if (!entity) return '';
+  if (typeof entity === 'string') {
+    return getCleanAddress(entity);
+  }
+
+  const structured = formatStructuredAddress({
+    street: entity.street ?? undefined,
+    area: entity.area ?? undefined,
+    city: entity.city ?? undefined,
+    state: entity.state ?? undefined,
+    pincode: entity.pincode ?? undefined,
+    country: entity.country ?? undefined,
+  });
+
+  if (structured && structured.trim().length > 0) {
+    return structured.trim();
+  }
+
+  if (entity.address) {
+    return getCleanAddress(entity.address);
+  }
+
+  return '';
 }
 
 /**

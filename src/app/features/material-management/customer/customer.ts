@@ -13,6 +13,7 @@ import { Customer as CustomerModel, CustomerCreateInput } from '../../../core/mo
 import { CustomerService } from '../../../core/services/customer';
 import {
   formatStructuredAddress,
+  getEntityFullAddress,
   lookupCityLocation,
   parseAddressString,
   POPULAR_CITIES,
@@ -90,7 +91,7 @@ export class Customer implements OnInit {
   );
 
   protected readonly withAddressCount = computed(() =>
-    this.customers().filter((c) => Boolean(c.address && c.address.trim().length > 0)).length,
+    this.customers().filter((c) => Boolean(this.getCleanAddr(c))).length,
   );
 
   protected readonly recentCount = computed(() => {
@@ -114,7 +115,7 @@ export class Customer implements OnInit {
         const nick = (customer.nickname || parsed.nickname).toLowerCase();
         const email = (customer.email || '').toLowerCase();
         const phone = (customer.contact_number || '').toLowerCase();
-        const address = getCleanAddress(customer.address).toLowerCase();
+        const address = this.getCleanAddr(customer).toLowerCase();
         const pocs = this.getCustomerPocs(customer);
         const pocMatches = pocs.some(
           (p) =>
@@ -432,8 +433,8 @@ export class Customer implements OnInit {
     return extractNameAndNickname(fullName).nickname;
   }
 
-  protected getCleanAddr(rawAddr: string | null | undefined): string {
-    return getCleanAddress(rawAddr);
+  protected getCleanAddr(rawAddrOrCustomer: CustomerModel | string | null | undefined): string {
+    return getEntityFullAddress(rawAddrOrCustomer);
   }
 
   protected getCustomerPocs(customer: CustomerModel): PointOfContact[] {

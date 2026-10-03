@@ -13,6 +13,7 @@ import { Supplier as SupplierModel, SupplierCreateInput } from '../../../core/mo
 import { SupplierService } from '../../../core/services/supplier';
 import {
   formatStructuredAddress,
+  getEntityFullAddress,
   lookupCityLocation,
   parseAddressString,
   POPULAR_CITIES,
@@ -90,7 +91,7 @@ export class Suppliers implements OnInit {
   );
 
   protected readonly withAddressCount = computed(() =>
-    this.suppliers().filter((s) => Boolean(s.address && s.address.trim().length > 0)).length,
+    this.suppliers().filter((s) => Boolean(this.getCleanAddr(s))).length,
   );
 
   protected readonly recentCount = computed(() => {
@@ -114,7 +115,7 @@ export class Suppliers implements OnInit {
         const nick = (supplier.nickname || parsed.nickname).toLowerCase();
         const email = (supplier.email || '').toLowerCase();
         const phone = (supplier.contact_number || '').toLowerCase();
-        const address = getCleanAddress(supplier.address).toLowerCase();
+        const address = this.getCleanAddr(supplier).toLowerCase();
         const pocs = this.getSupplierPocs(supplier);
         const pocMatches = pocs.some(
           (p) =>
@@ -432,8 +433,8 @@ export class Suppliers implements OnInit {
     return extractNameAndNickname(fullName).nickname;
   }
 
-  protected getCleanAddr(rawAddr: string | null | undefined): string {
-    return getCleanAddress(rawAddr);
+  protected getCleanAddr(rawAddrOrSupplier: SupplierModel | string | null | undefined): string {
+    return getEntityFullAddress(rawAddrOrSupplier);
   }
 
   protected getSupplierPocs(supplier: SupplierModel): PointOfContact[] {
