@@ -37,29 +37,26 @@
       }
     </div>
 
-    <!-- Health / Status Filters -->
-    <div class="filter-pills-list" role="tablist" aria-label="Filter projects by health">
+    <!-- Status Filters -->
+    <div class="filter-pills-list" role="tablist" aria-label="Filter projects by status">
       <button type="button" class="filter-pill" [class.filter-pill--active]="selectedHealthFilter() === 'all'"
         (click)="setFilter('all')">
         All ({{ projects().length }})
       </button>
-      <button type="button" class="filter-pill" [class.filter-pill--active]="selectedHealthFilter() === 'on_track'"
-        (click)="setFilter('on_track')">
-        <span class="status-dot status-dot--track" aria-hidden="true"></span>
-        On Track ({{ onTrackCount() }})
-      </button>
-      <button type="button" class="filter-pill" [class.filter-pill--active]="selectedHealthFilter() === 'delayed'"
-        (click)="setFilter('delayed')">
-        <span class="status-dot status-dot--delayed" aria-hidden="true"></span>
-        Delayed ({{ delayedCount() }})
-      </button>
       <button type="button" class="filter-pill" [class.filter-pill--active]="selectedHealthFilter() === 'in_progress'"
         (click)="setFilter('in_progress')">
-        In Progress
+        <span class="status-dot status-dot--in-progress" aria-hidden="true"></span>
+        In Progress ({{ inProgressCount() }})
+      </button>
+      <button type="button" class="filter-pill" [class.filter-pill--active]="selectedHealthFilter() === 'pending'"
+        (click)="setFilter('pending')">
+        <span class="status-dot status-dot--pending" aria-hidden="true"></span>
+        Pending ({{ pendingCount() }})
       </button>
       <button type="button" class="filter-pill" [class.filter-pill--active]="selectedHealthFilter() === 'completed'"
         (click)="setFilter('completed')">
-        Completed
+        <span class="status-dot status-dot--completed" aria-hidden="true"></span>
+        Completed ({{ completedCount() }})
       </button>
     </div>
 
@@ -124,126 +121,119 @@
     @for (project of filteredProjects(); track project.id) {
     <article class="modern-project-card" [class.modern-project-card--delayed]="project.health_status === 'delayed'">
 
-      <!-- 1. Top Row: Chip Group (Left) & Price Block (Right) -->
-      <div class="mpc-top-row">
-        <div class="mpc-chip-group">
-          <span class="mpc-chip mpc-chip--id" pTooltip="Project Code" tooltipPosition="top">
-            {{ project.project_code || ('PRJ-' + (project.id < 10 ? '0' + project.id : project.id)) }} </span>
-              @if (project.nickname) {
-              <span class="mpc-chip mpc-chip--nickname" [title]="'Nickname: ' + (project.nickname)">
-                <i class="pi pi-tag" aria-hidden="true"></i>
-                {{ project.nickname }}
-              </span>
-              }
-              @if (project.health_status === 'delayed' || project.health_status === 'at_risk') {
-              <span class="mpc-chip mpc-chip--status"
-                [class]="'mpc-chip mpc-chip--status ' + getHealthBadgeClass(project.health_status)">
-                <span class="status-dot" aria-hidden="true"></span>
-                {{ getHealthLabel(project.health_status) }}
-              </span>
-              }
-              <span class="mpc-chip mpc-chip--phase"
-                [class]="'mpc-chip mpc-chip--phase ' + getStatusBadgeClass(project.status)">
-                {{ getStatusLabel(project.status) }}
-              </span>
+      <!-- 1. Card Top Bar: Badges & Commercials -->
+      <div class="mpc-header">
+        <div class="mpc-badge-cluster">
+          <span class="mpc-code-badge" pTooltip="Project Code" tooltipPosition="top">
+            {{ project.project_code || ('PRJ-' + (project.id < 10 ? '0' + project.id : project.id)) }}
+          </span>
+
+          <span class="mpc-status-chip"
+            [class]="'mpc-status-chip mpc-status-chip--' + getProjectStatus(project)">
+            <span class="status-live-dot" aria-hidden="true"></span>
+            {{ getStatusLabel(getProjectStatus(project)) }}
+          </span>
+
+          @if (project.nickname && project.nickname.toLowerCase() !== project.project_title.toLowerCase()) {
+          <span class="mpc-nickname-tag" [title]="'Nickname: ' + project.nickname">
+            <i class="pi pi-tag" aria-hidden="true"></i>
+            {{ project.nickname }}
+          </span>
+          }
         </div>
 
-        <div class="mpc-price-block">
-          <div class="price-amount-row">
-            <span class="price-currency">{{ project.currency || 'INR' }}</span>
-            <span class="price-value">₹{{ (project.total_value || 0) | number:'1.2-2' }}</span>
+        <div class="mpc-financials">
+          <div class="financials-amount">
+            <span class="financials-currency">{{ project.currency || 'INR' }}</span>
+            <span class="financials-value">₹{{ (project.total_value || 0) | number:'1.2-2' }}</span>
           </div>
-          <div class="price-dates-stack" style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
-            <span class="price-date" [title]="'Created on ' + (project.created_at | appDate:'d MMM yyyy')">
-              Created: {{ project.created_at | appDate:'d MMM yyyy' }}
-            </span>
-            <span class="price-date" [title]="'Last updated on ' + ((project.updated_at || project.created_at) | appDate:'d MMM yyyy')">
-              Updated: {{ (project.updated_at || project.created_at) | appDate:'d MMM yyyy' }}
-            </span>
-          </div>
+          <span class="financials-date" [title]="'Last updated: ' + ((project.updated_at || project.created_at) | appDate:'d MMM yyyy')">
+            {{ (project.updated_at || project.created_at) | appDate:'d MMM yyyy' }}
+          </span>
         </div>
       </div>
 
-      <!-- 2. Title -->
-      <h2 class="mpc-title" (click)="openDetailsDialog(project)" [title]="project.nickname || project.project_title">
-        {{ project.nickname || project.project_title }}
+      <!-- 2. Project Title -->
+      <h2 class="mpc-title" (click)="openDetailsDialog(project)" [title]="project.project_title || project.nickname">
+        {{ project.project_title || project.nickname }}
       </h2>
 
-      <!-- 3. Customer / Supplier 2-Column Grid -->
-      <div class="mpc-parties-grid">
-        <div class="party-cell party-cell--customer">
-          <div class="party-icon-box" aria-hidden="true">
+      <!-- 3. Supply Chain Relationship Flow (No Boxed Table!) -->
+      <div class="mpc-supply-flow">
+        <div class="supply-node">
+          <div class="supply-avatar supply-avatar--customer" aria-hidden="true">
             <i class="pi pi-building"></i>
           </div>
-          <div class="party-text-stack">
-            <span class="party-label">Customer</span>
-            <span class="party-value" [title]="project.customer_name || getCustomerName(project.customer_id)">
+          <div class="supply-meta">
+            <span class="supply-role">Customer</span>
+            <span class="supply-name" [title]="project.customer_name || getCustomerName(project.customer_id)">
               {{ project.customer_name || getCustomerName(project.customer_id) }}
             </span>
           </div>
         </div>
 
-        <div class="party-cell party-cell--supplier">
-          <div class="party-icon-box" aria-hidden="true">
+        <div class="supply-flow-arrow" aria-hidden="true">
+          <i class="pi pi-arrow-right"></i>
+        </div>
+
+        <div class="supply-node">
+          <div class="supply-avatar supply-avatar--supplier" aria-hidden="true">
             <i class="pi pi-truck"></i>
           </div>
-          <div class="party-text-stack">
-            <span class="party-label">Supplier</span>
-            <span class="party-value" [title]="project.supplier_name || getSupplierName(project.supplier_id)">
+          <div class="supply-meta">
+            <span class="supply-role">Supplier</span>
+            <span class="supply-name" [title]="project.supplier_name || getSupplierName(project.supplier_id)">
               {{ project.supplier_name || getSupplierName(project.supplier_id) }}
             </span>
           </div>
         </div>
       </div>
 
-      <!-- 4. Progress Section -->
-      <div class="mpc-progress-section">
-        <div class="progress-info-row">
-          <div class="progress-stage-group">
-            <span class="step-chip">
-              Step {{ project.current_step_number || 1 }} of {{ project.total_steps || 15 }}
-            </span>
-            <span class="stage-name">
-              {{ project.current_step_name || 'Customer Query Initiated' }}
-            </span>
+      <!-- 4. Pipeline Lifecycle Progress -->
+      <div class="mpc-lifecycle">
+        <div class="lifecycle-meta">
+          <div class="lifecycle-stage">
+            <span class="stage-step-pill">Step {{ project.current_step_number || 1 }}/{{ project.total_steps || 15 }}</span>
+            <span class="stage-title">{{ project.current_step_name || 'Customer Query Initiated' }}</span>
           </div>
-          <span class="progress-percent">{{ getProgressPercent(project) }}%</span>
+          <span class="lifecycle-percent">{{ getProgressPercent(project) }}%</span>
         </div>
 
-        <div class="progress-track" role="progressbar" [attr.aria-valuenow]="getProgressPercent(project)"
+        <div class="lifecycle-track" role="progressbar" [attr.aria-valuenow]="getProgressPercent(project)"
           aria-valuemin="0" aria-valuemax="100">
-          <div class="progress-fill" [style.width.%]="getProgressPercent(project)"
-            [class.progress-fill--delayed]="project.health_status === 'delayed'"></div>
+          <div class="lifecycle-fill" [style.width.%]="getProgressPercent(project)"></div>
         </div>
       </div>
 
-      <!-- 5. Next Action Spotlight -->
+      <!-- 5. Next Action Callout (Seamless Minimal Ribbon) -->
       @if (project.next_action) {
-      <div class="mpc-next-action">
-        <div class="next-action-icon-chip" aria-hidden="true">
+      <div class="mpc-next-callout">
+        <span class="callout-bolt" aria-hidden="true">
           <i class="pi pi-bolt"></i>
-        </div>
-        <div class="next-action-text-stack">
-          <span class="next-action-label">Next action</span>
-          <p class="next-action-value" [title]="project.next_action">{{ project.next_action }}</p>
+        </span>
+        <div class="callout-body">
+          <span class="callout-tag">Next Action</span>
+          <span class="callout-text" [title]="project.next_action">{{ project.next_action }}</span>
         </div>
       </div>
       }
 
-      <!-- 6. Bottom Row: Edit/Delete (Left), Primary CTA (Right) -->
-      <div class="mpc-footer">
-        <div class="mpc-footer-actions">
-          <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm edit-card-btn"
-            pTooltip="Edit Project" tooltipPosition="top" (click)="openEditDialog(project)"
-            aria-label="Edit project"></button>
-
-          <button pButton type="button" icon="pi pi-trash"
-            class="p-button-text p-button-sm p-button-danger remove-card-btn" pTooltip="Remove Project"
-            tooltipPosition="top" (click)="deleteProject(project)" aria-label="Remove project"></button>
+      <!-- 6. Card Footer: Ghost Utility Actions & Primary CTA -->
+      <div class="mpc-bottom-bar">
+        <div class="mpc-ghost-actions">
+          <button type="button" class="mpc-ghost-btn" (click)="openEditDialog(project)" pTooltip="Edit Project"
+            tooltipPosition="top" aria-label="Edit project">
+            <i class="pi pi-pencil" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="mpc-ghost-btn mpc-ghost-btn--danger" (click)="deleteProject(project)"
+            pTooltip="Remove Project" tooltipPosition="top" aria-label="Remove project">
+            <i class="pi pi-trash" aria-hidden="true"></i>
+          </button>
         </div>
 
-        <button pButton type="button" label="Open Pipeline Dashboard" icon="pi pi-arrow-right" iconPos="right"
-          class="launch-pipeline-btn" (click)="openDetailsDialog(project)"></button>
+        <button pButton type="button" label="Pipeline Steps" icon="pi pi-arrow-right" iconPos="right"
+          class="mpc-pipeline-cta" (click)="openDetailsDialog(project)">
+        </button>
       </div>
     </article>
     }
@@ -265,7 +255,7 @@
           <th scope="col" style="min-width: 180px;">Supplier</th>
           <th scope="col" style="min-width: 220px;">Pipeline Step & Progress</th>
           <th scope="col" style="min-width: 130px; text-align: right;">Total Value</th>
-          <th scope="col" style="min-width: 120px; text-align: center;">Health</th>
+          <th scope="col" style="min-width: 120px; text-align: center;">Status</th>
           <th scope="col" style="min-width: 200px;">Next Action</th>
           <th scope="col" style="width: 110px; text-align: center;">Actions</th>
         </tr>
@@ -307,14 +297,10 @@
             ₹&nbsp;{{ (p.total_value || 0) | number:'1.2-2' }}
           </td>
           <td style="text-align: center;">
-            @if (p.health_status === 'delayed' || p.health_status === 'at_risk') {
-            <span class="health-pill" [class]="'health-pill ' + getHealthBadgeClass(p.health_status)">
-              <span class="pulse-dot" aria-hidden="true"></span>
-              {{ getHealthLabel(p.health_status) }}
+            <span class="mpc-chip mpc-chip--phase"
+              [class]="'mpc-chip mpc-chip--phase ' + getStatusBadgeClass(getProjectStatus(p))">
+              {{ getStatusLabel(getProjectStatus(p)) }}
             </span>
-            } @else {
-            <span class="text-muted" style="font-size: 0.8rem;">—</span>
-            }
           </td>
           <td>
             <span class="tbl-next-action" [title]="p.next_action || 'Pending action'">

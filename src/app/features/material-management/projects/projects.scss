@@ -386,6 +386,18 @@
   border-radius: 50%;
   display: inline-block;
 
+  &.status-dot--in-progress {
+    background: #0284c7;
+  }
+
+  &.status-dot--pending {
+    background: #f59e0b;
+  }
+
+  &.status-dot--completed {
+    background: #10b981;
+  }
+
   &.status-dot--track {
     background: #10b981;
   }

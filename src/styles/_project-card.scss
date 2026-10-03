@@ -131,6 +131,18 @@ $pc-info-bg: #edf4fc;
     color: $pc-info;
     border: 1px solid #d0ddf3;
 
+    &.status-badge--in-progress {
+      background: #edf4fc;
+      color: #1d5cb0;
+      border-color: #d0ddf3;
+    }
+
+    &.status-badge--pending {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #fde68a;
+    }
+
     &.status-badge--completed {
       background: $pc-success-bg;
       color: $pc-success;
@@ -201,6 +213,78 @@ $pc-info-bg: #edf4fc;
 
   &:hover {
     color: $pc-accent;
+  }
+}
+
+/* 3. Customer & Supplier Flow (Modern, Breathable) */
+.mpc-parties-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #faf8f5;
+  border-radius: 12px;
+  border: 1px solid #ede8e1;
+
+  .party-flow-node {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+
+    .party-flow-avatar {
+      width: 34px;
+      height: 34px;
+      min-width: 34px;
+      border-radius: 8px;
+      background: #ffffff;
+      color: $pc-accent;
+      border: 1px solid #e7e2d9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      flex-shrink: 0;
+    }
+
+    .party-flow-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .party-flow-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #78716c;
+      line-height: 1.2;
+    }
+
+    .party-flow-val {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #1c1917;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+  }
+
+  .party-flow-arrow {
+    color: #a8a29e;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0 4px;
   }
 }
 
@@ -344,50 +428,61 @@ $pc-info-bg: #edf4fc;
   }
 }
 
-/* 5. Next Action Spotlight */
+/* 5. Next Action Ribbon (Clean Left-Accent, No Boxy Heavy Border) */
+.mpc-next-ribbon,
 .mpc-next-action {
-  background: $pc-surface-tonal;
-  border: 1px solid $pc-accent-soft;
-  border-radius: 12px;
-  padding: 14px 18px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
+  padding: 10px 14px;
+  border-left: 3px solid $pc-accent;
+  background: #fbf7f4;
+  border-radius: 0 8px 8px 0;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
 
-  .next-action-icon-chip {
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
-    min-height: 34px;
-    border-radius: 8px;
-    background: $pc-accent;
-    color: #ffffff;
+  .next-action-icon-chip,
+  .next-ribbon-bullet {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    border-radius: 6px;
+    background: rgba(192, 82, 47, 0.12);
+    color: $pc-accent;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
+    font-size: 12px;
     flex-shrink: 0;
   }
 
-  .next-action-text-stack {
+  .next-action-text-stack,
+  .next-ribbon-content {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: baseline;
+    gap: 8px;
     min-width: 0;
     flex: 1;
+    flex-wrap: wrap;
   }
 
-  .next-action-label {
-    font-size: 11.5px;
-    font-weight: 600;
-    color: $pc-accent;
-    line-height: 1.2;
-  }
-
-  .next-action-value {
-    font-size: 14px;
+  .next-action-label,
+  .next-ribbon-label {
+    font-size: 11px;
     font-weight: 700;
-    color: $pc-ink;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $pc-accent;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .next-action-value,
+  .next-ribbon-val {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #292524;
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
@@ -1482,3 +1577,441 @@ $pc-info-bg: #edf4fc;
 }
 
 
+
+/* ══════════════════════════════════════════════════════════════════
+   SEAMLESS MODERN PROJECT CARD (No Box-in-a-Box Clutter)
+   Unified, breathable, high-converting SaaS layout
+══════════════════════════════════════════════════════════════════ */
+
+.modern-project-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #ede8e1;
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02);
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms ease, border-color 180ms ease;
+  position: relative;
+  box-sizing: border-box;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: #d8d4cd;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.03);
+  }
+
+  &--delayed {
+    border-left: 4px solid #f59e0b;
+  }
+}
+
+/* 1. Header */
+.mpc-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mpc-badge-cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mpc-code-badge {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #57534e;
+  background: #f5f4f0;
+  border: 1px solid #e7e4de;
+  border-radius: 6px;
+  padding: 3px 8px;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.mpc-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 650;
+  padding: 3px 9px;
+  border-radius: 6px;
+  line-height: 1;
+
+  .status-live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  &--in_progress {
+    background: #f0f9ff;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+    .status-live-dot { background: #0284c7; }
+  }
+
+  &--pending {
+    background: #fffbeb;
+    color: #92400e;
+    border: 1px solid #fde68a;
+    .status-live-dot { background: #d97706; }
+  }
+
+  &--completed {
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+    .status-live-dot { background: #16a34a; }
+  }
+}
+
+.mpc-nickname-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #c0522f;
+  background: #fbf2ed;
+  border: 1px solid #fed7aa;
+  border-radius: 6px;
+  padding: 3px 8px;
+  line-height: 1;
+
+  i { font-size: 10.5px; }
+}
+
+.mpc-financials {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+
+  .financials-amount {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .financials-currency {
+    font-size: 12px;
+    font-weight: 600;
+    color: #78716c;
+  }
+
+  .financials-value {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #1c1917;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  .financials-date {
+    font-size: 11.5px;
+    color: #a8a29e;
+    font-weight: 500;
+  }
+}
+
+/* 2. Title */
+.mpc-title {
+  font-size: 17.5px;
+  font-weight: 700;
+  color: #1c1917;
+  line-height: 1.35;
+  margin: 0;
+  cursor: pointer;
+  letter-spacing: -0.01em;
+  transition: color 140ms ease;
+
+  &:hover {
+    color: #c0522f;
+  }
+}
+
+/* 3. Supply Flow - OPEN & BREATHABLE (NO BOXES!) */
+.mpc-supply-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid #f5f4f0;
+  border-bottom: 1px solid #f5f4f0;
+
+  .supply-node {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+
+    .supply-avatar {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+
+      &--customer {
+        background: #fbf2ed;
+        color: #c0522f;
+      }
+
+      &--supplier {
+        background: #f5f4f0;
+        color: #57534e;
+      }
+    }
+
+    .supply-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+    }
+
+    .supply-role {
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #a8a29e;
+      line-height: 1.2;
+    }
+
+    .supply-name {
+      font-size: 13.5px;
+      font-weight: 650;
+      color: #1c1917;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+  }
+
+  .supply-flow-arrow {
+    color: #cbd5e1;
+    font-size: 12px;
+    flex-shrink: 0;
+    padding: 0 4px;
+  }
+}
+
+/* 4. Lifecycle Progress */
+.mpc-lifecycle {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+
+  .lifecycle-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .lifecycle-stage {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+
+    .stage-step-pill {
+      font-size: 11px;
+      font-weight: 700;
+      color: #78716c;
+      background: #f5f4f0;
+      border-radius: 4px;
+      padding: 2px 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .stage-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #292524;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .lifecycle-percent {
+    font-size: 13.5px;
+    font-weight: 750;
+    color: #c0522f;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+
+  .lifecycle-track {
+    width: 100%;
+    height: 6px;
+    background: #f1efe9;
+    border-radius: 999px;
+    overflow: hidden;
+
+    .lifecycle-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #c0522f, #e0704b);
+      transition: width 250ms ease;
+    }
+  }
+}
+
+/* 5. Next Action Callout (Linear-style minimal ribbon) */
+.mpc-next-callout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #fcf8f5;
+  border-left: 3px solid #c0522f;
+  border-radius: 0 8px 8px 0;
+
+  .callout-bolt {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    border-radius: 5px;
+    background: rgba(192, 82, 47, 0.12);
+    color: #c0522f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .callout-body {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .callout-tag {
+    font-size: 10.5px;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #c0522f;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .callout-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #292524;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* 6. Bottom Bar */
+.mpc-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid #f5f4f0;
+}
+
+.mpc-ghost-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mpc-ghost-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #78716c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: all 140ms ease;
+
+  &:hover {
+    background: #f5f4f0;
+    color: #1c1917;
+  }
+
+  &--danger:hover {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+}
+
+.mpc-pipeline-cta {
+  background: #c0522f !important;
+  border: 1px solid #c0522f !important;
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  height: 36px !important;
+  padding: 0 16px !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  box-shadow: 0 1px 3px rgba(192, 82, 47, 0.2) !important;
+  transition: all 140ms ease !important;
+
+  &:hover {
+    background: #aa4525 !important;
+    border-color: #aa4525 !important;
+    transform: translateX(1px);
+  }
+}
+
+@media (max-width: 520px) {
+  .mpc-supply-flow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+
+    .supply-flow-arrow {
+      transform: rotate(90deg);
+      align-self: center;
+    }
+  }
+
+  .mpc-financials {
+    align-items: flex-start;
+    text-align: left;
+  }
+}

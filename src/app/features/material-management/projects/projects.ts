@@ -28,7 +28,7 @@ import { ProjectService } from '../../../core/services/project';
 
 import { AppDatePipe } from '../../../core/pipes/app-date.pipe';
 
-export type HealthFilter = 'all' | 'on_track' | 'delayed' | 'in_progress' | 'completed';
+export type HealthFilter = 'all' | 'in_progress' | 'pending' | 'completed';
 export type ViewMode = 'grid' | 'table';
 
 @Component({
@@ -84,13 +84,31 @@ export class Projects implements OnInit {
     supplier_id: [null as number | null, [Validators.required]],
   });
 
-  // ── Project Filter Counts ───────────────────────────────────────
-  protected readonly onTrackCount = computed(() => {
-    return this.projects().filter((p) => p.health_status === 'on_track').length;
+  // ── Status Helper & Filter Counts ───────────────────────────────
+  protected getProjectStatus(p: Project): 'in_progress' | 'pending' | 'completed' | string {
+    const s = p.status?.toLowerCase().trim().replace(/\s+/g, '_');
+    if (s === 'completed' || s === 'pending' || s === 'in_progress') {
+      return s;
+    }
+    if ((p.progress_percentage ?? 0) >= 100) {
+      return 'completed';
+    }
+    if ((p.progress_percentage ?? 0) === 0 && (!p.current_step_number || p.current_step_number <= 1)) {
+      return 'pending';
+    }
+    return 'in_progress';
+  }
+
+  protected readonly inProgressCount = computed(() => {
+    return this.projects().filter((p) => this.getProjectStatus(p) === 'in_progress').length;
   });
 
-  protected readonly delayedCount = computed(() => {
-    return this.projects().filter((p) => p.health_status === 'delayed' || p.health_status === 'at_risk').length;
+  protected readonly pendingCount = computed(() => {
+    return this.projects().filter((p) => this.getProjectStatus(p) === 'pending').length;
+  });
+
+  protected readonly completedCount = computed(() => {
+    return this.projects().filter((p) => this.getProjectStatus(p) === 'completed').length;
   });
 
   // ── Filtered Projects List ─────────────────────────────────────
@@ -99,15 +117,13 @@ export class Projects implements OnInit {
     const filter = this.selectedHealthFilter();
     let list = this.projects();
 
-    // Health / Status filter
-    if (filter === 'on_track') {
-      list = list.filter((p) => p.health_status === 'on_track');
-    } else if (filter === 'delayed') {
-      list = list.filter((p) => p.health_status === 'delayed' || p.health_status === 'at_risk');
-    } else if (filter === 'in_progress') {
-      list = list.filter((p) => p.status === 'in_progress' || !p.status);
+    // Status filter: 'all' | 'in_progress' | 'pending' | 'completed'
+    if (filter === 'in_progress') {
+      list = list.filter((p) => this.getProjectStatus(p) === 'in_progress');
+    } else if (filter === 'pending') {
+      list = list.filter((p) => this.getProjectStatus(p) === 'pending');
     } else if (filter === 'completed') {
-      list = list.filter((p) => p.status === 'completed' || p.progress_percentage === 100);
+      list = list.filter((p) => this.getProjectStatus(p) === 'completed');
     }
 
     // Search query filter
@@ -366,26 +382,32 @@ export class Projects implements OnInit {
   }
 
   protected getStatusBadgeClass(status?: string): string {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'completed':
         return 'status-badge--completed';
+      case 'pending':
+        return 'status-badge--pending';
       case 'on_hold':
         return 'status-badge--on-hold';
       case 'cancelled':
         return 'status-badge--cancelled';
+      case 'in_progress':
       default:
         return 'status-badge--in-progress';
     }
   }
 
   protected getStatusLabel(status?: string): string {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'completed':
         return 'Completed';
+      case 'pending':
+        return 'Pending';
       case 'on_hold':
         return 'On Hold';
       case 'cancelled':
         return 'Cancelled';
+      case 'in_progress':
       default:
         return 'In Progress';
     }
