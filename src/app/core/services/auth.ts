@@ -5,6 +5,7 @@ import { map, Observable, tap } from 'rxjs';
 
 import { API_BASE_URL } from '../tokens/api-base-url.token';
 import { AuthSession, LoginCredentials, User } from '../models/user.model';
+import { formatNameTitleCase, resolveUserDisplayName } from '../utils/user.utils';
 
 const AUTH_SESSION_KEY = 'material-management.auth-session';
 
@@ -63,20 +64,42 @@ export class AuthService {
     return this.http.post<LoginApiResponse>(`${this.apiBaseUrl}/api/v1/auth/login`, credentials).pipe(
       map((response) => {
         const data = response.data;
-        const name = [data.first_name, data.last_name].filter(Boolean).join(' ') || 'Admin';
+        const rawFirst = data.first_name?.trim() || '';
+        const rawLast = data.last_name?.trim() || '';
+        const titleFirst = formatNameTitleCase(rawFirst);
+        const titleLast = formatNameTitleCase(rawLast);
+
+        const tempUser: User = {
+          id: String(data.id),
+          name: [titleFirst || rawFirst, titleLast || rawLast].filter(Boolean).join(' '),
+          first_name: rawFirst,
+          last_name: rawLast,
+          email: data.email,
+          role: 'admin' as const,
+        };
+
+        const resolvedName = resolveUserDisplayName(tempUser);
+        const finalUser: User = {
+          ...tempUser,
+          name: resolvedName,
+        };
+
         return {
           accessToken: data.access_token,
           refreshToken: data.refresh_token,
-          user: {
-            id: String(data.id),
-            name: name,
-            email: data.email,
-            role: 'admin' as const,
-          },
+          user: finalUser,
         };
       }),
       tap((session) => this.setSession(session)),
     );
+  }
+
+  updateCurrentUser(partialUser: Partial<User>): void {
+    const current = this.sessionState();
+    if (!current) return;
+    const merged: User = { ...current.user, ...partialUser };
+    merged.name = resolveUserDisplayName(merged);
+    this.setSession({ ...current, user: merged });
   }
 
   /**

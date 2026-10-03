@@ -2,7 +2,9 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
 
+import { AuthService } from '../../../core/services/auth';
 import { Dashbord } from './dashbord';
 
 describe('Dashbord', () => {
@@ -62,6 +64,51 @@ describe('Dashbord', () => {
     expect(component['getStatusBadgeClass']('on_hold')).toBe('status-badge--on-hold');
     expect(component['getStatusBadgeClass']('cancelled')).toBe('status-badge--cancelled');
     expect(component['getStatusBadgeClass']('in_progress')).toBe('status-badge--in-progress');
+  });
+
+  it('should patch first name and last name into greetingTitle', () => {
+    const authService = TestBed.inject(AuthService);
+    (authService as unknown as { sessionState: { set: (v: unknown) => void } }).sessionState.set({
+      accessToken: 'mock-access',
+      refreshToken: 'mock-refresh',
+      user: {
+        id: '2',
+        name: 'shruti kadam',
+        first_name: 'shruti',
+        last_name: 'kadam',
+        email: 'shruti.kadam@stcpl.com',
+        role: 'admin',
+      },
+    });
+
+    const greeting = (component as unknown as { greetingTitle: () => string }).greetingTitle();
+    expect(greeting).toMatch(/Good (morning|afternoon|evening), Shruti Kadam/);
+  });
+
+  it('should not show placeholder "string" and should deduce from email or fallback', () => {
+    const authService = TestBed.inject(AuthService);
+    (authService as unknown as { sessionState: { set: (v: unknown) => void } }).sessionState.set({
+      accessToken: 'mock-access',
+      refreshToken: 'mock-refresh',
+      user: {
+        id: '2',
+        name: 'string',
+        email: 'shruti.kadam@stcpl.com',
+        role: 'admin',
+      },
+    });
+
+    const greeting = (component as unknown as { greetingTitle: () => string }).greetingTitle();
+    expect(greeting).not.toContain('string');
+    expect(greeting).toMatch(/Good (morning|afternoon|evening), Shruti Kadam/);
+  });
+
+  it('should fall back to Admin when no user is logged in', () => {
+    const authService = TestBed.inject(AuthService);
+    (authService as unknown as { sessionState: { set: (v: unknown) => void } }).sessionState.set(null);
+
+    const greeting = (component as unknown as { greetingTitle: () => string }).greetingTitle();
+    expect(greeting).toMatch(/Good (morning|afternoon|evening), Admin/);
   });
 });
 

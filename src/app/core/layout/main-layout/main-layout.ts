@@ -4,6 +4,7 @@ import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
 
 import { AuthService } from '../../services/auth';
+import { resolveUserDisplayName } from '../../utils/user.utils';
 
 @Component({
   selector: 'app-main-layout',
@@ -17,10 +18,11 @@ export class MainLayout {
   private readonly router = inject(Router);
 
   protected readonly user = computed(() => this.authService.session()?.user);
+  protected readonly userDisplayName = computed(() => resolveUserDisplayName(this.user()));
   protected readonly userInitials = computed(() => {
-    const name = this.user()?.name?.trim();
+    const name = this.userDisplayName();
 
-    if (!name) {
+    if (!name || name === 'Admin') {
       return 'ST';
     }
 

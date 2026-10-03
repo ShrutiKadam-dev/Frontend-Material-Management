@@ -18,6 +18,7 @@ import { DashboardMetric, DashboardOverviewStats, DashboardProject } from '../..
 import { Project } from '../../../core/models/project.model';
 
 import { AppDatePipe } from '../../../core/pipes/app-date.pipe';
+import { resolveTimeGreeting, resolveUserDisplayName } from '../../../core/utils/user.utils';
 
 @Component({
   selector: 'app-dashbord',
@@ -49,16 +50,9 @@ export class Dashbord implements OnInit {
 
   // ── Executive Greeting ─────────────────────────────────────────
   protected readonly greetingTitle = computed(() => {
-    const hour = new Date().getHours();
-    let timeGreeting = 'Good morning';
-    if (hour >= 12 && hour < 17) {
-      timeGreeting = 'Good afternoon';
-    } else if (hour >= 17) {
-      timeGreeting = 'Good evening';
-    }
-
+    const timeGreeting = resolveTimeGreeting();
     const user = this.authService.currentUser();
-    const name = user?.name ? user.name.split(' ')[0] : 'Admin';
+    const name = resolveUserDisplayName(user);
     return `${timeGreeting}, ${name}`;
   });
 

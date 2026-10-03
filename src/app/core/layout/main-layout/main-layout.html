@@ -38,7 +38,7 @@
         routerLink="/projects"
       ></button> -->
 
-      <button class="profile-button" pButton type="button" rounded aria-label="Sign out {{ user()?.name ?? 'Admin' }}"
+      <button class="profile-button" pButton type="button" rounded aria-label="Sign out {{ userDisplayName() }}"
         (click)="logout()">
         <span>{{ userInitials() }}</span>
       </button>
