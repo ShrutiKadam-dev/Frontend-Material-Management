@@ -303,45 +303,91 @@
    Note: Modern Entity Card is styled globally in _project-card.scss
 ─────────────────────────────────────────────────────────────────────── */
 
-/* ── 5. Modern Data Table View ──────────────────────────────────────── */
+/* ── 5. Modern Data Table View (High-Density Aligned to Projects Table) ─ */
 .table-container {
   overflow-x: auto;
   background: var(--color-surface, #ffffff);
-  border: 1px solid var(--color-border-soft, #edeae4);
-  border-radius: var(--radius-card, 14px);
-  box-shadow: 0 1px 3px rgba(36, 27, 24, 0.04);
+  border: 1px solid var(--color-border, #e7e4de);
+  border-radius: var(--radius-card, 12px);
+  box-shadow: 0 1px 3px rgba(36, 27, 24, 0.03);
 }
 
 .modern-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.85rem;
+  font-size: 0.84rem;
 
   th {
     background: var(--color-surface-muted, #faf9f6);
-    padding: 12px 16px;
-    font-size: 0.74rem;
+    padding: 9px 12px;
+    font-size: 0.72rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--color-muted, #6b6864);
     border-bottom: 1px solid var(--color-border, #e7e4de);
     white-space: nowrap;
+    line-height: 1.2;
+
+    &.th-id {
+      width: 70px;
+      text-align: center;
+    }
+
+    &.th-supplier {
+      min-width: 200px;
+    }
+
+    &.th-poc {
+      min-width: 150px;
+    }
+
+    &.th-email {
+      min-width: 170px;
+    }
+
+    &.th-phone {
+      min-width: 130px;
+    }
+
+    &.th-address {
+      min-width: 180px;
+    }
+
+    &.th-date {
+      min-width: 100px;
+    }
+
+    &.th-actions {
+      width: 110px;
+      text-align: center;
+    }
   }
 
   td {
-    padding: 14px 16px;
+    padding: 7px 12px;
     border-bottom: 1px solid var(--color-border-soft, #edeae4);
     color: var(--color-text, #4a3e38);
     vertical-align: middle;
+    font-size: 0.84rem;
+    line-height: 1.25;
+
+    &.td-id {
+      text-align: center;
+    }
   }
 
   tr.table-row {
     transition: background 120ms ease;
+    cursor: pointer;
 
     &:hover {
-      background: rgba(251, 234, 230, 0.3);
+      background: #faf9f6 !important;
+    }
+
+    &:last-child td {
+      border-bottom: none;
     }
   }
 
@@ -350,20 +396,34 @@
   }
 }
 
+.id-pill {
+  font-family: monospace;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--color-primary-hover, #aa4525);
+  background: var(--color-primary-soft, #fdf1ec);
+  border: 1px solid rgba(192, 82, 47, 0.25);
+  border-radius: 4px;
+  padding: 1px 6px;
+  letter-spacing: 0.02em;
+  display: inline-block;
+  line-height: 1.3;
+}
+
 .table-supplier-cell {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .table-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   background: var(--color-primary-soft, #fdf1ec);
   color: var(--color-primary-hover, #aa4525);
   font-weight: 750;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -377,23 +437,75 @@
   min-width: 0;
 }
 
+.table-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
 .table-supplier-name {
+  font-size: 0.86rem;
   font-weight: 750;
   color: var(--color-heading, #1c1b1a);
   cursor: pointer;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
 
   &:hover {
     color: var(--color-primary, #c0522f);
+    text-decoration: underline;
   }
+}
+
+.nickname-pill-sm {
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 5px;
+  background: #f4f4f5;
+  color: #52525b;
+  border: 1px solid #e4e4e7;
+  border-radius: 4px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.table-poc-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.table-poc-name {
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--color-heading, #1c1b1a);
+  line-height: 1.25;
+}
+
+.poc-mini-count {
+  font-size: 0.64rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  background: #eef2ff;
+  color: #4338ca;
+  border-radius: 999px;
+  line-height: 1.2;
 }
 
 .contact-table-cell {
   display: flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
 
   .cell-icon {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--color-primary, #c0522f);
     flex-shrink: 0;
   }
@@ -402,6 +514,8 @@
 .table-link {
   color: var(--color-text, #4a3e38);
   text-decoration: none;
+  font-size: 0.82rem;
+  line-height: 1.25;
 
   &:hover {
     color: var(--color-primary, #c0522f);
@@ -430,9 +544,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.82rem;
+  line-height: 1.25;
 
   .cell-icon {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--color-muted-light, #9c9088);
     flex-shrink: 0;
   }
@@ -440,32 +556,22 @@
 
 .date-text {
   color: var(--color-muted, #6b6864);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   white-space: nowrap;
+  line-height: 1.25;
 }
 
-.table-actions-group {
-  display: inline-flex;
+.actions-cell {
+  display: flex;
   align-items: center;
   gap: 4px;
-}
 
-.table-action-btn {
-  width: 32px !important;
-  height: 32px !important;
-  color: var(--color-muted, #6b6864) !important;
-
-  &:hover {
-    color: var(--color-primary, #c0522f) !important;
-    background: var(--color-primary-soft, #fdf1ec) !important;
-  }
-
-  &--delete {
+  .qe-delete {
     color: #ef4444 !important;
 
     &:hover {
-      color: #dc2626 !important;
       background: #fef2f2 !important;
+      color: #dc2626 !important;
     }
   }
 }
@@ -682,24 +788,6 @@
   white-space: nowrap;
 }
 
-.table-name-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.nickname-pill-sm {
-  font-size: 0.64rem;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  padding: 1px 5px;
-  background: #f4f4f5;
-  color: #52525b;
-  border: 1px solid #e4e4e7;
-  border-radius: 4px;
-}
-
 .hero-nickname-chip {
   font-size: 0.72rem;
   font-weight: 600;
@@ -716,33 +804,6 @@
     font-weight: 750;
     color: #18181b;
   }
-}
-
-
-/* ── Table POC Cell ───────────────────────────────────────────────── */
-.th-poc {
-  width: 15%;
-}
-
-.table-poc-cell {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.table-poc-name {
-  font-size: 0.82rem;
-  font-weight: 650;
-  color: var(--color-heading, #1c1b1a);
-}
-
-.poc-mini-count {
-  font-size: 0.64rem;
-  font-weight: 800;
-  padding: 1px 5px;
-  background: #eef2ff;
-  color: #4338ca;
-  border-radius: 999px;
 }
 
 /* ── Dialog Header & Form Layout ──────────────────────────────────── */

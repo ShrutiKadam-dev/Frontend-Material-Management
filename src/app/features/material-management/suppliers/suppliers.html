@@ -206,7 +206,7 @@
           <th scope="col" class="th-phone">Contact Number</th>
           <th scope="col" class="th-address">Address</th>
           <th scope="col" class="th-date">Created</th>
-          <th scope="col" class="th-actions text-right">Actions</th>
+          <th scope="col" style="width: 110px; text-align: center;">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -283,18 +283,18 @@
           </td>
 
           <!-- Actions Column -->
-          <td class="td-actions text-right">
-            <div class="table-actions-group">
-              <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-sm table-action-btn"
-                (click)="openDetailsDialog(supplier)" pTooltip="View details" tooltipPosition="top"
-                aria-label="View supplier details"></button>
-              <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm table-action-btn"
-                (click)="openEditDialog(supplier)" pTooltip="Edit supplier" tooltipPosition="top"
-                aria-label="Edit supplier details"></button>
+          <td style="text-align: center;">
+            <div class="actions-cell" style="justify-content: center;">
+              <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-sm qe-edit"
+                (click)="openDetailsDialog(supplier); $event.stopPropagation()" pTooltip="View Details"
+                tooltipPosition="top" aria-label="View supplier details"></button>
+              <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+                (click)="openEditDialog(supplier); $event.stopPropagation()" pTooltip="Edit Supplier"
+                tooltipPosition="top" aria-label="Edit supplier details"></button>
               <button pButton type="button" icon="pi pi-trash"
-                class="p-button-text p-button-sm p-button-danger table-action-btn table-action-btn--delete"
-                (click)="deleteSupplier(supplier)" pTooltip="Remove supplier" tooltipPosition="top"
-                aria-label="Remove supplier"></button>
+                class="p-button-text p-button-sm p-button-danger qe-delete"
+                (click)="deleteSupplier(supplier); $event.stopPropagation()" pTooltip="Remove Supplier"
+                tooltipPosition="top" aria-label="Remove supplier"></button>
             </div>
           </td>
         </tr>

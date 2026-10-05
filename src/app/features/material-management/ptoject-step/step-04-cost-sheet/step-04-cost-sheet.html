@@ -183,34 +183,42 @@
                         @if (sheet.globalParams; as gp) {
                         <div class="vsc-params-strip">
                             <div class="param-chip">
+                                <i class="pi pi-money-bill" aria-hidden="true"></i>
                                 <span class="p-lbl">EUR Rate:</span>
                                 <span class="p-val">₹{{ gp.eurToInr }}</span>
                             </div>
                             <div class="param-chip">
+                                <i class="pi pi-shield" aria-hidden="true"></i>
                                 <span class="p-lbl">Ins. & Freight:</span>
                                 <span class="p-val">{{ formatPercent(gp.insuranceFreightRate) }}</span>
                             </div>
                             <div class="param-chip">
+                                <i class="pi pi-file-edit" aria-hidden="true"></i>
                                 <span class="p-lbl">Duty (BCD):</span>
                                 <span class="p-val">{{ formatPercent(gp.defaultCustomsDutyRate) }}</span>
                             </div>
                             <div class="param-chip">
+                                <i class="pi pi-percentage" aria-hidden="true"></i>
                                 <span class="p-lbl">IGST:</span>
                                 <span class="p-val">{{ formatPercent(gp.igstRate) }}</span>
                             </div>
                             <div class="param-chip">
+                                <i class="pi pi-truck" aria-hidden="true"></i>
                                 <span class="p-lbl">Transport:</span>
                                 <span class="p-val">{{ formatPercent(gp.transportationRate) }}</span>
                             </div>
                             <div class="param-chip">
+                                <i class="pi pi-credit-card" aria-hidden="true"></i>
                                 <span class="p-lbl">Finance:</span>
                                 <span class="p-val">{{ formatPercent(gp.financeChargesRate) }}</span>
                             </div>
                             <div class="param-chip param-chip--highlight">
+                                <i class="pi pi-chart-line" aria-hidden="true"></i>
                                 <span class="p-lbl">Margin:</span>
                                 <span class="p-val">{{ formatPercent(gp.marginRate) }}</span>
                             </div>
                             <div class="param-chip">
+                                <i class="pi pi-receipt" aria-hidden="true"></i>
                                 <span class="p-lbl">GST:</span>
                                 <span class="p-val">{{ formatPercent(gp.gstRate) }}</span>
                             </div>

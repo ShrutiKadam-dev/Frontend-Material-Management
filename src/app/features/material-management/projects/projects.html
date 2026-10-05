@@ -125,21 +125,17 @@
       <div class="mpc-header">
         <div class="mpc-badge-cluster">
           <span class="mpc-code-badge" pTooltip="Project Code" tooltipPosition="top">
-            {{ project.project_code || ('PRJ-' + (project.id < 10 ? '0' + project.id : project.id)) }}
-          </span>
+            {{ project.project_code || ('PRJ-' + (project.id < 10 ? '0' + project.id : project.id)) }} </span>
 
-          <span class="mpc-status-chip"
-            [class]="'mpc-status-chip mpc-status-chip--' + getProjectStatus(project)">
-            <span class="status-live-dot" aria-hidden="true"></span>
-            {{ getStatusLabel(getProjectStatus(project)) }}
-          </span>
+              <span class="mpc-status-chip" [class]="'mpc-status-chip mpc-status-chip--' + getProjectStatus(project)">
+                <span class="status-live-dot" aria-hidden="true"></span>
+                {{ getStatusLabel(getProjectStatus(project)) }}
+              </span>
 
-          @if (project.nickname && project.nickname.toLowerCase() !== project.project_title.toLowerCase()) {
-          <span class="mpc-nickname-tag" [title]="'Nickname: ' + project.nickname">
-            <i class="pi pi-tag" aria-hidden="true"></i>
-            {{ project.nickname }}
-          </span>
-          }
+              <span class="mpc-nickname-tag" [title]="'Nickname: ' + project.project_title">
+                <i class="pi pi-tag" aria-hidden="true"></i>
+                {{ project.project_title }}
+              </span>
         </div>
 
         <div class="mpc-financials">
@@ -147,15 +143,16 @@
             <span class="financials-currency">{{ project.currency || 'INR' }}</span>
             <span class="financials-value">₹{{ (project.total_value || 0) | number:'1.2-2' }}</span>
           </div>
-          <span class="financials-date" [title]="'Last updated: ' + ((project.updated_at || project.created_at) | appDate:'d MMM yyyy')">
+          <span class="financials-date"
+            [title]="'Last updated: ' + ((project.updated_at || project.created_at) | appDate:'d MMM yyyy')">
             {{ (project.updated_at || project.created_at) | appDate:'d MMM yyyy' }}
           </span>
         </div>
       </div>
 
       <!-- 2. Project Title -->
-      <h2 class="mpc-title" (click)="openDetailsDialog(project)" [title]="project.project_title || project.nickname">
-        {{ project.project_title || project.nickname }}
+      <h2 class="mpc-title" (click)="openDetailsDialog(project)" [title]="project.nickname">
+        {{ project.nickname }}
       </h2>
 
       <!-- 3. Supply Chain Relationship Flow (No Boxed Table!) -->
@@ -193,7 +190,8 @@
       <div class="mpc-lifecycle">
         <div class="lifecycle-meta">
           <div class="lifecycle-stage">
-            <span class="stage-step-pill">Step {{ project.current_step_number || 1 }}/{{ project.total_steps || 15 }}</span>
+            <span class="stage-step-pill">Step {{ project.current_step_number || 1 }}/{{ project.total_steps || 15
+              }}</span>
             <span class="stage-title">{{ project.current_step_name || 'Customer Query Initiated' }}</span>
           </div>
           <span class="lifecycle-percent">{{ getProgressPercent(project) }}%</span>
@@ -268,7 +266,8 @@
           </td>
           <td>
             <strong class="tbl-project-title" (click)="openDetailsDialog(p)">{{ p.project_title }}</strong>
-            <span class="tbl-date-sub">Created: {{ p.created_at | appDate }} · Updated: {{ (p.updated_at || p.created_at) | appDate }}</span>
+            <span class="tbl-date-sub">Created: {{ p.created_at | appDate }} · Updated: {{ (p.updated_at ||
+              p.created_at) | appDate }}</span>
           </td>
           <td>
             <div class="tbl-party-cell">
