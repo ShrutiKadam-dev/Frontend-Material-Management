@@ -6,7 +6,8 @@
       <span class="eyebrow">Executive Control Center · Operations Overview</span>
       <h1 id="dashboard-title" class="page-title">{{ greetingTitle() }}</h1>
       <p class="page-summary">
-        Overall portfolio visibility across all active procurement contracts, client milestones, and 15-step fulfillment stages.
+        Overall portfolio visibility across all active procurement contracts, client milestones, and 15-step fulfillment
+        stages.
       </p>
     </div>
 
@@ -72,7 +73,7 @@
 
   <!-- ── 4. Overall Operations & Portfolio Analytics Grid ─────────────── -->
   <div class="overview-analytics-grid">
-    
+
     <!-- Panel 1: 15-Step Pipeline Lifecycle Stages -->
     <div class="analytics-card app-panel">
       <div class="analytics-header">
@@ -141,14 +142,6 @@
       <div class="analytics-card-footer">
         <div class="summary-chip">
           <span class="dot dot--success"></span>
-          <span><strong>{{ onTrackCount() }}</strong> On Track</span>
-        </div>
-        <div class="summary-chip">
-          <span class="dot dot--warning"></span>
-          <span><strong>{{ delayedCount() }}</strong> Delayed / Attention</span>
-        </div>
-        <div class="summary-chip">
-          <span class="dot dot--info"></span>
           <span><strong>{{ completedCount() }}</strong> Completed</span>
         </div>
       </div>
@@ -254,25 +247,24 @@
     } @else {
     <div class="dashboard-projects-grid">
       @for (project of latestProjects(); track project.id) {
-      <article class="modern-project-card" [class.modern-project-card--delayed]="project.health_status === 'delayed'">
+      <article class="modern-project-card">
 
         <!-- 1. Top Bar: Badges & Commercials -->
         <div class="mpc-header">
           <div class="mpc-badge-cluster">
             <span class="mpc-code-badge" pTooltip="Project Code" tooltipPosition="top">
-              {{ project.project_code || ('PRJ-' + (project.id < 10 ? '0' + project.id : project.id)) }}
-            </span>
-            <span class="mpc-status-chip"
-              [class]="'mpc-status-chip mpc-status-chip--' + (project.status || 'in_progress')">
-              <span class="status-live-dot" aria-hidden="true"></span>
-              {{ getStatusLabel(project.status) }}
-            </span>
-            @if (project.nickname || project.project_nickname) {
-            <span class="mpc-nickname-tag" [title]="'Nickname: ' + (project.nickname || project.project_nickname)">
-              <i class="pi pi-tag" aria-hidden="true"></i>
-              {{ project.nickname || project.project_nickname }}
-            </span>
-            }
+              {{ project.project_code || ('PRJ-' + (project.id < 10 ? '0' + project.id : project.id)) }} </span>
+                <span class="mpc-status-chip"
+                  [class]="'mpc-status-chip mpc-status-chip--' + (project.status || 'in_progress')">
+                  <span class="status-live-dot" aria-hidden="true"></span>
+                  {{ getStatusLabel(project.status) }}
+                </span>
+                @if (project.nickname || project.project_nickname) {
+                <span class="mpc-nickname-tag" [title]="'Nickname: ' + (project.nickname || project.project_nickname)">
+                  <i class="pi pi-tag" aria-hidden="true"></i>
+                  {{ project.nickname || project.project_nickname }}
+                </span>
+                }
           </div>
 
           <div class="mpc-financials">
@@ -326,7 +318,8 @@
         <div class="mpc-lifecycle">
           <div class="lifecycle-meta">
             <div class="lifecycle-stage">
-              <span class="stage-step-pill">Step {{ project.current_step_number || 1 }}/{{ project.total_steps || 15 }}</span>
+              <span class="stage-step-pill">Step {{ project.current_step_number || 1 }}/{{ project.total_steps || 15
+                }}</span>
               <span class="stage-title">{{ project.current_step_name || 'Customer Query Initiated' }}</span>
             </div>
             <span class="lifecycle-percent">{{ getProgressPercent(project) }}%</span>
@@ -370,4 +363,3 @@
   }
 
 </section>
-

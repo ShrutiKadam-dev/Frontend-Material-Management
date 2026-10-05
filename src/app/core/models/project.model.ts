@@ -15,7 +15,6 @@ export interface Project {
   progress_percentage?: number;
   total_value?: number;
   currency?: string;
-  health_status?: 'on_track' | 'delayed' | 'at_risk' | string;
   next_action?: string;
   target_delivery_date?: string | null;
   customer_payment_status?: 'pending' | 'paid' | 'partial' | string;

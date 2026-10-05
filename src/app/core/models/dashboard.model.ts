@@ -18,7 +18,6 @@ export interface DashboardProject {
   total_steps?: number;
   total_value?: number;
   currency?: string;
-  health_status?: string;
   next_action?: string;
   target_delivery_date?: string | null;
   customer_payment_status?: string;
@@ -32,8 +31,6 @@ export interface DashboardOverviewStats {
   total_portfolio_value: number;
   total_customers: number;
   total_suppliers: number;
-  on_track_count: number;
-  delayed_count: number;
   completed_count: number;
   avg_progress: number;
   customer_payments: {

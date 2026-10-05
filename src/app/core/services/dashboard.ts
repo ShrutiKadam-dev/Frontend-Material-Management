@@ -81,7 +81,6 @@ export class DashboardService {
         total_steps: p['total_steps'] ? Number(p['total_steps']) : 15,
         total_value: p['total_value'] ? Number(p['total_value']) : undefined,
         currency: String(p['currency'] ?? 'INR'),
-        health_status: String(p['health_status'] ?? 'on_track'),
         next_action: p['next_action'] ? String(p['next_action']) : undefined,
         target_delivery_date: p['target_delivery_date'] ? String(p['target_delivery_date']) : null,
         customer_payment_status: p['customer_payment_status'] ? String(p['customer_payment_status']) : undefined,
@@ -115,8 +114,6 @@ export class DashboardService {
         const supplierMap = new Map<number, string>(suppliers.map((s) => [s.id, s.name]));
 
         const totalValue = projects.reduce((sum, p) => sum + (Number(p.total_value) || 0), 0);
-        const onTrackCount = projects.filter((p) => p.health_status === 'on_track').length;
-        const delayedCount = projects.filter((p) => p.health_status === 'delayed' || p.health_status === 'at_risk').length;
         const completedCount = projects.filter((p) => p.status === 'completed' || p.progress_percentage === 100).length;
 
         const avgProgress = totalProjects > 0
@@ -165,12 +162,6 @@ export class DashboardService {
             tone: 'success',
           },
           {
-            label: 'Pipeline Health',
-            value: `${onTrackCount} On Track`,
-            trend: delayedCount > 0 ? `${delayedCount} delayed/attention` : '100% on schedule',
-            tone: delayedCount > 0 ? 'warning' : 'success',
-          },
-          {
             label: 'Average Completion',
             value: `${avgProgress}%`,
             trend: 'Across 15 milestone stages',
@@ -184,8 +175,6 @@ export class DashboardService {
           total_portfolio_value: totalValue,
           total_customers: totalCustomers,
           total_suppliers: totalSuppliers,
-          on_track_count: onTrackCount,
-          delayed_count: delayedCount,
           completed_count: completedCount,
           avg_progress: avgProgress,
           customer_payments: {
@@ -239,7 +228,6 @@ export class DashboardService {
             total_steps: proj.total_steps || 15,
             total_value: proj.total_value ? Number(proj.total_value) : undefined,
             currency: proj.currency || 'INR',
-            health_status: proj.health_status || 'on_track',
             next_action: proj.next_action,
             target_delivery_date: proj.target_delivery_date,
             customer_payment_status: proj.customer_payment_status,

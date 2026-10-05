@@ -119,7 +119,7 @@
   @if (viewMode() === 'grid') {
   <div class="projects-grid" role="feed" aria-label="Projects list">
     @for (project of filteredProjects(); track project.id) {
-    <article class="modern-project-card" [class.modern-project-card--delayed]="project.health_status === 'delayed'">
+    <article class="modern-project-card">
 
       <!-- 1. Card Top Bar: Badges & Commercials -->
       <div class="mpc-header">

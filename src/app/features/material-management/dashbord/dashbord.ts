@@ -78,22 +78,6 @@ export class Dashbord implements OnInit {
     return this.totalPortfolioValue() / count;
   });
 
-  protected readonly onTrackCount = computed(() => {
-    if (this.overviewStats()?.on_track_count !== undefined) {
-      return this.overviewStats()!.on_track_count;
-    }
-    return this.recentProjects().filter((p) => p.health_status === 'on_track').length;
-  });
-
-  protected readonly delayedCount = computed(() => {
-    if (this.overviewStats()?.delayed_count !== undefined) {
-      return this.overviewStats()!.delayed_count;
-    }
-    return this.recentProjects().filter(
-      (p) => p.health_status === 'delayed' || p.health_status === 'at_risk',
-    ).length;
-  });
-
   protected readonly completedCount = computed(() => {
     if (this.overviewStats()?.completed_count !== undefined) {
       return this.overviewStats()!.completed_count;
@@ -187,32 +171,6 @@ export class Dashbord implements OnInit {
   protected navigateToProject(projectId?: number): void {
     if (projectId) {
       this.router.navigate(['/projects', projectId, 'steps']);
-    }
-  }
-
-  protected getHealthBadgeClass(health?: string): string {
-    switch (health) {
-      case 'on_track':
-        return 'health-pill--on-track';
-      case 'delayed':
-        return 'health-pill--delayed';
-      case 'at_risk':
-        return 'health-pill--at-risk';
-      default:
-        return 'health-pill--normal';
-    }
-  }
-
-  protected getHealthLabel(health?: string): string {
-    switch (health) {
-      case 'on_track':
-        return 'On Track';
-      case 'delayed':
-        return 'Delayed';
-      case 'at_risk':
-        return 'At Risk';
-      default:
-        return 'Active';
     }
   }
 

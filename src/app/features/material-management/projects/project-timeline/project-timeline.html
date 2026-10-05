@@ -5,8 +5,8 @@
     <!-- Top Action Navigation -->
     <div class="hero-top-nav">
       <div class="top-nav-left">
-        <button pButton type="button" icon="pi pi-arrow-left" label="All Projects" class="p-button-text back-projects-btn"
-          (click)="goBack()" aria-label="Back to projects list">
+        <button pButton type="button" icon="pi pi-arrow-left" label="All Projects"
+          class="p-button-text back-projects-btn" (click)="goBack()" aria-label="Back to projects list">
         </button>
 
         @if (project(); as p) {
@@ -59,14 +59,6 @@
             <span class="status-live-dot" aria-hidden="true"></span>
             {{ progressPercent() === 100 ? 'Completed' : 'Pipeline Active' }}
           </span>
-
-          @if (project()?.health_status === 'delayed' || project()?.health_status === 'at_risk') {
-          <span class="identity-sep" aria-hidden="true">·</span>
-          <span class="project-alert-inline">
-            <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
-            Attention Needed
-          </span>
-          }
         </div>
 
         <h1 id="timeline-title" class="project-title">
@@ -79,22 +71,26 @@
       <div class="hero-commercial-strip">
         <div class="commercial-col" [title]="customer()?.name || p.customer_name || ('Customer #' + p.customer_id)">
           <span class="commercial-label">Customer</span>
-          <span class="commercial-value">{{ customer()?.name || p.customer_name || ('Customer #' + p.customer_id) }}</span>
+          <span class="commercial-value">{{ customer()?.name || p.customer_name || ('Customer #' + p.customer_id)
+            }}</span>
         </div>
 
         <div class="commercial-divider" aria-hidden="true"></div>
 
         <div class="commercial-col" [title]="supplier()?.name || p.supplier_name || ('Supplier #' + p.supplier_id)">
           <span class="commercial-label">Supplier</span>
-          <span class="commercial-value">{{ supplier()?.name || p.supplier_name || ('Supplier #' + p.supplier_id) }}</span>
+          <span class="commercial-value">{{ supplier()?.name || p.supplier_name || ('Supplier #' + p.supplier_id)
+            }}</span>
         </div>
 
         @if (p.total_value !== undefined && p.total_value !== null) {
         <div class="commercial-divider" aria-hidden="true"></div>
 
-        <div class="commercial-col commercial-col--value" [title]="'Total Project Value: ₹' + ((p.total_value || 0) | number:'1.2-2')">
+        <div class="commercial-col commercial-col--value"
+          [title]="'Total Project Value: ₹' + ((p.total_value || 0) | number:'1.2-2')">
           <span class="commercial-label">Contract Value</span>
-          <strong class="commercial-value commercial-value--currency">₹{{ (p.total_value || 0) | number:'1.2-2' }}</strong>
+          <strong class="commercial-value commercial-value--currency">₹{{ (p.total_value || 0) | number:'1.2-2'
+            }}</strong>
         </div>
         }
       </div>
