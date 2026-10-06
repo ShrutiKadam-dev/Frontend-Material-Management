@@ -189,7 +189,7 @@
                             </span>
                             }
                             <span class="vsc-date">
-                                <i class="pi pi-calendar-check" aria-hidden="true"></i>
+                                <i class="pi pi-calendar" aria-hidden="true"></i>
                                 {{ payment.payment_date | appDate }}
                             </span>
                             <span class="vsc-title font-mono">
@@ -209,7 +209,8 @@
                                 [pTooltip]="'Amount Disbursed: ' + (payment.currency || cardCurrency()) + ' ' + (payment.amount_paid | number:'1.2-2')"
                                 tooltipPosition="bottom">
                                 <i class="pi pi-check-circle" aria-hidden="true"></i>
-                                Paid: {{ payment.currency || cardCurrency() }} {{ payment.amount_paid | number:'1.2-2' }}
+                                Paid: {{ payment.currency || cardCurrency() }} {{ payment.amount_paid | number:'1.2-2'
+                                }}
                             </span>
 
                             @if (getPaymentPendingAmount(payment) > 0 && !payment.is_payment_completed) {
@@ -223,11 +224,12 @@
                                 [pTooltip]="'Remaining Balance: ' + (payment.currency || cardCurrency()) + ' ' + (getPaymentPendingAmount(payment) | number:'1.2-2')"
                                 tooltipPosition="bottom">
                                 <i class="pi pi-clock" aria-hidden="true"></i>
-                                Remaining: {{ payment.currency || cardCurrency() }} {{ getPaymentPendingAmount(payment) | number:'1.2-2' }}
+                                Remaining: {{ payment.currency || cardCurrency() }} {{ getPaymentPendingAmount(payment)
+                                | number:'1.2-2' }}
                             </span>
                             } @else {
-                            <span class="vsc-count-pill vsc-count-pill--settled" pTooltip="Commitment fully settled (0% Remaining)"
-                                tooltipPosition="bottom">
+                            <span class="vsc-count-pill vsc-count-pill--settled"
+                                pTooltip="Commitment fully settled (0% Remaining)" tooltipPosition="bottom">
                                 <i class="pi pi-verified" aria-hidden="true"></i>
                                 Fully Settled (0% Remaining)
                             </span>
@@ -453,7 +455,8 @@
                                                         [class.pi-verified]="(payment.pending_amount || 0) <= 0"></i>
                                                 </span>
                                                 <span>{{ (getPaymentPendingAmount(payment) > 0 &&
-                                                    !payment.is_payment_completed) ? ('Remaining Balance (' + getRemainingPercentage(payment) + '%):')
+                                                    !payment.is_payment_completed) ? ('Remaining Balance (' +
+                                                    getRemainingPercentage(payment) + '%):')
                                                     : 'Net Status: Fully Cleared & Disbursed (0% Remaining)' }}</span>
                                             </div>
                                         </td>
@@ -570,10 +573,12 @@
                 <div class="cost-sheet-sync-pill" role="status">
                     <span class="afb-badge"><i class="pi pi-sparkles"></i> Auto-Fetched</span>
                     <div class="afb-content">
-                        <span>Total Commitment Value auto-fetched from <strong>{{ latestOrderConfirmation()?.total_amount ?
-                            'Latest Order Confirmation' : 'Order Confirmation & PO Commitments' }}</strong> ({{
-                        cardCurrency() }} {{ totalCommitmentValue() | number:'1.2-2' }}).</span>
-                        <span class="afb-fields"><strong>Auto-filled fields:</strong> Total Supplier Commitment Value, Currency.</span>
+                        <span>Total Commitment Value auto-fetched from <strong>{{
+                                latestOrderConfirmation()?.total_amount ?
+                                'Latest Order Confirmation' : 'Order Confirmation & PO Commitments' }}</strong> ({{
+                            cardCurrency() }} {{ totalCommitmentValue() | number:'1.2-2' }}).</span>
+                        <span class="afb-fields"><strong>Auto-filled fields:</strong> Total Supplier Commitment Value,
+                            Currency.</span>
                     </div>
                 </div>
                 }
@@ -588,7 +593,8 @@
                         <!-- Combined Total Commitment Value (PO/Invoice) & Currency in ONE Grid Cell (like Bank Charges) -->
                         <div class="field">
                             <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                                <label for="dlg-pay-total">Total Commitment Value (PO/Invoice) <span class="req" aria-hidden="true">*</span></label>
+                                <label for="dlg-pay-total">Total Commitment Value (PO/Invoice) <span class="req"
+                                        aria-hidden="true">*</span></label>
                             </div>
                             <div class="input-unit-group" style="display: flex; gap: 8px; align-items: center;">
                                 <p-select id="dlg-pay-currency" formControlName="currency" [options]="currencyOptions"
@@ -643,7 +649,8 @@
                                 style="font-size: 0.76rem; color: var(--color-muted); margin-top: 3px; display: block;">
                                 @if (payments().length > 0 && dialogPreviouslyPaid() > 0) {
                                 Previous: {{ dialogPreviouslyPaidPct() }}% ({{ cardCurrency() }} {{
-                                dialogPreviouslyPaid() | number:'1.2-2' }}). Pay up to {{ dialogAvailablePendingPct() }}%.
+                                dialogPreviouslyPaid() | number:'1.2-2' }}). Pay up to {{ dialogAvailablePendingPct()
+                                }}%.
                                 } @else {
                                 Entering % will automatically calculate the Amount Paid.
                                 }
@@ -731,7 +738,8 @@
                         }
                         <div class="scb-op">-</div>
                         <div class="scb-item">
-                            <span class="scb-label">This Payment ({{ paymentForm.get('payment_percentage')?.value || 0 }}%):</span>
+                            <span class="scb-label">This Payment ({{ paymentForm.get('payment_percentage')?.value || 0
+                                }}%):</span>
                             <span class="scb-val" style="color: #059669;">{{ paymentForm.get('currency')?.value || 'INR'
                                 }} {{ paymentForm.get('amount_paid')?.value || 0 | number:'1.2-2' }}</span>
                         </div>

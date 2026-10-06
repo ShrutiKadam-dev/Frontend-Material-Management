@@ -147,6 +147,13 @@ export class DashboardService {
           maximumFractionDigits: 2,
         })}`;
 
+        const inProgressCount = Math.max(0, totalProjects - completedCount);
+        const completedTrend = totalProjects === 0
+          ? 'No active projects'
+          : inProgressCount > 0
+            ? `${inProgressCount} active in progress`
+            : 'All milestones completed';
+
         // Compute overall dashboard metrics
         const metrics: DashboardMetric[] = [
           {
@@ -159,6 +166,12 @@ export class DashboardService {
             label: 'Total Project Value',
             value: formattedTotalValue,
             trend: 'Contracted procurement volume',
+            tone: 'success',
+          },
+          {
+            label: 'Completed Projects',
+            value: completedCount,
+            trend: completedTrend,
             tone: 'success',
           },
           {
@@ -176,6 +189,7 @@ export class DashboardService {
           total_customers: totalCustomers,
           total_suppliers: totalSuppliers,
           completed_count: completedCount,
+          in_progress_count: inProgressCount,
           avg_progress: avgProgress,
           customer_payments: {
             paid: customerPaid,

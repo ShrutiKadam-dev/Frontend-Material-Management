@@ -87,6 +87,13 @@ export class Dashbord implements OnInit {
     ).length;
   });
 
+  protected readonly inProgressCount = computed(() => {
+    if (this.overviewStats()?.in_progress_count !== undefined) {
+      return this.overviewStats()!.in_progress_count;
+    }
+    return Math.max(0, this.totalProjectsCount() - this.completedCount());
+  });
+
   // 15-Step Lifecycle Stage Breakdown
   protected readonly sourcingStageCount = computed(() => {
     if (this.overviewStats()?.stage_breakdown) {

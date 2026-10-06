@@ -163,10 +163,11 @@
     border: 1px solid rgba(47, 122, 79, 0.2);
   }
 
+  &.kpi-icon--completed,
   &.kpi-icon--health {
-    background: #f0fdf4;
-    color: #16a34a;
-    border: 1px solid #bbf7d0;
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
   }
 
   &.kpi-icon--progress {

@@ -32,6 +32,7 @@ export interface DashboardOverviewStats {
   total_customers: number;
   total_suppliers: number;
   completed_count: number;
+  in_progress_count?: number;
   avg_progress: number;
   customer_payments: {
     paid: number;

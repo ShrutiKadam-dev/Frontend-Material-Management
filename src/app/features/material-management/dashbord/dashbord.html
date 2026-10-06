@@ -50,11 +50,11 @@
     @for (metric of metrics(); track metric.label; let idx = $index) {
     <article class="kpi-card app-panel">
       <div class="kpi-icon-wrap" [class.kpi-icon--primary]="idx === 0" [class.kpi-icon--success]="idx === 1"
-        [class.kpi-icon--health]="idx === 2" [class.kpi-icon--progress]="idx === 3">
+        [class.kpi-icon--completed]="idx === 2" [class.kpi-icon--progress]="idx === 3">
         @switch (idx) {
         @case (0) { <i class="pi pi-briefcase" aria-hidden="true"></i> }
         @case (1) { <i class="pi pi-wallet" aria-hidden="true"></i> }
-        @case (2) { <i class="pi pi-heart" aria-hidden="true"></i> }
+        @case (2) { <i class="pi pi-check-circle" aria-hidden="true"></i> }
         @default { <i class="pi pi-chart-line" aria-hidden="true"></i> }
         }
       </div>
@@ -140,6 +140,10 @@
       </div>
 
       <div class="analytics-card-footer">
+        <div class="summary-chip">
+          <span class="dot dot--info"></span>
+          <span><strong>{{ inProgressCount() }}</strong> In Progress</span>
+        </div>
         <div class="summary-chip">
           <span class="dot dot--success"></span>
           <span><strong>{{ completedCount() }}</strong> Completed</span>
