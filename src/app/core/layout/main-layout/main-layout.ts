@@ -5,10 +5,11 @@ import { ToastModule } from 'primeng/toast';
 
 import { AuthService } from '../../services/auth';
 import { resolveUserDisplayName } from '../../utils/user.utils';
+import { CopilotComponent } from '../../../shared/components/copilot/copilot';
 
 @Component({
   selector: 'app-main-layout',
-  imports: [ButtonModule, ToastModule, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [ButtonModule, ToastModule, RouterLink, RouterLinkActive, RouterOutlet, CopilotComponent],
   templateUrl: './main-layout.html',
   styleUrl: './main-layout.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

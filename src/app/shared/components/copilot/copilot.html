@@ -1,0 +1,278 @@
+<!-- Floating Launcher Trigger Button -->
+<button
+  type="button"
+  class="copilot-launcher"
+  [class.is-open]="isOpen()"
+  (click)="toggleOpen()"
+  aria-label="Toggle Stantech AI Copilot"
+  [attr.aria-expanded]="isOpen()"
+  pTooltip="AI Copilot (Ctrl+/)"
+  tooltipPosition="left"
+>
+  <span class="launcher-icon-wrapper">
+    @if (isOpen()) {
+      <i class="pi pi-times" aria-hidden="true"></i>
+    } @else {
+      <i class="pi pi-sparkles launcher-sparkle" aria-hidden="true"></i>
+    }
+  </span>
+  <span class="launcher-label">Copilot</span>
+  <span class="launcher-pulse-indicator" aria-hidden="true"></span>
+</button>
+
+<!-- Slide-out / Floating Copilot Panel -->
+@if (isOpen()) {
+  <aside
+    class="copilot-panel"
+    role="dialog"
+    aria-label="Stantech Material Management AI Copilot"
+    aria-modal="false"
+  >
+    <!-- Header -->
+    <header class="copilot-header">
+      <div class="header-identity">
+        <div class="avatar-ring" aria-hidden="true">
+          <i class="pi pi-bolt"></i>
+        </div>
+        <div class="header-titles">
+          <h2 class="header-title">Stantech Copilot</h2>
+          <span class="header-badge">
+            <span class="badge-dot" aria-hidden="true"></span>
+            @if (context().stepName) {
+              <span>{{ context().stepName }}</span>
+            } @else if (context().projectId) {
+              <span>Project #{{ context().projectId }}</span>
+            } @else {
+              <span>Procurement Assistant</span>
+            }
+          </span>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <button
+          type="button"
+          class="ctrl-btn"
+          pTooltip="Clear conversation"
+          tooltipPosition="bottom"
+          aria-label="Clear chat conversation"
+          (click)="clearChat()"
+        >
+          <i class="pi pi-trash" aria-hidden="true"></i>
+        </button>
+        <button
+          type="button"
+          class="ctrl-btn"
+          pTooltip="Minimize Copilot"
+          tooltipPosition="bottom"
+          aria-label="Minimize Copilot"
+          (click)="close()"
+        >
+          <i class="pi pi-minus" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Context Hint Banner -->
+    <div class="context-hint-bar">
+      <i class="pi pi-info-circle hint-icon" aria-hidden="true"></i>
+      <span class="hint-text">
+        Context: <strong>{{ context().stepName || context().currentRoute }}</strong>
+      </span>
+    </div>
+
+    <!-- Runtime Diagnosis Bar -->
+    @if (diagnosis(); as diag) {
+      <div
+        class="runtime-status-bar"
+        [class.status-online]="diag.ollamaConnected && !!diag.activeModel"
+        [class.status-warning]="!diag.ollamaConnected || !diag.activeModel"
+      >
+        <button
+          type="button"
+          class="status-summary-btn"
+          (click)="toggleDiagnosisPanel()"
+          [attr.aria-expanded]="showDiagnosisPanel()"
+          aria-label="Toggle AI runtime diagnosis"
+        >
+          <span class="status-indicator" aria-hidden="true"></span>
+          @if (diag.activeProvider === 'ollama' && diag.activeModel) {
+            <span class="status-text">Ollama AI Active &bull; {{ diag.activeModel }}</span>
+          } @else if (diag.activeProvider === 'gemini') {
+            <span class="status-text">Gemini Cloud AI Active</span>
+          } @else {
+            <span class="status-text">Local Rule Engine (Ollama: {{ diag.ollamaConnected ? 'No models' : 'Offline' }})</span>
+          }
+          <i
+            class="pi status-chevron"
+            [class.pi-chevron-down]="!showDiagnosisPanel()"
+            [class.pi-chevron-up]="showDiagnosisPanel()"
+            aria-hidden="true"
+          ></i>
+        </button>
+
+        @if (showDiagnosisPanel()) {
+          <div class="diagnosis-panel">
+            <div class="diag-item">
+              <span class="diag-key">Ollama Service:</span>
+              <span
+                class="diag-val"
+                [class.val-success]="diag.ollamaConnected"
+                [class.val-danger]="!diag.ollamaConnected"
+              >
+                {{ diag.ollamaConnected ? 'Online (127.0.0.1:11434)' : 'Offline' }}
+              </span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-key">Active Model:</span>
+              <span class="diag-val">
+                <strong>{{ diag.activeModel || 'None' }}</strong>
+              </span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-key">Available Models:</span>
+              <span class="diag-val">
+                @if (diag.availableModels.length > 0) {
+                  {{ diag.availableModels.join(', ') }}
+                } @else {
+                  <em>None found</em>
+                }
+              </span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-key">Status Note:</span>
+              <span class="diag-val diag-note">{{ diag.statusMessage }}</span>
+            </div>
+            <div class="diag-footer">
+              <button
+                type="button"
+                class="diag-refresh-action"
+                [disabled]="isDiagnosing()"
+                (click)="refreshDiagnosis()"
+                aria-label="Recheck AI status"
+              >
+                <i [class]="isDiagnosing() ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'" aria-hidden="true"></i>
+                <span>{{ isDiagnosing() ? 'Diagnosing...' : 'Recheck Status' }}</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Messages Container -->
+    <div class="copilot-body" #messagesContainer>
+      <div class="messages-flow">
+        @for (msg of messages(); track msg.id) {
+          <div
+            class="message-bubble-wrapper"
+            [class.is-user]="msg.sender === 'user'"
+            [class.is-bot]="msg.sender === 'assistant'"
+          >
+            @if (msg.sender === 'assistant') {
+              <div class="msg-avatar" aria-hidden="true">
+                <i class="pi pi-sparkles"></i>
+              </div>
+            }
+
+            <div class="message-bubble">
+              @if (msg.provider) {
+                <div class="msg-provider-tag" [class.is-ollama]="msg.provider === 'ollama'">
+                  @if (msg.provider === 'ollama') {
+                    <i class="pi pi-server" aria-hidden="true"></i>
+                    <span>Ollama &bull; {{ msg.model || 'local' }}</span>
+                  } @else if (msg.provider === 'gemini') {
+                    <i class="pi pi-cloud" aria-hidden="true"></i>
+                    <span>Gemini Cloud</span>
+                  } @else {
+                    <i class="pi pi-list" aria-hidden="true"></i>
+                    <span>Procurement Rules</span>
+                  }
+                </div>
+              }
+              <div class="msg-content" [innerHTML]="formatMessage(msg.text)"></div>
+
+              <!-- Action buttons attached to assistant message -->
+              @if (msg.actions && msg.actions.length > 0) {
+                <div class="msg-actions-grid">
+                  @for (act of msg.actions; track act.label) {
+                    <button
+                      type="button"
+                      class="action-pill-btn"
+                      (click)="onActionClick(act)"
+                    >
+                      @if (act.icon) {
+                        <i [class]="act.icon" aria-hidden="true"></i>
+                      }
+                      <span>{{ act.label }}</span>
+                      <i class="pi pi-arrow-right action-arrow" aria-hidden="true"></i>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Typing / Loading state indicator -->
+        @if (isLoading()) {
+          <div class="message-bubble-wrapper is-bot">
+            <div class="msg-avatar" aria-hidden="true">
+              <i class="pi pi-spin pi-spinner"></i>
+            </div>
+            <div class="message-bubble typing-bubble">
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Contextual Quick Suggestion Prompts -->
+    @if (suggestedPrompts().length > 0) {
+      <div class="copilot-suggestions">
+        <span class="suggestions-label">Suggestions:</span>
+        <div class="suggestions-pills-row">
+          @for (prompt of suggestedPrompts(); track prompt) {
+            <button
+              type="button"
+              class="suggestion-chip"
+              (click)="selectSuggestion(prompt)"
+            >
+              {{ prompt }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Footer Input Bar -->
+    <footer class="copilot-footer">
+      <div class="input-composer">
+        <input
+          type="text"
+          class="composer-input"
+          [placeholder]="isLoading() ? 'Copilot is processing...' : 'Ask about suppliers, quotes, POs, steps...'"
+          [(ngModel)]="inputPrompt"
+          (keydown.enter)="$event.preventDefault(); send()"
+          [disabled]="isLoading()"
+          aria-label="Message for Stantech Copilot"
+        />
+        <button
+          type="button"
+          class="send-btn"
+          [disabled]="!inputPrompt().trim() || isLoading()"
+          (click)="send()"
+          aria-label="Send message to Copilot"
+        >
+          <i class="pi pi-send" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="composer-footnote">
+        <span>Press Enter to send • Powered by Procurement Intelligence</span>
+      </div>
+    </footer>
+  </aside>
+}

@@ -243,14 +243,6 @@ export class Step14CustomerPayment implements OnInit {
     return list.reduce((sum, p) => Math.max(sum, Number(p.invoice_value) || 0), 0);
   });
 
-  protected readonly totalPaymentReceived = computed(() => {
-    const lp = this.latestPayment();
-    if (lp?.total_paid_amount != null && !isNaN(Number(lp.total_paid_amount))) {
-      return Number(lp.total_paid_amount);
-    }
-    return this.payments().reduce((sum, p) => sum + (Number(p.payment_amount ?? p.amount_paid) || 0), 0);
-  });
-
   protected readonly totalTdsDeducted = computed(() => {
     return this.payments().reduce((sum, p) => sum + (Number(p.tds) || 0), 0);
   });
@@ -269,7 +261,7 @@ export class Step14CustomerPayment implements OnInit {
       return 0;
     }
     const inv = this.totalInvoiced();
-    const paid = this.totalPaymentReceived();
+    const paid = this.payments().reduce((sum, p) => sum + (Number(p.payment_amount ?? p.amount_paid) || 0), 0);
     const ded = this.totalDeductions();
     const mathOutstanding = Math.max(0, Math.round((inv - paid - ded) * 100) / 100);
     if (lp?.pending_amount != null && !isNaN(Number(lp.pending_amount))) {
@@ -287,7 +279,8 @@ export class Step14CustomerPayment implements OnInit {
     }
     const inv = this.totalInvoiced();
     if (inv <= 0) return 0;
-    const rate = ((this.totalPaymentReceived() + this.totalDeductions()) / inv) * 100;
+    const paid = this.payments().reduce((sum, p) => sum + (Number(p.payment_amount ?? p.amount_paid) || 0), 0);
+    const rate = ((paid + this.totalDeductions()) / inv) * 100;
     return Math.min(100, Math.round(rate));
   });
 

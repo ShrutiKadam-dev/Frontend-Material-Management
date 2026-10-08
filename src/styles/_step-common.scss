@@ -3107,6 +3107,18 @@
   margin-bottom: 22px;
   width: 100%;
 
+  &--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    @media (max-width: 900px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @media (max-width: 580px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
   @media (max-width: 1024px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3737,6 +3749,11 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
+}
+
+/* PrimeIcons polyfill: pi-calendar-check does not exist in PrimeIcons, map to check-circle */
+.pi-calendar-check:before {
+  content: "\e90a";
 }
 
 .param-chip {

@@ -91,7 +91,6 @@ describe('Step14CustomerPayment', () => {
     expect(component['payments']().length).toBe(1);
     expect(component['latestTaxInvoice']()?.invoice_no).toBe('INV-2026-001');
     expect(component['totalInvoiced']()).toBe(50000);
-    expect(component['totalPaymentReceived']()).toBe(45000);
     expect(component['totalDeductions']()).toBe(2000);
     expect(component['totalOutstandingBalance']()).toBe(3000);
   });
