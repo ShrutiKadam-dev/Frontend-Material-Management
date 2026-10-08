@@ -14,6 +14,7 @@ export interface Project {
   total_steps?: number;
   progress_percentage?: number;
   total_value?: number;
+  total_margin?: number;
   currency?: string;
   next_action?: string;
   target_delivery_date?: string | null;
@@ -31,6 +32,7 @@ export interface ProjectCreateInput {
   customer_id: number;
   supplier_id: number;
   currency?: string;
+  total_margin?: number;
   target_delivery_date?: string;
 }
 
@@ -43,6 +45,7 @@ export interface ProjectUpdateInput {
   supplier_id: number;
   status?: string;
   currency?: string;
+  total_margin?: number;
   target_delivery_date?: string;
 }
 

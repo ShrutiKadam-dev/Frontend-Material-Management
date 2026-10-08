@@ -574,10 +574,11 @@ export class Step15SupplierPayment implements OnInit {
     if (this.isAmountExceeding()) {
       const avail = this.dialogAvailablePending();
       const curr = this.paymentForm.get('currency')?.value || this.cardCurrency();
+      const availStr = avail.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       this.messageService.add({
         severity: 'warn',
         summary: 'Limit Exceeded',
-        detail: `Payment exceeds outstanding balance of ${curr} ${avail.toFixed(2)}. Maximum payable is ${avail.toFixed(2)}.`,
+        detail: `Payment exceeds outstanding balance of ${curr} ${availStr}. Maximum payable is ${availStr}.`,
         life: 4500,
       });
     }
@@ -756,7 +757,8 @@ export class Step15SupplierPayment implements OnInit {
 
     // Guard against exceeding outstanding balance
     if (!existing && availPending > 0 && Number(val.amount_paid) > (availPending + 0.01)) {
-      const errorMsg = `Payment exceeds outstanding balance of ${val.currency || this.cardCurrency()} ${availPending.toFixed(2)}`;
+      const availPendingStr = availPending.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const errorMsg = `Payment exceeds outstanding balance of ${val.currency || this.cardCurrency()} ${availPendingStr}`;
       this.messageService.add({
         severity: 'error',
         summary: 'Payment Limit Exceeded',
@@ -839,10 +841,11 @@ export class Step15SupplierPayment implements OnInit {
         .pipe(finalize(() => this.saving.set(false)))
         .subscribe({
           next: () => {
+            const paidFormatted = Number(payload.amount_paid).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             this.messageService.add({
               severity: 'success',
               summary: 'Payment Recorded',
-              detail: `Supplier payment of ${payload.currency} ${Number(payload.amount_paid).toFixed(2)} recorded successfully.`,
+              detail: `Supplier payment of ${payload.currency} ${paidFormatted} recorded successfully.`,
               life: 4000,
             });
             this.paymentDialogVisible.set(false);

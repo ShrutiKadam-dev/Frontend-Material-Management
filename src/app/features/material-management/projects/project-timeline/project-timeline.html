@@ -93,6 +93,17 @@
             }}</strong>
         </div>
         }
+
+        @if (p.total_margin !== undefined && p.total_margin !== null) {
+        <div class="commercial-divider" aria-hidden="true"></div>
+
+        <div class="commercial-col commercial-col--value"
+          [title]="'Total Margin: ₹' + ((p.total_margin || 0) | number:'1.2-2')">
+          <span class="commercial-label">Total Margin</span>
+          <strong class="commercial-value commercial-value--currency" style="color: #059669;">₹{{ (p.total_margin || 0) | number:'1.2-2'
+            }}</strong>
+        </div>
+        }
       </div>
       }
     </div>

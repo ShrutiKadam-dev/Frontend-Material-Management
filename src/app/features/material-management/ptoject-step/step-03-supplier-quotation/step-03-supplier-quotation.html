@@ -180,18 +180,18 @@
                   aria-label="Quoted materials">
                   <ng-template pTemplate="header">
                     <tr>
-                      <th scope="col" style="width: 40px; text-align: center;">#</th>
-                      <th scope="col" pSortableColumn="material_name">
+                      <th scope="col" style="width: 36px; text-align: center;">#</th>
+                      <th scope="col" pSortableColumn="material_name" style="width: 32%; min-width: 150px;">
                         Material Name <p-sortIcon field="material_name" />
                       </th>
-                      <th scope="col" style="min-width: 100px;">HSN/SAC</th>
-                      <th scope="col" pSortableColumn="quantity" style="width: 70px; text-align: right;">
+                      <th scope="col" style="width: 90px; text-align: center;">HSN/SAC</th>
+                      <th scope="col" pSortableColumn="quantity" style="width: 65px; text-align: right;">
                         Qty <p-sortIcon field="quantity" />
                       </th>
-                      <th scope="col" pSortableColumn="unit_price" style="width: 95px; text-align: right;">
+                      <th scope="col" pSortableColumn="unit_price" style="width: 145px; text-align: right;">
                         Unit Price <p-sortIcon field="unit_price" />
                       </th>
-                      <th scope="col" style="width: 105px; text-align: right;">
+                      <th scope="col" style="width: 130px; text-align: right;">
                         Net Amount
                       </th>
                     </tr>
@@ -239,7 +239,7 @@
                           <span class="total-title">Total Net Amount</span>
                         </div>
                       </td>
-                      <td class="total-amount-cell" style="width: 105px; text-align: right;">
+                      <td class="total-amount-cell" style="width: 130px; text-align: right;">
                         <span class="total-amount-value">{{ getQuotationCurrencySymbol(q.quotation_value, q) }} {{
                           calculateQuotationTotalNet(q.items) | number:'1.2-2' }}</span>
                       </td>
@@ -472,7 +472,7 @@
         <!-- Fast Inline Entry Row -->
         <div class="quick-add-bar" [class.quick-add-bar--editing]="editingIndex() !== null" [formGroup]="rowForm">
           <div class="quick-add-grid">
-            <div class="quick-field quick-field--name">
+            <div class="quick-field quick-field--name" style="flex: 1.5 1 160px;">
               <label for="dlg-sq-material-name">Material Name <span class="req">*</span></label>
               <input #matInput id="dlg-sq-material-name" pInputText formControlName="material_name"
                 placeholder="e.g. High-Pressure Hydraulic Valve" [class.ng-invalid]="isRowFieldInvalid('material_name')"
@@ -498,7 +498,7 @@
               }
             </div>
 
-            <div class="quick-field quick-field--price">
+            <div class="quick-field quick-field--price" style="flex: 1.2 1 140px;">
               <label for="dlg-sq-unit-price">Unit Price ({{ selectedCurrencySymbol() }})</label>
               <input #priceInput id="dlg-sq-unit-price" pInputText formControlName="unit_price"
                 placeholder="e.g. 150.00" (keydown.enter)="$event.preventDefault(); saveRow(matInput)" />
@@ -522,21 +522,21 @@
           styleClass="p-datatable-sm items-table-wrap" aria-label="Quotation items list">
           <ng-template pTemplate="header">
             <tr>
-              <th scope="col" style="width: 40px; text-align: center;">#</th>
-              <th scope="col" pSortableColumn="material_name">
+              <th scope="col" style="width: 36px; text-align: center;">#</th>
+              <th scope="col" pSortableColumn="material_name" style="width: 30%; min-width: 160px;">
                 Material Name <p-sortIcon field="material_name" />
               </th>
-              <th scope="col" style="min-width: 100px;">HSN/SAC</th>
-              <th scope="col" pSortableColumn="quantity" style="width: 80px; text-align: right;">
+              <th scope="col" style="width: 95px; text-align: center;">HSN/SAC</th>
+              <th scope="col" pSortableColumn="quantity" style="width: 70px; text-align: right;">
                 Qty <p-sortIcon field="quantity" />
               </th>
-              <th scope="col" pSortableColumn="unit_price" style="width: 110px; text-align: right;">
+              <th scope="col" pSortableColumn="unit_price" style="width: 160px; text-align: right;">
                 Unit Price ({{ selectedCurrencySymbol() }}) <p-sortIcon field="unit_price" />
               </th>
-              <th scope="col" style="width: 120px; text-align: right;">
+              <th scope="col" style="width: 135px; text-align: right;">
                 Net Amount ({{ selectedCurrencySymbol() }})
               </th>
-              <th scope="col" style="width: 80px; text-align: right; white-space: nowrap;">Actions</th>
+              <th scope="col" style="width: 75px; text-align: right; white-space: nowrap;">Actions</th>
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-item let-i="rowIndex">
@@ -596,11 +596,11 @@
                   }
                 </div>
               </td>
-              <td class="total-amount-cell" style="width: 120px; text-align: right;">
+              <td class="total-amount-cell" style="width: 135px; text-align: right;">
                 <span class="total-amount-value">{{ selectedCurrencySymbol() }} {{ totalNetAmount() | number:'1.2-2'
                   }}</span>
               </td>
-              <td class="total-empty-cell" style="width: 80px;"></td>
+              <td class="total-empty-cell" style="width: 75px;"></td>
             </tr>
           </ng-template>
         </p-table>

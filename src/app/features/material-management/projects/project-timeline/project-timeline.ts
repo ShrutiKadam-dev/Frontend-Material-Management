@@ -263,6 +263,7 @@ export class ProjectTimeline implements OnInit {
                 return {
                   ...cur,
                   total_value: match.total_value !== undefined && match.total_value !== null ? Number(match.total_value) : cur.total_value,
+                  total_margin: match.total_margin !== undefined && match.total_margin !== null ? Number(match.total_margin) : cur.total_margin,
                   currency: match.currency || cur.currency || 'INR',
                   created_at: cur.created_at || match.created_at,
                   updated_at: match.updated_at || cur.updated_at,

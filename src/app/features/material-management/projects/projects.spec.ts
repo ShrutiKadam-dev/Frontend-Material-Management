@@ -61,18 +61,21 @@ describe('Projects', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialize form with project_code and nickname', () => {
+  it('should initialize form with project_code, nickname and total_margin', () => {
     expect(component['projectForm'].get('project_code')).toBeDefined();
     expect(component['projectForm'].get('nickname')).toBeDefined();
+    expect(component['projectForm'].get('total_margin')).toBeDefined();
     expect(component['projectForm'].get('nickname')?.value).toBe('');
+    expect(component['projectForm'].get('total_margin')?.value).toBeNull();
   });
 
-  it('should patch nickname when opening edit dialog', () => {
-    component['openEditDialog']({ id: 1, project_title: 'Test' } as any);
+  it('should patch nickname and total_margin when opening edit dialog', () => {
+    component['openEditDialog']({ id: 1, project_title: 'Test', total_margin: 15000 } as any);
     expect(component['projectForm'].get('nickname')?.value).toBe('DEMO-NICK');
+    expect(component['projectForm'].get('total_margin')?.value).toBe(15000);
   });
 
-  it('should include nickname in create payload on submit', () => {
+  it('should include nickname and total_margin in create payload on submit', () => {
     let capturedPayload: any = null;
     vi.spyOn(mockProjectService, 'createProject').mockImplementation((payload: any) => {
       capturedPayload = payload;
@@ -86,11 +89,13 @@ describe('Projects', () => {
       nickname: 'COOL-SYS',
       customer_id: 1,
       supplier_id: 2,
+      total_margin: 25000,
     });
 
     component['onSubmit']();
     expect(capturedPayload).toBeTruthy();
     expect(capturedPayload.nickname).toBe('COOL-SYS');
+    expect(capturedPayload.total_margin).toBe(25000);
   });
 });
 

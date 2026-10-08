@@ -130,7 +130,7 @@ export function getQuotationCurrencySymbol(quotationValue?: string | number): st
  * Formats a raw or compound currency string/number with proper symbol and comma grouping
  * Example: 'USD 15000' -> '$ 15,000.00', 25000 -> '$ 25,000.00'
  */
-export function formatCurrencyAmount(value?: string | number | null, defaultCurrency = 'USD'): string {
+export function formatCurrencyAmount(value?: string | number | null, defaultCurrency = 'INR'): string {
   if (value === null || value === undefined || value === '') return '';
   const str = String(value).trim();
   const match = str.match(/^([A-Za-z]{3})\s*(.+)$/);
@@ -140,7 +140,8 @@ export function formatCurrencyAmount(value?: string | number | null, defaultCurr
     const num = parseFloat(match[2].replace(/,/g, ''));
     if (!isNaN(num)) {
       const sym = CURRENCY_SYMBOLS[code] ? `${CURRENCY_SYMBOLS[code]} ` : `${code} `;
-      return `${sym}${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const locale = code === 'INR' || code === '₹' || defaultCurrency === 'INR' ? 'en-IN' : 'en-US';
+      return `${sym}${num.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
     return str;
   }
@@ -148,7 +149,8 @@ export function formatCurrencyAmount(value?: string | number | null, defaultCurr
   const num = parseFloat(str.replace(/,/g, ''));
   if (!isNaN(num)) {
     const sym = getCurrencySymbol(defaultCurrency);
-    return `${sym} ${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const locale = defaultCurrency === 'INR' || defaultCurrency === '₹' ? 'en-IN' : 'en-US';
+    return `${sym} ${num.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
   return str;
 }

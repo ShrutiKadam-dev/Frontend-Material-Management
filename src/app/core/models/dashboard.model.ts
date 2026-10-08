@@ -17,6 +17,7 @@ export interface DashboardProject {
   current_step_number?: number;
   total_steps?: number;
   total_value?: number;
+  total_margin?: number;
   currency?: string;
   next_action?: string;
   target_delivery_date?: string | null;

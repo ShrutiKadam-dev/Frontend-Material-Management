@@ -82,6 +82,7 @@ export class Projects implements OnInit {
     nickname: [''],
     customer_id: [null as number | null, [Validators.required]],
     supplier_id: [null as number | null, [Validators.required]],
+    total_margin: [null as number | null],
   });
 
   // ── Status Helper & Filter Counts ───────────────────────────────
@@ -209,6 +210,7 @@ export class Projects implements OnInit {
       nickname: '',
       customer_id: null,
       supplier_id: null,
+      total_margin: null,
     });
     this.isEditMode.set(false);
     this.dialogVisible.set(true);
@@ -225,6 +227,7 @@ export class Projects implements OnInit {
           nickname: fresh.nickname || '',
           customer_id: fresh.customer_id,
           supplier_id: fresh.supplier_id,
+          total_margin: fresh.total_margin !== undefined && fresh.total_margin !== null ? fresh.total_margin : null,
         });
         this.isEditMode.set(true);
         this.dialogVisible.set(true);
@@ -248,6 +251,10 @@ export class Projects implements OnInit {
     this.submitting.set(true);
     const formValue = this.projectForm.value;
     const nicknameVal = (formValue.nickname || '').trim() || undefined;
+    const marginRaw = formValue.total_margin;
+    const marginVal = marginRaw !== null && marginRaw !== undefined && (marginRaw as unknown) !== ''
+      ? Number(marginRaw)
+      : undefined;
 
     const payload: ProjectCreateInput = {
       project_title: formValue.project_title ?? '',
@@ -255,6 +262,7 @@ export class Projects implements OnInit {
       nickname: nicknameVal,
       customer_id: formValue.customer_id as number,
       supplier_id: formValue.supplier_id as number,
+      total_margin: marginVal,
     };
 
     if (this.isEditMode()) {

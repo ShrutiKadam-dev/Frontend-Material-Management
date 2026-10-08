@@ -452,10 +452,12 @@ export class Step14CustomerPayment implements OnInit {
     if (this.isAmountExceeding()) {
       const avail = this.dialogAvailableBalance();
       const maxPay = this.dialogMaxPayable();
+      const availStr = avail.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const maxPayStr = maxPay.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       this.messageService.add({
         severity: 'warn',
         summary: 'Limit Exceeded',
-        detail: `Payment exceeds remaining balance of ₹ ${avail.toFixed(2)}. Maximum payable is ₹ ${maxPay.toFixed(2)}.`,
+        detail: `Payment exceeds remaining balance of ₹ ${availStr}. Maximum payable is ₹ ${maxPayStr}.`,
         life: 4500,
       });
     }
@@ -465,10 +467,12 @@ export class Step14CustomerPayment implements OnInit {
     if (this.isAmountExceeding()) {
       const avail = this.dialogAvailableBalance();
       const maxPay = this.dialogMaxPayable();
+      const availStr = avail.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const maxPayStr = maxPay.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       this.messageService.add({
         severity: 'warn',
         summary: 'Limit Exceeded',
-        detail: `Total deductions with payment exceed remaining balance of ₹ ${avail.toFixed(2)}. Maximum payable after deductions is ₹ ${maxPay.toFixed(2)}.`,
+        detail: `Total deductions with payment exceed remaining balance of ₹ ${availStr}. Maximum payable after deductions is ₹ ${maxPayStr}.`,
         life: 4500,
       });
     }
@@ -484,10 +488,12 @@ export class Step14CustomerPayment implements OnInit {
     if (this.isAmountExceeding()) {
       const avail = this.dialogAvailableBalance();
       const maxPay = this.dialogMaxPayable();
+      const availStr = avail.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const maxPayStr = maxPay.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       this.messageService.add({
         severity: 'error',
         summary: 'Cannot Submit: Balance Exceeded',
-        detail: `Payment amount exceeds the remaining balance of ₹ ${avail.toFixed(2)}. Maximum payable is ₹ ${maxPay.toFixed(2)}.`,
+        detail: `Payment amount exceeds the remaining balance of ₹ ${availStr}. Maximum payable is ₹ ${maxPayStr}.`,
         life: 5000,
       });
       return;

@@ -276,6 +276,12 @@
               <span class="financials-currency">{{ project.currency || 'INR' }}</span>
               <span class="financials-value">₹{{ (project.total_value || 0) | number:'1.2-2' }}</span>
             </div>
+            @if (project.total_margin !== undefined && project.total_margin !== null) {
+            <div class="financials-margin" [title]="'Total Margin: ₹' + (project.total_margin | number:'1.2-2')">
+              <span class="margin-label">Margin</span>
+              <span class="margin-val">₹{{ project.total_margin | number:'1.2-2' }}</span>
+            </div>
+            }
             <span class="financials-date">
               {{ (project.updated_at || project.created_at) | appDate:'d MMM yyyy' }}
             </span>

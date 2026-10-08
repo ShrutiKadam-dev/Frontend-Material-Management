@@ -143,6 +143,12 @@
             <span class="financials-currency">{{ project.currency || 'INR' }}</span>
             <span class="financials-value">₹{{ (project.total_value || 0) | number:'1.2-2' }}</span>
           </div>
+          @if (project.total_margin !== undefined && project.total_margin !== null) {
+          <div class="financials-margin" [title]="'Total Margin: ₹' + (project.total_margin | number:'1.2-2')">
+            <span class="margin-label">Margin</span>
+            <span class="margin-val">₹{{ project.total_margin | number:'1.2-2' }}</span>
+          </div>
+          }
           <span class="financials-date"
             [title]="'Last updated: ' + ((project.updated_at || project.created_at) | appDate:'d MMM yyyy')">
             {{ (project.updated_at || project.created_at) | appDate:'d MMM yyyy' }}
@@ -253,6 +259,7 @@
           <th scope="col" style="min-width: 180px;">Supplier</th>
           <th scope="col" style="min-width: 220px;">Pipeline Step & Progress</th>
           <th scope="col" style="min-width: 130px; text-align: right;">Total Value</th>
+          <th scope="col" style="min-width: 130px; text-align: right;">Total Margin</th>
           <th scope="col" style="min-width: 120px; text-align: center;">Status</th>
           <th scope="col" style="min-width: 200px;">Next Action</th>
           <th scope="col" style="width: 110px; text-align: center;">Actions</th>
@@ -294,6 +301,13 @@
           </td>
           <td style="text-align: right; font-weight: 800; color: var(--color-heading);">
             ₹&nbsp;{{ (p.total_value || 0) | number:'1.2-2' }}
+          </td>
+          <td style="text-align: right; font-weight: 700; color: #059669;">
+            @if (p.total_margin !== undefined && p.total_margin !== null) {
+              ₹&nbsp;{{ p.total_margin | number:'1.2-2' }}
+            } @else {
+              <span style="color: var(--color-muted); font-weight: 400;">—</span>
+            }
           </td>
           <td style="text-align: center;">
             <span class="mpc-chip mpc-chip--phase"
@@ -365,6 +379,12 @@
           <div class="field">
             <label for="dlg-project-code">Project Code</label>
             <input id="dlg-project-code" pInputText formControlName="project_code" placeholder="e.g. PRJ-2026-001" />
+          </div>
+
+          <div class="field span-two">
+            <label for="dlg-total-margin">Total Margin (₹)</label>
+            <input id="dlg-total-margin" pInputText type="number" step="0.01" formControlName="total_margin"
+              placeholder="e.g. 50000.00" />
           </div>
         </div>
       </div>

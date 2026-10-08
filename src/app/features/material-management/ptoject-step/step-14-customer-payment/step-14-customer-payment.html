@@ -324,7 +324,7 @@
                                 <span class="p-lbl">Invoice Date:</span>
                                 <span class="p-val">{{ payment.invoice_date | appDate }}</span>
                             </div>
-                            <div class="param-chip">
+                            <div class="param-chip param-chip--paid">
                                 <i class="pi pi-calendar-check" aria-hidden="true"></i>
                                 <span class="p-lbl">Receipt Date:</span>
                                 <span class="p-val">{{ payment.payment_date | appDate }}</span>
@@ -399,7 +399,12 @@
                                         <td><span class="ref-badge"
                                                 style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;">Bank
                                                 Receipt</span></td>
-                                        <td>Receipt Date: {{ payment.payment_date | appDate }}</td>
+                                        <td>
+                                            <span class="cell-date-badge">
+                                                <i class="pi pi-calendar-check" aria-hidden="true"></i>
+                                                Receipt Date: {{ payment.payment_date | appDate }}
+                                            </span>
+                                        </td>
                                         <td class="text-right font-mono font-bold" style="color: #059669;">− ₹ {{
                                             getPaymentAmount(payment) | number:'1.2-2' }}</td>
                                     </tr>
