@@ -517,8 +517,22 @@ export class Step04CostSheet implements OnInit {
     this.resetItemForm();
   }
 
-  protected editItem(index: number): void {
+  protected editItem(itemOrIndex: CostSheetItem | CostSheetItemInput | number, indexInPage?: number): void {
+    let index: number;
+    if (typeof itemOrIndex === 'number') {
+      index = itemOrIndex;
+    } else {
+      const foundIdx = this.items().indexOf(itemOrIndex as CostSheetItem);
+      index = foundIdx !== -1 ? foundIdx : (indexInPage ?? -1);
+    }
+
+    if (index < 0 || index >= this.items().length) return;
     const item = this.items()[index];
+    const defaultDuty = this.globalParamsForm.controls.defaultCustomsDutyRate.value;
+    const dutyVal = (item.customsDutyRate !== undefined && item.customsDutyRate !== null && !isNaN(Number(item.customsDutyRate)))
+      ? Number(item.customsDutyRate)
+      : (defaultDuty !== null && defaultDuty !== undefined && !isNaN(Number(defaultDuty)) ? Number(defaultDuty) : null);
+
     this.itemForm.setValue({
       quotationNumber: item.quotationNumber || '',
       quotationIndex: item.quotationIndex || String(index + 1),
@@ -526,15 +540,26 @@ export class Step04CostSheet implements OnInit {
       itemCode: item.itemCode || '',
       pricePerUnitEur: item.pricePerUnitEur !== undefined && item.pricePerUnitEur !== null ? item.pricePerUnitEur : null,
       quantity: item.quantity !== undefined && item.quantity !== null ? item.quantity : null,
-      customsDutyRate: item.customsDutyRate !== undefined && item.customsDutyRate !== null ? item.customsDutyRate : null,
+      customsDutyRate: dutyVal,
     });
     this.editingItemIndex.set(index);
   }
 
-  protected deleteItem(index: number): void {
+  protected deleteItem(itemOrIndex: CostSheetItem | CostSheetItemInput | number, indexInPage?: number): void {
+    let index: number;
+    if (typeof itemOrIndex === 'number') {
+      index = itemOrIndex;
+    } else {
+      const foundIdx = this.items().indexOf(itemOrIndex as CostSheetItem);
+      index = foundIdx !== -1 ? foundIdx : (indexInPage ?? -1);
+    }
+
+    if (index < 0 || index >= this.items().length) return;
     this.items.update((list) => list.filter((_, idx) => idx !== index));
     if (this.editingItemIndex() === index) {
       this.resetItemForm();
+    } else if (this.editingItemIndex() !== null && this.editingItemIndex()! > index) {
+      this.editingItemIndex.update((curr) => (curr !== null ? curr - 1 : null));
     }
   }
 
@@ -551,15 +576,28 @@ export class Step04CostSheet implements OnInit {
   protected importAllQuotationItems(quotation: SupplierQuotation): void {
     if (!quotation.items || quotation.items.length === 0) return;
 
-    const newItems: CostSheetItemInput[] = quotation.items.map((it, idx) => ({
-      quotationNumber: quotation.quotation_number || `SQ-${quotation.id}`,
-      quotationIndex: String(idx + 1),
-      itemDescription: it.material_name,
-      itemCode: `MAT-${idx + 1}`,
-      pricePerUnitEur: Number(it.unit_price) || 0,
-      quantity: Number(it.quantity) || 1,
-      customsDutyRate: undefined,
-    }));
+    const defaultDuty = this.globalParamsForm.controls.defaultCustomsDutyRate.value;
+    const initialDuty = defaultDuty !== null && defaultDuty !== undefined && !isNaN(Number(defaultDuty))
+      ? Number(defaultDuty)
+      : undefined;
+
+    const newItems: CostSheetItemInput[] = quotation.items.map((it, idx) => {
+      const rawItem = it as unknown as Record<string, unknown>;
+      const itemDuty = rawItem['customsDutyRate'] ?? rawItem['customs_duty_rate'] ?? rawItem['duty_rate'] ?? rawItem['duty'];
+      const duty = itemDuty !== undefined && itemDuty !== null && !isNaN(Number(itemDuty))
+        ? Number(itemDuty)
+        : initialDuty;
+
+      return {
+        quotationNumber: quotation.quotation_number || `SQ-${quotation.id}`,
+        quotationIndex: String(idx + 1),
+        itemDescription: it.material_name,
+        itemCode: (rawItem['material_number'] as string) || `MAT-${idx + 1}`,
+        pricePerUnitEur: Number(it.unit_price) || 0,
+        quantity: Number(it.quantity) || 1,
+        customsDutyRate: duty,
+      };
+    });
 
     this.items.update((list) => [...list, ...newItems]);
     this.messageService.add({

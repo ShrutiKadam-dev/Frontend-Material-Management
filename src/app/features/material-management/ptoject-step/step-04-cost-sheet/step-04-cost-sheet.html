@@ -604,18 +604,18 @@
                                 </td>
                                 <td class="num-cell">
                                     {{ formatPercent(item.customsDutyRate ??
-                                    globalParamsForm.controls.defaultCustomsDutyRate.value ?? 0) }}
+                                    activeGlobalParams().defaultCustomsDutyRate ?? 0) }}
                                 </td>
                                 <td style="text-align: right; width: 80px; white-space: nowrap;">
                                     <div class="actions-cell">
                                         <button pButton type="button" icon="pi pi-pencil"
                                             class="p-button-text p-button-sm qe-edit"
                                             [attr.aria-label]="'Edit ' + item.itemDescription" pTooltip="Edit Item"
-                                            tooltipPosition="top" (click)="editItem(i)"></button>
+                                            tooltipPosition="top" (click)="editItem(item, i)"></button>
                                         <button pButton type="button" icon="pi pi-trash"
                                             class="p-button-text p-button-sm p-button-danger qe-delete"
                                             [attr.aria-label]="'Delete ' + item.itemDescription" pTooltip="Delete Item"
-                                            tooltipPosition="top" (click)="deleteItem(i)"></button>
+                                            tooltipPosition="top" (click)="deleteItem(item, i)"></button>
                                     </div>
                                 </td>
                             </tr>
