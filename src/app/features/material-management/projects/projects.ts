@@ -9,7 +9,15 @@ import {
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
-import { finalize } from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  finalize,
+  of,
+  Subject,
+  switchMap,
+} from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -21,7 +29,12 @@ import { TableModule } from 'primeng/table';
 
 import { Customer } from '../../../core/models/customer.model';
 import { Supplier } from '../../../core/models/supplier.model';
-import { Project, ProjectCreateInput, ProjectUpdateInput } from '../../../core/models/project.model';
+import {
+  MatchedItem,
+  Project,
+  ProjectCreateInput,
+  ProjectUpdateInput,
+} from '../../../core/models/project.model';
 import { CustomerService } from '../../../core/services/customer';
 import { SupplierService } from '../../../core/services/supplier';
 import { ProjectService } from '../../../core/services/project';
@@ -58,16 +71,22 @@ export class Projects implements OnInit {
   private readonly messageService = inject(MessageService);
 
   // ── State Signals ──────────────────────────────────────────────
+  protected readonly masterProjects = signal<Project[]>([]);
   protected readonly projects = signal<Project[]>([]);
   protected readonly customers = signal<Customer[]>([]);
   protected readonly suppliers = signal<Supplier[]>([]);
   protected readonly loading = signal<boolean>(false);
+  protected readonly isSearching = signal<boolean>(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly expandedProjectItems = signal<Set<number>>(new Set());
 
   // ── Filter & Search States ────────────────────────────────────
   protected readonly searchQuery = signal<string>('');
   protected readonly selectedHealthFilter = signal<HealthFilter>('all');
   protected readonly viewMode = signal<ViewMode>('grid');
+
+  // ── Search Subject for Debounced Backend Query ────────────────
+  private readonly searchSubject = new Subject<string>();
 
   // ── Dialog States ──────────────────────────────────────────────
   protected readonly dialogVisible = signal<boolean>(false);
@@ -127,12 +146,12 @@ export class Projects implements OnInit {
       list = list.filter((p) => this.getProjectStatus(p) === 'completed');
     }
 
-    // Search query filter
+    // Search query filter (matches Project Title, Code, Nickname, Client, Supplier, Next Action, or Items)
     if (query) {
       list = list.filter((p) => {
         const titleMatch = p.project_title?.toLowerCase().includes(query);
         const codeMatch = p.project_code?.toLowerCase().includes(query);
-        const nickMatch = (p.nickname || '').toLowerCase().includes(query);
+        const nickMatch = (p.nickname || p.project_nickname || '').toLowerCase().includes(query);
         const custMatch = (p.customer_name || this.getCustomerName(p.customer_id))
           .toLowerCase()
           .includes(query);
@@ -141,7 +160,26 @@ export class Projects implements OnInit {
           .includes(query);
         const nextActionMatch = p.next_action?.toLowerCase().includes(query);
         const stepMatch = p.current_step_name?.toLowerCase().includes(query);
-        return titleMatch || codeMatch || nickMatch || custMatch || suppMatch || nextActionMatch || stepMatch;
+
+        // Check matched_items (from backend search) or items list
+        const allItems = [...(p.matched_items || []), ...(p.items || [])];
+        const itemMatch = allItems.some((item) => {
+          const matName = (item.material_name || '').toLowerCase();
+          const itCode = (item.item_code || '').toLowerCase();
+          const step = (item.step_name || '').toLowerCase();
+          return matName.includes(query) || itCode.includes(query) || step.includes(query);
+        });
+
+        return (
+          titleMatch ||
+          codeMatch ||
+          nickMatch ||
+          custMatch ||
+          suppMatch ||
+          nextActionMatch ||
+          stepMatch ||
+          itemMatch
+        );
       });
     }
 
@@ -149,8 +187,43 @@ export class Projects implements OnInit {
   });
 
   ngOnInit(): void {
+    this.initSearchPipeline();
     this.loadProjects();
     this.loadDropdownData();
+  }
+
+  private initSearchPipeline(): void {
+    this.searchSubject
+      .pipe(
+        debounceTime(350),
+        distinctUntilChanged(),
+        switchMap((term) => {
+          const trimmed = term.trim();
+          if (!trimmed) {
+            this.isSearching.set(false);
+            this.projects.set(this.masterProjects());
+            return of(this.masterProjects());
+          }
+          this.isSearching.set(true);
+          return this.projectService.searchProjects(trimmed).pipe(
+            catchError((err: unknown) => {
+              console.warn(
+                'Backend search endpoint /api/v1/projects/search not available; falling back to local list:',
+                err,
+              );
+              // Fallback to local master projects so local filter continues without breaking
+              return of(this.masterProjects());
+            }),
+            finalize(() => this.isSearching.set(false)),
+          );
+        }),
+      )
+      .subscribe({
+        next: (data) => {
+          this.projects.set(data);
+        },
+        error: (err: unknown) => console.error('Search pipeline error', err),
+      });
   }
 
   private loadDropdownData(): void {
@@ -172,7 +245,12 @@ export class Projects implements OnInit {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (data) => {
-          this.projects.set(data);
+          this.masterProjects.set(data);
+          if (this.searchQuery().trim()) {
+            this.searchSubject.next(this.searchQuery());
+          } else {
+            this.projects.set(data);
+          }
         },
         error: (err: unknown) => {
           console.error('Failed to load projects', err);
@@ -191,11 +269,15 @@ export class Projects implements OnInit {
 
   protected onSearchInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.searchQuery.set(input.value);
+    const value = input.value;
+    this.searchQuery.set(value);
+    this.searchSubject.next(value);
   }
 
   protected clearSearch(): void {
     this.searchQuery.set('');
+    this.searchSubject.next('');
+    this.projects.set(this.masterProjects());
   }
 
   // ── Navigation & Actions ───────────────────────────────────────
@@ -449,5 +531,73 @@ export class Projects implements OnInit {
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
+  }
+
+  // ── Matched Items Display Helpers ──────────────────────────────
+  protected toggleItemsExpand(projectId: number): void {
+    this.expandedProjectItems.update((current) => {
+      const next = new Set(current);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
+  }
+
+  protected isItemsExpanded(projectId: number): boolean {
+    return this.expandedProjectItems().has(projectId);
+  }
+
+  protected getMatchedItemsTooltip(items?: MatchedItem[]): string {
+    if (!items || items.length === 0) return '';
+    return items
+      .map(
+        (i) =>
+          `${i.material_name || i.item_code || 'Item'}${i.quantity ? ` (Qty: ${i.quantity})` : ''}${
+            i.step_name ? ` [${i.step_name}]` : ''
+          }`,
+      )
+      .join('\n');
+  }
+
+  protected highlightText(text?: string, query?: string): string {
+    if (!text) return '';
+    const q = (query || '').trim();
+    if (!q) return this.escapeHtml(text);
+
+    const words = q
+      .split(/\s+/)
+      .filter((w) => w.length > 0)
+      .map((w) => this.escapeRegex(w));
+    if (words.length === 0) return this.escapeHtml(text);
+
+    const splitRegex = new RegExp(`(${words.join('|')})`, 'gi');
+    const testRegex = new RegExp(`^(?:${words.join('|')})$`, 'i');
+    const parts = text.split(splitRegex);
+
+    return parts
+      .map((part) => {
+        if (!part) return '';
+        if (testRegex.test(part)) {
+          return `<mark class="search-match-mark">${this.escapeHtml(part)}</mark>`;
+        }
+        return this.escapeHtml(part);
+      })
+      .join('');
+  }
+
+  private escapeHtml(str: string): string {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  private escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 }

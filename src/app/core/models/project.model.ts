@@ -1,3 +1,10 @@
+export interface MatchedItem {
+  material_name?: string;
+  item_code?: string;
+  quantity?: string | number;
+  step_name?: string;
+}
+
 export interface Project {
   id: number;
   project_title: string;
@@ -20,6 +27,8 @@ export interface Project {
   target_delivery_date?: string | null;
   customer_payment_status?: 'pending' | 'paid' | 'partial' | string;
   supplier_payment_status?: 'pending' | 'paid' | 'partial' | string;
+  matched_items?: MatchedItem[];
+  items?: MatchedItem[];
   created_at: string;
   updated_at: string;
 }

@@ -27,9 +27,13 @@
   <div class="control-panel app-panel">
     <!-- Search Bar -->
     <div class="search-input-wrapper">
+      @if (isSearching()) {
+      <i class="pi pi-spin pi-spinner search-icon" aria-hidden="true"></i>
+      } @else {
       <i class="pi pi-search search-icon" aria-hidden="true"></i>
+      }
       <input type="text" class="search-input" [value]="searchQuery()" (input)="onSearchInput($event)"
-        placeholder="Search projects by title, client, supplier, or next step…" aria-label="Search projects" />
+        placeholder="Search projects by name, code, client, or item/material…" aria-label="Search projects" />
       @if (searchQuery()) {
       <button type="button" class="clear-search-btn" (click)="clearSearch()" aria-label="Clear search">
         <i class="pi pi-times" aria-hidden="true"></i>
@@ -72,6 +76,23 @@
       </button>
     </div>
   </div>
+
+  <!-- Search Feedback Active Banner -->
+  @if (searchQuery().trim()) {
+  <div class="search-feedback-banner" role="status" aria-live="polite">
+    <div class="banner-left">
+      <i class="pi pi-search banner-icon" aria-hidden="true"></i>
+      <span>
+        Showing results for <strong class="query-highlight">"{{ searchQuery().trim() }}"</strong>
+        <span class="results-count">({{ filteredProjects().length }} {{ filteredProjects().length === 1 ? 'project' :
+          'projects' }} found)</span>
+      </span>
+    </div>
+    <button type="button" class="banner-clear-btn" (click)="clearSearch()" aria-label="Clear current search">
+      <i class="pi pi-times" aria-hidden="true"></i> Clear search
+    </button>
+  </div>
+  }
 
   <!-- ── 3. Main Projects Content (Grid or Table) ─────────────────────── -->
   @if (loading() && projects().length === 0) {
@@ -124,18 +145,19 @@
       <!-- 1. Card Top Bar: Badges & Commercials -->
       <div class="mpc-header">
         <div class="mpc-badge-cluster">
-          <span class="mpc-code-badge" pTooltip="Project Code" tooltipPosition="top">
-            {{ project.project_code || ('PRJ-' + (project.id < 10 ? '0' + project.id : project.id)) }} </span>
+          <span class="mpc-code-badge" pTooltip="Project Code" tooltipPosition="top"
+            [innerHTML]="highlightText(project.project_code || ('PRJ-' + (project.id < 10 ? '0' + project.id : project.id)), searchQuery())">
+          </span>
 
-              <span class="mpc-status-chip" [class]="'mpc-status-chip mpc-status-chip--' + getProjectStatus(project)">
-                <span class="status-live-dot" aria-hidden="true"></span>
-                {{ getStatusLabel(getProjectStatus(project)) }}
-              </span>
+          <span class="mpc-status-chip" [class]="'mpc-status-chip mpc-status-chip--' + getProjectStatus(project)">
+            <span class="status-live-dot" aria-hidden="true"></span>
+            {{ getStatusLabel(getProjectStatus(project)) }}
+          </span>
 
-              <span class="mpc-nickname-tag" [title]="'Nickname: ' + project.project_title">
-                <i class="pi pi-tag" aria-hidden="true"></i>
-                {{ project.project_title }}
-              </span>
+          <span class="mpc-nickname-tag" [title]="'Nickname: ' + project.project_title">
+            <i class="pi pi-tag" aria-hidden="true"></i>
+            <span [innerHTML]="highlightText(project.project_title, searchQuery())"></span>
+          </span>
         </div>
 
         <div class="mpc-financials">
@@ -157,8 +179,8 @@
       </div>
 
       <!-- 2. Project Title -->
-      <h2 class="mpc-title" (click)="openDetailsDialog(project)" [title]="project.nickname">
-        {{ project.nickname }}
+      <h2 class="mpc-title" (click)="openDetailsDialog(project)" [title]="project.nickname"
+        [innerHTML]="highlightText(project.nickname, searchQuery())">
       </h2>
 
       <!-- 3. Supply Chain Relationship Flow (No Boxed Table!) -->
@@ -169,8 +191,8 @@
           </div>
           <div class="supply-meta">
             <span class="supply-role">Customer</span>
-            <span class="supply-name" [title]="project.customer_name || getCustomerName(project.customer_id)">
-              {{ project.customer_name || getCustomerName(project.customer_id) }}
+            <span class="supply-name" [title]="project.customer_name || getCustomerName(project.customer_id)"
+              [innerHTML]="highlightText(project.customer_name || getCustomerName(project.customer_id), searchQuery())">
             </span>
           </div>
         </div>
@@ -185,12 +207,47 @@
           </div>
           <div class="supply-meta">
             <span class="supply-role">Supplier</span>
-            <span class="supply-name" [title]="project.supplier_name || getSupplierName(project.supplier_id)">
-              {{ project.supplier_name || getSupplierName(project.supplier_id) }}
+            <span class="supply-name" [title]="project.supplier_name || getSupplierName(project.supplier_id)"
+              [innerHTML]="highlightText(project.supplier_name || getSupplierName(project.supplier_id), searchQuery())">
             </span>
           </div>
         </div>
       </div>
+
+      <!-- Matched Items Stack in Card View (Clean & Aligned) -->
+      @if (project.matched_items && project.matched_items.length > 0) {
+      <div class="mpc-matched-items-box" role="region" aria-label="Contained items">
+        <div class="mib-header">
+          <div class="mib-title">
+            <i class="pi pi-box" aria-hidden="true"></i>
+            <span>Contained Items</span>
+            <span class="mib-count">{{ project.matched_items.length }}</span>
+          </div>
+        </div>
+        <div class="mib-list">
+          @for (item of project.matched_items.slice(0, 3); track $index) {
+          <div class="mib-item-row">
+            <div class="mir-left">
+              <span class="mir-bullet" aria-hidden="true">↳</span>
+              <span class="mir-name"
+                [innerHTML]="highlightText(item.material_name || item.item_code, searchQuery())"></span>
+            </div>
+            @if (item.quantity !== undefined && item.quantity !== null && item.quantity !== '') {
+            <span class="mir-qty">Qty: {{ item.quantity }}</span>
+            }
+          </div>
+          }
+          @if (project.matched_items.length > 3) {
+          <div class="mib-more-wrap">
+            <span class="mib-more-btn" [pTooltip]="getMatchedItemsTooltip(project.matched_items)" tooltipPosition="top"
+              aria-label="View more items">
+              +{{ project.matched_items.length - 3 }} more item{{ project.matched_items.length - 3 > 1 ? 's' : '' }}
+            </span>
+          </div>
+          }
+        </div>
+      </div>
+      }
 
       <!-- 4. Pipeline Lifecycle Progress -->
       <div class="mpc-lifecycle">
@@ -269,23 +326,31 @@
       <ng-template pTemplate="body" let-p let-i="rowIndex">
         <tr class="table-project-row">
           <td style="text-align: center;">
-            <span class="tbl-code-pill">{{ p.project_code || ('PRJ-' + (p.id < 10 ? '0' + p.id : p.id)) }}</span>
+            <span class="tbl-code-pill"
+              [innerHTML]="highlightText(p.project_code || ('PRJ-' + (p.id < 10 ? '0' + p.id : p.id)), searchQuery())">
+            </span>
           </td>
           <td>
-            <strong class="tbl-project-title" (click)="openDetailsDialog(p)">{{ p.project_title }}</strong>
+            <div class="tbl-title-cluster">
+              <strong class="tbl-project-title" (click)="openDetailsDialog(p)"
+                [innerHTML]="highlightText(p.project_title, searchQuery())">
+              </strong>
+            </div>
             <span class="tbl-date-sub">Created: {{ p.created_at | appDate }} · Updated: {{ (p.updated_at ||
               p.created_at) | appDate }}</span>
           </td>
           <td>
             <div class="tbl-party-cell">
               <i class="pi pi-building" aria-hidden="true"></i>
-              <span>{{ p.customer_name || getCustomerName(p.customer_id) }}</span>
+              <span
+                [innerHTML]="highlightText(p.customer_name || getCustomerName(p.customer_id), searchQuery())"></span>
             </div>
           </td>
           <td>
             <div class="tbl-party-cell">
               <i class="pi pi-truck" aria-hidden="true"></i>
-              <span>{{ p.supplier_name || getSupplierName(p.supplier_id) }}</span>
+              <span
+                [innerHTML]="highlightText(p.supplier_name || getSupplierName(p.supplier_id), searchQuery())"></span>
             </div>
           </td>
           <td>
@@ -334,6 +399,51 @@
             </div>
           </td>
         </tr>
+
+        <!-- Matched Items Next Row (Clean, Aligned Table Subrow) -->
+        @if (p.matched_items && p.matched_items.length > 0) {
+        <tr class="table-matched-subrow" aria-label="Matched items in project">
+          <td colspan="10" class="subrow-items-cell">
+            <div class="matched-items-stack">
+              <div class="stack-header">
+                <div class="sh-title">
+                  <i class="pi pi-box" aria-hidden="true"></i>
+                  <span>Contained Items</span>
+                  <span class="sh-count">{{ p.matched_items.length }}</span>
+                </div>
+              </div>
+              <div class="stack-list">
+                @for (item of p.matched_items.slice(0, 5); track $index) {
+                <div class="stack-item-row">
+                  <div class="sir-left">
+                    <span class="sir-bullet" aria-hidden="true">↳</span>
+                    <span class="sir-name"
+                      [innerHTML]="highlightText(item.material_name || item.item_code, searchQuery())"></span>
+                  </div>
+                  <div class="sir-meta">
+                    @if (item.quantity !== undefined && item.quantity !== null && item.quantity !== '') {
+                    <span class="sir-qty">Qty: {{ item.quantity }}</span>
+                    }
+                    @if (item.step_name) {
+                    <span class="sir-step">{{ item.step_name }}</span>
+                    }
+                  </div>
+                </div>
+                }
+                @if (p.matched_items.length > 5) {
+                <div class="stack-more-wrap">
+                  <span class="stack-more-btn" [pTooltip]="getMatchedItemsTooltip(p.matched_items)"
+                    tooltipPosition="top" aria-label="View more items">
+                    <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
+                    +{{ p.matched_items.length - 5 }} more item{{ p.matched_items.length - 5 > 1 ? 's' : '' }}
+                  </span>
+                </div>
+                }
+              </div>
+            </div>
+          </td>
+        </tr>
+        }
       </ng-template>
     </p-table>
   </div>

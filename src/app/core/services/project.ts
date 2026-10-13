@@ -20,6 +20,18 @@ export class ProjectService {
       .pipe(map((res) => (Array.isArray(res) ? res : res?.data || [])));
   }
 
+  searchProjects(query: string): Observable<Project[]> {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      return this.getProjects();
+    }
+    return this.http
+      .get<Project[] | { data: Project[]; message?: string; success?: boolean }>(
+        `${this.apiBaseUrl}/api/v1/projects/search?q=${encodeURIComponent(trimmed)}`,
+      )
+      .pipe(map((res) => (Array.isArray(res) ? res : res?.data || [])));
+  }
+
   getProjectById(id: number): Observable<Project> {
     return this.http
       .get<Project | { data: Project; message?: string; success?: boolean }>(
