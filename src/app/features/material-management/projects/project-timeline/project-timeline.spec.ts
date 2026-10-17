@@ -1,3 +1,4 @@
+import '@angular/compiler';
 import { describe, expect, it } from 'vitest';
 import { ProjectTimeline } from './project-timeline';
 import { ProjectStep } from '../../../../core/models/project-step.model';

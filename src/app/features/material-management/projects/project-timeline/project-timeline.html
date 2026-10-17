@@ -31,6 +31,11 @@
           aria-label="Reload project data">
         </button>
 
+        <button pButton type="button" icon="pi pi-plus-circle" label="Attach Form as Step"
+          class="p-button-outlined p-button-primary" (click)="openAddStepModal()"
+          pTooltip="Select from catalog of 28 forms to attach to this project" tooltipPosition="bottom">
+        </button>
+
         @if (!loading() && activeStep(); as active) {
         <button pButton type="button" [label]="'Continue Step ' + active.step_number + ': ' + active.step_name"
           icon="pi pi-arrow-right" iconPos="right" class="continue-step-btn" (click)="continueActiveStep()"
@@ -163,6 +168,19 @@
     <button pButton type="button" icon="pi pi-refresh" label="Retry Connection" class="continue-step-btn"
       (click)="loadProjectAndSteps()"></button>
   </div>
+  } @else if (steps().length === 0) {
+  <div class="empty-pipeline-card app-panel text-center">
+    <div class="empty-pipeline-icon">
+      <i class="pi pi-sparkles"></i>
+    </div>
+    <div class="empty-pipeline-text">
+      <h2>Project Pipeline is Ready</h2>
+      <p>This project has no steps attached yet. Attach your first form (e.g. Query from Customer, RFQ, or Pre-Qualification Bid) to begin tracking milestones.</p>
+    </div>
+    <button pButton type="button" icon="pi pi-plus" label="Attach First Form as Step" class="p-button-lg p-button-primary"
+      (click)="openAddStepModal()">
+    </button>
+  </div>
   } @else {
 
   <!-- ── 3. High-Density, Perfectly Aligned Vertical Timeline ─────────── -->
@@ -190,13 +208,13 @@
 
       <!-- Timeline Steps (Structured Grid Columns for Clean Alignment) -->
       <ol class="phase-steps-timeline">
-        @for (step of phase.steps; track step.step_number; let isLastStep = $last) {
+        @for (step of phase.steps; track (step.id || step.step_number); let isLastStep = $last) {
         <li class="timeline-row" [class.timeline-row--completed]="step.status === 'completed'"
           [class.timeline-row--active]="step.status === 'in_progress'"
           [class.timeline-row--pending]="step.status === 'pending' || step.status === 'skipped'"
-          [attr.role]="isStepClickable(step.step_number) ? 'button' : null"
-          [attr.tabindex]="isStepClickable(step.step_number) ? 0 : null" (click)="navigateToStep(step.step_number)"
-          (keydown.enter)="navigateToStep(step.step_number)">
+          [attr.role]="isStepClickable(step) ? 'button' : null"
+          [attr.tabindex]="isStepClickable(step) ? 0 : null" (click)="navigateToStep(step)"
+          (keydown.enter)="navigateToStep(step)">
 
           <!-- Col 1: Spine / Node -->
           <div class="row-spine" aria-hidden="true">
@@ -269,6 +287,11 @@
 
           <!-- Col 6: Action Arrow -->
           <div class="col-step-action">
+            @if (step.form_code) {
+            <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger remove-step-ico-btn"
+              pTooltip="Remove step from project" tooltipPosition="top" (click)="removeStep(step, $event)"
+              aria-label="Remove step"></button>
+            }
             <button pButton type="button" icon="pi pi-arrow-right" class="p-button-text p-button-sm open-arrow-btn"
               pTooltip="Open Step Details" tooltipPosition="top" aria-label="Open step"></button>
           </div>
@@ -278,6 +301,21 @@
       </ol>
     </section>
     }
+  </div>
+
+  <!-- Quick Add Form as Step Callout Card -->
+  <div class="timeline-quick-add-strip app-panel" (click)="openAddStepModal()" role="button" tabindex="0"
+    (keydown.enter)="openAddStepModal()">
+    <div class="quick-add-left">
+      <div class="quick-add-icon">
+        <i class="pi pi-plus"></i>
+      </div>
+      <div>
+        <h3 class="quick-add-title">Attach Next Form as Step</h3>
+        <p class="quick-add-sub">Choose from 28 available forms across Tenders, RFQs, Invoices, Customs, and Settlements</p>
+      </div>
+    </div>
+    <button pButton type="button" icon="pi pi-plus" label="Browse 28 Forms" class="p-button-outlined quick-add-btn"></button>
   </div>
   }
 
@@ -390,9 +428,115 @@
       (click)="remarksDialogVisible.set(false)" aria-label="Close dialog">
     </button>
     <button pButton type="button" label="Open Step Form" icon="pi pi-arrow-right" iconPos="right"
-      class="continue-step-btn" (click)="remarksDialogVisible.set(false); navigateToStep(currentStep.step_number)"
+      class="continue-step-btn" (click)="remarksDialogVisible.set(false); navigateToStep(currentStep)"
       aria-label="Open step form">
     </button>
   </div>
   }
 </p-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: ATTACH FORM AS STEP (CATALOG OF 28 FORMS)
+══════════════════════════════════════════════════════════════════════ -->
+<p-dialog
+  [visible]="addStepModalVisible()"
+  (visibleChange)="addStepModalVisible.set($event)"
+  [modal]="true"
+  [blockScroll]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [dismissableMask]="true"
+  [style]="{ width: '92vw', maxWidth: '840px' }"
+  styleClass="catalog-modal-dialog"
+  appendTo="body">
+
+  <ng-template pTemplate="header">
+    <div class="catalog-dlg-header">
+      <div class="catalog-icon-box">
+        <i class="pi pi-th-large"></i>
+      </div>
+      <div>
+        <h2 class="catalog-dlg-title">Attach Form as Step</h2>
+        <p class="catalog-dlg-sub">Choose any of the 28 available forms to attach to this project</p>
+      </div>
+    </div>
+  </ng-template>
+
+  <div class="catalog-modal-content">
+    <!-- Search Bar -->
+    <div class="catalog-search-wrap">
+      <i class="pi pi-search search-icon"></i>
+      <input
+        pInputText
+        type="text"
+        [value]="catalogSearch()"
+        (input)="catalogSearch.set($any($event.target).value)"
+        placeholder="Search forms by name, code, or description (e.g. PQB, Invoice, Delivery Challan, BOE, RFQ)..."
+        class="catalog-search-input w-full" />
+    </div>
+
+    <!-- Category Filter Chips -->
+    <div class="category-chips-row">
+      @for (cat of ['All', 'Pre-Bidding & Tenders', 'Sourcing & Quotations', 'Supplier Orders & Invoices', 'Logistics & Customs', 'Customer & Supplier Settlement']; track cat) {
+      <button
+        type="button"
+        class="cat-chip"
+        [class.cat-chip--active]="selectedCategory() === cat"
+        (click)="selectedCategory.set(cat)">
+        {{ cat }}
+      </button>
+      }
+    </div>
+
+    <!-- Forms Grid (28 Forms Available) -->
+    <div class="catalog-cards-grid">
+      @for (form of filteredCatalog(); track form.formCode) {
+      <div class="catalog-card" (click)="onSelectCatalogForm(form)">
+        <div class="catalog-card-icon">
+          <i [class]="form.icon"></i>
+        </div>
+        <div class="catalog-card-body">
+          <div class="card-tags-line">
+            <span class="card-form-id">{{ form.formCode }}</span>
+            <span class="card-phase-tag">{{ form.category }}</span>
+          </div>
+          <h4 class="card-form-name">{{ form.name }}</h4>
+          <p class="card-form-desc">{{ form.description }}</p>
+        </div>
+        <div class="catalog-card-action">
+          <button pButton icon="pi pi-plus" class="p-button-rounded p-button-sm p-button-text"></button>
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="catalog-dlg-footer">
+      <button
+        pButton
+        type="button"
+        label="Cancel"
+        class="p-button-text p-button-secondary"
+        (click)="addStepModalVisible.set(false)">
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: STEP FORM INPUTS POPUP (GET, POST, PUT, DELETE)
+══════════════════════════════════════════════════════════════════════ -->
+<app-step-form-dialog
+  [visible]="stepFormModalVisible()"
+  (visibleChange)="stepFormModalVisible.set($event)"
+  [projectId]="projectIdNumber()"
+  [step]="selectedStepForForm()"
+  [formDefinition]="selectedDefForForm()"
+  [projectCode]="projectCode()"
+  [projectTitle]="project()?.project_title || ''"
+  [customerName]="customer()?.name || project()?.customer_name || ''"
+  [supplierName]="supplier()?.name || project()?.supplier_name || ''"
+  (stepSaved)="onStepSaved($event)"
+  (stepDeleted)="onStepDeleted($event)">
+</app-step-form-dialog>

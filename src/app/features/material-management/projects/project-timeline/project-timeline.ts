@@ -12,6 +12,7 @@ import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { TableModule } from 'primeng/table';
+import { InputTextModule } from 'primeng/inputtext';
 
 import { ProjectStepService } from '../../../../core/services/project-step';
 import { ProjectService } from '../../../../core/services/project';
@@ -23,6 +24,13 @@ import { Customer } from '../../../../core/models/customer.model';
 import { Supplier } from '../../../../core/models/supplier.model';
 import { formatDisplayDate } from '../../../../core/utils/date.utils';
 import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
+import {
+  FORM_CATALOG,
+  FormDefinition,
+  getFormDefinition,
+  LEGACY_STEP_TO_FORM_CODE,
+} from '../../../../core/constants/form-catalog';
+import { StepFormDialog } from './step-form-dialog/step-form-dialog';
 
 export type PhaseFilter = 'all' | 'phase-1' | 'phase-2' | 'phase-3' | 'phase-4';
 export type TimelineStatusFilter = 'all' | 'completed' | 'in_progress' | 'pending';
@@ -86,8 +94,10 @@ export const PIPELINE_PHASES: PhaseInfo[] = [
     DialogModule,
     TooltipModule,
     TableModule,
+    InputTextModule,
     AppDatePipe,
     DecimalPipe,
+    StepFormDialog,
   ],
   templateUrl: './project-timeline.html',
   styleUrl: './project-timeline.scss',
@@ -114,6 +124,34 @@ export class ProjectTimeline implements OnInit {
   protected readonly activeStatusFilter = signal<TimelineStatusFilter>('all');
   protected readonly searchQuery = signal<string>('');
   protected readonly viewMode = signal<TimelineViewMode>('grid');
+
+  // ── Dynamic Form Catalog & Dialog Signals ────────────────────────
+  protected readonly addStepModalVisible = signal<boolean>(false);
+  protected readonly catalogSearch = signal<string>('');
+  protected readonly selectedCategory = signal<string>('All');
+  protected readonly allCatalogForms = FORM_CATALOG;
+
+  // ── Step Form Inputs Popup (GET, POST, PUT, DELETE) ───────────────
+  protected readonly stepFormModalVisible = signal<boolean>(false);
+  protected readonly selectedStepForForm = signal<ProjectStep | null>(null);
+  protected readonly selectedDefForForm = signal<FormDefinition | null>(null);
+  protected readonly projectIdNumber = computed(
+    () => Number(this.route.snapshot.paramMap.get('projectId')) || 0,
+  );
+
+  protected readonly filteredCatalog = computed(() => {
+    const q = this.catalogSearch().toLowerCase().trim();
+    const cat = this.selectedCategory();
+    return this.allCatalogForms.filter((f) => {
+      const matchCat = cat === 'All' || f.category === cat;
+      const matchQuery =
+        !q ||
+        f.name.toLowerCase().includes(q) ||
+        f.formCode.toLowerCase().includes(q) ||
+        f.description.toLowerCase().includes(q);
+      return matchCat && matchQuery;
+    });
+  });
 
   // ── Step Remarks Dialog Signal ────────────────────────────────────
   protected readonly selectedStepForRemarks = signal<ProjectStep | null>(null);
@@ -205,16 +243,23 @@ export class ProjectTimeline implements OnInit {
   // ── Phase Groups for Vertical Timeline ─────────────────────────────
   protected readonly timelinePhases = computed(() => {
     return PIPELINE_PHASES.map((phase) => {
-      let phaseSteps = this.steps();
-      if (phase.id === 'phase-1') {
-        phaseSteps = phaseSteps.filter((s) => s.step_number >= 1 && s.step_number <= 5);
-      } else if (phase.id === 'phase-2') {
-        phaseSteps = phaseSteps.filter((s) => s.step_number >= 6 && s.step_number <= 9);
-      } else if (phase.id === 'phase-3') {
-        phaseSteps = phaseSteps.filter((s) => s.step_number >= 10 && s.step_number <= 12);
-      } else if (phase.id === 'phase-4') {
-        phaseSteps = phaseSteps.filter((s) => s.step_number >= 13 && s.step_number <= 15);
-      }
+      const phaseSteps = this.steps().filter((s) => {
+        if (s.phase) return s.phase === phase.id;
+        if (s.form_code) {
+          const def = getFormDefinition(s.form_code);
+          if (def?.phaseId) return def.phaseId === phase.id;
+        }
+        if (phase.id === 'phase-1') {
+          return s.step_number >= 1 && s.step_number <= 5;
+        } else if (phase.id === 'phase-2') {
+          return s.step_number >= 6 && s.step_number <= 9;
+        } else if (phase.id === 'phase-3') {
+          return s.step_number >= 10 && s.step_number <= 12;
+        } else if (phase.id === 'phase-4') {
+          return s.step_number >= 13 && s.step_number <= 15;
+        }
+        return false;
+      });
 
       const completedInPhase = phaseSteps.filter((s) => s.status === 'completed').length;
       return {
@@ -322,24 +367,92 @@ export class ProjectTimeline implements OnInit {
     this.router.navigate(['/projects']);
   }
 
-  protected isStepClickable(stepNumber: number): boolean {
-    return stepNumber >= 1 && stepNumber <= 15;
+  protected isStepClickable(stepOrNumber: ProjectStep | number): boolean {
+    return true;
   }
 
-  protected navigateToStep(stepNumber: number): void {
-    const projectId = this.route.snapshot.paramMap.get('projectId');
-    if (this.isStepClickable(stepNumber)) {
-      this.router.navigate(['/projects', projectId, 'steps', stepNumber]);
+  protected navigateToStep(stepOrNumber: ProjectStep | number): void {
+    if (typeof stepOrNumber === 'number') {
+      const match = this.steps().find((s) => s.step_number === stepOrNumber || s.id === stepOrNumber);
+      if (match) {
+        this.openStepFormPopup(match);
+      } else {
+        const pId = this.projectIdNumber();
+        if (pId) {
+          this.router.navigate(['/projects', pId, 'step-form', stepOrNumber]);
+        }
+      }
+      return;
     }
+
+    this.openStepFormPopup(stepOrNumber);
+  }
+
+  protected openStepFormPopup(step: ProjectStep): void {
+    this.selectedStepForForm.set(step);
+    const def = step.form_code ? getFormDefinition(step.form_code) : null;
+    this.selectedDefForForm.set(def || null);
+    this.stepFormModalVisible.set(true);
   }
 
   protected continueActiveStep(): void {
     const active = this.activeStep();
     if (active) {
-      this.navigateToStep(active.step_number);
+      this.navigateToStep(active);
+    } else if (this.steps().length > 0) {
+      this.navigateToStep(this.steps()[0]);
     } else {
-      this.navigateToStep(1);
+      this.openAddStepModal();
     }
+  }
+
+  protected openAddStepModal(): void {
+    this.addStepModalVisible.set(true);
+  }
+
+  protected onSelectCatalogForm(form: FormDefinition): void {
+    // Close catalog modal
+    this.addStepModalVisible.set(false);
+
+    // Open Step Form Inputs in popup to add form fields (POST mode)
+    this.selectedStepForForm.set(null);
+    this.selectedDefForForm.set(form);
+    this.stepFormModalVisible.set(true);
+  }
+
+  protected onStepSaved(savedStep: ProjectStep): void {
+    this.steps.update((cur) => {
+      const idx = cur.findIndex(
+        (s) => (s.id && s.id === savedStep.id) || s.step_number === savedStep.step_number,
+      );
+      if (idx >= 0) {
+        const copy = [...cur];
+        copy[idx] = savedStep;
+        return copy;
+      }
+      return [...cur, savedStep];
+    });
+  }
+
+  protected onStepDeleted(stepId: number): void {
+    this.steps.update((cur) =>
+      cur.filter((s) => s.id !== stepId && s.step_number !== stepId),
+    );
+  }
+
+  protected removeStep(step: ProjectStep, event: Event): void {
+    event.stopPropagation();
+    const projectId = Number(this.route.snapshot.paramMap.get('projectId'));
+    if (!projectId) return;
+
+    const stepId = step.id || step.step_number;
+    this.projectStepService.removeStep(projectId, stepId).subscribe({
+      next: () => {
+        this.steps.update((cur) =>
+          cur.filter((s) => s.id !== step.id && s.step_number !== step.step_number),
+        );
+      },
+    });
   }
 
   protected setPhaseFilter(phase: PhaseFilter): void {

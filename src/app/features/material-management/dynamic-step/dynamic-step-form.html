@@ -1,0 +1,548 @@
+<section class="base-page dynamic-step-page" aria-labelledby="dynamic-step-title">
+
+  <!-- ── 1. Top Executive Control Bar ──────────────────────────────────── -->
+  <header class="step-hero-header app-panel">
+    <div class="hero-top-nav">
+      <div class="top-nav-left">
+        <button
+          pButton
+          type="button"
+          icon="pi pi-arrow-left"
+          label="Project Pipeline"
+          class="p-button-text back-timeline-btn"
+          (click)="goBackToTimeline()"
+          aria-label="Back to project timeline">
+        </button>
+
+        @if (project(); as p) {
+        <span class="project-pill-code">#{{ p.project_code || ('PRJ-' + p.id) }}</span>
+        <span class="nav-sep">·</span>
+        <span class="project-pill-title">{{ p.project_title }}</span>
+        }
+      </div>
+
+      <div class="hero-actions">
+        <button
+          pButton
+          type="button"
+          icon="pi pi-plus-circle"
+          label="Attach Next Form"
+          class="p-button-outlined p-button-secondary add-next-btn"
+          (click)="openAddStepModal()"
+          pTooltip="Add another form as next step in this project"
+          tooltipPosition="bottom">
+        </button>
+
+        <button
+          pButton
+          type="button"
+          icon="pi pi-save"
+          label="Save Draft"
+          class="p-button-outlined save-draft-btn"
+          [loading]="saving()"
+          (click)="saveStep(false)">
+        </button>
+
+        <button
+          pButton
+          type="button"
+          icon="pi pi-check-circle"
+          [label]="isStepCompleted() ? 'Completed' : 'Mark as Complete'"
+          class="complete-step-btn"
+          [class.complete-step-btn--done]="isStepCompleted()"
+          [loading]="saving()"
+          (click)="saveStep(true)">
+        </button>
+      </div>
+    </div>
+
+    <!-- Step Identity Ribbon -->
+    @if (formDefinition(); as def) {
+    <div class="step-identity-bar">
+      <div class="identity-icon-box">
+        <i [class]="def.icon"></i>
+      </div>
+
+      <div class="identity-text-stack">
+        <div class="identity-tags-row">
+          <span class="step-seq-badge">Step {{ currentStepIndex() }} of {{ totalStepsCount() }}</span>
+          <span class="form-id-badge">{{ def.formCode }}</span>
+          <span class="phase-pill">{{ def.category }}</span>
+          <span class="status-pill" [class]="'status-pill--' + (currentStep()?.status || 'in_progress')">
+            {{ currentStep()?.status === 'completed' ? 'Completed' : 'In Progress' }}
+          </span>
+        </div>
+
+        <h1 id="dynamic-step-title" class="step-main-title">{{ def.name }}</h1>
+        <p class="step-main-desc">{{ def.description }}</p>
+      </div>
+    </div>
+    }
+
+    <!-- Commercial Context Quick Bar -->
+    @if (project(); as p) {
+    <div class="hero-commercial-strip">
+      <div class="comm-col">
+        <span class="comm-label">Customer</span>
+        <strong class="comm-val">{{ customer()?.name || p.customer_name || 'Direct Customer' }}</strong>
+      </div>
+      <div class="comm-divider"></div>
+      <div class="comm-col">
+        <span class="comm-label">Supplier</span>
+        <strong class="comm-val">{{ supplier()?.name || p.supplier_name || 'Vendor / Partner' }}</strong>
+      </div>
+      @if (p.total_value) {
+      <div class="comm-divider"></div>
+      <div class="comm-col">
+        <span class="comm-label">Contract Value</span>
+        <strong class="comm-val comm-val--curr">₹{{ p.total_value | number:'1.2-2' }}</strong>
+      </div>
+      }
+    </div>
+    }
+  </header>
+
+  <!-- ── 2. Loading State ──────────────────────────────────────────────── -->
+  @if (loading()) {
+  <div class="loading-state app-panel">
+    <i class="pi pi-spin pi-spinner loading-spinner"></i>
+    <p>Loading form fields and structure...</p>
+  </div>
+  } @else if (formDefinition(); as def) {
+
+  <!-- ── 3. Main Form Content Container ────────────────────────────────── -->
+  <div class="step-form-wrapper">
+
+    <!-- Card A: Primary Dynamic Fields Grid -->
+    <div class="form-card app-panel">
+      <div class="card-header-bar">
+        <div class="card-header-left">
+          <i class="pi pi-align-left header-ico"></i>
+          <div>
+            <h2 class="card-title">Form Parameters & Information</h2>
+            <p class="card-subtitle">Fill in the required information for {{ def.name }}</p>
+          </div>
+        </div>
+      </div>
+
+      <form [formGroup]="formGroup()" class="dynamic-fields-grid">
+        @for (field of def.fields; track field.key) {
+        <div
+          class="field-col"
+          [class.col-span-1]="field.colSpan === 1"
+          [class.col-span-2]="field.colSpan === 2 || !field.colSpan"
+          [class.col-span-3]="field.colSpan === 3"
+          [class.col-span-4]="field.colSpan === 4">
+
+          <label [for]="field.key" class="field-label">
+            {{ field.label }}
+            @if (field.required) { <span class="req-star">*</span> }
+          </label>
+
+          @switch (field.type) {
+            @case ('text') {
+              <input
+                pInputText
+                type="text"
+                [id]="field.key"
+                [formControlName]="field.key"
+                [placeholder]="field.placeholder || ('Enter ' + field.label)"
+                class="field-input w-full" />
+            }
+
+            @case ('number') {
+              <div class="affix-input-wrap">
+                @if (field.prefix) { <span class="affix-prefix">{{ field.prefix }}</span> }
+                <input
+                  pInputText
+                  type="number"
+                  [id]="field.key"
+                  [formControlName]="field.key"
+                  [placeholder]="field.placeholder || '0.00'"
+                  class="field-input w-full" />
+                @if (field.suffix) { <span class="affix-suffix">{{ field.suffix }}</span> }
+              </div>
+            }
+
+            @case ('currency') {
+              <div class="affix-input-wrap">
+                <span class="affix-prefix">{{ field.prefix || '₹' }}</span>
+                <input
+                  pInputText
+                  type="number"
+                  step="0.01"
+                  [id]="field.key"
+                  [formControlName]="field.key"
+                  placeholder="0.00"
+                  class="field-input w-full" />
+              </div>
+            }
+
+            @case ('date') {
+              <p-datepicker
+                [inputId]="field.key"
+                [formControlName]="field.key"
+                dateFormat="dd-mm-yy"
+                [showIcon]="true"
+                appendTo="body"
+                styleClass="w-full"
+                inputStyleClass="w-full">
+              </p-datepicker>
+            }
+
+            @case ('datetime') {
+              <input
+                pInputText
+                type="text"
+                [id]="field.key"
+                [formControlName]="field.key"
+                placeholder="DD-MM-YYYY HH:mm"
+                class="field-input w-full" />
+            }
+
+            @case ('select') {
+              <select [id]="field.key" [formControlName]="field.key" class="field-native-select w-full">
+                <option value="">Select option...</option>
+                @for (opt of field.options; track opt) {
+                <option [value]="opt">{{ opt }}</option>
+                }
+              </select>
+            }
+
+            @case ('textarea') {
+              <textarea
+                pTextarea
+                [id]="field.key"
+                [formControlName]="field.key"
+                rows="3"
+                class="field-textarea w-full"
+                [placeholder]="field.placeholder || ('Enter ' + field.label)">
+              </textarea>
+            }
+          }
+        </div>
+        }
+      </form>
+    </div>
+
+    <!-- Card B: Dynamic Line Items / Material Details Table (If Configured) -->
+    @if (def.tableConfig; as tableCfg) {
+    <div class="form-card app-panel">
+      <div class="card-header-bar">
+        <div class="card-header-left">
+          <i class="pi pi-table header-ico"></i>
+          <div>
+            <h2 class="card-title">{{ tableCfg.title }}</h2>
+            <p class="card-subtitle">Itemized rows and commercial specifications</p>
+          </div>
+        </div>
+
+        <button
+          pButton
+          type="button"
+          icon="pi pi-plus"
+          label="Add Item Row"
+          class="p-button-outlined p-button-sm add-row-btn"
+          (click)="addTableRow()">
+        </button>
+      </div>
+
+      <div class="table-container">
+        <table class="dynamic-data-table">
+          <thead>
+            <tr>
+              @for (col of tableCfg.columns; track col.key) {
+              <th [style.width]="col.width || 'auto'">{{ col.label }}</th>
+              }
+              <th style="width: 60px; text-align: center;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (rowGroup of tableFormArray().controls; track $index; let rIdx = $index) {
+            <tr [formGroup]="$any(rowGroup)">
+              @for (col of tableCfg.columns; track col.key) {
+              <td>
+                @switch (col.type) {
+                  @case ('number') {
+                    <input
+                      pInputText
+                      type="number"
+                      [formControlName]="col.key"
+                      (input)="onTableCellChange(rIdx)"
+                      class="table-cell-input table-cell-input--num" />
+                  }
+                  @case ('currency') {
+                    <input
+                      pInputText
+                      type="number"
+                      step="0.01"
+                      [formControlName]="col.key"
+                      (input)="onTableCellChange(rIdx)"
+                      class="table-cell-input table-cell-input--num" />
+                  }
+                  @case ('date') {
+                    <input
+                      pInputText
+                      type="text"
+                      placeholder="DD-MM-YYYY"
+                      [formControlName]="col.key"
+                      class="table-cell-input" />
+                  }
+                  @default {
+                    <input
+                      pInputText
+                      type="text"
+                      [formControlName]="col.key"
+                      class="table-cell-input" />
+                  }
+                }
+              </td>
+              }
+              <td style="text-align: center;">
+                <button
+                  type="button"
+                  class="row-delete-btn"
+                  (click)="removeTableRow(rIdx)"
+                  pTooltip="Delete row"
+                  tooltipPosition="top"
+                  aria-label="Delete line item">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </td>
+            </tr>
+            }
+          </tbody>
+          @if (tableCfg.autoCalculateTotal && tableCfg.totalKey) {
+          <tfoot>
+            <tr class="table-summary-row">
+              <td [attr.colspan]="tableCfg.columns.length - 1" class="text-right">
+                <strong>Cumulative Total:</strong>
+              </td>
+              <td class="total-value-cell">
+                <strong>₹{{ tableTotalSum() | number:'1.2-2' }}</strong>
+              </td>
+              <td></td>
+            </tr>
+          </tfoot>
+          }
+        </table>
+      </div>
+    </div>
+    }
+
+    <!-- Card C: Document Attachments & Uploads -->
+    <div class="form-card app-panel">
+      <div class="card-header-bar">
+        <div class="card-header-left">
+          <i class="pi pi-paperclip header-ico"></i>
+          <div>
+            <h2 class="card-title">Supporting Documents & Attachments</h2>
+            <p class="card-subtitle">Attach scanned copies, PDF contracts, or supporting files</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="uploads-grid">
+        @for (upload of def.uploads; track upload.key) {
+        <div class="upload-dropzone-box">
+          <div class="upload-dropzone-inner">
+            <i class="pi pi-cloud-upload dropzone-ico"></i>
+            <h4 class="upload-title">{{ upload.label }}</h4>
+            <p class="upload-hint">PDF, DOCX, XLSX, or Images up to 25MB</p>
+            <label [for]="upload.key" class="browse-file-btn">
+              <i class="pi pi-folder-open"></i> Browse Files
+            </label>
+            <input
+              type="file"
+              [id]="upload.key"
+              [multiple]="upload.multiple ?? true"
+              (change)="onFileUpload($event, upload.key)"
+              class="hidden-file-input" />
+          </div>
+        </div>
+        }
+      </div>
+
+      <!-- Uploaded Files List -->
+      @if (uploadedFiles().length > 0) {
+      <div class="attached-files-list">
+        <h4 class="attached-heading">Attached Files ({{ uploadedFiles().length }})</h4>
+        <div class="files-flex">
+          @for (file of uploadedFiles(); track file.name + $index; let fIdx = $index) {
+          <div class="file-chip">
+            <i class="pi pi-file-pdf file-ico"></i>
+            <div class="file-info">
+              <span class="file-name" [title]="file.name">{{ file.name }}</span>
+              <span class="file-size">{{ file.size }}</span>
+            </div>
+            <button
+              type="button"
+              class="file-remove-btn"
+              (click)="removeUploadedFile(fIdx)"
+              aria-label="Remove attachment">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+          }
+        </div>
+      </div>
+      }
+    </div>
+
+    <!-- Card D: Step Remarks & Observations -->
+    @if (currentStep(); as step) {
+    <div class="form-card app-panel">
+      <div class="card-header-bar">
+        <div class="card-header-left">
+          <i class="pi pi-comments header-ico"></i>
+          <div>
+            <h2 class="card-title">Remarks & Audit Log</h2>
+            <p class="card-subtitle">Record official review remarks and procedural observations</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="remarks-embed-container">
+        <app-step-remarks
+          [remarks]="stepRemarks()"
+          (quickAdd)="onAddRemark($event)">
+        </app-step-remarks>
+      </div>
+    </div>
+    }
+
+    <!-- Bottom Actions Bar -->
+    <div class="bottom-action-panel app-panel">
+      <button
+        pButton
+        type="button"
+        icon="pi pi-arrow-left"
+        label="Back to Pipeline"
+        class="p-button-text p-button-secondary"
+        (click)="goBackToTimeline()">
+      </button>
+
+      <div class="bottom-actions-right">
+        <button
+          pButton
+          type="button"
+          icon="pi pi-plus"
+          label="Add Next Form / Step"
+          class="p-button-outlined p-button-secondary"
+          (click)="openAddStepModal()">
+        </button>
+
+        <button
+          pButton
+          type="button"
+          icon="pi pi-save"
+          label="Save Draft"
+          class="p-button-outlined"
+          [loading]="saving()"
+          (click)="saveStep(false)">
+        </button>
+
+        <button
+          pButton
+          type="button"
+          icon="pi pi-check"
+          [label]="isStepCompleted() ? 'Completed' : 'Complete Step'"
+          class="complete-step-btn"
+          [loading]="saving()"
+          (click)="saveStep(true)">
+        </button>
+      </div>
+    </div>
+
+  </div>
+  }
+
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: SELECT NEXT FORM FROM CATALOG OF 28 FORMS
+══════════════════════════════════════════════════════════════════════ -->
+<p-dialog
+  [visible]="catalogModalVisible()"
+  (visibleChange)="catalogModalVisible.set($event)"
+  [modal]="true"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '92vw', maxWidth: '840px' }"
+  styleClass="add-step-dialog"
+  appendTo="body">
+
+  <ng-template pTemplate="header">
+    <div class="catalog-dlg-header">
+      <div class="catalog-icon-box">
+        <i class="pi pi-th-large"></i>
+      </div>
+      <div>
+        <h2 class="catalog-dlg-title">Attach Next Form as Step</h2>
+        <p class="catalog-dlg-sub">Choose any of the 28 available forms to attach to this project</p>
+      </div>
+    </div>
+  </ng-template>
+
+  <div class="catalog-modal-content">
+    <!-- Search Bar -->
+    <div class="catalog-search-wrap">
+      <i class="pi pi-search search-icon"></i>
+      <input
+        pInputText
+        type="text"
+        [value]="catalogSearch()"
+        (input)="catalogSearch.set($any($event.target).value)"
+        placeholder="Search forms by name, code, or description (e.g. PQB, Invoice, Clearance)..."
+        class="catalog-search-input w-full" />
+    </div>
+
+    <!-- Category Filter Chips -->
+    <div class="category-chips-row">
+      @for (cat of ['All', 'Pre-Bidding & Tenders', 'Sourcing & Quotations', 'Supplier Orders & Invoices', 'Logistics & Customs', 'Customer & Supplier Settlement']; track cat) {
+      <button
+        type="button"
+        class="cat-chip"
+        [class.cat-chip--active]="selectedCategory() === cat"
+        (click)="selectedCategory.set(cat)">
+        {{ cat }}
+      </button>
+      }
+    </div>
+
+    <!-- Forms Grid (28 Forms Available) -->
+    <div class="catalog-cards-grid">
+      @for (form of filteredCatalog(); track form.formCode) {
+      <div class="catalog-card" (click)="onSelectCatalogForm(form)">
+        <div class="catalog-card-icon">
+          <i [class]="form.icon"></i>
+        </div>
+        <div class="catalog-card-body">
+          <div class="card-tags-line">
+            <span class="card-form-id">{{ form.formCode }}</span>
+            <span class="card-phase-tag">{{ form.category }}</span>
+          </div>
+          <h4 class="card-form-name">{{ form.name }}</h4>
+          <p class="card-form-desc">{{ form.description }}</p>
+        </div>
+        <div class="catalog-card-action">
+          <button pButton icon="pi pi-plus" class="p-button-rounded p-button-sm p-button-text"></button>
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="catalog-dlg-footer">
+      <button
+        pButton
+        type="button"
+        label="Cancel"
+        class="p-button-text p-button-secondary"
+        (click)="catalogModalVisible.set(false)">
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>

@@ -40,109 +40,18 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'projects/:projectId/steps/1',
+        path: 'projects/:projectId/step-form/:stepId',
         loadComponent: () =>
-          import(
-            './features/material-management/ptoject-step/step-01-customer-query/step-01-customer-query'
-          ).then((m) => m.Step01CustomerQuery),
+          import('./features/material-management/dynamic-step/dynamic-step-form').then(
+            (m) => m.DynamicStepForm,
+          ),
       },
       {
-        path: 'projects/:projectId/steps/2',
+        path: 'projects/:projectId/forms/:formCode',
         loadComponent: () =>
-          import(
-            './features/material-management/ptoject-step/step-02-request-quotation/step-02-request-quotation'
-          ).then((m) => m.Step02RequestQuotation),
-      },
-      {
-        path: 'projects/:projectId/steps/3',
-        loadComponent: () =>
-          import(
-            './features/material-management/ptoject-step/step-03-supplier-quotation/step-03-supplier-quotation'
-          ).then((m) => m.Step03SupplierQuotation),
-      },
-      {
-        path: 'projects/:projectId/steps/4',
-        loadComponent: () =>
-          import(
-            './features/material-management/ptoject-step/step-04-cost-sheet/step-04-cost-sheet'
-          ).then((m) => m.Step04CostSheet),
-      },
-      {
-        path: 'projects/:projectId/steps/5',
-        loadComponent: () =>
-          import(
-            './features/material-management/ptoject-step/step-05-customer-quotation/step-05-customer-quotation'
-          ).then((m) => m.Step05CustomerQuotation),
-      },
-      {
-        path: 'projects/:projectId/steps/6',
-        loadComponent: () =>
-          import(
-            './features/material-management/ptoject-step/step-06-tender/step-06-tender'
-          ).then((m) => m.Step06Tender),
-      },
-      {
-        path: 'projects/:projectId/steps/7',
-        loadComponent: () =>
-          import(
-            './features/material-management/ptoject-step/step-07-bid-documents/step-07-bid-documents'
-          ).then((m) => m.Step07BidDocuments),
-      },
-      {
-        path: 'projects/:projectId/steps/8',
-        loadComponent: () =>
-          import(
-            './features/material-management/ptoject-step/step-08-purchase-order/step-08-purchase-order'
-          ).then((m) => m.Step08PurchaseOrder),
-      },
-      {
-        path: 'projects/:projectId/steps/9',
-        loadComponent: () =>
-          import(
-            './features/material-management/ptoject-step/step-09-order-confirmation/step-09-order-confirmation'
-          ).then((m) => m.Step09OrderConfirmation),
-      },
-      {
-        path: 'projects/:projectId/steps/10',
-        loadComponent: () =>
-          import(
-            './features/material-management/ptoject-step/step-10-supplier-invoice/step-10-supplier-invoice'
-          ).then((m) => m.Step10SupplierInvoice),
-      },
-      {
-        path: 'projects/:projectId/steps/11',
-        loadComponent: () =>
-          import(
-            './features/material-management/ptoject-step/step-11-import-logistics/step-11-import-logistics'
-          ).then((m) => m.Step11ImportLogistics),
-      },
-      {
-        path: 'projects/:projectId/steps/12',
-        loadComponent: () =>
-          import(
-            './features/material-management/ptoject-step/step-12-customs-clearance/step-12-customs-clearance'
-          ).then((m) => m.Step12CustomsClearance),
-      },
-      {
-        path: 'projects/:projectId/steps/13',
-        loadComponent: () =>
-          import(
-            './features/material-management/ptoject-step/step-13-customer-delivery/step-13-customer-delivery'
-          ).then((m) => m.Step13CustomerDelivery),
-      },
-      {
-        path: 'projects/:projectId/steps/14',
-        loadComponent: () =>
-          import(
-            './features/material-management/ptoject-step/step-14-customer-payment/step-14-customer-payment'
-          ).then((m) => m.Step14CustomerPayment),
-      },
-      {
-        path: 'projects/:projectId/steps/15',
-        loadComponent: () =>
-          import(
-            './features/material-management/ptoject-step/step-15-supplier-payment/step-15-supplier-payment'
-          ).then((m) => m.Step15SupplierPayment),
+          import('./features/material-management/dynamic-step/dynamic-step-form').then(
+            (m) => m.DynamicStepForm,
+          ),
       },
       {
         path: 'customers',

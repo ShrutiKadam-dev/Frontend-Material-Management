@@ -297,6 +297,12 @@ a {
   }
 }
 
+/* PrimeNG Overlays: DatePicker panel & Select overlay z-index above dialogs */
+.p-datepicker-panel,
+.p-select-overlay {
+  z-index: 12000 !important;
+}
+
 /* Prevent background container from showing second scrollbar while dialog is open */
 body:has(.p-dialog-mask) .content-shell,
 body:has(.p-dialog-mask) app-root,
