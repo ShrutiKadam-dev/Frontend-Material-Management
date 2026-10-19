@@ -75,6 +75,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-1',
     icon: 'pi pi-file-edit',
     description: 'Pre-qualification bid terms, submission schedule, supply locations, and requirements',
+    apiEndpoint: '/api/v1/pre-qualification-bids',
     fields: [
       { key: 'pqb_title', label: 'PQB Title', type: 'text', required: true, colSpan: 2 },
       { key: 'pqb_no', label: 'PQB No.', type: 'text', required: true, colSpan: 2 },
@@ -111,6 +112,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-1',
     icon: 'pi pi-book',
     description: 'Documentation for PQB submission, dates, and recorded corrigendum count',
+    apiEndpoint: '/api/v1/pqb-bid-documents',
     fields: [
       { key: 'pqb_title', label: 'PQB Title', type: 'text', required: true, colSpan: 2 },
       { key: 'pqb_no', label: 'PQB No.', type: 'text', required: true, colSpan: 2 },
@@ -131,6 +133,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-1',
     icon: 'pi pi-sync',
     description: 'Corrigendum amendment notices issued against EOI, PQB, or Tender notices',
+    apiEndpoint: '/api/v1/corrigendums',
     fields: [
       { key: 'corrigendum_no', label: 'Corrigendum No.', type: 'text', required: true, colSpan: 2 },
       { key: 'against_ref_no', label: 'Against EOI / PQB / Tender No.', type: 'text', required: true, colSpan: 2 },
@@ -148,6 +151,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-1',
     icon: 'pi pi-briefcase',
     description: 'LTE invitation terms, tender fee, EMD amounts, deadlines, and item specifications',
+    apiEndpoint: '/api/v1/limited-tender-enquiries',
     fields: [
       { key: 'pqb_no', label: 'PQB No.', type: 'text', colSpan: 2 },
       { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
@@ -180,6 +184,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-2',
     icon: 'pi pi-verified',
     description: 'Formal contract award notice and itemized awarded material price breakdown',
+    apiEndpoint: '/api/v1/notification-awards',
     fields: [
       { key: 'nac_no', label: 'NAC No.', type: 'text', required: true, colSpan: 1 },
       { key: 'nac_date', label: 'NAC Date', type: 'date', colSpan: 1 },
@@ -211,6 +216,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-1',
     icon: 'pi pi-receipt',
     description: 'Advisory and specialist consultancy invoices associated with the project',
+    apiEndpoint: '/api/v1/consultancy-invoices',
     fields: [
       { key: 'invoice_no', label: 'Invoice No.', type: 'text', required: true, colSpan: 2 },
       { key: 'invoice_date', label: 'Invoice Date', type: 'date', colSpan: 2 },
@@ -230,6 +236,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-1',
     icon: 'pi pi-compass',
     description: 'Expression of interest publication details, submission mode, and items required',
+    apiEndpoint: '/api/v1/expressions-of-interest',
     fields: [
       { key: 'eoi_title', label: 'EOI Title', type: 'text', required: true, colSpan: 2 },
       { key: 'eoi_no', label: 'EOI No.', type: 'text', required: true, colSpan: 2 },
