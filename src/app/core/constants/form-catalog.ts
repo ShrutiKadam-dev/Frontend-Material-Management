@@ -59,6 +59,7 @@ export interface FormDefinition {
   phaseId: 'phase-1' | 'phase-2' | 'phase-3' | 'phase-4';
   icon: string;
   description: string;
+  apiEndpoint?: string;
   fields: FormFieldDefinition[];
   tableConfig?: FormTableConfig;
   uploads: FormUploadConfig[];
@@ -265,6 +266,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-1',
     icon: 'pi pi-question-circle',
     description: 'Direct inquiry from customer detailing specific material requirements and quantities',
+    apiEndpoint: '/api/v1/customer-queries',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'query_date', label: 'Query Date', type: 'date', required: true, colSpan: 2 },
@@ -289,6 +291,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-1',
     icon: 'pi pi-send',
     description: 'Dispatch RFQ to prospective vendors and suppliers with requirements',
+    apiEndpoint: '/api/v1/quotation-requests',
     fields: [
       { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true, colSpan: 2 },
       { key: 'request_date', label: 'Request Date', type: 'date', required: true, colSpan: 2 },
@@ -313,6 +316,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-1',
     icon: 'pi pi-calculator',
     description: 'Complete commercial cost matrix including duties, forex buffers, logistics, and margins',
+    apiEndpoint: '/api/v1/cost-sheets',
     fields: [
       { key: 'project_title', label: 'Project Title', type: 'text', required: true, colSpan: 4, sectionTitle: '1. Project & Foreign Currency Valuation (Forex)' },
       { key: 'total_amount_eur', label: 'Total Amount in EUR', type: 'currency', prefix: '€', colSpan: 2 },
@@ -349,6 +353,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-1',
     icon: 'pi pi-tags',
     description: 'Detailed quotation received from vendor with HSN/SAC codes, incoterms, and pricing',
+    apiEndpoint: '/api/v1/supplier-quotations',
     fields: [
       { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true, colSpan: 2 },
       { key: 'quotation_no', label: 'Quotation No.', type: 'text', required: true, colSpan: 1 },
@@ -387,6 +392,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-1',
     icon: 'pi pi-file-o',
     description: 'Final commercial offer sent to customer with itemized rates and validity',
+    apiEndpoint: '/api/v1/customer-quotations',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'quotation_no', label: 'Quotation No.', type: 'text', required: true, colSpan: 1 },
@@ -421,6 +427,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-2',
     icon: 'pi pi-building',
     description: 'Proprietary Article Certificate (PAC) tender enquiry terms, dates, and specifications',
+    apiEndpoint: '/api/v1/customer-tenders',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
@@ -456,6 +463,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-2',
     icon: 'pi pi-shopping-bag',
     description: 'Formal purchase order contractual commitment with delivery dates and items',
+    apiEndpoint: '/api/v1/purchase-orders',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'po_title', label: 'PO Title', type: 'text', required: true, colSpan: 2 },
@@ -495,6 +503,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-2',
     icon: 'pi pi-folder-open',
     description: 'Bid submission submission data, corrigendum counts, and quoted tender pricing',
+    apiEndpoint: '/api/v1/bid-submissions',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
@@ -536,6 +545,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-2',
     icon: 'pi pi-check-square',
     description: 'Acknowledgement and formal confirmation placed with supplier for production',
+    apiEndpoint: '/api/v1/order-confirmations',
     fields: [
       { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true, colSpan: 2 },
       { key: 'order_confirmation_no', label: 'Order Confirmation No.', type: 'text', required: true, colSpan: 1 },
@@ -571,6 +581,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-2',
     icon: 'pi pi-file-invoice',
     description: 'Proforma invoice received from vendor prior to dispatch / foreign remittance',
+    apiEndpoint: '/api/v1/proforma-invoices',
     fields: [
       { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true, colSpan: 2 },
       { key: 'proforma_invoice_no', label: 'Proforma Invoice No.', type: 'text', required: true, colSpan: 1 },
@@ -607,6 +618,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-3',
     icon: 'pi pi-receipt',
     description: 'Commercial invoice issued by supplier covering final shipped goods',
+    apiEndpoint: '/api/v1/supplier-invoices',
     fields: [
       { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true, colSpan: 2 },
       { key: 'invoice_no', label: 'Invoice No.', type: 'text', required: true, colSpan: 1 },
@@ -643,6 +655,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-3',
     icon: 'pi pi-box',
     description: 'Inventory package list with tare/gross weights provided by the supplier',
+    apiEndpoint: '/api/v1/supplier-packing-lists',
     fields: [
       { key: 'packing_list_no', label: 'Packing List No.', type: 'text', required: true, colSpan: 2 },
       { key: 'packing_list_date', label: 'Packing List Date', type: 'date', colSpan: 2 },
@@ -672,6 +685,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-4',
     icon: 'pi pi-wallet',
     description: 'Forex remittance transfer, SWIFT debit advice, exchange rates, and balances',
+    apiEndpoint: '/api/v1/supplier-payments',
     fields: [
       { key: 'total_contract_value', label: 'Total Contract Value', type: 'currency', colSpan: 2 },
       { key: 'payment_pct', label: 'Payment (%)', type: 'number', suffix: '%', colSpan: 1 },
@@ -699,6 +713,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-3',
     icon: 'pi pi-truck',
     description: 'Inland transport details, carrier consignments, LR/AWB receipts and charges',
+    apiEndpoint: '/api/v1/import-logistics',
     fields: [
       {
         key: 'transportation_mode',
@@ -725,6 +740,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-4',
     icon: 'pi pi-dollar',
     description: 'Receivables from customer, TDS/LD deductions, and balance settlement',
+    apiEndpoint: '/api/v1/customer-payments',
     fields: [
       { key: 'payment_against_invoice_no', label: 'Payment Against Invoice No.', type: 'text', required: true, colSpan: 2 },
       { key: 'invoice_date', label: 'Invoice Date', type: 'date', colSpan: 1 },
@@ -747,6 +763,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-4',
     icon: 'pi pi-shield',
     description: 'Manufacturer warranty coverage document referencing PO and invoices',
+    apiEndpoint: '/api/v1/warranty-certificates',
     fields: [
       { key: 'certificate_date', label: 'Certificate Date', type: 'date', required: true, colSpan: 2 },
       { key: 'warranty_period', label: 'Warranty Period (e.g. 24 Months)', type: 'text', required: true, colSpan: 2 },
@@ -767,6 +784,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-4',
     icon: 'pi pi-send',
     description: 'Dispatch challan with material items and consignee acknowledgement proof',
+    apiEndpoint: '/api/v1/delivery-challans',
     fields: [
       { key: 'delivery_challan_no', label: 'Delivery Challan No.', type: 'text', required: true, colSpan: 2 },
       { key: 'delivery_challan_date', label: 'Delivery Challan Date', type: 'date', colSpan: 2 },
@@ -796,6 +814,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-4',
     icon: 'pi pi-box',
     description: 'Final packing list delivered to the customer with tare and box specifications',
+    apiEndpoint: '/api/v1/customer-packing-lists',
     fields: [
       { key: 'packing_list_no', label: 'Packing List No.', type: 'text', required: true, colSpan: 2 },
       { key: 'packing_list_date', label: 'Packing List Date', type: 'date', colSpan: 2 },
@@ -825,6 +844,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-4',
     icon: 'pi pi-file',
     description: 'Final sales tax invoice billed to the customer for complete supply and service',
+    apiEndpoint: '/api/v1/customer-tax-invoices',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'invoice_no', label: 'Invoice No.', type: 'text', required: true, colSpan: 1 },
@@ -857,6 +877,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-3',
     icon: 'pi pi-globe',
     description: 'Port logistics, customs Bill of Entry (BOE), duties, IGST, and clearance tracking',
+    apiEndpoint: '/api/v1/bill-of-entries',
     fields: [
       {
         key: 'logistic_mode',
@@ -899,6 +920,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-3',
     icon: 'pi pi-users',
     description: 'Customs House Agent (CHA) invoices, freight handling disbursements and fee records',
+    apiEndpoint: '/api/v1/customs-clearances',
     fields: [
       { key: 'freight_forwarder_name', label: 'Freight Forwarder Name', type: 'text', colSpan: 2 },
       { key: 'cha_name', label: 'CHA Name (Custom House Agent)', type: 'text', required: true, colSpan: 2 },

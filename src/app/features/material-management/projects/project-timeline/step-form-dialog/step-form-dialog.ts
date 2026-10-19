@@ -30,6 +30,7 @@ import { MessageService } from 'primeng/api';
 
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../../../../../core/models/project-step.model';
 import { ProjectStepService } from '../../../../../core/services/project-step';
+import { FormApiService } from '../../../../../core/services/form-api';
 import {
   FormDefinition,
   FormFieldDefinition,
@@ -60,6 +61,7 @@ import { getCurrentUserFromStorage } from '../../../../../core/utils/remark.util
 })
 export class StepFormDialog {
   private readonly projectStepService = inject(ProjectStepService);
+  private readonly formApiService = inject(FormApiService);
   private readonly messageService = inject(MessageService);
 
   // ── Inputs & Two-Way Model ──────────────────────────────────────────
@@ -85,7 +87,9 @@ export class StepFormDialog {
   readonly resolvedDef = signal<FormDefinition | null>(null);
   readonly formGroup = signal<FormGroup>(new FormGroup({}));
   readonly tableFormArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
-  readonly uploadedFiles = signal<Array<{ name: string; size: string; uploadKey: string }>>([]);
+  readonly uploadedFiles = signal<
+    Array<{ name: string; size: string; uploadKey: string; fileRef?: File }>
+  >([]);
   readonly stepRemarks = signal<ProjectStepRemark[]>([]);
   readonly newRemarkInput = signal<string>('');
 
@@ -349,6 +353,7 @@ export class StepFormDialog {
             name: file.name,
             size: this.formatFileSize(file.size),
             uploadKey,
+            fileRef: file,
           },
         ]);
       }
@@ -377,6 +382,7 @@ export class StepFormDialog {
             name: file.name,
             size: this.formatFileSize(file.size),
             uploadKey,
+            fileRef: file,
           },
         ]);
       }
@@ -511,12 +517,15 @@ export class StepFormDialog {
     const progress = markAsCompleted ? 100 : 50;
 
     const existingStep = this.step();
+    const rawFiles = this.uploadedFiles()
+      .map((f) => f.fileRef)
+      .filter((f): f is File => !!f);
 
     if (existingStep) {
-      // ── PUT OPERATION: Update existing step ────────────────────────
+      // ── PUT/PATCH OPERATION: Update existing step via FormApiService ─
       const stepId = existingStep.id || existingStep.step_number;
-      this.projectStepService
-        .updateStep(pId, stepId, combinedData, status, progress)
+      this.formApiService
+        .updateEntry(def, pId, stepId, combinedData, rawFiles)
         .subscribe({
           next: (updatedStep) => {
             this.saving.set(false);
@@ -538,9 +547,9 @@ export class StepFormDialog {
           },
         });
     } else {
-      // ── POST OPERATION: Create & attach new step with form inputs ──
-      this.projectStepService
-        .addStep(pId, def.formCode, def.name, combinedData, status, progress)
+      // ── POST OPERATION: Create new entry via FormApiService ─────────
+      this.formApiService
+        .createEntry(def, pId, combinedData, rawFiles)
         .subscribe({
           next: (newStep) => {
             this.saving.set(false);
@@ -580,8 +589,13 @@ export class StepFormDialog {
 
     this.deleting.set(true);
     const stepId = existingStep.id || existingStep.step_number;
+    const def = this.resolvedDef();
 
-    this.projectStepService.removeStep(pId, stepId).subscribe({
+    const delete$ = def
+      ? this.formApiService.deleteEntry(def, pId, stepId)
+      : this.projectStepService.removeStep(pId, stepId);
+
+    delete$.subscribe({
       next: () => {
         this.deleting.set(false);
         this.deleteConfirmVisible.set(false);

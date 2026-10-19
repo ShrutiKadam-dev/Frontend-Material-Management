@@ -2,15 +2,17 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   OnInit,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { finalize } from 'rxjs';
+import { catchError, finalize, forkJoin, Observable, of } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
@@ -27,6 +29,7 @@ import { ProjectService } from '../../../../core/services/project';
 import { ProjectStepService } from '../../../../core/services/project-step';
 import { CustomerService } from '../../../../core/services/customer';
 import { SupplierService } from '../../../../core/services/supplier';
+import { FormApiService } from '../../../../core/services/form-api';
 import { formatDisplayDate } from '../../../../core/utils/date.utils';
 import { createStepRemarkItem, parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
@@ -58,7 +61,15 @@ export class ProjectFormEntries implements OnInit {
   private readonly projectStepService = inject(ProjectStepService);
   private readonly customerService = inject(CustomerService);
   private readonly supplierService = inject(SupplierService);
+  private readonly formApiService = inject(FormApiService);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  private safeUntilDestroyed<T>() {
+    return this.destroyRef
+      ? takeUntilDestroyed<T>(this.destroyRef)
+      : (source: Observable<T>) => source;
+  }
 
   // ── Route & Entity Signals ──────────────────────────────────────────
   readonly projectId = signal<number | null>(null);
@@ -93,6 +104,10 @@ export class ProjectFormEntries implements OnInit {
     const num = Number(raw);
     if (!isNaN(num) && num > 0) {
       return getFormDefinition(num) || null;
+    }
+
+    if (raw.toLowerCase().includes('quer')) {
+      return getFormDefinition('FORM_08_CUSTOMER_QUERY') || null;
     }
 
     return (
@@ -206,75 +221,87 @@ export class ProjectFormEntries implements OnInit {
     this.entries().reduce((sum, e) => sum + this.getEntryRemarks(e).length, 0),
   );
 
-  constructor() {
-    // If routing to Customer Query code, redirect to customer-queries dedicated page
-    effect(() => {
-      const code = (this.formCode() || '').toUpperCase();
-      const pId = this.projectId();
-      if ((code === 'FORM_08_CUSTOMER_QUERY' || code === '8') && pId) {
-        this.router.navigate(['/projects', pId, 'customer-queries']);
-      }
-    });
-  }
-
   ngOnInit(): void {
-    const pParam = this.route.snapshot.paramMap.get('projectId');
-    const fParam =
-      this.route.snapshot.paramMap.get('formCode') ||
-      this.route.snapshot.paramMap.get('stepNumber');
+    // Reactively respond to route parameter changes (e.g., switching steps without full reload)
+    this.route.paramMap
+      .pipe(this.safeUntilDestroyed())
+      .subscribe((params) => {
+        const pParam = params.get('projectId');
+        const fParam =
+          params.get('formCode') ||
+          params.get('stepNumber') ||
+          (this.route.snapshot.data ? this.route.snapshot.data['formCode'] : '');
 
-    const pId = Number(pParam);
-    if (!pId || isNaN(pId)) {
-      this.error.set('Invalid or missing project identifier.');
-      this.loading.set(false);
-      return;
-    }
+        const pId = Number(pParam);
+        if (!pId || isNaN(pId)) {
+          this.error.set('Invalid or missing project identifier.');
+          this.loading.set(false);
+          return;
+        }
 
-    this.projectId.set(pId);
-    this.formCode.set(fParam || '');
-    this.loadAllData(pId);
+        const prevId = this.projectId();
+        const prevCode = this.formCode();
+        this.projectId.set(pId);
+        this.formCode.set(fParam || '');
+
+        if (prevId !== pId || prevCode !== (fParam || '') || this.allSteps().length === 0) {
+          this.loadAllData(pId);
+        }
+      });
   }
 
   loadAllData(projectId: number): void {
     this.loading.set(true);
     this.error.set(null);
 
-    // 1. Load project context
-    this.projectService.getProjectById(projectId).subscribe({
-      next: (proj) => {
-        this.project.set(proj);
-        this.loadCustomerAndSupplier(proj);
-      },
-      error: () => {
-        this.error.set('Could not load project context.');
-      },
-    });
+    const def = this.formDefinition();
+    const entries$ = def
+      ? this.formApiService.getEntries(def, projectId).pipe(catchError(() => of([])))
+      : this.projectStepService.getSteps(projectId).pipe(catchError(() => of([])));
 
-    // 2. Load all project steps
-    this.projectStepService.getSteps(projectId).subscribe({
-      next: (steps) => {
-        this.allSteps.set(steps || []);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set('Could not load form entries for this project.');
-        this.loading.set(false);
-      },
-    });
+    // Load project metadata and form entries in parallel without waterfalls
+    forkJoin({
+      project: this.projectService.getProjectById(projectId).pipe(catchError(() => of(null))),
+      steps: entries$,
+    })
+      .pipe(
+        this.safeUntilDestroyed(),
+        finalize(() => this.loading.set(false)),
+      )
+      .subscribe({
+        next: ({ project, steps }) => {
+          if (project) {
+            this.project.set(project);
+            this.loadCustomerAndSupplier(project);
+          } else {
+            this.error.set('Could not load project context.');
+          }
+          this.allSteps.set(steps || []);
+        },
+        error: () => {
+          this.error.set('Could not load form entries for this project.');
+        },
+      });
   }
 
   private loadCustomerAndSupplier(p: Project): void {
     if (p.customer_id) {
-      this.customerService.getCustomerById(p.customer_id).subscribe({
-        next: (cust) => this.customer.set(cust),
-        error: () => {},
-      });
+      this.customerService
+        .getCustomerById(p.customer_id)
+        .pipe(
+          this.safeUntilDestroyed(),
+          catchError(() => of(null)),
+        )
+        .subscribe((cust) => this.customer.set(cust));
     }
     if (p.supplier_id) {
-      this.supplierService.getSupplierById(p.supplier_id).subscribe({
-        next: (supp) => this.supplier.set(supp),
-        error: () => {},
-      });
+      this.supplierService
+        .getSupplierById(p.supplier_id)
+        .pipe(
+          this.safeUntilDestroyed(),
+          catchError(() => of(null)),
+        )
+        .subscribe((supp) => this.supplier.set(supp));
     }
   }
 
@@ -360,32 +387,43 @@ export class ProjectFormEntries implements OnInit {
 
     const stepId = step.id || step.step_number;
     this.deleting.set(true);
+    const def = this.formDefinition();
 
-    this.projectStepService.removeStep(pId, stepId).subscribe({
-      next: () => {
-        this.allSteps.update((current) =>
-          current.filter((s) => s.id !== step.id && s.step_number !== step.step_number),
-        );
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Entry Deleted',
-          detail: `Entry has been successfully removed.`,
-        });
-        this.deleting.set(false);
-        this.cancelDelete();
-      },
-      error: () => {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Delete Failed',
-          detail: 'Could not delete entry. Please try again.',
-        });
-        this.deleting.set(false);
-      },
-    });
+    const delete$ = def
+      ? this.formApiService.deleteEntry(def, pId, stepId)
+      : this.projectStepService.removeStep(pId, stepId);
+
+    delete$
+      .pipe(
+        this.safeUntilDestroyed(),
+        finalize(() => {
+          this.deleting.set(false);
+          this.cancelDelete();
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.allSteps.update((current) =>
+            current.filter((s) => s.id !== step.id && s.step_number !== step.step_number),
+          );
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Entry Deleted',
+            detail: `Entry has been successfully removed.`,
+            life: 3000,
+          });
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Delete Failed',
+            detail: 'Could not delete entry. Please try again.',
+          });
+        },
+      });
   }
 
-  // ── Quick Remark Support ────────────────────────────────────────────
+  // ── Quick Remark Support ────────────────────────────────────
   onQuickAddRemark(entry: ProjectStep, text: string): void {
     const trimmed = text.trim();
     if (!trimmed || this.quickRemarkPending()) return;
@@ -407,15 +445,22 @@ export class ProjectFormEntries implements OnInit {
       remarks: serializeStepRemarks(updatedRemarks),
     };
 
-    this.projectStepService
-      .updateStep(
-        pId,
-        stepId,
-        updatedData,
-        entry.status,
-        entry.progress_percentage,
+    const def = this.formDefinition();
+    const update$ = def
+      ? this.formApiService.updateEntry(def, pId, stepId, updatedData)
+      : this.projectStepService.updateStep(
+          pId,
+          stepId,
+          updatedData,
+          entry.status,
+          entry.progress_percentage,
+        );
+
+    update$
+      .pipe(
+        this.safeUntilDestroyed(),
+        finalize(() => this.quickRemarkPending.set(false)),
       )
-      .pipe(finalize(() => this.quickRemarkPending.set(false)))
       .subscribe({
         next: (updated) => {
           this.onStepSaved(updated);
@@ -454,14 +499,19 @@ export class ProjectFormEntries implements OnInit {
       remarks: remarksPayload,
     };
 
-    this.projectStepService
-      .updateStep(
-        pId,
-        stepId,
-        updatedData,
-        entry.status,
-        entry.progress_percentage,
-      )
+    const def = this.formDefinition();
+    const update$ = def
+      ? this.formApiService.updateEntry(def, pId, stepId, updatedData)
+      : this.projectStepService.updateStep(
+          pId,
+          stepId,
+          updatedData,
+          entry.status,
+          entry.progress_percentage,
+        );
+
+    update$
+      .pipe(this.safeUntilDestroyed())
       .subscribe({
         next: (updated) => {
           this.onStepSaved(updated);

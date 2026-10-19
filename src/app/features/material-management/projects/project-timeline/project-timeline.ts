@@ -421,29 +421,17 @@ export class ProjectTimeline implements OnInit {
     return true;
   }
 
-  protected isCustomerQueryStep(stepOrNumber: ProjectStep | number): boolean {
-    if (typeof stepOrNumber === 'number') {
-      return stepOrNumber === 1;
-    }
-    const num = stepOrNumber.step_number;
-    const code = (stepOrNumber.form_code || '').toUpperCase();
-    const name = (stepOrNumber.step_name || '').toLowerCase();
+  protected isCustomerQueryStep(step: ProjectStep): boolean {
     return (
-      num === 1 ||
-      code === 'FORM_08_CUSTOMER_QUERY' ||
-      name.includes('customer query') ||
-      name.includes('query from customer')
+      step.step_number === 1 ||
+      step.form_code === 'FORM_08_CUSTOMER_QUERY' ||
+      (step.step_name ? step.step_name.toLowerCase().includes('query') : false)
     );
   }
 
   protected navigateToStep(stepOrNumber: ProjectStep | number): void {
     const pId = this.projectIdNumber();
     if (!pId) return;
-
-    if (this.isCustomerQueryStep(stepOrNumber)) {
-      this.router.navigate(['/projects', pId, 'customer-queries']);
-      return;
-    }
 
     const step =
       typeof stepOrNumber === 'number'
@@ -490,15 +478,6 @@ export class ProjectTimeline implements OnInit {
 
     const pId = this.projectIdNumber();
     if (!pId) return;
-
-    if (
-      form.formCode === 'FORM_08_CUSTOMER_QUERY' ||
-      form.name.toLowerCase().includes('query') ||
-      form.id === 8
-    ) {
-      this.router.navigate(['/projects', pId, 'customer-queries']);
-      return;
-    }
 
     this.router.navigate(['/projects', pId, 'forms', form.formCode]);
   }

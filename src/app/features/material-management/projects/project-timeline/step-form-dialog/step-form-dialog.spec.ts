@@ -76,8 +76,8 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
 
   it('should execute POST when saving in ADD mode', () => {
     const comp = Object.create(StepFormDialog.prototype);
-    const mockStepService = {
-      addStep: vi.fn().mockReturnValue(
+    const mockFormApiService = {
+      createEntry: vi.fn().mockReturnValue(
         of({
           id: 999,
           step_name: 'National Pre-Qualification Bid (PQB)',
@@ -85,12 +85,12 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
           status: 'in_progress',
         }),
       ),
-      updateStep: vi.fn(),
-      removeStep: vi.fn(),
+      updateEntry: vi.fn(),
+      deleteEntry: vi.fn(),
     };
     const mockMessageService = { add: vi.fn() };
 
-    comp.projectStepService = mockStepService;
+    comp.formApiService = mockFormApiService;
     comp.messageService = mockMessageService;
     comp.projectId = () => 12;
     comp.resolvedDef = () => mockFormDef;
@@ -106,16 +106,14 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
     // Trigger saveStep
     comp.saveStep(false);
 
-    expect(mockStepService.addStep).toHaveBeenCalledWith(
+    expect(mockFormApiService.createEntry).toHaveBeenCalledWith(
+      mockFormDef,
       12,
-      'FORM_01_PQB',
-      'National Pre-Qualification Bid (PQB)',
       expect.objectContaining({
         pqb_title: 'New Bid',
         pqb_no: 'B-01',
       }),
-      'in_progress',
-      50,
+      [],
     );
     expect(comp.stepSaved.emit).toHaveBeenCalled();
     expect(comp.close).toHaveBeenCalled();
@@ -123,16 +121,16 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
 
   it('should execute PUT when saving in EDIT mode', () => {
     const comp = Object.create(StepFormDialog.prototype);
-    const mockStepService = {
-      addStep: vi.fn(),
-      updateStep: vi.fn().mockReturnValue(
+    const mockFormApiService = {
+      createEntry: vi.fn(),
+      updateEntry: vi.fn().mockReturnValue(
         of({
           id: 55,
           step_name: 'National Pre-Qualification Bid (PQB)',
           status: 'completed',
         }),
       ),
-      removeStep: vi.fn(),
+      deleteEntry: vi.fn(),
     };
     const mockMessageService = { add: vi.fn() };
 
@@ -148,7 +146,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       data: {},
     };
 
-    comp.projectStepService = mockStepService;
+    comp.formApiService = mockFormApiService;
     comp.messageService = mockMessageService;
     comp.projectId = () => 12;
     comp.resolvedDef = () => mockFormDef;
@@ -165,14 +163,14 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
     // Trigger saveStep marking complete
     comp.saveStep(true);
 
-    expect(mockStepService.updateStep).toHaveBeenCalledWith(
+    expect(mockFormApiService.updateEntry).toHaveBeenCalledWith(
+      mockFormDef,
       12,
       55,
       expect.objectContaining({
         pqb_title: 'Updated Bid Title',
       }),
-      'completed',
-      100,
+      [],
     );
     expect(comp.stepSaved.emit).toHaveBeenCalled();
     expect(comp.close).toHaveBeenCalled();
@@ -180,8 +178,8 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
 
   it('should execute DELETE when confirming delete of an existing step', () => {
     const comp = Object.create(StepFormDialog.prototype);
-    const mockStepService = {
-      removeStep: vi.fn().mockReturnValue(of(true)),
+    const mockFormApiService = {
+      deleteEntry: vi.fn().mockReturnValue(of(true)),
     };
     const mockMessageService = { add: vi.fn() };
 
@@ -195,9 +193,10 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       completed_at: null,
     };
 
-    comp.projectStepService = mockStepService;
+    comp.formApiService = mockFormApiService;
     comp.messageService = mockMessageService;
     comp.projectId = () => 12;
+    comp.resolvedDef = () => mockFormDef;
     comp.step = () => existingStep;
     comp.deleting = { set: vi.fn() };
     comp.deleteConfirmVisible = { set: vi.fn() };
@@ -207,7 +206,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
     // Trigger confirmDelete
     comp.confirmDelete();
 
-    expect(mockStepService.removeStep).toHaveBeenCalledWith(12, 88);
+    expect(mockFormApiService.deleteEntry).toHaveBeenCalledWith(mockFormDef, 12, 88);
     expect(comp.stepDeleted.emit).toHaveBeenCalledWith(88);
     expect(comp.close).toHaveBeenCalled();
   });

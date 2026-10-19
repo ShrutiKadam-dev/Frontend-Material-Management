@@ -79,6 +79,12 @@ describe('ProjectFormEntries Component', () => {
     comp.deleting = signal(false);
     comp.quickRemarkPending = signal(false);
     comp.messageService = { add: vi.fn() };
+    comp.formApiService = {
+      deleteEntry: vi.fn().mockReturnValue(of(true)),
+      getEntries: vi.fn().mockReturnValue(of([])),
+      createEntry: vi.fn(),
+      updateEntry: vi.fn(),
+    };
     comp.projectStepService = {
       removeStep: vi.fn().mockReturnValue(of(true)),
       updateStep: vi.fn(),
@@ -207,7 +213,7 @@ describe('ProjectFormEntries Component', () => {
     comp.stepToDelete.set(mockSteps[0]);
 
     comp.executeDelete();
-    expect(comp.projectStepService.removeStep).toHaveBeenCalledWith(5, 101);
+    expect(comp.formApiService.deleteEntry).toHaveBeenCalledWith(expect.anything(), 5, 101);
     expect(comp.allSteps.update).toHaveBeenCalled();
     expect(stepsList.some((s) => s.id === 101)).toBe(false);
     expect(comp.messageService.add).toHaveBeenCalled();
