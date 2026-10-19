@@ -36,7 +36,7 @@ import {
 } from '../../../../core/constants/form-catalog';
 import { StepFormDialog } from './step-form-dialog/step-form-dialog';
 
-export type PhaseFilter = 'all' | 'phase-1' | 'phase-2' | 'phase-3' | 'phase-4';
+export type PhaseFilter = 'all' | 'phase-1' | 'phase-2' | 'phase-3' | 'phase-4' | 'phase-5';
 export type TimelineStatusFilter = 'all' | 'completed' | 'in_progress' | 'pending';
 export type TimelineViewMode = 'grid' | 'board' | 'table';
 
@@ -63,30 +63,37 @@ export interface FormattedStepRemark {
 export const PIPELINE_PHASES: PhaseInfo[] = [
   {
     id: 'phase-1',
-    title: 'Inquiry & Sourcing',
-    shortTitle: 'Phase 1: Sourcing',
-    stepRange: 'Steps 1–5',
-    badgeClass: 'phase-pill--sourcing',
-  },
-  {
-    id: 'phase-2',
-    title: 'Tender & Purchase Orders',
-    shortTitle: 'Phase 2: Orders',
-    stepRange: 'Steps 6–9',
+    title: 'Pre-Bidding & Tenders',
+    shortTitle: 'Phase 1: Pre-Bidding',
+    stepRange: 'Phase 1',
     badgeClass: 'phase-pill--bidding',
   },
   {
+    id: 'phase-2',
+    title: 'Sourcing & Quotations',
+    shortTitle: 'Phase 2: Sourcing',
+    stepRange: 'Phase 2',
+    badgeClass: 'phase-pill--sourcing',
+  },
+  {
     id: 'phase-3',
-    title: 'Logistics & Customs',
-    shortTitle: 'Phase 3: Logistics',
-    stepRange: 'Steps 10–12',
-    badgeClass: 'phase-pill--logistics',
+    title: 'Supplier Orders & Invoices',
+    shortTitle: 'Phase 3: Orders',
+    stepRange: 'Phase 3',
+    badgeClass: 'phase-pill--orders',
   },
   {
     id: 'phase-4',
-    title: 'Delivery & Settlement',
-    shortTitle: 'Phase 4: Settlement',
-    stepRange: 'Steps 13–15',
+    title: 'Logistics & Customs',
+    shortTitle: 'Phase 4: Logistics',
+    stepRange: 'Phase 4',
+    badgeClass: 'phase-pill--logistics',
+  },
+  {
+    id: 'phase-5',
+    title: 'Customer & Supplier Settlement',
+    shortTitle: 'Phase 5: Settlement',
+    stepRange: 'Phase 5',
     badgeClass: 'phase-pill--settlement',
   },
 ];
@@ -185,10 +192,11 @@ export class ProjectTimeline implements OnInit {
 
   protected getCatalogPhaseName(phaseId?: string): string {
     switch (phaseId) {
-      case 'phase-1': return 'Phase 1: Pre-Bidding';
-      case 'phase-2': return 'Phase 2: Sourcing';
-      case 'phase-3': return 'Phase 3: Execution';
-      case 'phase-4': return 'Phase 4: Settlement';
+      case 'phase-1': return 'Phase 1: Pre-Bidding & Tenders';
+      case 'phase-2': return 'Phase 2: Sourcing & Quotations';
+      case 'phase-3': return 'Phase 3: Supplier Orders & Invoices';
+      case 'phase-4': return 'Phase 4: Logistics & Customs';
+      case 'phase-5': return 'Phase 5: Customer & Supplier Settlement';
       default: return 'Standard';
     }
   }
@@ -248,14 +256,15 @@ export class ProjectTimeline implements OnInit {
     const query = this.searchQuery().toLowerCase().trim();
 
     // Phase Filter
-    if (phase === 'phase-1') {
-      list = list.filter((s) => s.step_number >= 1 && s.step_number <= 5);
-    } else if (phase === 'phase-2') {
-      list = list.filter((s) => s.step_number >= 6 && s.step_number <= 9);
-    } else if (phase === 'phase-3') {
-      list = list.filter((s) => s.step_number >= 10 && s.step_number <= 12);
-    } else if (phase === 'phase-4') {
-      list = list.filter((s) => s.step_number >= 13 && s.step_number <= 15);
+    if (phase !== 'all') {
+      list = list.filter((s) => {
+        if (s.phase) return s.phase === phase;
+        if (s.form_code) {
+          const def = getFormDefinition(s.form_code);
+          if (def?.phaseId) return def.phaseId === phase;
+        }
+        return false;
+      });
     }
 
     // Status Filter
@@ -291,13 +300,15 @@ export class ProjectTimeline implements OnInit {
           if (def?.phaseId) return def.phaseId === phase.id;
         }
         if (phase.id === 'phase-1') {
-          return s.step_number >= 1 && s.step_number <= 5;
+          return (s.step_number >= 1 && s.step_number <= 7) || s.step_number === 13 || s.step_number === 15;
         } else if (phase.id === 'phase-2') {
-          return s.step_number >= 6 && s.step_number <= 9;
+          return s.step_number >= 8 && s.step_number <= 12;
         } else if (phase.id === 'phase-3') {
-          return s.step_number >= 10 && s.step_number <= 12;
+          return s.step_number === 14 || (s.step_number >= 16 && s.step_number <= 20);
         } else if (phase.id === 'phase-4') {
-          return s.step_number >= 13 && s.step_number <= 15;
+          return s.step_number === 21 || s.step_number === 27 || s.step_number === 28;
+        } else if (phase.id === 'phase-5') {
+          return s.step_number >= 22 && s.step_number <= 26;
         }
         return false;
       });
@@ -468,7 +479,15 @@ export class ProjectTimeline implements OnInit {
     }
   }
 
-  protected openAddStepModal(): void {
+  protected openAddStepModal(categoryOrPhase?: string): void {
+    if (categoryOrPhase) {
+      const matched = this.allCatalogForms.find(
+        (f) => f.category === categoryOrPhase || f.phaseId === categoryOrPhase,
+      );
+      if (matched) {
+        this.selectedCategory.set(matched.category);
+      }
+    }
     this.addStepModalVisible.set(true);
   }
 
@@ -693,11 +712,27 @@ export class ProjectTimeline implements OnInit {
     return badges;
   }
 
-  protected getPhaseForStep(stepNumber: number): PhaseInfo {
-    if (stepNumber <= 5) return PIPELINE_PHASES[0];
-    if (stepNumber <= 9) return PIPELINE_PHASES[1];
-    if (stepNumber <= 12) return PIPELINE_PHASES[2];
-    return PIPELINE_PHASES[3];
+  protected getPhaseForStep(stepNumberOrStep: number | ProjectStep): PhaseInfo {
+    if (typeof stepNumberOrStep === 'object' && stepNumberOrStep !== null) {
+      if (stepNumberOrStep.phase) {
+        const found = PIPELINE_PHASES.find((p) => p.id === stepNumberOrStep.phase);
+        if (found) return found;
+      }
+      if (stepNumberOrStep.form_code) {
+        const def = getFormDefinition(stepNumberOrStep.form_code);
+        if (def?.phaseId) {
+          const found = PIPELINE_PHASES.find((p) => p.id === def.phaseId);
+          if (found) return found;
+        }
+      }
+      return this.getPhaseForStep(stepNumberOrStep.step_number);
+    }
+    const stepNumber = stepNumberOrStep;
+    if (stepNumber <= 7 || stepNumber === 13 || stepNumber === 15) return PIPELINE_PHASES[0];
+    if (stepNumber <= 12) return PIPELINE_PHASES[1];
+    if (stepNumber === 14 || (stepNumber >= 16 && stepNumber <= 20)) return PIPELINE_PHASES[2];
+    if (stepNumber === 21 || stepNumber === 27 || stepNumber === 28) return PIPELINE_PHASES[3];
+    return PIPELINE_PHASES[4];
   }
 
   protected statusLabel(status: StepStatus): string {

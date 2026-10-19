@@ -197,12 +197,24 @@
         </div>
 
         <div class="phase-ribbon-right">
+          @if (phase.totalCount > 0) {
           <span class="phase-done-pill" [class.phase-done-pill--all]="phase.isCompleted">
             @if (phase.isCompleted) {
             <i class="pi pi-check" aria-hidden="true"></i>
             }
             {{ phase.completedCount }} / {{ phase.totalCount }} Done
           </span>
+          } @else {
+          <button
+            type="button"
+            class="phase-attach-mini-btn"
+            (click)="openAddStepModal(phase.title)"
+            [pTooltip]="'Attach a ' + phase.title + ' form'"
+            tooltipPosition="left">
+            <i class="pi pi-plus" aria-hidden="true"></i>
+            <span>Attach Form</span>
+          </button>
+          }
         </div>
       </div>
 
