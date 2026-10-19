@@ -9,11 +9,19 @@
 
       <div class="header-title-group">
         <span class="eyebrow">Project Management · Pipeline Step 01</span>
-        <h1 id="cq-page-title">
-          {{ project()?.project_title || 'Customer Queries' }}
-        </h1>
+        <div class="title-code-wrap">
+          <div class="page-title-icon-badge" aria-hidden="true">
+            <i class="pi pi-comments"></i>
+          </div>
+          <h1 id="cq-page-title">Customer Queries</h1>
+          <span class="code-pill">STEP 01</span>
+        </div>
         <div class="header-subtitle-strip">
           <span class="proj-code-badge">#{{ projectCode() }}</span>
+          @if (project()?.project_title) {
+          <span class="sub-sep" aria-hidden="true">·</span>
+          <span class="proj-title-snippet">{{ project()?.project_title }}</span>
+          }
           @if (customer(); as c) {
           <span class="sub-sep" aria-hidden="true">·</span>
           <span class="customer-pill" [title]="'Customer: ' + c.name">

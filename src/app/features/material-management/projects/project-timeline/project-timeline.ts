@@ -438,41 +438,35 @@ export class ProjectTimeline implements OnInit {
 
   protected navigateToStep(stepOrNumber: ProjectStep | number): void {
     const pId = this.projectIdNumber();
+    if (!pId) return;
+
     if (this.isCustomerQueryStep(stepOrNumber)) {
-      if (pId) {
-        this.router.navigate(['/projects', pId, 'customer-queries']);
-      }
+      this.router.navigate(['/projects', pId, 'customer-queries']);
       return;
     }
 
-    if (typeof stepOrNumber === 'number') {
-      const match = this.steps().find((s) => s.step_number === stepOrNumber || s.id === stepOrNumber);
-      if (match) {
-        this.openStepFormPopup(match);
-      } else {
-        if (pId) {
-          this.router.navigate(['/projects', pId, 'step-form', stepOrNumber]);
-        }
-      }
-      return;
+    const step =
+      typeof stepOrNumber === 'number'
+        ? this.steps().find((s) => s.step_number === stepOrNumber || s.id === stepOrNumber)
+        : stepOrNumber;
+
+    let formCode = step?.form_code;
+    if (!formCode && step?.step_number) {
+      formCode = getFormDefinition(step.step_number)?.formCode;
+    } else if (!formCode && typeof stepOrNumber === 'number') {
+      formCode = getFormDefinition(stepOrNumber)?.formCode;
     }
 
-    this.openStepFormPopup(stepOrNumber);
+    if (formCode) {
+      this.router.navigate(['/projects', pId, 'forms', formCode]);
+    } else {
+      const stepNum = typeof stepOrNumber === 'number' ? stepOrNumber : (step?.step_number || 1);
+      this.router.navigate(['/projects', pId, 'step-entries', stepNum]);
+    }
   }
 
   protected openStepFormPopup(step: ProjectStep): void {
-    if (this.isCustomerQueryStep(step)) {
-      const pId = this.projectIdNumber();
-      if (pId) {
-        this.router.navigate(['/projects', pId, 'customer-queries']);
-      }
-      return;
-    }
-
-    this.selectedStepForForm.set(step);
-    const def = step.form_code ? getFormDefinition(step.form_code) : null;
-    this.selectedDefForForm.set(def || null);
-    this.stepFormModalVisible.set(true);
+    this.navigateToStep(step);
   }
 
   protected continueActiveStep(): void {
@@ -495,20 +489,18 @@ export class ProjectTimeline implements OnInit {
     this.addStepModalVisible.set(false);
 
     const pId = this.projectIdNumber();
+    if (!pId) return;
+
     if (
-      (form.formCode === 'FORM_08_CUSTOMER_QUERY' ||
-        form.name.toLowerCase().includes('query') ||
-        form.id === 8) &&
-      pId
+      form.formCode === 'FORM_08_CUSTOMER_QUERY' ||
+      form.name.toLowerCase().includes('query') ||
+      form.id === 8
     ) {
       this.router.navigate(['/projects', pId, 'customer-queries']);
       return;
     }
 
-    // Open Step Form Inputs in popup to add form fields (POST mode)
-    this.selectedStepForForm.set(null);
-    this.selectedDefForForm.set(form);
-    this.stepFormModalVisible.set(true);
+    this.router.navigate(['/projects', pId, 'forms', form.formCode]);
   }
 
   protected onStepSaved(savedStep: ProjectStep): void {

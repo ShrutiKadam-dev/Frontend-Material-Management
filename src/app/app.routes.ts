@@ -70,9 +70,23 @@ export const routes: Routes = [
       {
         path: 'projects/:projectId/forms/:formCode',
         loadComponent: () =>
-          import('./features/material-management/dynamic-step/dynamic-step-form').then(
-            (m) => m.DynamicStepForm,
-          ),
+          import(
+            './features/material-management/projects/project-form-entries/project-form-entries'
+          ).then((m) => m.ProjectFormEntries),
+      },
+      {
+        path: 'projects/:projectId/forms/:formCode/entries',
+        loadComponent: () =>
+          import(
+            './features/material-management/projects/project-form-entries/project-form-entries'
+          ).then((m) => m.ProjectFormEntries),
+      },
+      {
+        path: 'projects/:projectId/step-entries/:stepNumber',
+        loadComponent: () =>
+          import(
+            './features/material-management/projects/project-form-entries/project-form-entries'
+          ).then((m) => m.ProjectFormEntries),
       },
       {
         path: 'customers',
