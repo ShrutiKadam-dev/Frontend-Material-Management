@@ -26,7 +26,6 @@ import { Supplier } from '../../../../core/models/supplier.model';
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../../../../core/models/project-step.model';
 import { FormDefinition, FormTableColumn, FORM_CATALOG, getFormDefinition } from '../../../../core/constants/form-catalog';
 import { ProjectService } from '../../../../core/services/project';
-import { ProjectStepService } from '../../../../core/services/project-step';
 import { CustomerService } from '../../../../core/services/customer';
 import { SupplierService } from '../../../../core/services/supplier';
 import { FormApiService } from '../../../../core/services/form-api';
@@ -58,7 +57,6 @@ export class ProjectFormEntries implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly projectService = inject(ProjectService);
-  private readonly projectStepService = inject(ProjectStepService);
   private readonly customerService = inject(CustomerService);
   private readonly supplierService = inject(SupplierService);
   private readonly formApiService = inject(FormApiService);
@@ -255,9 +253,15 @@ export class ProjectFormEntries implements OnInit {
     this.error.set(null);
 
     const def = this.formDefinition();
-    const entries$ = def
-      ? this.formApiService.getEntries(def, projectId).pipe(catchError(() => of([])))
-      : this.projectStepService.getSteps(projectId).pipe(catchError(() => of([])));
+    if (!def) {
+      this.loading.set(false);
+      this.error.set('Form definition not found in catalog.');
+      return;
+    }
+
+    const entries$ = this.formApiService.getEntries(def, projectId).pipe(
+      catchError(() => of([])),
+    );
 
     // Load project metadata and form entries in parallel without waterfalls
     forkJoin({
@@ -391,7 +395,7 @@ export class ProjectFormEntries implements OnInit {
 
     const delete$ = def
       ? this.formApiService.deleteEntry(def, pId, stepId)
-      : this.projectStepService.removeStep(pId, stepId);
+      : of(false);
 
     delete$
       .pipe(
@@ -448,13 +452,7 @@ export class ProjectFormEntries implements OnInit {
     const def = this.formDefinition();
     const update$ = def
       ? this.formApiService.updateEntry(def, pId, stepId, updatedData)
-      : this.projectStepService.updateStep(
-          pId,
-          stepId,
-          updatedData,
-          entry.status,
-          entry.progress_percentage,
-        );
+      : of(entry);
 
     update$
       .pipe(
@@ -502,13 +500,7 @@ export class ProjectFormEntries implements OnInit {
     const def = this.formDefinition();
     const update$ = def
       ? this.formApiService.updateEntry(def, pId, stepId, updatedData)
-      : this.projectStepService.updateStep(
-          pId,
-          stepId,
-          updatedData,
-          entry.status,
-          entry.progress_percentage,
-        );
+      : of(entry);
 
     update$
       .pipe(this.safeUntilDestroyed())
@@ -614,7 +606,16 @@ export class ProjectFormEntries implements OnInit {
       const val = entry.data[f.key];
       if (val !== undefined && val !== null && val !== '') {
         let formattedVal = String(val);
-        if (f.type === 'currency' && typeof val === 'number') {
+        if (Array.isArray(val)) {
+          formattedVal = val.join(', ');
+        } else if (f.type === 'select' && f.options && typeof val === 'string') {
+          const match = f.options.find(
+            (opt) => (typeof opt === 'object' && opt !== null ? opt.value === val : opt === val),
+          );
+          if (match && typeof match === 'object') {
+            formattedVal = match.label;
+          }
+        } else if (f.type === 'currency' && typeof val === 'number') {
           formattedVal = '₹ ' + val.toLocaleString('en-IN', { minimumFractionDigits: 2 });
         } else if (f.type === 'date' && typeof val === 'string') {
           formattedVal = formatDisplayDate(val);

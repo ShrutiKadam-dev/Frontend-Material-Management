@@ -42,6 +42,7 @@ import {
   getFormDefinition,
   LEGACY_STEP_TO_FORM_CODE,
 } from '../../../core/constants/form-catalog';
+import { SelectOption } from '../../../core/constants/dropdown-options.constant';
 import { StepRemarksComponent } from '../../../shared/components/step-remarks/step-remarks';
 
 @Component({
@@ -245,7 +246,27 @@ export class DynamicStepForm implements OnInit {
     const controls: Record<string, FormControl> = {};
 
     for (const field of def.fields) {
-      const initialValue = savedData[field.key] ?? (this.getDefaultFieldValue(field));
+      let initialValue = savedData[field.key];
+      if (initialValue === undefined || initialValue === null) {
+        initialValue = this.getDefaultFieldValue(field);
+      }
+      if (field.type === 'multilocation') {
+        if (Array.isArray(initialValue)) {
+          initialValue = initialValue.map((v) => String(v).trim()).filter(Boolean);
+        } else if (typeof initialValue === 'string' && initialValue.trim()) {
+          initialValue = initialValue.split(',').map((s) => s.trim()).filter(Boolean);
+        } else {
+          initialValue = [];
+        }
+      } else if (field.type === 'select' && field.options && typeof initialValue === 'string' && initialValue.trim()) {
+        const strVal = initialValue.toLowerCase();
+        const match = field.options.find(
+          (opt) => typeof opt === 'object' && opt !== null && opt.label.toLowerCase() === strVal,
+        );
+        if (match && typeof match === 'object') {
+          initialValue = match.value;
+        }
+      }
       const validators = field.required ? [Validators.required] : [];
       controls[field.key] = new FormControl(initialValue, validators);
     }
@@ -276,8 +297,65 @@ export class DynamicStepForm implements OnInit {
 
   private getDefaultFieldValue(field: FormFieldDefinition): unknown {
     if (field.type === 'number' || field.type === 'currency') return null;
-    if (field.type === 'date') return null;
+    if (field.type === 'date' || field.type === 'datetime') return null;
+    if (field.type === 'multilocation') return [];
     return '';
+  }
+
+  // ── Select and Location Field Helpers ──────────────────────────────
+  getSelectOptions(field: FormFieldDefinition): SelectOption<string>[] {
+    if (!field.options) return [];
+    return field.options.map((opt) =>
+      typeof opt === 'string' ? { label: opt, value: opt } : opt,
+    );
+  }
+
+  getLocations(fieldKey: string): string[] {
+    const val = this.formGroup()?.get(fieldKey)?.value;
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string' && val.trim()) {
+      return val.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+    return [];
+  }
+
+  addLocation(fieldKey: string, inputElement: HTMLInputElement): void {
+    const raw = inputElement.value.trim();
+    if (!raw) return;
+
+    const items = raw.split(',').map((s) => s.trim()).filter(Boolean);
+    const current = this.getLocations(fieldKey);
+    const next = [...current];
+
+    for (const item of items) {
+      if (!next.includes(item)) {
+        next.push(item);
+      }
+    }
+
+    const control = this.formGroup()?.get(fieldKey);
+    if (control) {
+      control.setValue(next);
+      control.markAsDirty();
+    }
+    inputElement.value = '';
+  }
+
+  removeLocation(fieldKey: string, index: number): void {
+    const current = this.getLocations(fieldKey);
+    const next = current.filter((_, i) => i !== index);
+    const control = this.formGroup()?.get(fieldKey);
+    if (control) {
+      control.setValue(next);
+      control.markAsDirty();
+    }
+  }
+
+  onLocationInputKeydown(event: KeyboardEvent, fieldKey: string, inputElement: HTMLInputElement): void {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      this.addLocation(fieldKey, inputElement);
+    }
   }
 
   private createTableRowGroup(def: FormDefinition, initialData: Record<string, unknown> = {}): FormGroup {
@@ -448,7 +526,18 @@ export class DynamicStepForm implements OnInit {
 
     this.saving.set(true);
 
-    const formData = this.formGroup().value;
+    const formData: Record<string, unknown> = { ...this.formGroup().value };
+    const def = this.formDefinition();
+    if (def) {
+      for (const field of def.fields) {
+        if (field.type === 'multilocation') {
+          const val = formData[field.key];
+          if (Array.isArray(val)) {
+            formData[field.key] = val.join(', ');
+          }
+        }
+      }
+    }
     const tableData = this.tableFormArray().value;
 
     const combinedData: Record<string, unknown> = {

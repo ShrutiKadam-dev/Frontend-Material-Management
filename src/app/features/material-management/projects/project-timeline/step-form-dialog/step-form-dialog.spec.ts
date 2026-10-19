@@ -314,5 +314,110 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
     comp.removeUploadedFileByRef(filesState[0]);
     expect(filesState.length).toBe(0);
   });
+
+  describe('Multilocation & Select Helpers', () => {
+    it('should normalize select options correctly whether array of strings or SelectOption objects', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+
+      const fieldWithStringOpts = {
+        key: 'status',
+        label: 'Status',
+        type: 'select' as const,
+        options: ['Active', 'Pending', 'Closed'],
+      };
+      const normalizedStrings = comp.getSelectOptions(fieldWithStringOpts);
+      expect(normalizedStrings).toEqual([
+        { label: 'Active', value: 'Active' },
+        { label: 'Pending', value: 'Pending' },
+        { label: 'Closed', value: 'Closed' },
+      ]);
+
+      const fieldWithObjectOpts = {
+        key: 'incoterms',
+        label: 'Incoterms',
+        type: 'select' as const,
+        options: [
+          { label: 'EXW - Ex Works', value: 'EXW' },
+          { label: 'FOB - Free on Board', value: 'FOB' },
+        ],
+      };
+      const normalizedObjects = comp.getSelectOptions(fieldWithObjectOpts);
+      expect(normalizedObjects).toEqual([
+        { label: 'EXW - Ex Works', value: 'EXW' },
+        { label: 'FOB - Free on Board', value: 'FOB' },
+      ]);
+
+      const fieldWithoutOpts = { key: 'desc', label: 'Desc', type: 'text' as const };
+      expect(comp.getSelectOptions(fieldWithoutOpts)).toEqual([]);
+    });
+
+    it('should add, get, and remove locations for multilocation fields', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const control = {
+        value: [] as string[],
+        setValue: vi.fn((val) => {
+          control.value = val;
+        }),
+        markAsDirty: vi.fn(),
+      };
+      const groupMock = {
+        get: vi.fn((key: string) => (key === 'supply_location' ? control : null)),
+      };
+      comp.formGroup = () => groupMock;
+
+      // 1. Initial locations is empty
+      expect(comp.getLocations('supply_location')).toEqual([]);
+
+      // 2. Add a single location
+      const inputEl = { value: 'Mumbai' } as HTMLInputElement;
+      comp.addLocation('supply_location', inputEl);
+      expect(control.setValue).toHaveBeenCalledWith(['Mumbai']);
+      expect(inputEl.value).toBe('');
+
+      // 3. Add multiple locations via comma-separated string
+      inputEl.value = 'Delhi, Bangalore';
+      comp.addLocation('supply_location', inputEl);
+      expect(control.setValue).toHaveBeenCalledWith(['Mumbai', 'Delhi', 'Bangalore']);
+
+      // 4. Remove a location by index
+      comp.removeLocation('supply_location', 1); // remove Delhi
+      expect(control.setValue).toHaveBeenCalledWith(['Mumbai', 'Bangalore']);
+    });
+
+    it('should parse both string and array formats during initForm for multilocation fields', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.formGroup = { set: vi.fn() };
+      comp.tableFormArray = { set: vi.fn() };
+      comp.uploadedFiles = { set: vi.fn(), length: 0 };
+      comp.stepRemarks = { set: vi.fn() };
+
+      const locationFormDef: FormDefinition = {
+        id: 21,
+        formCode: 'FORM_21_TRANSPORTATION_DETAILS',
+        name: 'Transportation Details',
+        category: 'Logistics & Customs',
+        phaseId: 'phase-3',
+        icon: 'pi pi-truck',
+        description: 'Transport details',
+        fields: [
+          { key: 'from_location', label: 'From Location', type: 'multilocation' },
+          { key: 'to_location', label: 'To Location', type: 'multilocation' },
+        ],
+      };
+
+      (comp as any).populateForm(
+        locationFormDef,
+        {
+          from_location: 'Mumbai, Pune',
+          to_location: ['Chennai', 'Hyderabad'],
+        },
+        [],
+      );
+
+      const createdGroup = comp.formGroup.set.mock.calls[0][0];
+      expect(createdGroup.get('from_location').value).toEqual(['Mumbai', 'Pune']);
+      expect(createdGroup.get('to_location').value).toEqual(['Chennai', 'Hyderabad']);
+    });
+  });
 });
 

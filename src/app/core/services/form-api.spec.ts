@@ -102,21 +102,7 @@ describe('FormApiService', () => {
     expect(entries[0].form_code).toBe('FORM_09_RFQ');
   });
 
-  it('getEntries should fall back gracefully to ProjectStepService when no apiEndpoint is present', async () => {
-    const fallbackStep: ProjectStep = {
-      id: 101,
-      project_id: 7,
-      step_number: 1,
-      step_name: 'National Pre-Qualification Bid (PQB)',
-      description: 'PQB Submission',
-      status: 'completed',
-      progress_percentage: 100,
-      completed_at: null,
-      form_code: 'FORM_01_PQB',
-      data: {},
-      remarks: [],
-    };
-
+  it('getEntries should return empty array when no apiEndpoint is present and not call steps', async () => {
     const mockHttp = {
       get: vi.fn(),
       post: vi.fn(),
@@ -124,26 +110,43 @@ describe('FormApiService', () => {
       delete: vi.fn(),
     };
 
-    const mockProjectStepService = {
-      getSteps: vi.fn().mockReturnValue(of([fallbackStep])),
-      addStep: vi.fn(),
-      updateStep: vi.fn(),
-      removeStep: vi.fn(),
-    };
-
     const service = Object.create(FormApiService.prototype);
     service.http = mockHttp;
     service.apiBaseUrl = 'http://localhost:5000';
-    service.projectStepService = mockProjectStepService;
 
     const entries = await new Promise<ProjectStep[]>((resolve) => {
       service.getEntries(sampleDefWithoutEndpoint, 7).subscribe(resolve);
     });
 
     expect(mockHttp.get).not.toHaveBeenCalled();
-    expect(mockProjectStepService.getSteps).toHaveBeenCalledWith(7);
-    expect(entries).toHaveLength(1);
-    expect(entries[0].id).toBe(101);
+    expect(entries).toHaveLength(0);
+  });
+
+  it('getEntryById should fetch a single record from the dedicated individual endpoint', async () => {
+    const mockHttp = {
+      get: vi.fn().mockReturnValue(
+        of({
+          id: 42,
+          project_id: 7,
+          supplier_name: 'Acme Steel',
+        }),
+      ),
+      post: vi.fn(),
+      patch: vi.fn(),
+      delete: vi.fn(),
+    };
+
+    const service = Object.create(FormApiService.prototype);
+    service.http = mockHttp;
+    service.apiBaseUrl = 'http://localhost:5000';
+
+    const step = await new Promise<ProjectStep>((resolve) => {
+      service.getEntryById(sampleDef, 42, 7).subscribe(resolve);
+    });
+
+    expect(mockHttp.get).toHaveBeenCalledWith('http://localhost:5000/api/v1/quotation-requests/42');
+    expect(step.id).toBe(42);
+    expect(step.data['supplier_name']).toBe('Acme Steel');
   });
 
   it('createEntry should send FormData with JSON payload to dedicated endpoint', async () => {
@@ -160,17 +163,9 @@ describe('FormApiService', () => {
       delete: vi.fn(),
     };
 
-    const mockProjectStepService = {
-      getSteps: vi.fn(),
-      addStep: vi.fn(),
-      updateStep: vi.fn(),
-      removeStep: vi.fn(),
-    };
-
     const service = Object.create(FormApiService.prototype);
     service.http = mockHttp;
     service.apiBaseUrl = 'http://localhost:5000';
-    service.projectStepService = mockProjectStepService;
 
     const dummyFile = new File(['content'], 'rfq.pdf', { type: 'application/pdf' });
     const payload = { supplier_name: 'Tata Steel', request_date: '2026-10-18' };
@@ -187,7 +182,7 @@ describe('FormApiService', () => {
     expect(created.form_code).toBe('FORM_09_RFQ');
   });
 
-  it('deleteEntry should call DELETE on dedicated endpoint and remove from step cache', async () => {
+  it('deleteEntry should call DELETE directly on dedicated endpoint', async () => {
     const mockHttp = {
       get: vi.fn(),
       post: vi.fn(),
@@ -195,17 +190,9 @@ describe('FormApiService', () => {
       delete: vi.fn().mockReturnValue(of(undefined)),
     };
 
-    const mockProjectStepService = {
-      getSteps: vi.fn(),
-      addStep: vi.fn(),
-      updateStep: vi.fn(),
-      removeStep: vi.fn().mockReturnValue(of(true)),
-    };
-
     const service = Object.create(FormApiService.prototype);
     service.http = mockHttp;
     service.apiBaseUrl = 'http://localhost:5000';
-    service.projectStepService = mockProjectStepService;
 
     const result = await new Promise<boolean>((resolve) => {
       service.deleteEntry(sampleDef, 4, 99).subscribe(resolve);

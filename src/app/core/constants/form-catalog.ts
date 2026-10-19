@@ -1,3 +1,9 @@
+import {
+  INCOTERMS_OPTIONS,
+  SelectOption,
+  WARRANTY_PERIOD_OPTIONS,
+} from './dropdown-options.constant';
+
 export type FormCategory =
   | 'Pre-Bidding & Tenders'
   | 'Sourcing & Quotations'
@@ -12,7 +18,8 @@ export type FormFieldType =
   | 'datetime'
   | 'select'
   | 'currency'
-  | 'textarea';
+  | 'textarea'
+  | 'multilocation';
 
 export interface FormFieldDefinition {
   key: string;
@@ -20,7 +27,7 @@ export interface FormFieldDefinition {
   type: FormFieldType;
   required?: boolean;
   placeholder?: string;
-  options?: string[]; // for select
+  options?: (string | SelectOption<string>)[]; // for select
   suffix?: string;
   prefix?: string;
   colSpan?: 1 | 2 | 3 | 4; // grid column width out of 4
@@ -89,7 +96,7 @@ export const FORM_CATALOG: FormDefinition[] = [
         options: ['Online (e-Procurement)', 'Physical Hardcopy', 'Hybrid (Online + Physical)'],
         colSpan: 1,
       },
-      { key: 'supply_location', label: 'Supply Location', type: 'text', colSpan: 4 },
+      { key: 'supply_location', label: 'Supply Location', type: 'multilocation', colSpan: 4 },
     ],
     tableConfig: {
       title: 'Requirements',
@@ -250,7 +257,7 @@ export const FORM_CATALOG: FormDefinition[] = [
         options: ['Online Portal', 'Physical Tender Box', 'Email Submission'],
         colSpan: 1,
       },
-      { key: 'supply_location', label: 'Supply Location', type: 'text', colSpan: 4 },
+      { key: 'supply_location', label: 'Supply Location', type: 'multilocation', colSpan: 4 },
     ],
     tableConfig: {
       title: 'Requirements',
@@ -367,10 +374,10 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'quotation_date', label: 'Quotation Date', type: 'date', colSpan: 1 },
       { key: 'quotation_value', label: 'Quotation Value', type: 'currency', colSpan: 2 },
       { key: 'quotation_validity', label: 'Quotation Validity', type: 'text', colSpan: 2 },
-      { key: 'incoterms', label: 'Incoterms (e.g. FOB, CIF, EXW)', type: 'text', colSpan: 1 },
+      { key: 'incoterms', label: 'Incoterms', type: 'select', options: INCOTERMS_OPTIONS, colSpan: 1 },
       { key: 'payment_terms', label: 'Payment Terms', type: 'text', colSpan: 1 },
       { key: 'delivery_period', label: 'Delivery Period', type: 'text', colSpan: 1 },
-      { key: 'warranty_period', label: 'Warranty Period', type: 'text', colSpan: 1 },
+      { key: 'warranty_period', label: 'Warranty Period', type: 'select', options: WARRANTY_PERIOD_OPTIONS, colSpan: 1 },
     ],
     tableConfig: {
       title: 'Quoted Materials & Pricing',
@@ -444,10 +451,10 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'opening_date_time', label: 'Opening Date & Time', type: 'datetime', colSpan: 2 },
       { key: 'tender_fee', label: 'Tender Fee', type: 'currency', colSpan: 1 },
       { key: 'validity', label: 'Validity', type: 'text', colSpan: 1 },
-      { key: 'delivery_terms', label: 'Delivery Terms', type: 'text', colSpan: 1 },
+      { key: 'delivery_terms', label: 'Delivery Terms (Incoterms)', type: 'select', options: INCOTERMS_OPTIONS, colSpan: 1 },
       { key: 'delivery_period', label: 'Delivery Period', type: 'text', colSpan: 1 },
       { key: 'payment_terms', label: 'Payment Terms', type: 'text', colSpan: 2 },
-      { key: 'warranty_period', label: 'Warranty Period', type: 'text', colSpan: 2 },
+      { key: 'warranty_period', label: 'Warranty Period', type: 'select', options: WARRANTY_PERIOD_OPTIONS, colSpan: 2 },
     ],
     tableConfig: {
       title: 'Requirements',
@@ -476,9 +483,9 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'po_title', label: 'PO Title', type: 'text', required: true, colSpan: 2 },
       { key: 'po_no', label: 'PO No.', type: 'text', required: true, colSpan: 2 },
       { key: 'po_date', label: 'PO Date', type: 'date', colSpan: 2 },
-      { key: 'delivery_terms', label: 'Delivery Terms', type: 'text', colSpan: 1 },
+      { key: 'delivery_terms', label: 'Delivery Terms (Incoterms)', type: 'select', options: INCOTERMS_OPTIONS, colSpan: 1 },
       { key: 'payment_terms', label: 'Payment Terms', type: 'text', colSpan: 1 },
-      { key: 'warranty_period', label: 'Warranty Period', type: 'text', colSpan: 1 },
+      { key: 'warranty_period', label: 'Warranty Period', type: 'select', options: WARRANTY_PERIOD_OPTIONS, colSpan: 1 },
       { key: 'gst_rate_pct', label: 'GST Rate %', type: 'number', suffix: '%', colSpan: 1 },
     ],
     tableConfig: {
@@ -518,11 +525,11 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'tender_issue_date', label: 'Tender Issue Date', type: 'date', colSpan: 1 },
       { key: 'total_no_corrigendum_issued', label: 'Total No. Corrigendum Issued', type: 'number', colSpan: 1 },
       { key: 'bid_submission_date', label: 'Bid Submission Date', type: 'date', colSpan: 1 },
-      { key: 'delivery_terms', label: 'Delivery Terms', type: 'text', colSpan: 1 },
+      { key: 'delivery_terms', label: 'Delivery Terms (Incoterms)', type: 'select', options: INCOTERMS_OPTIONS, colSpan: 1 },
       { key: 'delivery_period', label: 'Delivery Period', type: 'text', colSpan: 1 },
       { key: 'bid_validity', label: 'Bid Validity', type: 'text', colSpan: 1 },
       { key: 'payment_terms', label: 'Payment Terms', type: 'text', colSpan: 1 },
-      { key: 'warranty_period', label: 'Warranty Period', type: 'text', colSpan: 2 },
+      { key: 'warranty_period', label: 'Warranty Period', type: 'select', options: WARRANTY_PERIOD_OPTIONS, colSpan: 2 },
       { key: 'gst_pct', label: 'GST (%)', type: 'number', suffix: '%', colSpan: 2 },
     ],
     tableConfig: {
@@ -557,9 +564,9 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true, colSpan: 2 },
       { key: 'order_confirmation_no', label: 'Order Confirmation No.', type: 'text', required: true, colSpan: 1 },
       { key: 'order_confirmation_date', label: 'Order Confirmation Date', type: 'date', colSpan: 1 },
-      { key: 'incoterms', label: 'Incoterms', type: 'text', colSpan: 1 },
+      { key: 'incoterms', label: 'Incoterms', type: 'select', options: INCOTERMS_OPTIONS, colSpan: 1 },
       { key: 'delivery_period', label: 'Delivery Period', type: 'text', colSpan: 1 },
-      { key: 'warranty_period', label: 'Warranty Period', type: 'text', colSpan: 1 },
+      { key: 'warranty_period', label: 'Warranty Period', type: 'select', options: WARRANTY_PERIOD_OPTIONS, colSpan: 1 },
       { key: 'payment_terms', label: 'Payment Terms', type: 'text', colSpan: 1 },
     ],
     tableConfig: {
@@ -593,9 +600,9 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true, colSpan: 2 },
       { key: 'proforma_invoice_no', label: 'Proforma Invoice No.', type: 'text', required: true, colSpan: 1 },
       { key: 'proforma_invoice_date', label: 'Proforma Invoice Date', type: 'date', colSpan: 1 },
-      { key: 'incoterms', label: 'Incoterms', type: 'text', colSpan: 1 },
+      { key: 'incoterms', label: 'Incoterms', type: 'select', options: INCOTERMS_OPTIONS, colSpan: 1 },
       { key: 'payment_terms', label: 'Payment Terms', type: 'text', colSpan: 1 },
-      { key: 'warranty_period', label: 'Warranty Period', type: 'text', colSpan: 1 },
+      { key: 'warranty_period', label: 'Warranty Period', type: 'select', options: WARRANTY_PERIOD_OPTIONS, colSpan: 1 },
       { key: 'delivery_period', label: 'Delivery Period', type: 'text', colSpan: 1 },
     ],
     tableConfig: {
@@ -630,9 +637,9 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true, colSpan: 2 },
       { key: 'invoice_no', label: 'Invoice No.', type: 'text', required: true, colSpan: 1 },
       { key: 'invoice_date', label: 'Invoice Date', type: 'date', colSpan: 1 },
-      { key: 'incoterms', label: 'Incoterms', type: 'text', colSpan: 1 },
+      { key: 'incoterms', label: 'Incoterms', type: 'select', options: INCOTERMS_OPTIONS, colSpan: 1 },
       { key: 'payment_terms', label: 'Payment Terms', type: 'text', colSpan: 1 },
-      { key: 'warranty_period', label: 'Warranty Period', type: 'text', colSpan: 1 },
+      { key: 'warranty_period', label: 'Warranty Period', type: 'select', options: WARRANTY_PERIOD_OPTIONS, colSpan: 1 },
       { key: 'delivery_period', label: 'Delivery Period', type: 'text', colSpan: 1 },
     ],
     tableConfig: {
@@ -731,8 +738,8 @@ export const FORM_CATALOG: FormDefinition[] = [
       },
       { key: 'lr_rr_awb_no', label: 'LR / RR / AWB No.', type: 'text', required: true, colSpan: 1 },
       { key: 'lr_rr_awb_date', label: 'LR / RR / AWB Date', type: 'date', colSpan: 1 },
-      { key: 'from_location', label: 'From Location', type: 'text', colSpan: 2 },
-      { key: 'to_location', label: 'To Location', type: 'text', colSpan: 2 },
+      { key: 'from_location', label: 'From Location', type: 'multilocation', colSpan: 2 },
+      { key: 'to_location', label: 'To Location', type: 'multilocation', colSpan: 2 },
       { key: 'total_transportation_charges', label: 'Total Transportation Charges', type: 'currency', prefix: '₹', colSpan: 4 },
     ],
     uploads: [{ key: 'upload_transportation_doc', label: 'Upload Transportation Document', multiple: true }],
@@ -773,7 +780,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     apiEndpoint: '/api/v1/warranty-certificates',
     fields: [
       { key: 'certificate_date', label: 'Certificate Date', type: 'date', required: true, colSpan: 2 },
-      { key: 'warranty_period', label: 'Warranty Period (e.g. 24 Months)', type: 'text', required: true, colSpan: 2 },
+      { key: 'warranty_period', label: 'Warranty Period', type: 'select', options: WARRANTY_PERIOD_OPTIONS, required: true, colSpan: 2 },
       { key: 'po_no', label: 'PO No.', type: 'text', colSpan: 1 },
       { key: 'po_date', label: 'PO Date', type: 'date', colSpan: 1 },
       { key: 'invoice_no', label: 'Invoice No.', type: 'text', colSpan: 1 },
@@ -908,7 +915,7 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'duty_paid_date', label: 'Duty Paid Date', type: 'date', colSpan: 1 },
       { key: 'challan_no', label: 'Duty Challan No.', type: 'text', colSpan: 1 },
       { key: 'payment_ref_no', label: 'Transaction / Payment Ref No.', type: 'text', colSpan: 2 },
-      { key: 'customs_location', label: 'Customs Location', type: 'text', colSpan: 2 },
+      { key: 'customs_location', label: 'Customs Location', type: 'multilocation', colSpan: 2 },
       { key: 'cfs_name', label: 'CFS Name (Container Freight Station)', type: 'text', colSpan: 2 },
     ],
     uploads: [

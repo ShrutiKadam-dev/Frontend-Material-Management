@@ -201,12 +201,67 @@
             }
 
             @case ('select') {
-              <select [id]="field.key" [formControlName]="field.key" class="field-native-select w-full">
-                <option value="">Select option...</option>
-                @for (opt of field.options; track opt) {
-                <option [value]="opt">{{ opt }}</option>
+              <p-select
+                [id]="field.key"
+                [formControlName]="field.key"
+                [options]="getSelectOptions(field)"
+                optionLabel="label"
+                optionValue="value"
+                [placeholder]="field.placeholder || ('Select ' + field.label)"
+                appendTo="body"
+                styleClass="w-full">
+              </p-select>
+            }
+
+            @case ('multilocation') {
+              <div class="multilocation-wrapper">
+                <div class="multilocation-input-row">
+                  <div class="multilocation-input-wrap">
+                    <i class="pi pi-map-marker input-prefix-icon" aria-hidden="true"></i>
+                    <input
+                      #locInput
+                      pInputText
+                      type="text"
+                      [id]="field.key"
+                      [placeholder]="field.placeholder || ('Add ' + field.label + ' (press Enter)')"
+                      (keydown)="onLocationInputKeydown($event, field.key, locInput)"
+                      class="field-input w-full with-prefix" />
+                  </div>
+                  <button
+                    type="button"
+                    class="add-loc-btn"
+                    (click)="addLocation(field.key, locInput)"
+                    pTooltip="Add location"
+                    tooltipPosition="top">
+                    <i class="pi pi-plus" aria-hidden="true"></i>
+                    <span>Add</span>
+                  </button>
+                </div>
+
+                @let locs = getLocations(field.key);
+                @if (locs.length > 0) {
+                  <div class="locations-chip-list" role="list" aria-label="Locations list">
+                    @for (loc of locs; track $index) {
+                      <span class="location-chip" role="listitem">
+                        <i class="pi pi-map-pin chip-pin" aria-hidden="true"></i>
+                        <span class="chip-text">{{ loc }}</span>
+                        <button
+                          type="button"
+                          class="chip-remove-btn"
+                          (click)="removeLocation(field.key, $index)"
+                          [attr.aria-label]="'Remove location ' + loc">
+                          <i class="pi pi-times" aria-hidden="true"></i>
+                        </button>
+                      </span>
+                    }
+                  </div>
+                } @else {
+                  <div class="locations-empty-hint">
+                    <i class="pi pi-info-circle" aria-hidden="true"></i>
+                    <span>No locations added yet. Type location above and click Add or press Enter.</span>
+                  </div>
                 }
-              </select>
+              </div>
             }
 
             @case ('textarea') {

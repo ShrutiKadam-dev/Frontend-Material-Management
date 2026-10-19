@@ -933,3 +933,125 @@
   padding: 5px 12px;
   transition: all 0.16s ease;
 }
+
+/* ── Multilocation Tags Input ─────────────────────────────────────────── */
+.multilocation-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.multilocation-input-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.multilocation-input-wrap {
+  flex: 1;
+  position: relative;
+
+  .input-prefix-icon {
+    color: #64748b;
+    font-size: 14px;
+    left: 12px;
+    pointer-events: none;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+  }
+
+  .field-input.with-prefix {
+    padding-left: 34px;
+  }
+}
+
+.add-loc-btn {
+  align-items: center;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  color: #2563eb;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 6px;
+  height: 38px;
+  padding: 0 14px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+
+  &:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+  }
+}
+
+.locations-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 24px;
+  padding-top: 2px;
+}
+
+.location-chip {
+  align-items: center;
+  animation: fadeInChip 0.15s ease;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #1e293b;
+  display: inline-flex;
+  font-size: 12.5px;
+  gap: 6px;
+  padding: 4px 8px;
+
+  .chip-pin {
+    color: #2563eb;
+    font-size: 11px;
+  }
+
+  .chip-text {
+    font-weight: 500;
+  }
+
+  .chip-remove-btn {
+    align-items: center;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    color: #94a3b8;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 10px;
+    height: 16px;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.15s ease;
+    width: 16px;
+
+    &:hover {
+      background: #e2e8f0;
+      color: #ef4444;
+    }
+  }
+}
+
+.locations-empty-hint {
+  align-items: center;
+  color: #94a3b8;
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+  padding: 2px 4px;
+
+  i {
+    font-size: 12px;
+  }
+}
+

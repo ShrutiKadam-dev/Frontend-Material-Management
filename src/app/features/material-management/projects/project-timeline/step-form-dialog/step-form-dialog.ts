@@ -28,8 +28,10 @@ import { TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 
+import { of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../../../../../core/models/project-step.model';
-import { ProjectStepService } from '../../../../../core/services/project-step';
 import { FormApiService } from '../../../../../core/services/form-api';
 import {
   FormDefinition,
@@ -37,6 +39,7 @@ import {
   getFormDefinition,
   FORM_CATALOG,
 } from '../../../../../core/constants/form-catalog';
+import { SelectOption } from '../../../../../core/constants/dropdown-options.constant';
 import { getCurrentUserFromStorage } from '../../../../../core/utils/remark.utils';
 
 @Component({
@@ -60,7 +63,6 @@ import { getCurrentUserFromStorage } from '../../../../../core/utils/remark.util
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StepFormDialog {
-  private readonly projectStepService = inject(ProjectStepService);
   private readonly formApiService = inject(FormApiService);
   private readonly messageService = inject(MessageService);
 
@@ -153,9 +155,13 @@ export class StepFormDialog {
       const pId = this.projectId();
       const stepId = step.id || step.step_number;
 
-      // GET operation to fetch freshest step state
+      // GET operation to fetch freshest step state via individual form API
       this.loading.set(true);
-      this.projectStepService.getStepById(pId, stepId).subscribe({
+      const fetch$ = def?.apiEndpoint
+        ? this.formApiService.getEntryById(def, stepId, pId).pipe(catchError(() => of(step)))
+        : of(step);
+
+      fetch$.subscribe({
         next: (freshStep) => {
           this.loading.set(false);
           const activeStep = freshStep || step;
@@ -190,6 +196,23 @@ export class StepFormDialog {
       let initialVal = savedData[field.key];
       if (initialVal === undefined || initialVal === null) {
         initialVal = this.getDefaultFieldValue(field);
+      }
+      if (field.type === 'multilocation') {
+        if (Array.isArray(initialVal)) {
+          initialVal = initialVal.map((v) => String(v).trim()).filter(Boolean);
+        } else if (typeof initialVal === 'string' && initialVal.trim()) {
+          initialVal = initialVal.split(',').map((s) => s.trim()).filter(Boolean);
+        } else {
+          initialVal = [];
+        }
+      } else if (field.type === 'select' && field.options && typeof initialVal === 'string' && initialVal.trim()) {
+        const strVal = initialVal.toLowerCase();
+        const match = field.options.find(
+          (opt) => typeof opt === 'object' && opt !== null && opt.label.toLowerCase() === strVal,
+        );
+        if (match && typeof match === 'object') {
+          initialVal = match.value;
+        }
       }
       const validators = field.required ? [Validators.required] : [];
       controls[field.key] = new FormControl(initialVal, validators);
@@ -262,8 +285,65 @@ export class StepFormDialog {
 
   private getDefaultFieldValue(field: FormFieldDefinition): unknown {
     if (field.type === 'number' || field.type === 'currency') return null;
-    if (field.type === 'date') return null;
+    if (field.type === 'date' || field.type === 'datetime') return null;
+    if (field.type === 'multilocation') return [];
     return '';
+  }
+
+  // ── Select and Location Field Helpers ──────────────────────────────
+  getSelectOptions(field: FormFieldDefinition): SelectOption<string>[] {
+    if (!field.options) return [];
+    return field.options.map((opt) =>
+      typeof opt === 'string' ? { label: opt, value: opt } : opt,
+    );
+  }
+
+  getLocations(fieldKey: string): string[] {
+    const val = this.formGroup()?.get(fieldKey)?.value;
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string' && val.trim()) {
+      return val.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+    return [];
+  }
+
+  addLocation(fieldKey: string, inputElement: HTMLInputElement): void {
+    const raw = inputElement.value.trim();
+    if (!raw) return;
+
+    const items = raw.split(',').map((s) => s.trim()).filter(Boolean);
+    const current = this.getLocations(fieldKey);
+    const next = [...current];
+
+    for (const item of items) {
+      if (!next.includes(item)) {
+        next.push(item);
+      }
+    }
+
+    const control = this.formGroup()?.get(fieldKey);
+    if (control) {
+      control.setValue(next);
+      control.markAsDirty();
+    }
+    inputElement.value = '';
+  }
+
+  removeLocation(fieldKey: string, index: number): void {
+    const current = this.getLocations(fieldKey);
+    const next = current.filter((_, i) => i !== index);
+    const control = this.formGroup()?.get(fieldKey);
+    if (control) {
+      control.setValue(next);
+      control.markAsDirty();
+    }
+  }
+
+  onLocationInputKeydown(event: KeyboardEvent, fieldKey: string, inputElement: HTMLInputElement): void {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      this.addLocation(fieldKey, inputElement);
+    }
   }
 
   private createTableRowGroup(def: FormDefinition, initialData: Record<string, unknown> = {}): FormGroup {
@@ -502,7 +582,17 @@ export class StepFormDialog {
 
     this.saving.set(true);
 
-    const formData = this.formGroup().value;
+    const formData: Record<string, unknown> = { ...this.formGroup().value };
+    // Format multilocation fields to comma-separated string for backend compatibility
+    for (const field of def.fields) {
+      if (field.type === 'multilocation') {
+        const val = formData[field.key];
+        if (Array.isArray(val)) {
+          formData[field.key] = val.join(', ');
+        }
+      }
+    }
+
     const tableData = this.tableFormArray().value;
 
     const combinedData: Record<string, unknown> = {
@@ -593,7 +683,7 @@ export class StepFormDialog {
 
     const delete$ = def
       ? this.formApiService.deleteEntry(def, pId, stepId)
-      : this.projectStepService.removeStep(pId, stepId);
+      : of(false);
 
     delete$.subscribe({
       next: () => {
