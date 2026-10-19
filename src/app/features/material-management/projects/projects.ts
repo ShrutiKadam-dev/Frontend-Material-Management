@@ -83,7 +83,7 @@ export class Projects implements OnInit {
   // ── Filter & Search States ────────────────────────────────────
   protected readonly searchQuery = signal<string>('');
   protected readonly selectedHealthFilter = signal<HealthFilter>('all');
-  protected readonly viewMode = signal<ViewMode>('grid');
+  protected readonly viewMode = signal<ViewMode>('table');
 
   // ── Search Subject for Debounced Backend Query ────────────────
   private readonly searchSubject = new Subject<string>();
@@ -282,6 +282,19 @@ export class Projects implements OnInit {
 
   // ── Navigation & Actions ───────────────────────────────────────
   protected openDetailsDialog(project: Project): void {
+    this.router.navigate(['/projects', project.id, 'steps']);
+  }
+
+  protected openStepFromProject(project: Project, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    const stepNum = project.current_step_number || 1;
+    const stepName = (project.current_step_name || '').toLowerCase();
+    if (stepNum === 1 || stepName.includes('query')) {
+      this.router.navigate(['/projects', project.id, 'customer-queries']);
+      return;
+    }
     this.router.navigate(['/projects', project.id, 'steps']);
   }
 

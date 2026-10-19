@@ -24,6 +24,7 @@ export interface FormFieldDefinition {
   suffix?: string;
   prefix?: string;
   colSpan?: 1 | 2 | 3 | 4; // grid column width out of 4
+  sectionTitle?: string; // section header title banner
 }
 
 export interface FormTableColumn {
@@ -313,24 +314,28 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-calculator',
     description: 'Complete commercial cost matrix including duties, forex buffers, logistics, and margins',
     fields: [
-      { key: 'project_title', label: 'Project Title', type: 'text', required: true, colSpan: 4 },
+      { key: 'project_title', label: 'Project Title', type: 'text', required: true, colSpan: 4, sectionTitle: '1. Project & Foreign Currency Valuation (Forex)' },
       { key: 'total_amount_eur', label: 'Total Amount in EUR', type: 'currency', prefix: '€', colSpan: 2 },
       { key: 'eur_to_inr_rate_prep', label: 'EUR to INR Rate on Prep Date', type: 'number', colSpan: 1 },
       { key: 'eur_to_inr_rate_buffer', label: 'EUR to INR Rate with Buffer', type: 'number', colSpan: 1 },
-      { key: 'freight_insurance_pct', label: 'Freight & Insurance %', type: 'number', suffix: '%', colSpan: 1 },
+
+      { key: 'freight_insurance_pct', label: 'Freight & Insurance %', type: 'number', suffix: '%', colSpan: 1, sectionTitle: '2. Freight, Insurance & Customs Duty' },
       { key: 'freight_insurance_amount', label: 'Freight & Insurance Amount', type: 'currency', prefix: '₹', colSpan: 1 },
       { key: 'custom_duty_pct', label: 'Custom Duty %', type: 'number', suffix: '%', colSpan: 1 },
       { key: 'custom_duty_amount', label: 'Custom Duty Amount', type: 'currency', prefix: '₹', colSpan: 1 },
-      { key: 'igst_pct', label: 'IGST %', type: 'number', suffix: '%', colSpan: 1 },
+
+      { key: 'igst_pct', label: 'IGST %', type: 'number', suffix: '%', colSpan: 1, sectionTitle: '3. Taxes & Inland Transportation' },
       { key: 'igst_amount', label: 'IGST Amount', type: 'currency', prefix: '₹', colSpan: 1 },
       { key: 'transportation_pct', label: 'Transportation %', type: 'number', suffix: '%', colSpan: 1 },
       { key: 'transportation_amount', label: 'Transportation Amount', type: 'currency', prefix: '₹', colSpan: 1 },
-      { key: 'finance_charges_pct', label: 'Finance Charges %', type: 'number', suffix: '%', colSpan: 1 },
+
+      { key: 'finance_charges_pct', label: 'Finance Charges %', type: 'number', suffix: '%', colSpan: 1, sectionTitle: '4. Commercial Margins & Financing Charges' },
       { key: 'finance_charges_amount', label: 'Finance Charges Amount', type: 'currency', prefix: '₹', colSpan: 1 },
       { key: 'margin_pct', label: 'Margin %', type: 'number', suffix: '%', colSpan: 1 },
       { key: 'margin_amount', label: 'Margin Amount', type: 'currency', prefix: '₹', colSpan: 1 },
-      { key: 'gst_pct', label: 'GST %', type: 'number', suffix: '%', colSpan: 1 },
-      { key: 'gst_amount', label: 'GST Amount', type: 'currency', prefix: '₹', colSpan: 1 },
+
+      { key: 'gst_pct', label: 'GST %', type: 'number', suffix: '%', colSpan: 2, sectionTitle: '5. Goods & Services Tax (GST)' },
+      { key: 'gst_amount', label: 'GST Amount', type: 'currency', prefix: '₹', colSpan: 2 },
     ],
     uploads: [{ key: 'upload_cost_sheet', label: 'Upload Cost Sheet', multiple: true }],
   },

@@ -40,6 +40,27 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'projects/:projectId/customer-queries',
+        loadComponent: () =>
+          import(
+            './features/material-management/projects/customer-queries/customer-queries'
+          ).then((m) => m.CustomerQueries),
+      },
+      {
+        path: 'projects/:projectId/steps/1',
+        loadComponent: () =>
+          import(
+            './features/material-management/projects/customer-queries/customer-queries'
+          ).then((m) => m.CustomerQueries),
+      },
+      {
+        path: 'projects/:projectId/queries',
+        loadComponent: () =>
+          import(
+            './features/material-management/projects/customer-queries/customer-queries'
+          ).then((m) => m.CustomerQueries),
+      },
+      {
         path: 'projects/:projectId/step-form/:stepId',
         loadComponent: () =>
           import('./features/material-management/dynamic-step/dynamic-step-form').then(

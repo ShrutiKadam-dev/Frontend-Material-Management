@@ -215,7 +215,11 @@ export class StepFormDialog {
     const attachedCount = Number(savedData['attachments_count']) || 0;
     if (attachedCount > 0 && this.uploadedFiles().length === 0) {
       this.uploadedFiles.set([
-        { name: `${def.formCode}_document.pdf`, size: '240 KB', uploadKey: 'main' },
+        {
+          name: `${def.formCode}_document.pdf`,
+          size: '240 KB',
+          uploadKey: (def.uploads && def.uploads[0]?.key) || 'main',
+        },
       ]);
     } else if (!savedData['attachments_count']) {
       this.uploadedFiles.set([]);
@@ -333,8 +337,8 @@ export class StepFormDialog {
     }
   }
 
-  // ── File Upload Handling ────────────────────────────────────────────
-  onFileUpload(event: Event, uploadKey: string): void {
+  // ── File Upload Handling (Customer Query Aligned) ──────────────────
+  onFilesSelected(event: Event, uploadKey: string = 'main'): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length) {
       for (let i = 0; i < input.files.length; i++) {
@@ -343,7 +347,7 @@ export class StepFormDialog {
           ...files,
           {
             name: file.name,
-            size: `${(file.size / 1024).toFixed(1)} KB`,
+            size: this.formatFileSize(file.size),
             uploadKey,
           },
         ]);
@@ -357,8 +361,92 @@ export class StepFormDialog {
     }
   }
 
+  onFileUpload(event: Event, uploadKey: string = 'main'): void {
+    this.onFilesSelected(event, uploadKey);
+  }
+
+  onDropFiles(event: DragEvent, uploadKey: string = 'main'): void {
+    event.preventDefault();
+    if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
+      const files = event.dataTransfer.files;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        this.uploadedFiles.update((filesList) => [
+          ...filesList,
+          {
+            name: file.name,
+            size: this.formatFileSize(file.size),
+            uploadKey,
+          },
+        ]);
+      }
+      this.messageService.add({
+        severity: 'success',
+        summary: 'File Attached',
+        detail: `Added ${files.length} document(s).`,
+      });
+    }
+  }
+
+  getFilesForUpload(uploadKey: string): Array<{ name: string; size: string; uploadKey: string }> {
+    const def = this.resolvedDef();
+    if (!def || !def.uploads || def.uploads.length <= 1) {
+      return this.uploadedFiles();
+    }
+    return this.uploadedFiles().filter(
+      (f) => f.uploadKey === uploadKey || (!f.uploadKey && uploadKey === def.uploads[0]?.key),
+    );
+  }
+
+  removeUploadedFileByRef(target: { name: string; size: string; uploadKey: string }): void {
+    this.uploadedFiles.update((files) => files.filter((f) => f !== target));
+  }
+
   removeUploadedFile(index: number): void {
     this.uploadedFiles.update((files) => files.filter((_, i) => i !== index));
+  }
+
+  formatFileSize(bytes?: number): string {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  }
+
+  getFileIcon(fileName?: string): string {
+    if (!fileName) return 'pi pi-file';
+    const s = fileName.toLowerCase();
+    if (s.endsWith('.pdf') || s.includes('pdf')) return 'pi pi-file-pdf';
+    if (
+      s.endsWith('.png') ||
+      s.endsWith('.jpg') ||
+      s.endsWith('.jpeg') ||
+      s.endsWith('.webp') ||
+      s.endsWith('.svg') ||
+      s.includes('image')
+    ) {
+      return 'pi pi-image';
+    }
+    if (
+      s.endsWith('.xlsx') ||
+      s.endsWith('.xls') ||
+      s.endsWith('.csv') ||
+      s.includes('sheet') ||
+      s.includes('excel') ||
+      s.includes('csv')
+    ) {
+      return 'pi pi-file-excel';
+    }
+    if (
+      s.endsWith('.docx') ||
+      s.endsWith('.doc') ||
+      s.includes('word') ||
+      s.includes('document')
+    ) {
+      return 'pi pi-file-word';
+    }
+    return 'pi pi-file';
   }
 
   // ── Step Remarks Support ──────────────────────────────────────────

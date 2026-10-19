@@ -391,11 +391,11 @@
             <span>{{ item.userInitials }}</span>
           </div>
 
-          <!-- History Item Content Bubble -->
-          <div class="history-bubble">
-            <div class="history-bubble-header">
+          <!-- History Item Content (NO BOX, NO BUBBLE) -->
+          <div class="history-timeline-entry">
+            <div class="history-entry-header">
               <div class="author-meta">
-                <span class="author-name">{{ item.displayUser }}</span>
+                <strong class="author-name">{{ item.displayUser }}</strong>
                 <span class="author-source-chip" [class.source-chip--audit]="item.source === 'audit'"
                   [class.source-chip--data]="item.source === 'data'">
                   {{ item.source === 'audit' ? 'Audit Log' : 'Form Entry' }}
@@ -404,15 +404,15 @@
 
               <div class="history-entry-meta">
                 <span class="entry-seq-pill">#{{ item.sequence < 10 ? '0' + item.sequence : item.sequence }}</span>
-                    @if (item.date) {
-                    <span class="entry-timestamp" [title]="'Recorded on ' + item.date">
-                      <i class="pi pi-clock" aria-hidden="true"></i> {{ item.date }}
-                    </span>
-                    }
+                @if (item.date) {
+                <span class="entry-timestamp" [title]="'Recorded on ' + item.date">
+                  <i class="pi pi-clock" aria-hidden="true"></i> {{ item.date }}
+                </span>
+                }
               </div>
             </div>
 
-            <div class="history-bubble-body">
+            <div class="history-entry-body">
               <p class="history-remark-text">{{ item.remark }}</p>
             </div>
           </div>
@@ -420,6 +420,34 @@
         }
       </div>
       }
+    </div>
+
+    <!-- Bottom Type Box / Chat Composer -->
+    <div class="timeline-chat-composer">
+      <div class="composer-avatar-dot" aria-hidden="true">
+        <span>TM</span>
+      </div>
+      <div class="composer-input-wrapper">
+        <input
+          pInputText
+          type="text"
+          [value]="newTimelineRemark()"
+          (input)="newTimelineRemark.set($any($event.target).value)"
+          (keydown.enter)="$event.preventDefault(); addTimelineRemark(currentStep)"
+          placeholder="Type a remark or observation for this step and press Enter to send..."
+          class="timeline-chat-input w-full"
+          aria-label="Type remark" />
+      </div>
+      <button
+        pButton
+        type="button"
+        icon="pi pi-send"
+        label="Send"
+        class="timeline-chat-send-btn"
+        [disabled]="!newTimelineRemark().trim()"
+        (click)="addTimelineRemark(currentStep)"
+        aria-label="Send remark">
+      </button>
     </div>
   </div>
 
@@ -446,80 +474,124 @@
   [draggable]="false"
   [resizable]="false"
   [dismissableMask]="true"
-  [style]="{ width: '92vw', maxWidth: '840px' }"
+  [style]="{ width: '92vw', maxWidth: '940px', height: '85vh', maxHeight: '90vh' }"
   styleClass="catalog-modal-dialog"
   appendTo="body">
 
   <ng-template pTemplate="header">
     <div class="catalog-dlg-header">
-      <div class="catalog-icon-box">
-        <i class="pi pi-th-large"></i>
+      <div class="catalog-icon-box" aria-hidden="true">
+        <i class="pi pi-folder-plus"></i>
       </div>
-      <div>
+      <div class="catalog-header-text">
         <h2 class="catalog-dlg-title">Attach Form as Step</h2>
-        <p class="catalog-dlg-sub">Choose any of the 28 available forms to attach to this project</p>
       </div>
     </div>
   </ng-template>
 
   <div class="catalog-modal-content">
-    <!-- Search Bar -->
-    <div class="catalog-search-wrap">
-      <i class="pi pi-search search-icon"></i>
-      <input
-        pInputText
-        type="text"
-        [value]="catalogSearch()"
-        (input)="catalogSearch.set($any($event.target).value)"
-        placeholder="Search forms by name, code, or description (e.g. PQB, Invoice, Delivery Challan, BOE, RFQ)..."
-        class="catalog-search-input w-full" />
-    </div>
-
-    <!-- Category Filter Chips -->
-    <div class="category-chips-row">
-      @for (cat of ['All', 'Pre-Bidding & Tenders', 'Sourcing & Quotations', 'Supplier Orders & Invoices', 'Logistics & Customs', 'Customer & Supplier Settlement']; track cat) {
-      <button
-        type="button"
-        class="cat-chip"
-        [class.cat-chip--active]="selectedCategory() === cat"
-        (click)="selectedCategory.set(cat)">
-        {{ cat }}
-      </button>
-      }
-    </div>
-
-    <!-- Forms Grid (28 Forms Available) -->
-    <div class="catalog-cards-grid">
-      @for (form of filteredCatalog(); track form.formCode) {
-      <div class="catalog-card" (click)="onSelectCatalogForm(form)">
-        <div class="catalog-card-icon">
-          <i [class]="form.icon"></i>
-        </div>
-        <div class="catalog-card-body">
-          <div class="card-tags-line">
-            <span class="card-form-id">{{ form.formCode }}</span>
-            <span class="card-phase-tag">{{ form.category }}</span>
-          </div>
-          <h4 class="card-form-name">{{ form.name }}</h4>
-          <p class="card-form-desc">{{ form.description }}</p>
-        </div>
-        <div class="catalog-card-action">
-          <button pButton icon="pi pi-plus" class="p-button-rounded p-button-sm p-button-text"></button>
-        </div>
+    <!-- Top Controls Bar: Search & Category Chips -->
+    <div class="catalog-controls-bar">
+      <!-- Search Bar -->
+      <div class="catalog-search-wrap">
+        <i class="pi pi-search search-icon" aria-hidden="true"></i>
+        <input
+          pInputText
+          type="text"
+          [value]="catalogSearch()"
+          (input)="catalogSearch.set($any($event.target).value)"
+          placeholder="Search forms by name or code (e.g., PQB, PO, Delivery, RFQ)..."
+          class="catalog-search-input w-full" />
+        @if (catalogSearch()) {
+          <button
+            type="button"
+            class="search-clear-btn"
+            (click)="clearCatalogSearch()"
+            aria-label="Clear search">
+            <i class="pi pi-times"></i>
+          </button>
+        }
       </div>
+
+      <!-- Category Filter Chips -->
+      <div class="category-chips-row" role="tablist" aria-label="Filter forms by category">
+        @for (cat of catalogCategories(); track cat.label) {
+          <button
+            type="button"
+            class="cat-chip"
+            [class.cat-chip--active]="selectedCategory() === cat.label"
+            (click)="selectedCategory.set(cat.label)">
+            <span>{{ cat.label }}</span>
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Forms Grid Container -->
+    <div class="catalog-cards-container">
+      @if (filteredCatalog().length === 0) {
+        <div class="catalog-empty-state">
+          <div class="catalog-empty-icon" aria-hidden="true">
+            <i class="pi pi-search"></i>
+          </div>
+          <h3 class="catalog-empty-title">No Matching Forms Found</h3>
+          <p class="catalog-empty-desc">
+            No form in "{{ selectedCategory() }}" matches "{{ catalogSearch() }}". Try adjusting your search term or reset filters.
+          </p>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-refresh"
+            label="Reset Filters"
+            class="p-button-outlined p-button-sm reset-filter-btn"
+            (click)="resetCatalogFilters()">
+          </button>
+        </div>
+      } @else {
+        <div class="catalog-cards-grid">
+          @for (form of filteredCatalog(); track form.formCode) {
+            <div
+              class="catalog-card"
+              (click)="onSelectCatalogForm(form)"
+              role="button"
+              tabindex="0"
+              (keydown.enter)="onSelectCatalogForm(form)">
+              
+              <div class="catalog-card-icon" aria-hidden="true">
+                <i [class]="form.icon"></i>
+              </div>
+
+              <div class="catalog-card-body">
+                <div class="card-tags-line">
+                  <span class="card-form-id">{{ form.formCode }}</span>
+                </div>
+                <h4 class="card-form-name">{{ form.name }}</h4>
+              </div>
+
+              <div class="catalog-card-action">
+                <span class="attach-btn-pill">
+                  <i class="pi pi-plus"></i>
+                  <span>Attach</span>
+                </span>
+              </div>
+            </div>
+          }
+        </div>
       }
     </div>
   </div>
 
   <ng-template pTemplate="footer">
     <div class="catalog-dlg-footer">
-      <button
-        pButton
-        type="button"
-        label="Cancel"
-        class="p-button-text p-button-secondary"
-        (click)="addStepModalVisible.set(false)">
-      </button>
+      <div class="catalog-footer-right">
+        <button
+          pButton
+          type="button"
+          label="Close"
+          class="p-button-text p-button-secondary cancel-catalog-btn"
+          (click)="addStepModalVisible.set(false)">
+        </button>
+      </div>
     </div>
   </ng-template>
 </p-dialog>

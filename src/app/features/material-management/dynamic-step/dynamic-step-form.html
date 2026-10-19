@@ -330,7 +330,7 @@
     </div>
     }
 
-    <!-- Card C: Document Attachments & Uploads -->
+    <!-- Card C: Document Attachments & Uploads (Customer Query Aligned) -->
     <div class="form-card app-panel">
       <div class="card-header-bar">
         <div class="card-header-left">
@@ -340,53 +340,70 @@
             <p class="card-subtitle">Attach scanned copies, PDF contracts, or supporting files</p>
           </div>
         </div>
+        <span class="upload-badge">{{ uploadedFiles().length }}</span>
       </div>
 
-      <div class="uploads-grid">
-        @for (upload of def.uploads; track upload.key) {
-        <div class="upload-dropzone-box">
-          <div class="upload-dropzone-inner">
-            <i class="pi pi-cloud-upload dropzone-ico"></i>
-            <h4 class="upload-title">{{ upload.label }}</h4>
-            <p class="upload-hint">PDF, DOCX, XLSX, or Images up to 25MB</p>
-            <label [for]="upload.key" class="browse-file-btn">
-              <i class="pi pi-folder-open"></i> Browse Files
-            </label>
-            <input
-              type="file"
-              [id]="upload.key"
-              [multiple]="upload.multiple ?? true"
-              (change)="onFileUpload($event, upload.key)"
-              class="hidden-file-input" />
+      <div class="upload-cards-stack">
+        @for (upload of (def.uploads && def.uploads.length > 0 ? def.uploads : [{ key: 'main', label: 'Upload ' + def.name + ' Document', multiple: true }]); track upload.key) {
+          <div class="upload-dropzone-card">
+            <div class="upload-header">
+              <div class="upload-title-wrap">
+                <i class="pi pi-paperclip upload-icon"></i>
+                <span class="upload-label">{{ upload.label || 'Upload Step Document' }}</span>
+              </div>
+              <span class="upload-badge">{{ getFilesForUpload(upload.key).length }}</span>
+            </div>
+
+            <div class="upload-body">
+              <!-- Attached Documents Stack (Identical to Customer Queries) -->
+              @if (getFilesForUpload(upload.key).length > 0) {
+                <div class="existing-files-stack">
+                  <span class="files-stack-title">Attached Documents:</span>
+                  <div class="files-chip-list">
+                    @for (file of getFilesForUpload(upload.key); track file.name + $index) {
+                      <div class="file-chip existing-chip">
+                        <i [class]="getFileIcon(file.name)" class="chip-file-icon"></i>
+                        <span class="file-name" [title]="file.name">{{ file.name }}</span>
+                        <span class="file-size">{{ file.size }}</span>
+                        <button
+                          type="button"
+                          class="remove-chip-btn"
+                          pTooltip="Remove file"
+                          tooltipPosition="top"
+                          (click)="removeUploadedFileByRef(file)">
+                          <i class="pi pi-times"></i>
+                        </button>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- Click to upload drop box with Drag & Drop support -->
+              <div
+                class="drop-box"
+                role="button"
+                tabindex="0"
+                (click)="fileInput.click()"
+                (keydown.enter)="fileInput.click()"
+                (dragover)="$event.preventDefault()"
+                (drop)="onDropFiles($event, upload.key)">
+                <i class="pi pi-cloud-upload drop-icon"></i>
+                <div class="drop-text">
+                  <span class="drop-main">Click to select files to attach</span>
+                  <span class="drop-sub">PDF, Word, Excel, Images up to 25MB</span>
+                </div>
+                <input
+                  #fileInput
+                  type="file"
+                  [multiple]="upload.multiple ?? true"
+                  class="hidden-file-input"
+                  (change)="onFilesSelected($event, upload.key)" />
+              </div>
+            </div>
           </div>
-        </div>
         }
       </div>
-
-      <!-- Uploaded Files List -->
-      @if (uploadedFiles().length > 0) {
-      <div class="attached-files-list">
-        <h4 class="attached-heading">Attached Files ({{ uploadedFiles().length }})</h4>
-        <div class="files-flex">
-          @for (file of uploadedFiles(); track file.name + $index; let fIdx = $index) {
-          <div class="file-chip">
-            <i class="pi pi-file-pdf file-ico"></i>
-            <div class="file-info">
-              <span class="file-name" [title]="file.name">{{ file.name }}</span>
-              <span class="file-size">{{ file.size }}</span>
-            </div>
-            <button
-              type="button"
-              class="file-remove-btn"
-              (click)="removeUploadedFile(fIdx)"
-              aria-label="Remove attachment">
-              <i class="pi pi-times"></i>
-            </button>
-          </div>
-          }
-        </div>
-      </div>
-      }
     </div>
 
     <!-- Card D: Step Remarks & Observations -->
@@ -469,18 +486,17 @@
   [dismissableMask]="true"
   [draggable]="false"
   [resizable]="false"
-  [style]="{ width: '92vw', maxWidth: '840px' }"
+  [style]="{ width: '92vw', maxWidth: '940px', height: '85vh', maxHeight: '90vh' }"
   styleClass="add-step-dialog"
   appendTo="body">
 
   <ng-template pTemplate="header">
     <div class="catalog-dlg-header">
       <div class="catalog-icon-box">
-        <i class="pi pi-th-large"></i>
+        <i class="pi pi-folder-plus"></i>
       </div>
       <div>
         <h2 class="catalog-dlg-title">Attach Next Form as Step</h2>
-        <p class="catalog-dlg-sub">Choose any of the 28 available forms to attach to this project</p>
       </div>
     </div>
   </ng-template>
@@ -494,7 +510,7 @@
         type="text"
         [value]="catalogSearch()"
         (input)="catalogSearch.set($any($event.target).value)"
-        placeholder="Search forms by name, code, or description (e.g. PQB, Invoice, Clearance)..."
+        placeholder="Search forms by name, code, or keyword (e.g. PQB, Invoice, Clearance)..."
         class="catalog-search-input w-full" />
     </div>
 
@@ -521,13 +537,14 @@
         <div class="catalog-card-body">
           <div class="card-tags-line">
             <span class="card-form-id">{{ form.formCode }}</span>
-            <span class="card-phase-tag">{{ form.category }}</span>
           </div>
           <h4 class="card-form-name">{{ form.name }}</h4>
-          <p class="card-form-desc">{{ form.description }}</p>
         </div>
         <div class="catalog-card-action">
-          <button pButton icon="pi pi-plus" class="p-button-rounded p-button-sm p-button-text"></button>
+          <span class="attach-btn-pill">
+            <i class="pi pi-plus"></i>
+            <span>Attach</span>
+          </span>
         </div>
       </div>
       }

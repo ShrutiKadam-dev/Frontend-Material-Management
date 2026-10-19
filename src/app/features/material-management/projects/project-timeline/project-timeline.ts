@@ -13,16 +13,20 @@ import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { TableModule } from 'primeng/table';
 import { InputTextModule } from 'primeng/inputtext';
+import { MessageService } from 'primeng/api';
 
 import { ProjectStepService } from '../../../../core/services/project-step';
 import { ProjectService } from '../../../../core/services/project';
 import { CustomerService } from '../../../../core/services/customer';
 import { SupplierService } from '../../../../core/services/supplier';
+import { CustomerQueryService } from '../../../../core/services/customer-query';
+import { CustomerQuery } from '../../../../core/models/customer-query.model';
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../../../../core/models/project-step.model';
 import { Project } from '../../../../core/models/project.model';
 import { Customer } from '../../../../core/models/customer.model';
 import { Supplier } from '../../../../core/models/supplier.model';
 import { formatDisplayDate } from '../../../../core/utils/date.utils';
+import { getCurrentUserFromStorage } from '../../../../core/utils/remark.utils';
 import { AppDatePipe } from '../../../../core/pipes/app-date.pipe';
 import {
   FORM_CATALOG,
@@ -110,10 +114,13 @@ export class ProjectTimeline implements OnInit {
   private readonly projectService = inject(ProjectService);
   private readonly customerService = inject(CustomerService);
   private readonly supplierService = inject(SupplierService);
+  private readonly customerQueryService = inject(CustomerQueryService);
+  private readonly messageService = inject(MessageService, { optional: true });
 
   // ── Core Data Signals ──────────────────────────────────────────────
   protected readonly project = signal<Project | null>(null);
   protected readonly steps = signal<ProjectStep[]>([]);
+  protected readonly customerQueries = signal<CustomerQuery[]>([]);
   protected readonly customer = signal<Customer | null>(null);
   protected readonly supplier = signal<Supplier | null>(null);
   protected readonly loading = signal(true);
@@ -130,6 +137,20 @@ export class ProjectTimeline implements OnInit {
   protected readonly catalogSearch = signal<string>('');
   protected readonly selectedCategory = signal<string>('All');
   protected readonly allCatalogForms = FORM_CATALOG;
+
+  protected readonly catalogCategories = computed(() => {
+    const list: Array<{ label: string; count: number }> = [
+      { label: 'All', count: this.allCatalogForms.length },
+    ];
+    const catMap = new Map<string, number>();
+    for (const f of this.allCatalogForms) {
+      catMap.set(f.category, (catMap.get(f.category) || 0) + 1);
+    }
+    for (const [cat, count] of catMap.entries()) {
+      list.push({ label: cat, count });
+    }
+    return list;
+  });
 
   // ── Step Form Inputs Popup (GET, POST, PUT, DELETE) ───────────────
   protected readonly stepFormModalVisible = signal<boolean>(false);
@@ -153,9 +174,29 @@ export class ProjectTimeline implements OnInit {
     });
   });
 
+  protected clearCatalogSearch(): void {
+    this.catalogSearch.set('');
+  }
+
+  protected resetCatalogFilters(): void {
+    this.catalogSearch.set('');
+    this.selectedCategory.set('All');
+  }
+
+  protected getCatalogPhaseName(phaseId?: string): string {
+    switch (phaseId) {
+      case 'phase-1': return 'Phase 1: Pre-Bidding';
+      case 'phase-2': return 'Phase 2: Sourcing';
+      case 'phase-3': return 'Phase 3: Execution';
+      case 'phase-4': return 'Phase 4: Settlement';
+      default: return 'Standard';
+    }
+  }
+
   // ── Step Remarks Dialog Signal ────────────────────────────────────
   protected readonly selectedStepForRemarks = signal<ProjectStep | null>(null);
   protected readonly remarksDialogVisible = signal<boolean>(false);
+  protected readonly newTimelineRemark = signal<string>('');
 
   // ── Phases Definition ─────────────────────────────────────────────
   protected readonly phases: PhaseInfo[] = PIPELINE_PHASES;
@@ -346,6 +387,15 @@ export class ProjectTimeline implements OnInit {
         this.loading.set(false);
       },
     });
+
+    this.customerQueryService.getByProject(id).subscribe({
+      next: (data) => {
+        this.customerQueries.set(data || []);
+      },
+      error: () => {
+        // Fallback gracefully
+      },
+    });
   }
 
   private loadCustomerAndSupplier(p: Project): void {
@@ -371,13 +421,35 @@ export class ProjectTimeline implements OnInit {
     return true;
   }
 
+  protected isCustomerQueryStep(stepOrNumber: ProjectStep | number): boolean {
+    if (typeof stepOrNumber === 'number') {
+      return stepOrNumber === 1;
+    }
+    const num = stepOrNumber.step_number;
+    const code = (stepOrNumber.form_code || '').toUpperCase();
+    const name = (stepOrNumber.step_name || '').toLowerCase();
+    return (
+      num === 1 ||
+      code === 'FORM_08_CUSTOMER_QUERY' ||
+      name.includes('customer query') ||
+      name.includes('query from customer')
+    );
+  }
+
   protected navigateToStep(stepOrNumber: ProjectStep | number): void {
+    const pId = this.projectIdNumber();
+    if (this.isCustomerQueryStep(stepOrNumber)) {
+      if (pId) {
+        this.router.navigate(['/projects', pId, 'customer-queries']);
+      }
+      return;
+    }
+
     if (typeof stepOrNumber === 'number') {
       const match = this.steps().find((s) => s.step_number === stepOrNumber || s.id === stepOrNumber);
       if (match) {
         this.openStepFormPopup(match);
       } else {
-        const pId = this.projectIdNumber();
         if (pId) {
           this.router.navigate(['/projects', pId, 'step-form', stepOrNumber]);
         }
@@ -389,6 +461,14 @@ export class ProjectTimeline implements OnInit {
   }
 
   protected openStepFormPopup(step: ProjectStep): void {
+    if (this.isCustomerQueryStep(step)) {
+      const pId = this.projectIdNumber();
+      if (pId) {
+        this.router.navigate(['/projects', pId, 'customer-queries']);
+      }
+      return;
+    }
+
     this.selectedStepForForm.set(step);
     const def = step.form_code ? getFormDefinition(step.form_code) : null;
     this.selectedDefForForm.set(def || null);
@@ -413,6 +493,17 @@ export class ProjectTimeline implements OnInit {
   protected onSelectCatalogForm(form: FormDefinition): void {
     // Close catalog modal
     this.addStepModalVisible.set(false);
+
+    const pId = this.projectIdNumber();
+    if (
+      (form.formCode === 'FORM_08_CUSTOMER_QUERY' ||
+        form.name.toLowerCase().includes('query') ||
+        form.id === 8) &&
+      pId
+    ) {
+      this.router.navigate(['/projects', pId, 'customer-queries']);
+      return;
+    }
 
     // Open Step Form Inputs in popup to add form fields (POST mode)
     this.selectedStepForForm.set(null);
@@ -549,11 +640,64 @@ export class ProjectTimeline implements OnInit {
       event.stopPropagation();
     }
     this.selectedStepForRemarks.set(step);
+    this.newTimelineRemark.set('');
     this.remarksDialogVisible.set(true);
+  }
+
+  protected addTimelineRemark(step: ProjectStep): void {
+    const text = this.newTimelineRemark().trim();
+    if (!text) return;
+
+    const session = getCurrentUserFromStorage();
+    const userName = session?.user || 'Audit Member';
+
+    const newRemark: ProjectStepRemark = {
+      remark: text,
+      user: userName,
+      created_at: new Date().toISOString(),
+    };
+
+    const currentRemarks = Array.isArray(step.remarks) ? [...step.remarks] : [];
+    const updatedRemarks = [...currentRemarks, newRemark];
+    const updatedStep: ProjectStep = {
+      ...step,
+      remarks: updatedRemarks,
+    };
+
+    this.selectedStepForRemarks.set(updatedStep);
+    this.onStepSaved(updatedStep);
+    this.newTimelineRemark.set('');
+
+    const pid = this.projectIdNumber();
+    if (pid && step.id) {
+      this.projectStepService.updateStep(pid, step.id, step.data || {}, step.status, step.progress_percentage).subscribe({
+        error: (e) => console.warn('Could not persist timeline remark to backend:', e),
+      });
+    }
+
+    this.messageService?.add({
+      severity: 'success',
+      summary: 'Remark Recorded',
+      detail: 'New remark saved to timeline.',
+    });
   }
 
   protected getStepDataBadges(step: ProjectStep): { icon?: string; label: string }[] {
     const badges: { icon?: string; label: string }[] = [];
+
+    if (
+      this.customerQueries &&
+      typeof this.customerQueries === 'function' &&
+      this.isCustomerQueryStep(step) &&
+      this.customerQueries().length > 0
+    ) {
+      const qCount = this.customerQueries().length;
+      badges.push({
+        icon: 'pi pi-file-edit',
+        label: `${qCount} ${qCount === 1 ? 'Query' : 'Queries'}`,
+      });
+    }
+
     if (!step.data || typeof step.data !== 'object') return badges;
     const d = step.data as Record<string, unknown>;
 
@@ -614,6 +758,24 @@ export class ProjectTimeline implements OnInit {
           label: 'Completed',
           date: formatted,
         };
+      }
+    }
+
+    if (
+      this.customerQueries &&
+      typeof this.customerQueries === 'function' &&
+      this.isCustomerQueryStep(step) &&
+      this.customerQueries().length > 0
+    ) {
+      const first = this.customerQueries()[0];
+      if (first?.qo_date) {
+        const formatted = formatDisplayDate(first.qo_date);
+        if (formatted && formatted !== '—') {
+          return {
+            label: step.status === 'completed' ? 'Completed' : 'Query Date',
+            date: formatted,
+          };
+        }
       }
     }
 

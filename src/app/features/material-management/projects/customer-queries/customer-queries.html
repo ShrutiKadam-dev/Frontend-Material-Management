@@ -1,0 +1,769 @@
+<section class="base-page customer-queries-page" aria-labelledby="cq-page-title">
+
+  <!-- ── 1. Page Header Bar ───────────────────────────────────────────── -->
+  <header class="page-header app-panel">
+    <div class="header-left">
+      <button pButton type="button" icon="pi pi-arrow-left" label="Pipeline Steps"
+        class="p-button-text p-button-secondary back-btn" (click)="goBack()" aria-label="Back to project timeline">
+      </button>
+
+      <div class="header-title-group">
+        <span class="eyebrow">Project Management · Pipeline Step 01</span>
+        <h1 id="cq-page-title">
+          {{ project()?.project_title || 'Customer Queries' }}
+        </h1>
+        <div class="header-subtitle-strip">
+          <span class="proj-code-badge">#{{ projectCode() }}</span>
+          @if (customer(); as c) {
+          <span class="sub-sep" aria-hidden="true">·</span>
+          <span class="customer-pill" [title]="'Customer: ' + c.name">
+            <i class="pi pi-building" aria-hidden="true"></i> {{ c.name }}
+          </span>
+          } @else if (project()?.customer_name) {
+          <span class="sub-sep" aria-hidden="true">·</span>
+          <span class="customer-pill" [title]="'Customer: ' + project()?.customer_name">
+            <i class="pi pi-building" aria-hidden="true"></i> {{ project()?.customer_name }}
+          </span>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Search Input within Header -->
+      <div class="header-search-wrap">
+        <i class="pi pi-search search-ico" aria-hidden="true"></i>
+        <input type="text" class="header-search-input" [value]="searchQuery()" (input)="onSearchInput($event)"
+          placeholder="Filter queries by material, date, or #…" aria-label="Search queries" />
+        @if (searchQuery()) {
+        <button type="button" class="clear-search-ico" (click)="clearSearch()" aria-label="Clear query search">
+          <i class="pi pi-times"></i>
+        </button>
+        }
+      </div>
+
+      <button pButton type="button" icon="pi pi-refresh" class="p-button-text p-button-secondary refresh-btn"
+        (click)="loadAllData(projectId())" pTooltip="Reload queries" tooltipPosition="bottom"
+        aria-label="Reload queries">
+      </button>
+
+      <button pButton type="button" icon="pi pi-plus" label="New Customer Query" class="create-query-btn"
+        (click)="openCreateDialog()" pTooltip="Create an additional query for this project" tooltipPosition="bottom">
+      </button>
+    </div>
+  </header>
+
+  <!-- ── 2. Commercial Summary KPI Strip ──────────────────────────────── -->
+  <div class="queries-kpi-ribbon">
+    <div class="kpi-ribbon-card app-panel">
+      <div class="krc-icon krc-icon--primary" aria-hidden="true">
+        <i class="pi pi-file-edit"></i>
+      </div>
+      <div class="krc-info">
+        <span class="krc-label">Total Queries</span>
+        <strong class="krc-val">{{ totalQueriesCount() }}</strong>
+        <span class="krc-hint">Project Inquiries</span>
+      </div>
+    </div>
+
+    <div class="kpi-ribbon-card app-panel">
+      <div class="krc-icon krc-icon--items" aria-hidden="true">
+        <i class="pi pi-box"></i>
+      </div>
+      <div class="krc-info">
+        <span class="krc-label">Requested Line Items</span>
+        <strong class="krc-val">{{ totalMaterialsCount() }}</strong>
+        <span class="krc-hint">Materials across all queries</span>
+      </div>
+    </div>
+
+    <div class="kpi-ribbon-card app-panel">
+      <div class="krc-icon krc-icon--files" aria-hidden="true">
+        <i class="pi pi-paperclip"></i>
+      </div>
+      <div class="krc-info">
+        <span class="krc-label">Attached Documents</span>
+        <strong class="krc-val">{{ totalAttachmentsCount() }}</strong>
+        <span class="krc-hint">Drawings & specifications</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. Main Query Content Area ───────────────────────────────────── -->
+  @if (loading() && queries().length === 0) {
+  <div class="center-state loading-state app-panel">
+    <div class="loading-ring" aria-hidden="true">
+      <i class="pi pi-spin pi-spinner"></i>
+    </div>
+    <p>Loading customer inquiries & line items…</p>
+  </div>
+  } @else if (error()) {
+  <div class="error-state app-panel" role="alert">
+    <i class="pi pi-exclamation-circle error-icon" aria-hidden="true"></i>
+    <h2>Unable to Load Customer Queries</h2>
+    <p>{{ error() }}</p>
+    <button pButton type="button" icon="pi pi-refresh" label="Retry Connection" class="create-query-btn"
+      (click)="loadAllData(projectId())"></button>
+  </div>
+  } @else if (queries().length === 0) {
+  <!-- 0 Queries Recorded: Dedicated Empty State -->
+  <div class="empty-state-card app-panel text-center">
+    <div class="empty-icon-wrap" aria-hidden="true">
+      <i class="pi pi-file-edit"></i>
+    </div>
+    <h2>No Customer Queries Recorded Yet</h2>
+    <p>
+      Record incoming material requests, specifications, and inquiries from the customer. You can record multiple
+      separate queries under this project.
+    </p>
+    <div class="empty-actions">
+      <button pButton type="button" icon="pi pi-plus" label="Create First Customer Query"
+        class="p-button-lg create-query-btn" (click)="openCreateDialog()">
+      </button>
+      <button pButton type="button" icon="pi pi-arrow-left" label="Back to Steps"
+        class="p-button-outlined p-button-secondary" (click)="goBack()">
+      </button>
+    </div>
+  </div>
+  } @else if (filteredQueries().length === 0) {
+  <!-- Search query yielded 0 results -->
+  <div class="empty-state-card app-panel text-center">
+    <div class="empty-icon-wrap" aria-hidden="true">
+      <i class="pi pi-search"></i>
+    </div>
+    <h2>No Queries Match "{{ searchQuery() }}"</h2>
+    <p>Try searching with another material keyword, query ID, or clear your search query.</p>
+    <button pButton type="button" icon="pi pi-times" label="Clear Search Filter" class="p-button-outlined"
+      (click)="clearSearch()"></button>
+  </div>
+  } @else {
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       QUERIES LIST VIEW (SHOWS MULTIPLE QUERIES WITH EDIT & DELETE)
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="queries-list-container" role="feed" aria-label="List of customer queries">
+
+    @for (q of filteredQueries(); track q.id; let idx = $index) {
+    <article class="query-card app-panel" [attr.aria-labelledby]="'query-heading-' + q.id">
+
+      <!-- Query Card Top Header Ribbon -->
+      <header class="qc-header">
+        <div class="qc-header-left">
+          <div class="qc-badge-index">
+            <span class="qc-num">Query #{{ idx + 1 }}</span>
+            <span class="qc-id-pill" [title]="'Database ID: ' + q.id">ID: #{{ q.id }}</span>
+          </div>
+
+          <div class="qc-meta-tags">
+            <span class="qc-meta-tag qc-meta-tag--date">
+              <i class="pi pi-calendar" aria-hidden="true"></i>
+              {{ q.qo_date | appDate }}
+            </span>
+
+            @if (customer(); as c) {
+            <span class="qc-meta-tag qc-meta-tag--customer" [title]="c.name">
+              <i class="pi pi-building" aria-hidden="true"></i>
+              {{ c.name }}
+            </span>
+            }
+
+            <span class="qc-meta-tag qc-meta-tag--items">
+              <i class="pi pi-box" aria-hidden="true"></i>
+              {{ (q.items && q.items.length) || 0 }} {{ (q.items && q.items.length === 1) ? 'item' : 'items' }}
+            </span>
+
+            @if (q.attachments && q.attachments.length) {
+            <span class="qc-meta-tag qc-meta-tag--files">
+              <i class="pi pi-paperclip" aria-hidden="true"></i>
+              {{ q.attachments.length }} {{ q.attachments.length === 1 ? 'file' : 'files' }}
+            </span>
+            }
+          </div>
+        </div>
+
+        <!-- Right Side: Edit & Delete Action Buttons -->
+        <div class="qc-header-actions">
+          <button pButton type="button" icon="pi pi-pencil" label="Edit Query"
+            class="p-button-outlined p-button-sm qc-edit-btn" (click)="openEditDialog(q)"
+            pTooltip="Edit items, date, remarks, or files for this query" tooltipPosition="top"
+            [attr.aria-label]="'Edit query ' + q.id">
+          </button>
+
+          <button pButton type="button" icon="pi pi-trash" label="Delete"
+            class="p-button-text p-button-danger p-button-sm qc-delete-btn" (click)="confirmDeleteQuery(q, $event)"
+            pTooltip="Delete this query and its items" tooltipPosition="top"
+            [attr.aria-label]="'Delete query ' + q.id">
+          </button>
+        </div>
+      </header>
+
+      <!-- Query Card Body (2-Column Responsive Layout) -->
+      <div class="qc-body-grid">
+
+        <!-- Column 1: Requested Material Items Table -->
+        <section class="qc-col-materials" aria-label="Requested items in this query">
+          <div class="col-section-header">
+            <div class="csh-left">
+              <i class="pi pi-box" aria-hidden="true"></i>
+              <h2 [id]="'query-heading-' + q.id" class="csh-title">
+                Requested Materials & Specifications
+              </h2>
+            </div>
+            <span class="csh-count-pill">{{ q.items.length }}</span>
+          </div>
+
+          @if (q.items && q.items.length > 0) {
+          <div class="table-frame">
+            <p-table [value]="q.items" [paginator]="q.items.length > 5" [rows]="5"
+              styleClass="p-datatable-sm items-table-wrap" responsiveLayout="scroll" aria-label="Query material items">
+              <ng-template pTemplate="header">
+                <tr>
+                  <th scope="col" style="width: 50px; text-align: center;">#</th>
+                  <th scope="col">Material Name / Description</th>
+                  <th scope="col" style="width: 140px; text-align: right;">Quantity</th>
+                </tr>
+              </ng-template>
+
+              <ng-template pTemplate="body" let-item let-itemIdx="rowIndex">
+                <tr>
+                  <td style="text-align: center; color: var(--color-muted); font-weight: 700;">
+                    {{ itemIdx + 1 }}
+                  </td>
+                  <td>
+                    <strong class="item-name-cell">{{ item.material_name }}</strong>
+                  </td>
+                  <td style="text-align: right;">
+                    <span class="qty-pill">{{ item.quantity }}</span>
+                  </td>
+                </tr>
+              </ng-template>
+            </p-table>
+          </div>
+          } @else {
+          <div class="empty-items-box">
+            <i class="pi pi-inbox" aria-hidden="true"></i>
+            <span>No material items listed in this query.</span>
+          </div>
+          }
+        </section>
+
+        <!-- Column 2: Attachments & Multiple Remarks Stream -->
+        <aside class="qc-col-side" aria-label="Attachments and remarks">
+
+          <!-- Attachments Section -->
+          @if (q.attachments && q.attachments.length > 0) {
+          <div class="qc-attachments-block">
+            <div class="col-section-header">
+              <div class="csh-left">
+                <i class="pi pi-paperclip" aria-hidden="true"></i>
+                <h3 class="csh-title">Attachments & Drawings</h3>
+              </div>
+              <span class="csh-count-pill">{{ q.attachments.length }}</span>
+            </div>
+
+            <div class="attachments-chips-grid">
+              @for (att of q.attachments; track att.id) {
+              <div class="att-card">
+                <div class="att-icon-wrap" aria-hidden="true">
+                  <i [class]="getFileIcon(att.content_type)"></i>
+                </div>
+                <div class="att-info">
+                  <span class="att-filename" [title]="att.file_name">{{ att.file_name }}</span>
+                  <span class="att-filesize">{{ formatFileSize(att.file_size) }}</span>
+                </div>
+                <button type="button" class="att-dl-btn" (click)="downloadAttachment(att, $event)"
+                  [disabled]="downloadingAttachmentId() === att.id"
+                  [attr.aria-label]="'Download ' + att.file_name" pTooltip="Download file" tooltipPosition="left">
+                  @if (downloadingAttachmentId() === att.id) {
+                  <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                  } @else {
+                  <i class="pi pi-download" aria-hidden="true"></i>
+                  }
+                </button>
+              </div>
+              }
+            </div>
+          </div>
+          }
+
+          <!-- Remarks Section (Full Audit Trail & Quick Adding) -->
+          <div class="qc-remarks-block">
+            <app-step-remarks [remarks]="q.remarks || q.remark" [defaultDate]="q.qo_date"
+              [loading]="quickRemarkPending()" (quickAdd)="onQuickAddRemarkToQuery(q, $event)"
+              (deleteRemark)="onDeleteRemarkFromQuery(q, $event)">
+            </app-step-remarks>
+          </div>
+
+        </aside>
+
+      </div>
+
+    </article>
+    }
+
+  </div>
+  }
+
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL DIALOG: CREATE OR EDIT CUSTOMER QUERY (TAB STRUCTURE)
+══════════════════════════════════════════════════════════════════════ -->
+<p-dialog
+  [visible]="dialogVisible()"
+  (visibleChange)="dialogVisible.set($event)"
+  [modal]="true"
+  [blockScroll]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [dismissableMask]="true"
+  [style]="{ width: '96vw', maxWidth: '1180px', height: '86vh', maxHeight: '90vh' }"
+  styleClass="step-form-popup-dialog"
+  appendTo="body">
+
+  <!-- ── 1. Clean Simple Header ──────────────────────────────────────── -->
+  <ng-template pTemplate="header">
+    <div class="dlg-clean-header">
+      <div class="dlg-title-line">
+        <h2 class="dlg-title-text">{{ editingQuery() ? ('Edit Customer Query #' + editingQuery()!.id) : 'New Customer Query' }}</h2>
+        <span class="dlg-code-chip">FORM_08_CUSTOMER_QUERY</span>
+      </div>
+    </div>
+  </ng-template>
+
+  <!-- ── 2. Dialog Body with Navigation Tabs ────────────────────────── -->
+  <div class="dlg-body-container">
+
+    @if (dialogError()) {
+    <div class="dialog-error-banner" role="alert">
+      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+      <span>{{ dialogError() }}</span>
+    </div>
+    }
+
+    <!-- Navigation Segment Tabs -->
+    <nav class="dlg-section-tabs" aria-label="Customer Query Sections">
+      <button
+        type="button"
+        class="dlg-tab-btn"
+        [class.dlg-tab-btn--active]="activeTab() === 'fields'"
+        (click)="activeTab.set('fields')">
+        <i class="pi pi-align-left"></i>
+        <span>Form Inputs</span>
+        <span class="tab-badge">2</span>
+      </button>
+
+      <button
+        type="button"
+        class="dlg-tab-btn"
+        [class.dlg-tab-btn--active]="activeTab() === 'table'"
+        (click)="activeTab.set('table')">
+        <i class="pi pi-table"></i>
+        <span>Requirement</span>
+        <span class="tab-badge">{{ draftItems().length }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="dlg-tab-btn"
+        [class.dlg-tab-btn--active]="activeTab() === 'uploads'"
+        (click)="activeTab.set('uploads')">
+        <i class="pi pi-paperclip"></i>
+        <span>Attachments</span>
+        <span class="tab-badge">{{ existingAttachments().length + newAttachmentFiles().length }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="dlg-tab-btn"
+        [class.dlg-tab-btn--active]="activeTab() === 'remarks'"
+        (click)="activeTab.set('remarks')">
+        <i class="pi pi-comments"></i>
+        <span>Remarks</span>
+        <span class="tab-badge">{{ dialogRemarks().length }}</span>
+      </button>
+    </nav>
+
+    <!-- ── TAB 1: FORM INPUTS ──────────────────────────────────────── -->
+    @if (activeTab() === 'fields') {
+      <div class="tab-panel tab-panel--fields">
+        <form [formGroup]="queryHeaderForm" class="dynamic-inputs-grid">
+          <!-- Customer Organization -->
+          <div class="input-col col-span-2">
+            <label for="dlg-customer-name" class="input-label">Customer / Organization Name</label>
+            <input
+              pInputText
+              type="text"
+              id="dlg-customer-name"
+              [value]="customer()?.name || project()?.customer_name || 'Customer Organization'"
+              readonly
+              class="form-control-input readonly-input w-full" />
+          </div>
+
+          <!-- Query Date -->
+          <div class="input-col col-span-2">
+            <label for="dlg-query-date" class="input-label">
+              Query Date <span class="req-star" aria-hidden="true">*</span>
+            </label>
+            <p-datepicker
+              formControlName="qo_date"
+              inputId="dlg-query-date"
+              dateFormat="dd-mm-yy"
+              [showIcon]="true"
+              placeholder="Select Date (DD-MM-YYYY)"
+              appendTo="body"
+              styleClass="w-full">
+            </p-datepicker>
+            @if (isFieldInvalid('qo_date')) {
+              <span class="field-error-msg">Please select a valid query date.</span>
+            }
+          </div>
+
+          <!-- Project Title (Contextual Readonly) -->
+          <div class="input-col col-span-2">
+            <label class="input-label">Project Title</label>
+            <input
+              pInputText
+              type="text"
+              [value]="project()?.project_title || '—'"
+              readonly
+              class="form-control-input readonly-input w-full" />
+          </div>
+
+          <!-- Project Code & Nickname -->
+          <div class="input-col col-span-2">
+            <label class="input-label">Project Code / Reference</label>
+            <input
+              pInputText
+              type="text"
+              [value]="projectCode() + (project()?.nickname ? ' · ' + project()?.nickname : '')"
+              readonly
+              class="form-control-input readonly-input w-full" />
+          </div>
+        </form>
+      </div>
+    }
+
+    <!-- ── TAB 2: LINE ITEMS TABLE (EXACT step-form-dialog table design) ── -->
+    @if (activeTab() === 'table') {
+      <div class="tab-panel tab-panel--table">
+        <div class="table-section-bar">
+          <div class="table-title-group">
+            <h3 class="table-section-title">Requirement</h3>
+            <span class="table-item-count">({{ draftItems().length }} item{{ draftItems().length === 1 ? '' : 's' }})</span>
+          </div>
+
+          <div class="table-actions-group">
+            <button
+              pButton
+              type="button"
+              icon="pi pi-plus"
+              label="Add Item Row"
+              class="p-button-outlined p-button-sm add-row-btn"
+              (click)="addDraftItemRow()">
+            </button>
+          </div>
+        </div>
+
+        <div class="table-scroll-wrapper">
+          <table class="dynamic-items-table">
+            <thead>
+              <tr>
+                <th style="width: 70px; text-align: center;">Sr. No.</th>
+                <th>Description</th>
+                <th style="width: 180px; text-align: right;">Quantity</th>
+                <th style="width: 50px; text-align: center;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of draftItems(); track $index; let rIdx = $index) {
+                <tr class="item-table-row">
+                  <td class="text-center">
+                    <span class="row-seq-num">{{ rIdx + 1 }}</span>
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      [value]="item.material_name"
+                      (input)="updateItemField(rIdx, 'material_name', $event)"
+                      placeholder="Material description or specification..."
+                      class="table-flat-input" />
+                  </td>
+                  <td class="text-right">
+                    <input
+                      type="text"
+                      [value]="item.quantity"
+                      (input)="updateItemField(rIdx, 'quantity', $event)"
+                      placeholder="0.00"
+                      class="table-flat-input text-right" />
+                  </td>
+                  <td class="text-center action-cell">
+                    <button
+                      type="button"
+                      class="table-row-del-btn"
+                      pTooltip="Remove item row"
+                      tooltipPosition="top"
+                      (click)="removeDraftItemRow(rIdx)">
+                      <i class="pi pi-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- ── TAB 3: DOCUMENT UPLOADS ─────────────────────────────────── -->
+    @if (activeTab() === 'uploads') {
+      <div class="tab-panel tab-panel--uploads">
+        <div class="upload-dropzone-card">
+          <div class="upload-header">
+            <div class="upload-title-wrap">
+              <i class="pi pi-paperclip upload-icon"></i>
+              <span class="upload-label">Upload Query Document</span>
+            </div>
+            <span class="upload-badge">{{ existingAttachments().length + newAttachmentFiles().length }}</span>
+          </div>
+
+          <div class="upload-body">
+            <!-- Existing Attachments (When editing) -->
+            @if (existingAttachments().length > 0) {
+              <div class="existing-files-stack">
+                <span class="files-stack-title">Existing Attachments:</span>
+                <div class="files-chip-list">
+                  @for (file of existingAttachments(); track file.id) {
+                    <div class="file-chip existing-chip">
+                      <i [class]="getFileIcon(file.content_type || file.file_name)" class="chip-file-icon"></i>
+                      <span class="file-name" [title]="file.file_name">{{ file.file_name }}</span>
+                      <span class="file-size">{{ formatFileSize(file.file_size) }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Newly selected files list -->
+            @if (newAttachmentFiles().length > 0) {
+              <div class="new-files-stack">
+                <span class="files-stack-title">Files Ready to Upload:</span>
+                <div class="files-chip-list">
+                  @for (file of newAttachmentFiles(); track $index) {
+                    <div class="file-chip new-chip">
+                      <i [class]="getFileIcon(file.type || file.name)" class="chip-file-icon"></i>
+                      <span class="file-name" [title]="file.name">{{ file.name }}</span>
+                      <span class="file-size">{{ formatFileSize(file.size) }}</span>
+                      <button
+                        type="button"
+                        class="remove-chip-btn"
+                        pTooltip="Remove file"
+                        (click)="removeNewAttachment($index)">
+                        <i class="pi pi-times"></i>
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Click to upload drop box -->
+            <div
+              class="drop-box"
+              role="button"
+              tabindex="0"
+              (click)="fileInput.click()"
+              (keydown.enter)="fileInput.click()"
+              (dragover)="$event.preventDefault()"
+              (drop)="onDropAttachmentFiles($event)">
+              <i class="pi pi-cloud-upload drop-icon"></i>
+              <div class="drop-text">
+                <span class="drop-main">Click to select files to attach</span>
+                <span class="drop-sub">PDF, Word, Excel, Images up to 25MB</span>
+              </div>
+              <input
+                #fileInput
+                type="file"
+                multiple
+                class="hidden-file-input"
+                (change)="onFilesSelected($event)" />
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ── TAB 4: REMARKS TIMELINE ─────────────────────────────────── -->
+    <!-- ── TAB 4: REMARKS TIMELINE (PURE TIMELINE FORMAT AS PREVIOUS) ── -->
+    @if (activeTab() === 'remarks') {
+      <div class="tab-panel tab-panel--remarks timeline-layout">
+
+        <!-- 1. Pure Timeline Stream (NO BOX STRUCTURE) -->
+        <div class="timeline-stream-container" role="log" aria-label="Customer Query Remarks Timeline">
+          @if (dialogRemarks().length === 0) {
+            <div class="timeline-empty-state">
+              <div class="timeline-empty-icon" aria-hidden="true">
+                <i class="pi pi-history"></i>
+              </div>
+              <h4 class="timeline-empty-title">No Remarks Recorded Yet</h4>
+              <p class="timeline-empty-desc">
+                Observations, procedural notes, and customer query remarks will appear chronologically along this timeline.
+              </p>
+            </div>
+          } @else {
+            <div class="timeline-tree">
+              <!-- Continuous vertical timeline line -->
+              <div class="timeline-stem-line" aria-hidden="true"></div>
+
+              @for (rmk of dialogRemarks(); track rmk.id || $index; let rIdx = $index; let isLast = $last) {
+                <div class="timeline-event" [class.timeline-event--last]="isLast">
+
+                  <!-- Timeline Marker Node on the track -->
+                  <div class="timeline-marker" aria-hidden="true">
+                    <span class="timeline-marker-dot"></span>
+                  </div>
+
+                  <!-- Timeline Content (NO BOX, NO BORDER, PURE TIMELINE) -->
+                  <div class="timeline-entry">
+                    <div class="timeline-entry-header">
+                      <div class="timeline-author-group">
+                        <strong class="timeline-author-name">{{ rmk.user || 'Team Member' }}</strong>
+                        <span class="timeline-source-pill">
+                          {{ rmk.user === 'Form Entry' ? 'Data Log' : 'Audit Entry' }}
+                        </span>
+                      </div>
+
+                      <div class="timeline-meta-group">
+                        @if (rmk.created_at) {
+                          <span class="timeline-entry-time" [title]="rmk.created_at">
+                            <i class="pi pi-clock" aria-hidden="true"></i>
+                            {{ rmk.created_at | date:'dd-MM-yyyy, hh:mm a' }}
+                          </span>
+                        }
+                        <button
+                          type="button"
+                          class="timeline-del-btn"
+                          pTooltip="Delete remark"
+                          tooltipPosition="top"
+                          [attr.aria-label]="'Delete remark ' + (rIdx + 1)"
+                          (click)="removeDialogRemark(rIdx)">
+                          <i class="pi pi-trash" aria-hidden="true"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="timeline-entry-body">
+                      <p class="timeline-text-content">{{ rmk.text }}</p>
+                    </div>
+                  </div>
+
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- 2. Bottom Type Box / Composer (Sticky at bottom) -->
+        <div class="timeline-composer-bar">
+          <div class="composer-avatar-dot" aria-hidden="true">
+            <span>{{ getRemarkInitials(currentUser()?.user || 'TM') }}</span>
+          </div>
+          <div class="composer-input-wrap">
+            <input
+              pInputText
+              type="text"
+              [value]="newRemarkInput()"
+              (input)="newRemarkInput.set($any($event.target).value)"
+              (keydown.enter)="$event.preventDefault(); addDialogRemark()"
+              placeholder="Type a remark or observation for this query and press Enter to post..."
+              class="timeline-type-input w-full"
+              aria-label="Type remark" />
+          </div>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-send"
+            label="Post Remark"
+            class="timeline-post-btn"
+            [disabled]="!newRemarkInput().trim()"
+            (click)="addDialogRemark()"
+            aria-label="Post remark">
+          </button>
+        </div>
+
+      </div>
+    }
+
+  </div>
+
+  <!-- ── 3. Sticky Footer Actions ──────────────────────────────────── -->
+  <ng-template pTemplate="footer">
+    <div class="dlg-footer-bar">
+      <div class="dlg-footer-left">
+        @if (editingQuery(); as q) {
+          <button
+            pButton
+            type="button"
+            icon="pi pi-trash"
+            label="Delete Query"
+            class="p-button-text p-button-danger dlg-del-btn"
+            [disabled]="submitting()"
+            (click)="closeDialog(); confirmDeleteQuery(q)">
+          </button>
+        }
+      </div>
+
+      <div class="dlg-footer-right">
+        <button
+          pButton
+          type="button"
+          label="Cancel"
+          class="p-button-text p-button-secondary cancel-dlg-btn"
+          [disabled]="submitting()"
+          (click)="closeDialog()">
+        </button>
+
+        <button
+          pButton
+          type="button"
+          [icon]="editingQuery() ? 'pi pi-check' : 'pi pi-send'"
+          [label]="editingQuery() ? 'Update Query' : 'Save & Submit Query'"
+          class="p-button-primary submit-dlg-btn"
+          [loading]="submitting()"
+          (click)="submitQuery()">
+        </button>
+      </div>
+    </div>
+  </ng-template>
+
+</p-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     CONFIRMATION DIALOG: DELETE QUERY
+══════════════════════════════════════════════════════════════════════ -->
+<p-dialog header="Confirm Delete Query" [visible]="deleteConfirmVisible()"
+  (visibleChange)="deleteConfirmVisible.set($event)" [modal]="true" [draggable]="false" [resizable]="false"
+  [style]="{ width: '460px', maxWidth: '94vw' }" styleClass="delete-confirm-dialog" appendTo="body">
+
+  <div class="delete-confirm-body">
+    <div class="confirm-icon-wrap" aria-hidden="true">
+      <i class="pi pi-exclamation-triangle"></i>
+    </div>
+    <div class="confirm-text">
+      <h3>Delete Customer Query #{{ queryToDelete()?.id }}?</h3>
+      <p>
+        Are you sure you want to permanently delete this customer query? This will remove all associated
+        material items ({{ queryToDelete()?.items?.length || 0 }}) and recorded attachments.
+      </p>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary" [disabled]="deleting()"
+      (click)="cancelDelete()">
+    </button>
+    <button pButton type="button" icon="pi pi-trash" label="Delete Query" class="p-button-danger"
+      [loading]="deleting()" (click)="executeDelete()">
+    </button>
+  </ng-template>
+</p-dialog>

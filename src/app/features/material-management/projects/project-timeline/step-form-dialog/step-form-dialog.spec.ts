@@ -262,4 +262,58 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
     comp.removeRemark(0);
     expect(currentRemarks.length).toBe(0);
   });
+
+  it('should support customer query aligned attachment methods (file icons, size formatting, and file management)', () => {
+    const comp = Object.create(StepFormDialog.prototype);
+
+    // Test getFileIcon
+    expect(comp.getFileIcon('spec_doc.pdf')).toBe('pi pi-file-pdf');
+    expect(comp.getFileIcon('estimate.xlsx')).toBe('pi pi-file-excel');
+    expect(comp.getFileIcon('contract.docx')).toBe('pi pi-file-word');
+    expect(comp.getFileIcon('photo.png')).toBe('pi pi-image');
+    expect(comp.getFileIcon('unknown.bin')).toBe('pi pi-file');
+    expect(comp.getFileIcon('')).toBe('pi pi-file');
+
+    // Test formatFileSize
+    expect(comp.formatFileSize(0)).toBe('0 B');
+    expect(comp.formatFileSize(1024)).toBe('1 KB');
+    expect(comp.formatFileSize(1048576)).toBe('1 MB');
+
+    // Test file management
+    let filesState: any[] = [];
+    comp.uploadedFiles = Object.assign(() => filesState, {
+      update: vi.fn((fn: (arr: any[]) => any[]) => {
+        filesState = fn(filesState);
+      }),
+      set: vi.fn((val: any[]) => {
+        filesState = val;
+      }),
+    });
+    comp.messageService = { add: vi.fn() };
+    comp.resolvedDef = () => mockFormDef;
+
+    // Simulate onFilesSelected
+    const fakeFile = { name: 'test.pdf', size: 2048 };
+    const fakeEvent = {
+      target: {
+        files: [fakeFile],
+        value: 'test.pdf',
+      },
+    } as any;
+
+    comp.onFilesSelected(fakeEvent, 'doc');
+    expect(filesState.length).toBe(1);
+    expect(filesState[0].name).toBe('test.pdf');
+    expect(filesState[0].size).toBe('2 KB');
+    expect(comp.messageService.add).toHaveBeenCalled();
+
+    // Test getFilesForUpload
+    const filesForSlot = comp.getFilesForUpload('doc');
+    expect(filesForSlot.length).toBe(1);
+
+    // Test removeUploadedFileByRef
+    comp.removeUploadedFileByRef(filesState[0]);
+    expect(filesState.length).toBe(0);
+  });
 });
+
