@@ -1,0 +1,92 @@
+<div
+  class="chat-bubble-row"
+  [class.user-row]="message().role === 'user'"
+  [class.assistant-row]="message().role === 'assistant'"
+>
+  @if (message().role === 'assistant') {
+    <div class="avatar assistant-avatar" aria-hidden="true">
+      <span class="pi pi-sparkles"></span>
+    </div>
+  }
+
+  <div class="message-card" [class.user-card]="message().role === 'user'">
+    <div class="message-meta">
+      <span class="sender-name">
+        {{ message().role === 'user' ? 'You' : 'AI Database Assistant' }}
+      </span>
+      <span class="timestamp">{{ message().timestamp | date: 'shortTime' }}</span>
+    </div>
+
+    <!-- Refusal notice if user asked for database modification -->
+    @if (message().queryResult?.is_refusal) {
+      <div class="refusal-box" role="alert">
+        <span class="pi pi-shield refusal-icon" aria-hidden="true"></span>
+        <div class="refusal-body">
+          <strong class="refusal-title">Read-Only Safety Guard:</strong>
+          <span>{{ message().content }}</span>
+        </div>
+      </div>
+    } @else {
+      <div class="message-body">
+        {{ message().content }}
+      </div>
+    }
+
+    <!-- Optional Generated SQL section -->
+    @if (message().queryResult?.sql) {
+      <div class="sql-section">
+        <button
+          type="button"
+          class="sql-toggle-btn"
+          (click)="onToggleSql()"
+          [attr.aria-expanded]="message().sqlExpanded"
+          aria-label="Toggle generated SQL query view"
+        >
+          <span class="pi pi-code" aria-hidden="true"></span>
+          <span>Generated SQL Query</span>
+          <span
+            class="pi pi-chevron-down toggle-arrow"
+            [class.arrow-up]="message().sqlExpanded"
+            aria-hidden="true"
+          ></span>
+        </button>
+
+        @if (message().sqlExpanded) {
+          <div class="sql-code-block" role="region" aria-label="Generated SQL code">
+            <div class="code-header">
+              <span class="sql-lang-tag">SQL (Read-Only)</span>
+              <button
+                type="button"
+                class="copy-btn"
+                (click)="copySql()"
+                pTooltip="Copy SQL query"
+                tooltipPosition="top"
+                [attr.aria-label]="copied() ? 'SQL copied' : 'Copy SQL query'"
+              >
+                <span
+                  class="pi"
+                  [class.pi-copy]="!copied()"
+                  [class.pi-check]="copied()"
+                  aria-hidden="true"
+                ></span>
+                <span>{{ copied() ? 'Copied!' : 'Copy' }}</span>
+              </button>
+            </div>
+            <pre class="sql-code"><code>{{ message().queryResult?.sql }}</code></pre>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Tabular Result Presentation -->
+    @if (message().queryResult?.columns?.length && message().queryResult?.rows?.length) {
+      <app-ai-query-result [result]="message().queryResult!" />
+    }
+  </div>
+
+  @if (message().role === 'user') {
+    <div class="avatar user-avatar" aria-hidden="true">
+      <span class="pi pi-user"></span>
+    </div>
+  }
+</div>

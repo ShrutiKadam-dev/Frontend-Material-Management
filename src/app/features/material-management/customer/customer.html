@@ -310,7 +310,7 @@
 
 <!-- ── 5. Add / Edit Customer Modal ───────────────────────────────────── -->
 <p-dialog [visible]="dialogVisible()" (visibleChange)="dialogVisible.set($event)" [modal]="true"
-  [style]="{ width: '95vw', maxWidth: '680px' }" [draggable]="false" [resizable]="false" [dismissableMask]="true"
+  [style]="{ width: '95vw', maxWidth: '680px' }" [draggable]="false" [resizable]="false" [dismissableMask]="false"
   [focusOnShow]="true" styleClass="modern-dialog">
   <ng-template pTemplate="header">
     <div class="dialog-header-custom">
@@ -618,7 +618,7 @@
 
 <!-- ── 6. Rich Customer Details Modal ──────────────────────────────────── -->
 <p-dialog [visible]="detailsVisible()" (visibleChange)="detailsVisible.set($event)" [modal]="true"
-  [style]="{ width: '92vw', maxWidth: '580px' }" [draggable]="false" [resizable]="false" [dismissableMask]="true"
+  [style]="{ width: '92vw', maxWidth: '580px' }" [draggable]="false" [resizable]="false" [dismissableMask]="false"
   styleClass="modern-dialog details-dialog">
   <ng-template pTemplate="header">
     <div class="dialog-header-custom">

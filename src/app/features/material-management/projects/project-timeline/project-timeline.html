@@ -337,7 +337,7 @@
      MODAL: CLEAN AUDIT TRAIL & REMARKS HISTORY DIALOG
 ══════════════════════════════════════════════════════════════════════ -->
 <p-dialog [visible]="remarksDialogVisible()" (visibleChange)="remarksDialogVisible.set($event)" [modal]="true"
-  [blockScroll]="true" [draggable]="false" [resizable]="false" [dismissableMask]="true"
+  [blockScroll]="true" [draggable]="false" [resizable]="false" [dismissableMask]="false"
   [style]="{ width: '92vw', maxWidth: '640px' }" styleClass="remarks-history-dialog" appendTo="body">
 
   <ng-template pTemplate="header">
@@ -485,7 +485,7 @@
   [blockScroll]="true"
   [draggable]="false"
   [resizable]="false"
-  [dismissableMask]="true"
+  [dismissableMask]="false"
   [style]="{ width: '92vw', maxWidth: '940px', height: '85vh', maxHeight: '90vh' }"
   styleClass="catalog-modal-dialog"
   appendTo="body">

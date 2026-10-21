@@ -277,7 +277,7 @@
 ══════════════════════════════════════════════════════════════════════ -->
 <p-dialog [header]="isEditMode() ? 'Edit Project Details' : 'Initiate New Project'" [visible]="dialogVisible()"
   (visibleChange)="dialogVisible.set($event)" [modal]="true" [blockScroll]="true" [draggable]="false"
-  [resizable]="false" [style]="{ width: '92vw', maxWidth: '640px' }" styleClass="cq-dialog cost-sheet-dialog"
+  [resizable]="false" [dismissableMask]="false" [style]="{ width: '92vw', maxWidth: '640px' }" styleClass="cq-dialog cost-sheet-dialog"
   appendTo="body">
 
   <form [formGroup]="projectForm" (ngSubmit)="onSubmit()" novalidate id="project-form">

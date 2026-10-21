@@ -88,7 +88,14 @@ export const routes: Routes = [
         path: 'suppliers',
         loadComponent: () =>
           import('./features/material-management/suppliers/suppliers').then((m) => m.Suppliers),
-      }
+      },
+      {
+        path: 'ai-assistant',
+        loadComponent: () =>
+          import('./features/ai-assistant/pages/ai-assistant.component').then(
+            (m) => m.AiAssistantComponent,
+          ),
+      },
     ],
   },
   {

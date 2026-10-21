@@ -1,0 +1,83 @@
+<div class="chat-viewport">
+  <!-- Messages Scroll Area -->
+  <div #scrollContainer class="messages-area" tabindex="0" aria-label="Conversation message history">
+    @for (msg of aiService.messages(); track msg.id) {
+      <app-ai-chat-message [message]="msg" (sqlToggled)="onToggleSql($event)" />
+    }
+
+    @if (aiService.loading()) {
+      <div class="loader-row">
+        <app-ai-loading-indicator />
+      </div>
+    }
+
+    <!-- Suggested Prompts when conversation is fresh -->
+    @if (aiService.messages().length <= 1 && !aiService.loading()) {
+      <div class="suggested-prompts-section">
+        <div class="suggested-title">
+          <span class="pi pi-compass" aria-hidden="true"></span>
+          <span>Sample Questions You Can Ask:</span>
+        </div>
+
+        <div class="prompts-grid">
+          @for (p of aiService.suggestedPrompts; track p.label) {
+            <button
+              type="button"
+              class="prompt-chip"
+              (click)="usePrompt(p)"
+              [attr.aria-label]="'Ask: ' + p.label"
+            >
+              <div class="chip-icon">
+                <span [class]="p.icon" aria-hidden="true"></span>
+              </div>
+              <div class="chip-content">
+                <span class="chip-label">{{ p.label }}</span>
+                <span class="chip-query">{{ p.query }}</span>
+              </div>
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Bottom Input Bar -->
+  <div class="chat-input-bar">
+    <div class="input-card">
+      <textarea
+        class="chat-textarea"
+        rows="1"
+        placeholder="Ask a question about customers, suppliers, projects, or orders... (e.g. 'Show top 10 customers')"
+        [value]="questionInput()"
+        (input)="questionInput.set($any($event.target).value)"
+        (keydown)="handleKeyDown($event)"
+        [disabled]="aiService.loading()"
+        aria-label="Ask database question"
+      ></textarea>
+
+      <div class="bar-actions">
+        <button
+          pButton
+          type="button"
+          icon="pi pi-trash"
+          class="clear-btn p-button-text p-button-secondary p-button-rounded"
+          pTooltip="Clear conversation"
+          tooltipPosition="top"
+          (click)="aiService.clearChat()"
+          aria-label="Clear conversation history"
+        ></button>
+
+        <button
+          pButton
+          type="button"
+          icon="pi pi-send"
+          label="Ask AI"
+          class="send-btn"
+          [disabled]="!questionInput().trim() || aiService.loading()"
+          (click)="submitQuestion()"
+          aria-label="Submit question to AI"
+        ></button>
+      </div>
+    </div>
+  </div>
+</div>

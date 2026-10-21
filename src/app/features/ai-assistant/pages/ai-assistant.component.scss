@@ -1,0 +1,261 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.ai-page-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #fbf9f7;
+}
+
+.page-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px;
+  background: #ffffff;
+  border-bottom: 1px solid #eee5df;
+  box-shadow: 0 1px 4px rgba(30, 41, 59, 0.03);
+  flex-wrap: wrap;
+  gap: 16px;
+  z-index: 10;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.header-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #e14d3f 0%, #b7392c 100%);
+  color: #ffffff;
+  font-size: 1.25rem;
+  box-shadow: 0 4px 12px rgba(225, 77, 63, 0.25);
+}
+
+.page-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.page-subtitle {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.security-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 20px;
+  cursor: default;
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #16a34a;
+    box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+    animation: beacon 2s infinite ease-in-out;
+  }
+
+  .shield-icon {
+    font-size: 0.88rem;
+    color: #15803d;
+  }
+
+  .badge-text {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #166534;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.schema-btn {
+  height: 36px;
+  font-size: 0.84rem !important;
+  color: #574843 !important;
+  border-color: #dcd2cc !important;
+  border-radius: 10px !important;
+
+  &:hover {
+    background: #fff1f0 !important;
+    color: #b7392c !important;
+    border-color: #b7392c !important;
+  }
+}
+
+.chat-main-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+
+  app-ai-chat {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+.schema-dialog-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.schema-intro {
+  font-size: 0.88rem;
+  color: #574843;
+  margin-top: 0;
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+
+.tables-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.table-card {
+  padding: 14px 16px;
+  background: #fdfbf9;
+  border: 1px solid #eee5df;
+  border-radius: 12px;
+}
+
+.table-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+
+  .table-name-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.88rem;
+    color: #b7392c;
+  }
+
+  .table-desc {
+    font-size: 0.8rem;
+    color: #64748b;
+  }
+}
+
+.columns-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.column-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: #ffffff;
+  border: 1px solid #e2d8d2;
+  border-radius: 6px;
+  font-size: 0.74rem;
+
+  .col-name {
+    font-weight: 600;
+    color: #334155;
+  }
+
+  .col-type {
+    color: #94a3b8;
+    font-size: 0.7rem;
+  }
+
+  .key-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: #e2e8f0;
+    color: #475569;
+  }
+
+  &.pk-chip {
+    border-color: #fde68a;
+    background: #fffbeb;
+
+    .key-tag {
+      background: #f59e0b;
+      color: #ffffff;
+    }
+  }
+
+  &.fk-chip {
+    border-color: #cbd5e1;
+
+    .key-tag {
+      background: #64748b;
+      color: #ffffff;
+    }
+  }
+}
+
+.empty-schema {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px;
+  color: #786b66;
+  font-size: 0.9rem;
+}
+
+@keyframes beacon {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}

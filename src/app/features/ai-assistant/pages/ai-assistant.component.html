@@ -1,0 +1,95 @@
+<div class="ai-page-shell">
+  <!-- Top Navigation / Context Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="header-icon-box">
+        <span class="pi pi-sparkles" aria-hidden="true"></span>
+      </div>
+      <div>
+        <h1 class="page-title">AI Database Assistant</h1>
+        <p class="page-subtitle">
+          Natural language reporting and queries directly from your material management database.
+        </p>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <!-- Security Status Badge -->
+      <div class="security-badge" pTooltip="All operations are strictly read-only and validated by SQL safety filters" tooltipPosition="bottom">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="pi pi-shield-fill shield-icon" aria-hidden="true"></span>
+        <span class="badge-text">Read-Only Enforced</span>
+      </div>
+
+      <!-- Schema Viewer Button -->
+      <button
+        pButton
+        type="button"
+        icon="pi pi-database"
+        label="Schema Reference"
+        class="schema-btn p-button-outlined"
+        (click)="toggleSchemaDialog()"
+        aria-label="Open database schema reference"
+      ></button>
+    </div>
+  </header>
+
+  <!-- Main Chat Container -->
+  <main class="chat-main-area">
+    <app-ai-chat />
+  </main>
+
+  <!-- Database Schema Dialog -->
+  <p-dialog
+    header="Database Schema Reference"
+    [visible]="schemaDialogVisible()"
+    (visibleChange)="schemaDialogVisible.set($event)"
+    [modal]="true"
+    [dismissableMask]="false"
+    [style]="{ width: '780px', maxWidth: '92vw' }"
+    [draggable]="false"
+    [resizable]="false"
+  >
+    <div class="schema-dialog-content">
+      <p class="schema-intro">
+        The AI Assistant queries the database using strictly validated SELECT queries. You can ask questions referencing any of the following tables and business entities:
+      </p>
+
+      <div class="tables-accordion">
+        @for (tbl of aiService.schemaTables(); track tbl.name) {
+          <div class="table-card">
+            <div class="table-card-header">
+              <span class="table-name-badge">
+                <span class="pi pi-table" aria-hidden="true"></span>
+                <strong>{{ tbl.name }}</strong>
+              </span>
+              @if (tbl.description) {
+                <span class="table-desc">{{ tbl.description }}</span>
+              }
+            </div>
+
+            <div class="columns-wrap">
+              @for (col of tbl.columns; track col.name) {
+                <span class="column-chip" [class.pk-chip]="col.primary_key" [class.fk-chip]="col.foreign_key">
+                  <span class="col-name">{{ col.name }}</span>
+                  <span class="col-type">{{ col.type }}</span>
+                  @if (col.primary_key) {
+                    <span class="key-tag">PK</span>
+                  }
+                  @if (col.foreign_key) {
+                    <span class="key-tag">FK</span>
+                  }
+                </span>
+              }
+            </div>
+          </div>
+        } @empty {
+          <div class="empty-schema">
+            <span class="pi pi-spin pi-spinner" aria-hidden="true"></span>
+            <span>Loading database schema metadata...</span>
+          </div>
+        }
+      </div>
+    </div>
+  </p-dialog>
+</div>

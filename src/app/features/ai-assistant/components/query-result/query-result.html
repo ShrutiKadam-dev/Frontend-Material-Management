@@ -1,0 +1,70 @@
+<div class="result-container" role="region" aria-label="Query results data table">
+  <div class="result-header">
+    <div class="meta-badges">
+      <span class="badge rows-badge">
+        <span class="pi pi-table" aria-hidden="true"></span>
+        <span>{{ filteredRows().length }} of {{ result().total_rows }} rows</span>
+      </span>
+      @if (result().execution_time_ms > 0) {
+        <span class="badge speed-badge">
+          <span class="pi pi-bolt" aria-hidden="true"></span>
+          <span>{{ result().execution_time_ms }} ms</span>
+        </span>
+      }
+    </div>
+
+    <div class="result-actions">
+      <div class="filter-box">
+        <span class="pi pi-search filter-icon" aria-hidden="true"></span>
+        <input
+          type="text"
+          class="filter-input"
+          placeholder="Filter in results..."
+          [value]="filterText()"
+          (input)="filterText.set($any($event.target).value)"
+          aria-label="Filter result rows"
+        />
+      </div>
+
+      <button
+        pButton
+        type="button"
+        icon="pi pi-download"
+        label="CSV"
+        class="csv-btn p-button-outlined p-button-sm"
+        pTooltip="Download results as CSV"
+        tooltipPosition="top"
+        (click)="exportCsv()"
+      ></button>
+    </div>
+  </div>
+
+  <div class="table-scroll" tabindex="0" aria-label="Scrollable result table">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th scope="col" class="row-num-th">#</th>
+          @for (col of result().columns; track col) {
+            <th scope="col">{{ formatHeader(col) }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of filteredRows(); track $index) {
+          <tr>
+            <td class="row-num-td">{{ $index + 1 }}</td>
+            @for (col of result().columns; track col) {
+              <td>{{ formatCell(row[col]) }}</td>
+            }
+          </tr>
+        } @empty {
+          <tr>
+            <td [attr.colspan]="(result().columns.length || 0) + 1" class="empty-cell">
+              No matching rows found in this result.
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

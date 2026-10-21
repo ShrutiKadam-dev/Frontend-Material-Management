@@ -186,12 +186,31 @@
   overflow-x: hidden;
   padding: 34px var(--layout-x-padding) 80px;
   @include premium-scrollbar;
+
+  &:has(app-ai-assistant) {
+    padding: 0 !important;
+    overflow: hidden !important;
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 .content-shell > * {
   display: block;
   margin: 0 auto;
   max-width: var(--layout-max-width);
+}
+
+.content-shell > app-ai-assistant {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 980px) {
