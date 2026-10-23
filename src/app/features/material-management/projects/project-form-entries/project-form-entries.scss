@@ -5,6 +5,20 @@
    Rich Commercial Styling with High-Density Multi-Entry Layout
 ══════════════════════════════════════════════════════════════════ */
 
+:host {
+  /* ── Unified Responsive Typography Strategy ───────────────────────── */
+  /* Level 1: Major Section Titles (Commercial Specs, Remarks & Notes, Line Items) */
+  --entry-section-title-size: clamp(0.92rem, 0.8vw + 0.82rem, 0.98rem);
+  --entry-section-subtitle-size: clamp(0.72rem, 0.4vw + 0.65rem, 0.75rem);
+  --entry-section-badge-size: 0.72rem;
+
+  /* Level 2: Field Titles / Labels (Tender Title, Delivery Terms, Incoterms, etc.) */
+  --entry-field-label-size: clamp(0.70rem, 0.3vw + 0.65rem, 0.74rem);
+
+  /* Level 3: Field Data / Values (Tender Title text, Delivery Terms badge, Clause text, etc.) */
+  --entry-field-data-size: clamp(0.82rem, 0.4vw + 0.75rem, 0.86rem);
+}
+
 .form-entries-page {
   display: flex;
   flex-direction: column;
@@ -778,10 +792,53 @@
     width: 100%;
   }
 
-  .remarks-card-section {
+  ::ng-deep .remarks-card-section {
     background: #ffffff;
     border: 1px solid var(--color-border-soft, #edeae4);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+
+    .chat-section-header {
+      border-bottom: 1px solid var(--color-border-soft, #edeae4);
+      padding-bottom: 10px;
+
+      .chat-header-title-wrap {
+        gap: 10px;
+      }
+
+      .chat-header-icon {
+        height: 32px;
+        width: 32px;
+        border-radius: 8px;
+
+        i {
+          font-size: 0.88rem;
+        }
+      }
+
+      .qe-section-title {
+        color: #0f172a;
+        font-size: var(--entry-section-title-size, clamp(0.92rem, 0.8vw + 0.82rem, 0.98rem)) !important;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        line-height: 1.3;
+        margin: 0;
+        text-transform: none !important;
+      }
+
+      .qe-section-subtitle {
+        color: #64748b;
+        font-size: var(--entry-section-subtitle-size, clamp(0.72rem, 0.4vw + 0.65rem, 0.75rem)) !important;
+        font-weight: 500;
+        line-height: 1.35;
+        margin-top: 1px;
+      }
+
+      .chat-count-pill {
+        font-size: var(--entry-section-badge-size, 0.72rem);
+        font-weight: 750;
+        padding: 2px 9px;
+      }
+    }
   }
 }
 
@@ -797,8 +854,8 @@
   align-items: center;
   color: #64748b;
   display: flex;
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: var(--entry-field-label-size, clamp(0.70rem, 0.3vw + 0.65rem, 0.74rem));
+  font-weight: 750;
   gap: 6px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -925,16 +982,19 @@
 
 .ssh-heading {
   color: #0f172a;
-  font-size: 0.92rem;
+  font-size: var(--entry-section-title-size, clamp(0.92rem, 0.8vw + 0.82rem, 0.98rem));
   font-weight: 800;
   letter-spacing: -0.01em;
+  line-height: 1.3;
   margin: 0;
+  text-transform: none;
 }
 
 .ssh-subtext {
   color: #64748b;
-  font-size: 0.72rem;
+  font-size: var(--entry-section-subtitle-size, clamp(0.72rem, 0.4vw + 0.65rem, 0.75rem));
   font-weight: 500;
+  line-height: 1.35;
 }
 
 .specs-count-badge {
@@ -942,7 +1002,7 @@
   border: 1px solid #e2e8f0;
   border-radius: 9999px;
   color: #475569;
-  font-size: 0.72rem;
+  font-size: var(--entry-section-badge-size, 0.72rem);
   font-weight: 750;
   padding: 2px 9px;
 }
@@ -1013,7 +1073,7 @@
   align-items: flex-start;
   color: #64748b;
   display: flex;
-  font-size: 0.70rem;
+  font-size: var(--entry-field-label-size, clamp(0.70rem, 0.3vw + 0.65rem, 0.74rem));
   font-weight: 750;
   gap: 6px;
   letter-spacing: 0.04em;
@@ -1067,46 +1127,47 @@
 .spec-value {
   align-items: flex-start;
   display: flex;
+  font-size: var(--entry-field-data-size, clamp(0.82rem, 0.4vw + 0.75rem, 0.86rem));
   margin: 0;
   min-width: 0;
 }
 
 .spec-pill-badge {
+  align-items: center;
   background: #f1f5f9;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
   color: #0f172a;
-  display: inline-block;
-  font-size: 0.78rem;
-  font-weight: 750;
+  display: inline-flex;
+  font-size: var(--entry-field-data-size, clamp(0.82rem, 0.4vw + 0.75rem, 0.86rem));
+  font-weight: 600;
   letter-spacing: 0.01em;
-  line-height: 1.4;
+  line-height: 1.35;
   padding: 3px 10px;
   white-space: nowrap;
 }
 
 .spec-title-value {
   color: #0f172a;
-  font-size: 0.94rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1.4;
+  font-size: var(--entry-field-data-size, clamp(0.82rem, 0.4vw + 0.75rem, 0.86rem));
+  font-weight: 600;
+  line-height: 1.45;
   word-break: break-word;
 }
 
 .spec-clause-value {
   color: #1e293b;
-  font-size: 0.85rem;
+  font-size: var(--entry-field-data-size, clamp(0.82rem, 0.4vw + 0.75rem, 0.86rem));
   font-weight: 600;
-  line-height: 1.55;
+  line-height: 1.5;
   letter-spacing: -0.005em;
   word-break: break-word;
 }
 
 .spec-text-value {
   color: #0f172a;
-  font-size: 0.86rem;
-  font-weight: 650;
+  font-size: var(--entry-field-data-size, clamp(0.82rem, 0.4vw + 0.75rem, 0.86rem));
+  font-weight: 600;
   line-height: 1.45;
   word-break: break-word;
 }
@@ -1159,16 +1220,19 @@
 
 .tsh-title {
   color: #0f172a;
-  font-size: 0.94rem;
+  font-size: var(--entry-section-title-size, clamp(0.92rem, 0.8vw + 0.82rem, 0.98rem));
   font-weight: 800;
   letter-spacing: -0.01em;
+  line-height: 1.3;
   margin: 0;
+  text-transform: none;
 }
 
 .tsh-sub {
   color: #64748b;
-  font-size: 0.72rem;
+  font-size: var(--entry-section-subtitle-size, clamp(0.72rem, 0.4vw + 0.65rem, 0.75rem));
   font-weight: 500;
+  line-height: 1.35;
 }
 
 .tsh-count-badge {
@@ -1178,14 +1242,14 @@
   border-radius: 9999px;
   color: #1e293b;
   display: inline-flex;
-  font-size: 0.74rem;
-  font-weight: 700;
+  font-size: var(--entry-section-badge-size, 0.72rem);
+  font-weight: 750;
   gap: 6px;
-  padding: 3px 10px;
+  padding: 2px 9px;
 
   i {
     color: var(--color-primary, #c0522f);
-    font-size: 0.74rem;
+    font-size: 0.72rem;
   }
 }
 
@@ -1207,7 +1271,7 @@
     border-left: none !important;
     border-right: none !important;
     color: #475569 !important;
-    font-size: 0.72rem !important;
+    font-size: var(--entry-field-label-size, clamp(0.70rem, 0.3vw + 0.65rem, 0.74rem)) !important;
     font-weight: 750 !important;
     letter-spacing: 0.05em !important;
     padding: 12px 16px !important;
@@ -1225,7 +1289,7 @@
     > td {
       border: none !important;
       padding: 10px 16px !important;
-      font-size: 0.83rem !important;
+      font-size: var(--entry-field-data-size, clamp(0.82rem, 0.4vw + 0.75rem, 0.86rem)) !important;
       vertical-align: middle !important;
     }
   }
