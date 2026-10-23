@@ -277,8 +277,9 @@ export class DynamicStepForm implements OnInit {
     // Build Table FormArray if configured
     if (def.tableConfig) {
       const rowsArray = new FormArray<FormGroup>([]);
-      const savedRows = Array.isArray(savedData['table_items'])
-        ? (savedData['table_items'] as Array<Record<string, unknown>>)
+      const rawRows = savedData['items'] ?? savedData['table_items'];
+      const savedRows = Array.isArray(rawRows)
+        ? (rawRows as Array<Record<string, unknown>>)
         : [];
 
       if (savedRows.length > 0) {
@@ -542,7 +543,7 @@ export class DynamicStepForm implements OnInit {
 
     const combinedData: Record<string, unknown> = {
       ...formData,
-      table_items: tableData,
+      items: tableData,
       attachments_count: this.uploadedFiles().length,
       form_code: cur.form_code,
     };

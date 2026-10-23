@@ -112,9 +112,13 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect.objectContaining({
         pqb_title: 'New Bid',
         pqb_no: 'B-01',
+        items: [],
       }),
       [],
     );
+    const passedPayload = mockFormApiService.createEntry.mock.calls[0][2];
+    expect(passedPayload['table_items']).toBeUndefined();
+    expect(passedPayload['items']).toEqual([]);
     expect(comp.stepSaved.emit).toHaveBeenCalled();
     expect(comp.close).toHaveBeenCalled();
   });

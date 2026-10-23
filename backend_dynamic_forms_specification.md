@@ -178,7 +178,7 @@ Returns all active steps attached to this project, ordered by `step_order ASC`.
     "data": {
       "customer_name": "Indian Railways",
       "query_date": "2026-03-14",
-      "table_items": [
+      "items": [
         { "sr_no": 1, "description": "High Strength Alloy Steel Studs", "quantity": 500 }
       ]
     },
@@ -209,7 +209,7 @@ Returns all active steps attached to this project, ordered by `step_order ASC`.
     "bill_of_entry_no": "BOE-2026-9921",
     "boe_filing_date": "2026-03-20",
     "total_assessable_value": 450000.00,
-    "table_items": []
+    "items": []
   },
   "status": "in_progress",
   "progress_percentage": 50
@@ -237,7 +237,7 @@ Returns all active steps attached to this project, ordered by `step_order ASC`.
     "bill_of_entry_no": "BOE-2026-9921",
     "boe_filing_date": "2026-03-20",
     "total_assessable_value": 450000.00,
-    "table_items": []
+    "items": []
   },
   "remarks": []
 }
@@ -256,7 +256,7 @@ Returns all active steps attached to this project, ordered by `step_order ASC`.
     "boe_filing_date": "2026-03-20",
     "total_assessable_value": 450000.00,
     "basic_custom_duty_bcd": 33750.00,
-    "table_items": []
+    "items": []
   },
   "status": "completed",
   "progress_percentage": 100

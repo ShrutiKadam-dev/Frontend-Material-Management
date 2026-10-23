@@ -628,11 +628,11 @@ export class ProjectFormEntries implements OnInit {
 
   getTableItems(entry: ProjectStep): Array<Record<string, unknown>> {
     if (!entry.data || typeof entry.data !== 'object') return [];
-    if (Array.isArray(entry.data['table_items'])) {
-      return entry.data['table_items'] as Array<Record<string, unknown>>;
-    }
     if (Array.isArray(entry.data['items'])) {
       return entry.data['items'] as Array<Record<string, unknown>>;
+    }
+    if (Array.isArray(entry.data['table_items'])) {
+      return entry.data['table_items'] as Array<Record<string, unknown>>;
     }
     return [];
   }

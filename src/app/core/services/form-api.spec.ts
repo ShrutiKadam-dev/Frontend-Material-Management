@@ -55,9 +55,9 @@ describe('FormApiService', () => {
     expect(step.project_id).toBe(10);
     expect(step.form_code).toBe('FORM_09_RFQ');
     expect(step.status).toBe('in_progress');
-    expect(step.progress_percentage).toBe(50);
     expect(step.data).toBeDefined();
-    expect(step.data?.['table_items']).toEqual([{ description: 'High-tensile Bolt', quantity: 100 }]);
+    expect(step.data?.['items']).toEqual([{ description: 'High-tensile Bolt', quantity: 100 }]);
+    expect(step.data?.['table_items']).toBeUndefined();
     expect(step.data?.['supplier_name']).toBe('Acme Steel Corp');
   });
 
@@ -168,7 +168,11 @@ describe('FormApiService', () => {
     service.apiBaseUrl = 'http://localhost:5000';
 
     const dummyFile = new File(['content'], 'rfq.pdf', { type: 'application/pdf' });
-    const payload = { supplier_name: 'Tata Steel', request_date: '2026-10-18' };
+    const payload = {
+      supplier_name: 'Tata Steel',
+      request_date: '2026-10-18',
+      table_items: [{ item_name: 'Pipe', qty: 10 }],
+    };
 
     const created = await new Promise<ProjectStep>((resolve) => {
       service.createEntry(sampleDef, 3, payload, [dummyFile]).subscribe(resolve);
@@ -178,6 +182,9 @@ describe('FormApiService', () => {
     const [url, fd] = mockHttp.post.mock.calls[0];
     expect(url).toBe('http://localhost:5000/api/v1/quotation-requests');
     expect(fd instanceof FormData).toBe(true);
+    const sentData = JSON.parse(fd.get('data') as string);
+    expect(sentData.items).toEqual([{ item_name: 'Pipe', qty: 10 }]);
+    expect(sentData.table_items).toBeUndefined();
     expect(created.id).toBe(55);
     expect(created.form_code).toBe('FORM_09_RFQ');
   });

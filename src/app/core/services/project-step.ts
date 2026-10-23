@@ -72,11 +72,18 @@ export class ProjectStepService {
   ): Observable<ProjectStep> {
     const formDef = getFormDefinition(formCode);
     const resolvedName = stepName || formDef?.name || `Form ${formCode}`;
+    const { table_items, ...sanitizedData } = data;
+    const normalizedData: Record<string, unknown> = {
+      ...sanitizedData,
+      ...(table_items !== undefined || sanitizedData['items'] !== undefined
+        ? { items: (sanitizedData['items'] ?? table_items ?? []) as unknown[] }
+        : {}),
+    };
     const payload: AddStepRequest = {
       form_code: formCode,
       step_name: resolvedName,
       description: formDef?.description,
-      data,
+      data: normalizedData,
       status,
       progress_percentage: progressPercentage,
     };
@@ -91,7 +98,7 @@ export class ProjectStepService {
             data:
               createdStep.data && Object.keys(createdStep.data).length > 0
                 ? createdStep.data
-                : data,
+                : normalizedData,
             status: createdStep.status || status,
             progress_percentage: createdStep.progress_percentage ?? progressPercentage,
             form_code: createdStep.form_code || formCode,
@@ -116,7 +123,7 @@ export class ProjectStepService {
             form_code: formCode,
             category: formDef?.category,
             phase: formDef?.phaseId,
-            data,
+            data: normalizedData,
             remarks: [],
             created_at: new Date().toISOString(),
           };
@@ -133,8 +140,15 @@ export class ProjectStepService {
     status: StepStatus = 'in_progress',
     progressPercentage: number = 50,
   ): Observable<ProjectStep> {
+    const { table_items, ...sanitizedData } = data;
+    const normalizedData: Record<string, unknown> = {
+      ...sanitizedData,
+      ...(table_items !== undefined || sanitizedData['items'] !== undefined
+        ? { items: (sanitizedData['items'] ?? table_items ?? []) as unknown[] }
+        : {}),
+    };
     const payload = {
-      data,
+      data: normalizedData,
       status,
       progress_percentage: progressPercentage,
       completed_at: status === 'completed' ? new Date().toISOString() : null,

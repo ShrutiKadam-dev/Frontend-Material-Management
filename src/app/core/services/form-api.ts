@@ -24,11 +24,11 @@ export function normalizeBackendEntityToStep(
 
   const combinedData: Record<string, unknown> = {
     ...item,
-    table_items: rawTableItems,
     items: rawTableItems,
     attachments: rawAttachments,
     remarks: rawRemarks,
   };
+  delete combinedData['table_items'];
 
   return {
     id: stepId,
@@ -123,10 +123,11 @@ export class FormApiService {
     }
 
     const endpointUrl = `${this.apiBaseUrl}${formDef.apiEndpoint}`;
+    const { table_items, ...restPayload } = payload;
     const bodyPayload: Record<string, unknown> = {
       project_id: projectId,
-      items: payload['table_items'] || payload['items'] || [],
-      ...payload,
+      ...restPayload,
+      items: (payload['items'] ?? table_items ?? []) as unknown[],
     };
 
     const fd = new FormData();
@@ -156,10 +157,11 @@ export class FormApiService {
     }
 
     const endpointUrl = `${this.apiBaseUrl}${formDef.apiEndpoint}/${stepId}`;
+    const { table_items, ...restPayload } = payload;
     const bodyPayload: Record<string, unknown> = {
       project_id: projectId,
-      items: payload['table_items'] || payload['items'] || [],
-      ...payload,
+      ...restPayload,
+      items: (payload['items'] ?? table_items ?? []) as unknown[],
     };
 
     const fd = new FormData();
