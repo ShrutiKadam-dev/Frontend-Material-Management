@@ -28,40 +28,46 @@ import { createStepRemarkItem, parseStepRemarks } from '../../../core/utils/rema
     @if (mode() === 'card') {
     <div class="remarks-card-section" [attr.aria-label]="title()">
       <div class="chat-section-header">
-        <p class="qe-section-title">
-          <i class="pi pi-history" aria-hidden="true"></i>
-          {{ title() }}
-        </p>
-        <span class="chat-count-pill">{{ parsedRemarks().length }}</span>
+        <div class="chat-header-title-wrap">
+          <div class="chat-header-icon" aria-hidden="true">
+            <i class="pi pi-comments"></i>
+          </div>
+          <div>
+            <p class="qe-section-title">{{ title() }}</p>
+            <span class="qe-section-subtitle">Audit trail & collaboration</span>
+          </div>
+        </div>
+        <span class="chat-count-pill">{{ parsedRemarks().length }} {{ parsedRemarks().length === 1 ? 'note' : 'notes' }}</span>
       </div>
 
       <!-- Remarks Timeline Stream (Content First) -->
       <div class="remarks-timeline">
         @if (parsedRemarks().length === 0) {
         <div class="empty-remarks-hint">
-          <i class="pi pi-history" aria-hidden="true"></i>
-          <span>No remarks recorded yet. Enter a note or observation in the box below to start the timeline.</span>
+          <div class="empty-hint-icon" aria-hidden="true">
+            <i class="pi pi-comment"></i>
+          </div>
+          <div class="empty-hint-text">
+            <strong class="empty-hint-title">No remarks recorded yet</strong>
+            <span class="empty-hint-desc">Enter an observation, update, or note below to start the timeline.</span>
+          </div>
         </div>
         } @else {
         <div class="timeline-sequence">
           @for (rmk of parsedRemarks(); track rmk.id; let isLast = $last) {
           <div class="timeline-item" [class.timeline-item--last]="isLast">
-            <div class="timeline-indicator" aria-hidden="true">
-              <span class="timeline-dot"></span>
-              @if (!isLast) {
-              <span class="timeline-stem"></span>
-              }
+            <div class="timeline-avatar" aria-hidden="true">
+              {{ extractInitials(rmk.user) }}
             </div>
             <div class="timeline-entry">
               <div class="timeline-meta-bar">
                 <div class="timeline-meta-info">
                   <span class="timeline-author">
-                    <i class="pi pi-user" aria-hidden="true"></i>
                     {{ rmk.user || 'Team Member' }}
                   </span>
                   <span class="timeline-timestamp">
                     <i class="pi pi-clock" aria-hidden="true"></i>
-                    {{ safeDate(rmk.created_at) | date: 'dd-MM-yyyy, hh:mm a' }}
+                    {{ safeDate(rmk.created_at) | date: 'dd MMM yyyy, hh:mm a' }}
                   </span>
                 </div>
                 @if (canDelete()) {
@@ -85,6 +91,7 @@ import { createStepRemarkItem, parseStepRemarks } from '../../../core/utils/rema
       <!-- Quick Add Remark Box (Bottom Type Box) -->
       @if (canAdd()) {
       <div class="chat-typebox-bar">
+        <i class="pi pi-pencil typebox-icon" aria-hidden="true"></i>
         <input pInputText type="text" [(ngModel)]="newText" [placeholder]="placeholder()"
           class="chat-typebox-input" (keydown.enter)="$event.preventDefault(); onAddQuick()" />
         <button pButton type="button" icon="pi pi-send" [label]="buttonLabel()"

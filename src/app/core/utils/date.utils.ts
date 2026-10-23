@@ -208,7 +208,22 @@ export function formatDisplayDate(
   if (format === 'dd-MM-yyyy') {
     return `${dayStr}-${monthStr}-${yearStr}`;
   }
+  if (format.includes('MMM') && (format.includes('HH:mm') || format.includes('hh:mm'))) {
+    const hours = dateObj.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const h12 = hours % 12 || 12;
+    if (format.includes('a')) {
+      return `${dayNum} ${MONTH_NAMES_SHORT[monthNum]} ${yearStr}, ${String(h12).padStart(2, '0')}:${minutesStr} ${ampm}`;
+    }
+    return `${dayNum} ${MONTH_NAMES_SHORT[monthNum]} ${yearStr}, ${hoursStr}:${minutesStr}`;
+  }
   if (format.includes('HH:mm') || format.includes('hh:mm')) {
+    if (format.includes('a')) {
+      const hours = dateObj.getHours();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const h12 = hours % 12 || 12;
+      return `${dayStr}-${monthStr}-${yearStr}, ${String(h12).padStart(2, '0')}:${minutesStr} ${ampm}`;
+    }
     return `${dayStr}-${monthStr}-${yearStr}, ${hoursStr}:${minutesStr}`;
   }
   if (format === 'd MMMM yyyy') {

@@ -35,6 +35,20 @@ import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { StepFormDialog } from '../project-timeline/step-form-dialog/step-form-dialog';
 import { StepRemarksComponent } from '../../../../shared/components/step-remarks/step-remarks';
 
+export interface EntryDisplayField {
+  key: string;
+  label: string;
+  value: string;
+  type: string;
+  colSpan: number;
+  icon: string;
+  isLongText: boolean;
+  isHighlight?: boolean;
+  isPill?: boolean;
+  isTitle?: boolean;
+  isClause?: boolean;
+}
+
 @Component({
   selector: 'app-project-form-entries',
   imports: [
@@ -91,8 +105,25 @@ export class ProjectFormEntries implements OnInit {
   readonly stepToDelete = signal<ProjectStep | null>(null);
   readonly deleting = signal<boolean>(false);
 
-  // ── Quick Remark Signals ────────────────────────────────────────────
+  // ── Quick Remark & Collapsible State ──────────────────────────────
   readonly quickRemarkPending = signal<boolean>(false);
+  readonly openRemarksEntryIds = signal<Set<string | number>>(new Set());
+
+  isRemarksOpen(entryKey: string | number): boolean {
+    return this.openRemarksEntryIds().has(entryKey);
+  }
+
+  toggleRemarks(entryKey: string | number): void {
+    this.openRemarksEntryIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(entryKey)) {
+        next.delete(entryKey);
+      } else {
+        next.add(entryKey);
+      }
+      return next;
+    });
+  }
 
   // ── Computed Properties ─────────────────────────────────────────────
   readonly formDefinition = computed<FormDefinition | null>(() => {
@@ -462,6 +493,10 @@ export class ProjectFormEntries implements OnInit {
       .subscribe({
         next: (updated) => {
           this.onStepSaved(updated);
+          const entryKey = entry.id ?? entry.step_number;
+          if (entryKey) {
+            this.openRemarksEntryIds.update((set) => new Set(set).add(entryKey));
+          }
           this.messageService.add({
             severity: 'success',
             summary: 'Remark Added',
@@ -540,14 +575,33 @@ export class ProjectFormEntries implements OnInit {
     if (col.key === 'sr_no') {
       return String(row['sr_no'] ?? (rowIndex + 1));
     }
-    const val = row[col.key];
+    let val = row[col.key];
+
+    // If total column is blank/dash, check if we can compute from quantity * unit_price
+    if (
+      (val === undefined || val === null || val === '') &&
+      (col.key === 'total_amount' || col.key === 'total_price' || col.key === 'total')
+    ) {
+      const q = Number(row['quantity'] ?? row['qty']);
+      const up = Number(row['unit_price'] ?? row['rate'] ?? row['price']);
+      if (!isNaN(q) && !isNaN(up) && q > 0 && up > 0) {
+        val = q * up;
+      }
+    }
+
     if (val === undefined || val === null || val === '') return '—';
 
-    if (col.type === 'currency' && (typeof val === 'number' || !isNaN(Number(val)))) {
-      return '₹ ' + Number(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (
+      (col.type === 'currency' || col.key.includes('price') || col.key.includes('amount')) &&
+      (typeof val === 'number' || !isNaN(Number(val)))
+    ) {
+      return '₹\u00A0' + Number(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    if (col.type === 'number' && (typeof val === 'number' || !isNaN(Number(val)))) {
+      return Number(val).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
     }
     if (col.type === 'date' && typeof val === 'string') {
-      return formatDisplayDate(val);
+      return formatDisplayDate(val, 'd MMM yyyy');
     }
     return String(val);
   }
@@ -558,15 +612,19 @@ export class ProjectFormEntries implements OnInit {
 
     const def = this.formDefinition();
     const cols = def?.tableConfig?.columns || this.tableColumns();
-    let totalColKey = cols.find(
-      (c) =>
-        c.type === 'currency' ||
-        c.key === 'total_amount' ||
-        c.key === 'total_price' ||
-        c.key === 'total' ||
-        c.key === 'amount',
-    )?.key;
 
+    // Check configured totalKey first
+    let totalColKey = def?.tableConfig?.totalKey;
+    if (!totalColKey) {
+      // Find a column explicitly representing total
+      totalColKey = cols.find(
+        (c) =>
+          c.key === 'total_amount' ||
+          c.key === 'total_price' ||
+          c.key === 'total' ||
+          c.key === 'amount',
+      )?.key;
+    }
     if (!totalColKey) {
       for (const candidate of ['total_amount', 'total_price', 'total', 'amount']) {
         if (items.some((it) => it[candidate] !== undefined && it[candidate] !== null && it[candidate] !== '')) {
@@ -575,13 +633,25 @@ export class ProjectFormEntries implements OnInit {
         }
       }
     }
-
-    if (!totalColKey) return null;
+    if (!totalColKey) {
+      totalColKey = cols.find((c) => c.type === 'currency' && !c.key.includes('unit') && !c.key.includes('rate'))?.key;
+    }
+    if (!totalColKey) {
+      totalColKey = cols.find((c) => c.type === 'currency')?.key;
+    }
 
     let sum = 0;
     let hasValid = false;
     for (const it of items) {
-      const val = Number(it[totalColKey]);
+      let val = totalColKey ? Number(it[totalColKey]) : NaN;
+      if (isNaN(val) || val === 0) {
+        // Fallback: quantity * unit_price if item row only has quantity & unit_price
+        const q = Number(it['quantity'] ?? it['qty']);
+        const up = Number(it['unit_price'] ?? it['rate'] ?? it['price']);
+        if (!isNaN(q) && !isNaN(up) && q > 0 && up > 0) {
+          val = q * up;
+        }
+      }
       if (!isNaN(val)) {
         sum += val;
         hasValid = true;
@@ -593,19 +663,21 @@ export class ProjectFormEntries implements OnInit {
   getTableTotalFormatted(entry: ProjectStep): string | null {
     const total = this.calculateTableTotal(entry);
     if (total === null) return null;
-    return '₹ ' + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return '₹\u00A0' + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   // ── Helper Presentation Methods ─────────────────────────────────────
-  getDisplayFields(entry: ProjectStep): Array<{ label: string; value: string }> {
+  getDisplayFields(entry: ProjectStep): EntryDisplayField[] {
     const def = this.formDefinition();
     if (!def || !entry.data || typeof entry.data !== 'object') return [];
 
-    const fields: Array<{ label: string; value: string }> = [];
+    const rawFields: (EntryDisplayField & { _order: number })[] = [];
     for (const f of def.fields) {
       const val = entry.data[f.key];
       if (val !== undefined && val !== null && val !== '') {
         let formattedVal = String(val);
+        const strVal = typeof val === 'string' ? val.trim() : '';
+
         if (Array.isArray(val)) {
           formattedVal = val.join(', ');
         } else if (f.type === 'select' && f.options && typeof val === 'string') {
@@ -615,15 +687,148 @@ export class ProjectFormEntries implements OnInit {
           if (match && typeof match === 'object') {
             formattedVal = match.label;
           }
-        } else if (f.type === 'currency' && typeof val === 'number') {
-          formattedVal = '₹ ' + val.toLocaleString('en-IN', { minimumFractionDigits: 2 });
-        } else if (f.type === 'date' && typeof val === 'string') {
-          formattedVal = formatDisplayDate(val);
+        } else if (f.type === 'currency' && (typeof val === 'number' || !isNaN(Number(val)))) {
+          formattedVal = '₹\u00A0' + Number(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        } else if (f.type === 'datetime') {
+          const dateInput = typeof val === 'string' || typeof val === 'number' || val instanceof Date ? val : String(val);
+          formattedVal = formatDisplayDate(dateInput, 'dd-MM-yyyy, hh:mm a');
+        } else if (f.type === 'date') {
+          const dateInput = typeof val === 'string' || typeof val === 'number' || val instanceof Date ? val : String(val);
+          formattedVal = formatDisplayDate(dateInput, 'd MMM yyyy');
+        } else if (strVal && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(strVal)) {
+          formattedVal = formatDisplayDate(strVal, 'dd-MM-yyyy, hh:mm a');
+        } else if (strVal && /^\d{4}-\d{2}-\d{2}$/.test(strVal)) {
+          formattedVal = formatDisplayDate(strVal, 'd MMM yyyy');
         }
-        fields.push({ label: f.label, value: formattedVal });
+
+        const k = f.key.toLowerCase();
+        const isTitle =
+          (k.includes('title') || k.includes('subject') || k === 'name' || k === 'purpose') &&
+          !k.includes('customer') &&
+          !k.includes('supplier');
+        const isDateOrTime =
+          f.type === 'date' ||
+          f.type === 'datetime' ||
+          k.includes('date') ||
+          k.includes('time') ||
+          /^\d{4}-\d{2}-\d{2}/.test(strVal);
+        const isRefNumber =
+          k === 'id' ||
+          k.endsWith('_id') ||
+          k.startsWith('id_') ||
+          k === 'no' ||
+          k.endsWith('_no') ||
+          k.startsWith('no_') ||
+          k.includes('number') ||
+          k.includes('code') ||
+          k.includes('ref');
+
+        // Multi-line legal clauses, textarea, or long narrative terms
+        const isClause =
+          (k.includes('terms') && !k.includes('delivery_terms')) ||
+          k.includes('condition') ||
+          k.includes('clause') ||
+          k.includes('scope') ||
+          f.type === 'textarea' ||
+          formattedVal.length > 50;
+
+        // Compact specification badges/pills
+        const isPill =
+          !isClause &&
+          !isTitle &&
+          (f.type === 'select' ||
+            k.includes('validity') ||
+            k.includes('period') ||
+            k.includes('delivery_terms') ||
+            k.includes('status') ||
+            k.includes('gst') ||
+            k.includes('mode') ||
+            k.includes('incoterm') ||
+            k.includes('type')) &&
+          formattedVal.length <= 25;
+
+        // Structured Column Spanning in a 4-Column Grid:
+        // 10: Title (4 cols - spans full width)
+        // 20: Dates & Reference Numbers (2 cols - pairs neatly 2 + 2 = 4)
+        // 30: Compact Terms & Pills (1 col - packs neatly 1 + 1 + 1 + 1 = 4)
+        // 40: Multi-line Clauses & Terms (4 cols - spans full width)
+        let colSpan = 1;
+        let order = 30;
+
+        if (isTitle) {
+          colSpan = 4;
+          order = 10;
+        } else if (isClause) {
+          colSpan = 4;
+          order = 40;
+        } else if (isDateOrTime || isRefNumber) {
+          colSpan = 2;
+          order = 20;
+        } else {
+          colSpan = 1;
+          order = 30;
+        }
+
+        const isHighlight =
+          k.includes('closing') ||
+          k.includes('opening');
+
+        rawFields.push({
+          key: f.key,
+          label: f.label,
+          value: formattedVal,
+          type: f.type || 'text',
+          colSpan,
+          icon: this.getFieldIcon(f.key, f.type),
+          isLongText: colSpan === 4,
+          isHighlight: !!isHighlight,
+          isPill: !!isPill,
+          isTitle: !!isTitle,
+          isClause: !!isClause,
+          _order: order,
+        });
       }
     }
-    return fields;
+
+    return rawFields
+      .sort((a, b) => a._order - b._order)
+      .map(({ _order, ...rest }) => rest);
+  }
+
+  getFieldIcon(fieldKey: string, fieldType?: string): string {
+    const k = fieldKey.toLowerCase();
+    const t = (fieldType || '').toLowerCase();
+
+    if (t === 'datetime' || t.includes('time') || k.includes('time') || k.includes('closing') || k.includes('opening')) {
+      return 'pi pi-clock';
+    }
+    if (t === 'date' || k.includes('date')) return 'pi pi-calendar';
+    if (k.includes('warranty') || k.includes('guarantee') || k.includes('security')) return 'pi pi-shield';
+    if (k.includes('valid') || k.includes('period') || k.includes('duration')) return 'pi pi-hourglass';
+    if (t === 'currency' || k.includes('fee') || k.includes('amount') || k.includes('price') || k.includes('cost')) {
+      return 'pi pi-indian-rupee';
+    }
+    if (k.includes('customer') || k.includes('client') || k.includes('org')) return 'pi pi-building';
+    if (k.includes('supplier') || k.includes('vendor') || k.includes('delivery') || k.includes('transport') || k.includes('incoterm')) {
+      return 'pi pi-truck';
+    }
+    if (k.includes('title') || k.includes('subject') || k.includes('desc') || k.includes('name')) return 'pi pi-bookmark';
+    if (k.includes('pay') || k.includes('terms') || k.includes('condition')) return 'pi pi-credit-card';
+    if (
+      k === 'id' ||
+      k.endsWith('_id') ||
+      k.startsWith('id_') ||
+      k === 'no' ||
+      k.endsWith('_no') ||
+      k.startsWith('no_') ||
+      k.includes('number') ||
+      k.includes('code') ||
+      k.includes('ref')
+    ) {
+      return 'pi pi-hashtag';
+    }
+    if (k.includes('status') || k.includes('stage')) return 'pi pi-info-circle';
+    return 'pi pi-file-edit';
   }
 
   getTableItems(entry: ProjectStep): Array<Record<string, unknown>> {
@@ -664,6 +869,10 @@ export class ProjectFormEntries implements OnInit {
     }
 
     return list;
+  }
+
+  hasSpecsOrAttachments(entry: ProjectStep): boolean {
+    return this.getDisplayFields(entry).length > 0 || this.getEntryAttachments(entry).length > 0;
   }
 
   getEntryRemarks(entry: ProjectStep): StepRemarkItem[] {
@@ -755,6 +964,7 @@ export class ProjectFormEntries implements OnInit {
         'qo_date',
         'po_date',
         'invoice_date',
+        'tender_issue_date',
         'pqb_issuing_date',
         'issue_date',
         'delivery_date',
@@ -763,10 +973,10 @@ export class ProjectFormEntries implements OnInit {
       ];
       for (const k of dateKeys) {
         if (d[k]) {
-          return formatDisplayDate(String(d[k]));
+          return formatDisplayDate(String(d[k]), 'd MMM yyyy');
         }
       }
     }
-    return formatDisplayDate(entry.created_at || entry.completed_at || new Date().toISOString());
+    return formatDisplayDate(entry.created_at || entry.completed_at || new Date().toISOString(), 'd MMM yyyy');
   }
 }

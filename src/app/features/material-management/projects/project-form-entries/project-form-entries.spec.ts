@@ -78,6 +78,7 @@ describe('ProjectFormEntries Component', () => {
     comp.stepToDelete = signal(null);
     comp.deleting = signal(false);
     comp.quickRemarkPending = signal(false);
+    comp.openRemarksEntryIds = signal(new Set());
     comp.messageService = { add: vi.fn() };
     comp.formApiService = {
       deleteEntry: vi.fn().mockReturnValue(of(true)),
@@ -236,6 +237,90 @@ describe('ProjectFormEntries Component', () => {
     expect(atts[0].name).toBe('pqb_specs.pdf');
   });
 
+  it('should format and align commercial specification fields in 4-column rectilinear order', () => {
+    const comp = createComponent([], 'FORM_13_PAC_TENDER');
+    const tenderStep: ProjectStep = {
+      id: 501,
+      project_id: 5,
+      step_number: 13,
+      step_name: 'PAC Tender',
+      status: 'in_progress',
+      form_code: 'FORM_13_PAC_TENDER',
+      data: {
+        tender_title: 'PROCUREMENT OF MECHANICAL SPARES FOR REWINDER SECTION',
+        closing_date_time: '2025-12-17T14:30:00',
+        opening_date_time: '2025-12-17T15:00:00',
+        validity: '90 Days',
+        delivery_terms: 'FOR',
+        delivery_period: '12 MONTHS',
+        warranty_period: '12 Months',
+        payment_terms:
+          '100% PAYMENT WILL BE MADE AFTER RECEIPT AND ACCEPTANCE OF MATERIAL AND ON PRODUCTION OF ALL REQUIRED DOCUMENTS BY SUPPLIER AT OUR SITE THROUGH RTGS/NEFT ONLY',
+      },
+      remarks: [],
+    };
+
+    const fields = comp.getDisplayFields(tenderStep);
+    expect(fields).toHaveLength(8);
+
+    // Row 1: Title (colSpan 4)
+    expect(fields[0].key).toBe('tender_title');
+    expect(fields[0].colSpan).toBe(4);
+    expect(fields[0].isTitle).toBe(true);
+
+    // Row 2: Milestones Closing & Opening (colSpan 2 each, 2 + 2 = 4)
+    expect(fields[1].key).toBe('closing_date_time');
+    expect(fields[1].colSpan).toBe(2);
+    expect(fields[2].key).toBe('opening_date_time');
+    expect(fields[2].colSpan).toBe(2);
+
+    // Row 3: Compact pills (colSpan 1 each, 1 + 1 + 1 + 1 = 4)
+    expect(fields[3].key).toBe('validity');
+    expect(fields[3].colSpan).toBe(1);
+    expect(fields[3].isPill).toBe(true);
+    expect(fields[3].icon).toBe('pi pi-hourglass');
+
+    expect(fields[4].key).toBe('delivery_terms');
+    expect(fields[4].colSpan).toBe(1);
+    expect(fields[4].isPill).toBe(true);
+
+    expect(fields[5].key).toBe('delivery_period');
+    expect(fields[5].colSpan).toBe(1);
+    expect(fields[5].isPill).toBe(true);
+
+    expect(fields[6].key).toBe('warranty_period');
+    expect(fields[6].colSpan).toBe(1);
+    expect(fields[6].isPill).toBe(true);
+    expect(fields[6].icon).toBe('pi pi-shield');
+
+    // Row 4: Commercial Clause (colSpan 4)
+    expect(fields[7].key).toBe('payment_terms');
+    expect(fields[7].colSpan).toBe(4);
+    expect(fields[7].isClause).toBe(true);
+  });
+
+  it('should detect whether an entry has specifications or attachments', () => {
+    const compEmpty = createComponent([], 'FORM_13_PAC_TENDER');
+    const emptyStep: ProjectStep = {
+      id: 999,
+      project_id: 5,
+      step_number: 1,
+      step_name: 'Query from Customer',
+      status: 'pending',
+      form_code: 'FORM_01_PQB',
+      data: {},
+      remarks: [],
+    };
+    expect(compEmpty.hasSpecsOrAttachments(emptyStep)).toBe(false);
+
+    const compPqb = createComponent([], 'FORM_01_PQB');
+    const stepWithSpecs: ProjectStep = {
+      ...emptyStep,
+      data: { pqb_title: 'Turbine Overhaul' },
+    };
+    expect(compPqb.hasSpecsOrAttachments(stepWithSpecs)).toBe(true);
+  });
+
   it('should support formatters, status labels, and date extraction', () => {
     const comp = createComponent();
 
@@ -309,5 +394,16 @@ describe('ProjectFormEntries Component', () => {
         summary: 'Document Download',
       }),
     );
+  });
+
+  it('should toggle remarks panel visibility for entries', () => {
+    const comp = createComponent();
+    expect(comp.isRemarksOpen(101)).toBe(false);
+
+    comp.toggleRemarks(101);
+    expect(comp.isRemarksOpen(101)).toBe(true);
+
+    comp.toggleRemarks(101);
+    expect(comp.isRemarksOpen(101)).toBe(false);
   });
 });

@@ -207,68 +207,32 @@
         <article class="entry-card app-panel" [attr.aria-labelledby]="'entry-heading-' + (entry.id || idx)">
 
           <!-- Card Top Header Ribbon -->
+          <!-- Card Top Header Ribbon (Single Aligned Horizontal Row) -->
           <header class="ec-header">
             <div class="ec-header-left">
-              <div class="ec-title-badge-row">
-                <span class="ec-num">Entry #{{ idx + 1 }}</span>
-                <h2 [id]="'entry-heading-' + (entry.id || idx)" class="ec-entry-title">
-                  {{ entry.step_name || (formDefinition()?.name + ' (Entry #' + (idx + 1) + ')') }}
-                </h2>
-                @if (entry.id) {
-                  <span class="ec-id-pill" [title]="'Database ID: ' + entry.id">ID: #{{ entry.id }}</span>
-                }
-              </div>
-
-              <div class="ec-meta-tags">
-                <span class="ec-meta-tag ec-meta-tag--date">
-                  <i class="pi pi-calendar" aria-hidden="true"></i>
-                  {{ getEntryDate(entry) }}
-                </span>
-
-                <span class="ec-meta-tag ec-meta-tag--status" [class]="'ec-status--' + entry.status">
-                  <i class="pi" [class]="statusIcon(entry.status)" aria-hidden="true"></i>
-                  {{ statusLabel(entry.status) }}
-                </span>
-
-                @if (entry.progress_percentage !== undefined) {
-                  <div class="ec-progress-wrap" [pTooltip]="entry.progress_percentage + '% complete'" tooltipPosition="top">
-                    <div class="ec-mini-track">
-                      <div
-                        class="ec-mini-fill"
-                        [style.width.%]="entry.progress_percentage"
-                        [class.ec-mini-fill--completed]="entry.status === 'completed'">
-                      </div>
-                    </div>
-                    <span class="ec-pct-text">{{ entry.progress_percentage }}%</span>
-                  </div>
-                }
-
-                @if (getTableItems(entry).length > 0) {
-                  <span class="ec-meta-tag ec-meta-tag--items">
-                    <i class="pi pi-box" aria-hidden="true"></i>
-                    {{ getTableItems(entry).length }} {{ getTableItems(entry).length === 1 ? 'item' : 'items' }}
-                  </span>
-                }
-
-                @if (getEntryAttachments(entry).length > 0) {
-                  <span class="ec-meta-tag ec-meta-tag--files">
-                    <i class="pi pi-paperclip" aria-hidden="true"></i>
-                    {{ getEntryAttachments(entry).length }} {{ getEntryAttachments(entry).length === 1 ? 'file' : 'files' }}
-                  </span>
-                }
-              </div>
+              <span class="ec-num-badge">
+                <i class="pi pi-bookmark" aria-hidden="true"></i>
+                <span>Entry #{{ idx + 1 }}</span>
+              </span>
+              <h2 [id]="'entry-heading-' + (entry.id || idx)" class="ec-entry-title">
+                {{ entry.step_name || (formDefinition()?.name + ' (Entry #' + (idx + 1) + ')') }}
+              </h2>
+              <span class="ec-meta-pill ec-meta-pill--date">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                <span>{{ getEntryDate(entry) }}</span>
+              </span>
             </div>
 
-            <!-- Right Side: Edit & Delete Action Buttons -->
+            <!-- Right Side: Edit & Delete Action Buttons (Text Buttons on the same row) -->
             <div class="ec-header-actions">
               <button
                 pButton
                 type="button"
                 icon="pi pi-pencil"
-                label="Edit Entry"
-                class="p-button-outlined p-button-sm ec-edit-btn"
+                label="Edit"
+                class="p-button-text p-button-secondary p-button-sm ec-action-edit"
                 (click)="openEditDialog(entry)"
-                pTooltip="Edit inputs, line items, files, or remarks"
+                pTooltip="Edit commercial terms, specifications, line items, and files"
                 tooltipPosition="top"
                 [attr.aria-label]="'Edit entry ' + (entry.id || idx)">
               </button>
@@ -278,7 +242,7 @@
                 type="button"
                 icon="pi pi-trash"
                 label="Delete"
-                class="p-button-text p-button-danger p-button-sm ec-delete-btn"
+                class="p-button-text p-button-danger p-button-sm ec-action-delete"
                 (click)="confirmDeleteEntry(entry, $event)"
                 pTooltip="Delete this entry and its associated data"
                 tooltipPosition="top"
@@ -287,141 +251,102 @@
             </div>
           </header>
 
-          <!-- Card Body (2-Column Responsive Layout) -->
-          <div class="ec-body-grid">
+          <!-- Card Body (Clean Non-Boxed Layout) -->
+          <div class="ec-card-body">
 
-            <!-- Column 1: Primary Form Fields & Table Items -->
-            <section class="ec-col-main" aria-label="Entry details and data">
-              <!-- Key Values Grid -->
-              @if (getDisplayFields(entry).length > 0) {
-                <div class="entry-fields-preview">
-                  <h3 class="preview-heading">Form Data Summary</h3>
-                  <div class="fields-key-value-grid">
-                    @for (field of getDisplayFields(entry); track field.label) {
-                      <div class="field-item">
-                        <span class="field-label">{{ field.label }}</span>
-                        <strong class="field-val" [title]="field.value">{{ field.value }}</strong>
+            <!-- Top Split: Specifications on Left (1fr), Remarks Stream on Right (380px) -->
+            <!-- Top Split: Specifications on Left (1.35fr), Remarks on Right (1fr) -->
+            <!-- If no specifications/attachments exist, Remarks expands to full width with zero left whitespace -->
+            <div
+              class="ec-top-split"
+              [class.ec-top-split--no-specs]="!hasSpecsOrAttachments(entry)">
+
+              @if (hasSpecsOrAttachments(entry)) {
+                <!-- Left Column: Commercial Specifications & Attached Files -->
+                <section class="ec-summary-area" aria-label="Commercial specifications">
+                  @if (getDisplayFields(entry).length > 0) {
+                    <div class="summary-specs-panel">
+                      <div class="specs-section-header">
+                        <div class="ssh-title-group">
+                          <span class="ssh-icon-badge" aria-hidden="true">
+                            <i class="pi pi-sliders-h"></i>
+                          </span>
+                          <div class="ssh-text">
+                            <h3 class="ssh-heading">Commercial Specifications</h3>
+                            <span class="ssh-subtext">Commercial terms & contract requirements</span>
+                          </div>
+                        </div>
+                        <span class="specs-count-badge">
+                          {{ getDisplayFields(entry).length }} {{ getDisplayFields(entry).length === 1 ? 'field' : 'fields' }}
+                        </span>
                       </div>
-                    }
-                  </div>
-                </div>
-              }
 
-              <!-- Structured Line Items Table -->
-              @if (getTableItems(entry).length > 0) {
-                <div class="ec-table-block">
-                  <div class="col-section-header">
-                    <div class="csh-left">
-                      <i class="pi pi-table" aria-hidden="true"></i>
-                      <h3 class="csh-title">{{ formDefinition()?.tableConfig?.title || 'Structured Line Items' }}</h3>
-                    </div>
-                    <span class="csh-count-pill">{{ getTableItems(entry).length }}</span>
-                  </div>
-
-                  <div class="table-frame">
-                    <p-table
-                      [value]="getTableItems(entry)"
-                      [paginator]="getTableItems(entry).length > 5"
-                      [rows]="5"
-                      styleClass="p-datatable-sm items-table-wrap"
-                      responsiveLayout="scroll">
-                      <ng-template pTemplate="header">
-                        <tr>
-                          @for (col of tableColumns(); track col.key) {
-                            <th
-                              scope="col"
-                              [style.width]="col.width || 'auto'"
-                              [style.text-align]="col.key === 'sr_no' ? 'center' : (col.type === 'number' || col.type === 'currency' ? 'right' : 'left')">
-                              {{ col.label }}
-                            </th>
-                          }
-                        </tr>
-                      </ng-template>
-
-                      <ng-template pTemplate="body" let-item let-itemIdx="rowIndex">
-                        <tr>
-                          @for (col of tableColumns(); track col.key) {
-                            <td [style.text-align]="col.key === 'sr_no' ? 'center' : (col.type === 'number' || col.type === 'currency' ? 'right' : 'left')">
-                              @if (col.key === 'sr_no') {
-                                <span class="sr-num">{{ formatCellValue(item, col, itemIdx) }}</span>
-                              } @else if (col.type === 'currency') {
-                                <strong class="currency-cell">{{ formatCellValue(item, col, itemIdx) }}</strong>
-                              } @else if (col.type === 'number') {
-                                <span class="qty-pill">{{ formatCellValue(item, col, itemIdx) }}</span>
+                      <dl class="specs-clean-grid">
+                        @for (field of getDisplayFields(entry); track field.key || field.label) {
+                          <div
+                            class="spec-item"
+                            [class.spec-item--span-4]="field.colSpan === 4"
+                            [class.spec-item--span-2]="field.colSpan === 2"
+                            [class.spec-item--span-1]="field.colSpan === 1"
+                            [class.spec-item--full]="field.colSpan === 4"
+                            [class.spec-item--clause]="field.isClause"
+                            [class.spec-item--highlight]="field.isHighlight">
+                            <dt class="spec-label">
+                              <i [class]="field.icon" class="spec-icon" aria-hidden="true"></i>
+                              <span>{{ field.label }}</span>
+                            </dt>
+                            <dd class="spec-value">
+                              @if (field.isPill) {
+                                <span class="spec-pill-badge">{{ field.value }}</span>
+                              } @else if (field.isTitle) {
+                                <span class="spec-title-value">{{ field.value }}</span>
+                              } @else if (field.isClause) {
+                                <span class="spec-clause-value">{{ field.value }}</span>
                               } @else {
-                                <span [class.item-name-cell]="col.key === 'description' || col.key === 'item_name' || col.key === 'material_name'">
-                                  {{ formatCellValue(item, col, itemIdx) }}
-                                </span>
+                                <span class="spec-text-value">{{ field.value }}</span>
                               }
-                            </td>
-                          }
-                        </tr>
-                      </ng-template>
-
-                      @if (calculateTableTotal(entry) !== null) {
-                        <ng-template pTemplate="footer">
-                          <tr class="table-total-row">
-                            <td [attr.colspan]="tableColumns().length - 1" class="total-label-cell">
-                              Total ({{ getTableItems(entry).length }} {{ getTableItems(entry).length === 1 ? 'item' : 'items' }})
-                            </td>
-                            <td class="total-val-cell">
-                              {{ getTableTotalFormatted(entry) }}
-                            </td>
-                          </tr>
-                        </ng-template>
-                      }
-                    </p-table>
-                  </div>
-                </div>
-              } @else if (getDisplayFields(entry).length === 0) {
-                <div class="empty-entry-fields">
-                  <i class="pi pi-file-edit"></i>
-                  <span>No custom values configured for this entry yet. Click "Edit Entry" to add details.</span>
-                </div>
-              }
-            </section>
-
-            <!-- Column 2: Attachments & Multiple Remarks Stream -->
-            <aside class="ec-col-side" aria-label="Attachments and remarks">
-
-              <!-- Attachments Section -->
-              @if (getEntryAttachments(entry).length > 0) {
-                <div class="ec-attachments-block">
-                  <div class="col-section-header">
-                    <div class="csh-left">
-                      <i class="pi pi-paperclip" aria-hidden="true"></i>
-                      <h3 class="csh-title">Attached Documents</h3>
+                            </dd>
+                          </div>
+                        }
+                      </dl>
                     </div>
-                    <span class="csh-count-pill">{{ getEntryAttachments(entry).length }}</span>
-                  </div>
+                  }
 
-                  <div class="attachments-chips-grid">
-                    @for (att of getEntryAttachments(entry); track att.name) {
-                      <div class="att-card">
-                        <div class="att-icon-wrap" aria-hidden="true">
-                          <i [class]="getFileIcon(att.name)"></i>
-                        </div>
-                        <div class="att-info">
-                          <span class="att-filename" [title]="att.name">{{ att.name }}</span>
-                          <span class="att-filesize">{{ att.size }}</span>
-                        </div>
-                        <button
-                          type="button"
-                          class="att-dl-btn"
-                          (click)="downloadAttachment(att, $event)"
-                          [pTooltip]="'Download ' + att.name"
-                          tooltipPosition="top"
-                          [attr.aria-label]="'Download ' + att.name">
-                          <i class="pi pi-download" aria-hidden="true"></i>
-                        </button>
+                  <!-- Attached Documents (Clean Horizontal Chips) -->
+                  @if (getEntryAttachments(entry).length > 0) {
+                    <div class="ec-attachments-strip">
+                      <div class="strip-header">
+                        <i class="pi pi-paperclip" aria-hidden="true"></i>
+                        <span class="strip-title">Attached Documents ({{ getEntryAttachments(entry).length }})</span>
                       </div>
-                    }
-                  </div>
-                </div>
+                      <div class="strip-chips-list">
+                        @for (att of getEntryAttachments(entry); track att.name) {
+                          <div class="modern-att-chip">
+                            <i [class]="getFileIcon(att.name)" class="mac-icon" aria-hidden="true"></i>
+                            <span class="mac-filename" [title]="att.name">{{ att.name }}</span>
+                            <span class="mac-filesize">{{ att.size }}</span>
+                            <button
+                              type="button"
+                              class="mac-dl-btn"
+                              (click)="downloadAttachment(att, $event)"
+                              [pTooltip]="'Download ' + att.name"
+                              tooltipPosition="top"
+                              [attr.aria-label]="'Download ' + att.name">
+                              <i class="pi pi-download" aria-hidden="true"></i>
+                            </button>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </section>
               }
 
-              <!-- Remarks Section (Powered by AppStepRemarks Timeline Component) -->
-              <div class="ec-remarks-block">
+              <!-- Remarks Column: Prominent Team Remarks & Audit Notes -->
+              <aside
+                class="ec-remarks-col"
+                [class.ec-remarks-col--full]="!hasSpecsOrAttachments(entry)"
+                aria-label="Team remarks & audit notes">
                 <app-step-remarks
                   [remarks]="getEntryRemarks(entry)"
                   [defaultDate]="getEntryDate(entry)"
@@ -429,9 +354,114 @@
                   (quickAdd)="onQuickAddRemarkToEntry(entry, $event)"
                   (deleteRemark)="onDeleteRemarkFromEntry(entry, $event)">
                 </app-step-remarks>
-              </div>
+              </aside>
 
-            </aside>
+            </div>
+
+            <!-- Empty entry banner when specs, attachments, and line items are ALL empty -->
+            @if (!hasSpecsOrAttachments(entry) && getTableItems(entry).length === 0 && getEntryRemarks(entry).length === 0) {
+              <div class="empty-entry-fields">
+                <div class="eef-icon-wrap" aria-hidden="true">
+                  <i class="pi pi-file-edit"></i>
+                </div>
+                <div class="eef-text">
+                  <strong>No commercial data or line items recorded yet</strong>
+                  <span>Click "Edit" above to configure commercial terms, line items, and files.</span>
+                </div>
+              </div>
+            }
+
+            <!-- Bottom Section: Full-Width Structured Line Items Table -->
+            @if (getTableItems(entry).length > 0) {
+              <section class="ec-table-full-section" aria-label="Line items and pricing table">
+                <div class="table-section-header">
+                  <div class="tsh-left">
+                    <div class="tsh-icon-wrap" aria-hidden="true">
+                      <i class="pi pi-table"></i>
+                    </div>
+                    <div class="tsh-titles">
+                      <h3 class="tsh-title">{{ formDefinition()?.tableConfig?.title || 'Structured Line Items' }}</h3>
+                      <span class="tsh-sub">Commercial specifications & line item requirements</span>
+                    </div>
+                  </div>
+                  <div class="tsh-right">
+                    <span class="tsh-count-badge">
+                      <i class="pi pi-box" aria-hidden="true"></i>
+                      <span>{{ getTableItems(entry).length }} {{ getTableItems(entry).length === 1 ? 'item' : 'items' }}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div class="modern-table-frame">
+                  <p-table
+                    [value]="getTableItems(entry)"
+                    [paginator]="getTableItems(entry).length > 8"
+                    [rows]="8"
+                    [rowsPerPageOptions]="[8, 15, 25, 50]"
+                    [showCurrentPageReport]="true"
+                    currentPageReportTemplate="Showing {first} to {last} of {totalRecords} items"
+                    styleClass="p-datatable-sm modern-items-datatable"
+                    responsiveLayout="scroll">
+                    <ng-template pTemplate="header">
+                      <tr>
+                        @for (col of tableColumns(); track col.key) {
+                          <th
+                            scope="col"
+                            [style.width]="col.width || 'auto'"
+                            [style.min-width]="col.type === 'currency' ? '150px' : (col.key === 'description' ? '220px' : 'auto')"
+                            [style.text-align]="col.key === 'sr_no' ? 'center' : (col.type === 'number' || col.type === 'currency' ? 'right' : 'left')">
+                            {{ col.label }}
+                          </th>
+                        }
+                      </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="body" let-item let-itemIdx="rowIndex">
+                      <tr class="modern-table-row">
+                        @for (col of tableColumns(); track col.key) {
+                          <td
+                            [style.text-align]="col.key === 'sr_no' ? 'center' : (col.type === 'number' || col.type === 'currency' ? 'right' : 'left')"
+                            [style.white-space]="col.type === 'currency' ? 'nowrap' : 'normal'">
+                            @if (col.key === 'sr_no') {
+                              <span class="sr-badge-pill">{{ formatCellValue(item, col, itemIdx) }}</span>
+                            } @else if (col.type === 'currency' || col.key.includes('price') || col.key.includes('amount')) {
+                              <span class="currency-cell-val">{{ formatCellValue(item, col, itemIdx) }}</span>
+                            } @else if (col.type === 'number') {
+                              <span class="qty-badge-pill">{{ formatCellValue(item, col, itemIdx) }}</span>
+                            } @else if (col.key === 'hsn_sac') {
+                              <span class="hsn-code-pill">{{ formatCellValue(item, col, itemIdx) }}</span>
+                            } @else if (col.key === 'unit') {
+                              @if (formatCellValue(item, col, itemIdx) !== '—') {
+                                <span class="unit-badge-pill">{{ formatCellValue(item, col, itemIdx) }}</span>
+                              } @else {
+                                <span class="muted-dash">—</span>
+                              }
+                            } @else {
+                              <span class="cell-desc-text" [title]="formatCellValue(item, col, itemIdx)">
+                                {{ formatCellValue(item, col, itemIdx) }}
+                              </span>
+                            }
+                          </td>
+                        }
+                      </tr>
+                    </ng-template>
+
+                    @if (calculateTableTotal(entry) !== null) {
+                      <ng-template pTemplate="footer">
+                        <tr class="table-total-row">
+                          <td [attr.colspan]="tableColumns().length - 1" class="total-label-cell">
+                            Total ({{ getTableItems(entry).length }} {{ getTableItems(entry).length === 1 ? 'item' : 'items' }})
+                          </td>
+                          <td class="total-val-cell">
+                            {{ getTableTotalFormatted(entry) }}
+                          </td>
+                        </tr>
+                      </ng-template>
+                    }
+                  </p-table>
+                </div>
+              </section>
+            }
 
           </div>
 
