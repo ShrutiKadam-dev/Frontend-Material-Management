@@ -152,41 +152,41 @@ export class CustomerDeliveryService {
   // ── 0.2 Fetch Latest Supplier Packing List for Auto-Patching ───
   getLatestSupplierPackingList(projectId: number): Observable<LatestSupplierPackingListTemplate | null> {
     return this.http
-      .get<any>(`${this.apiBaseUrl}/api/v1/supplier-packing-lists/latest?project_id=${projectId}`)
+      .get<Record<string, unknown>>(`${this.apiBaseUrl}/api/v1/supplier-packing-lists/latest?project_id=${projectId}`)
       .pipe(
-        map((res: any) => {
+        map((res: Record<string, unknown>) => {
           if (!res) return null;
-          let data = res.data !== undefined ? res.data : res;
+          let data = (res['data'] !== undefined ? res['data'] : res) as Record<string, unknown>;
           if (Array.isArray(data)) {
-            if (!data.length) return null;
-            data = data[0];
+            if (!(data as Array<Record<string, unknown>>).length) return null;
+            data = (data as Array<Record<string, unknown>>)[0];
           }
           if (data && typeof data === 'object') {
-            if (data.supplier_packing_list) data = data.supplier_packing_list;
-            else if (data.packing_list) data = data.packing_list;
+            if (data['supplier_packing_list']) data = data['supplier_packing_list'] as Record<string, unknown>;
+            else if (data['packing_list']) data = data['packing_list'] as Record<string, unknown>;
           }
           if (!data || typeof data !== 'object') return null;
 
           const totalWeight =
-            data.total_weight ??
-            data.net_weight ??
-            data.weight ??
-            data.total_net_weight ??
+            data['total_weight'] ??
+            data['net_weight'] ??
+            data['weight'] ??
+            data['total_net_weight'] ??
             '';
 
           const grossWeight =
-            data.total_gross_weight_kg ??
-            data.total_gross_weight ??
-            data.gross_weight ??
-            data.gross_weight_kg ??
+            data['total_gross_weight_kg'] ??
+            data['total_gross_weight'] ??
+            data['gross_weight'] ??
+            data['gross_weight_kg'] ??
             '';
 
-          const rawItems = Array.isArray(data.items)
-            ? data.items
-            : Array.isArray(data.packing_items)
-            ? data.packing_items
-            : Array.isArray(data.materials)
-            ? data.materials
+          const rawItems: Array<Record<string, unknown>> = Array.isArray(data['items'])
+            ? (data['items'] as Array<Record<string, unknown>>)
+            : Array.isArray(data['packing_items'])
+            ? (data['packing_items'] as Array<Record<string, unknown>>)
+            : Array.isArray(data['materials'])
+            ? (data['materials'] as Array<Record<string, unknown>>)
             : [];
 
           return {
@@ -196,25 +196,25 @@ export class CustomerDeliveryService {
             total_gross_weight_kg: grossWeight,
             gross_weight: grossWeight,
             total_gross_weight: grossWeight,
-            packing_list_no: data.packing_list_no || data.packing_no || '',
-            packing_list_date: data.packing_list_date || data.date || '',
-            packing_condition: data.packing_condition || '',
-            total_no_of_packs: data.total_no_of_packs || data.packs || 1,
-            items: rawItems.map((it: any) => ({
+            packing_list_no: (data['packing_list_no'] || data['packing_no'] || '') as string,
+            packing_list_date: (data['packing_list_date'] || data['date'] || '') as string,
+            packing_condition: (data['packing_condition'] || '') as string,
+            total_no_of_packs: (data['total_no_of_packs'] || data['packs'] || 1) as number,
+            items: rawItems.map((it: Record<string, unknown>) => ({
               material_name: String(
-                it.material_name ||
-                it.item_name ||
-                it.description ||
-                it.material_description ||
-                it.name ||
-                it.item_code ||
+                it['material_name'] ||
+                it['item_name'] ||
+                it['description'] ||
+                it['material_description'] ||
+                it['name'] ||
+                it['item_code'] ||
                 'Item'
               ).trim(),
-              hsn_code: String(it.hsn_code || it.hsn_sac || it.hsn || '').trim(),
-              quantity: Number(it.quantity ?? it.qty ?? 1) || 1,
-              weight: Number(it.weight ?? it.total_weight ?? it.unit_weight ?? 0) || 0,
-              unit_weight: Number(it.unit_weight ?? it.weight ?? 0) || 0,
-              total_weight: Number(it.total_weight ?? it.weight ?? 0) || 0,
+              hsn_code: String(it['hsn_code'] || it['hsn_sac'] || it['hsn'] || '').trim(),
+              quantity: Number(it['quantity'] ?? it['qty'] ?? 1) || 1,
+              weight: Number(it['weight'] ?? it['total_weight'] ?? it['unit_weight'] ?? 0) || 0,
+              unit_weight: Number(it['unit_weight'] ?? it['weight'] ?? 0) || 0,
+              total_weight: Number(it['total_weight'] ?? it['weight'] ?? 0) || 0,
             })),
           } as LatestSupplierPackingListTemplate;
         }),

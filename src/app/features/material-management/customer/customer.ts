@@ -12,7 +12,6 @@ import { TooltipModule } from 'primeng/tooltip';
 import { Customer as CustomerModel, CustomerCreateInput } from '../../../core/models/customer.model';
 import { CustomerService } from '../../../core/services/customer';
 import {
-  formatStructuredAddress,
   getEntityFullAddress,
   lookupCityLocation,
   parseAddressString,
@@ -24,7 +23,6 @@ import {
   extractNameAndNickname,
   formatAddressWithPocs,
   formatNameWithNickname,
-  getCleanAddress,
   PointOfContact,
 } from '../../../core/models/contact.model';
 

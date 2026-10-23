@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { of } from 'rxjs';
 import { signal } from '@angular/core';
 
-import { ProjectFormEntries } from './project-form-entries';
+import { ProjectFormEntries, EntryDisplayField } from './project-form-entries';
 import { ProjectStep } from '../../../../core/models/project-step.model';
-import { FORM_CATALOG, getFormDefinition } from '../../../../core/constants/form-catalog';
+import { FORM_CATALOG, FormTableColumn, getFormDefinition } from '../../../../core/constants/form-catalog';
 
 describe('ProjectFormEntries Component', () => {
   const pqbDef = FORM_CATALOG.find((f) => f.formCode === 'FORM_01_PQB')!;
@@ -226,7 +226,7 @@ describe('ProjectFormEntries Component', () => {
 
     const fields = comp.getDisplayFields(mockSteps[0]);
     expect(fields.length).toBeGreaterThan(0);
-    expect(fields.some((f: any) => f.label === 'PQB Title' && f.value === 'Turbine Overhaul')).toBe(true);
+    expect(fields.some((f: EntryDisplayField) => f.label === 'PQB Title' && f.value === 'Turbine Overhaul')).toBe(true);
 
     const items = comp.getTableItems(mockSteps[0]);
     expect(items).toHaveLength(1);
@@ -244,6 +244,9 @@ describe('ProjectFormEntries Component', () => {
       project_id: 5,
       step_number: 13,
       step_name: 'PAC Tender',
+      description: 'PAC Tender enquiry',
+      progress_percentage: 50,
+      completed_at: null,
       status: 'in_progress',
       form_code: 'FORM_13_PAC_TENDER',
       data: {
@@ -306,6 +309,9 @@ describe('ProjectFormEntries Component', () => {
       project_id: 5,
       step_number: 1,
       step_name: 'Query from Customer',
+      description: 'Customer inquiry',
+      progress_percentage: 0,
+      completed_at: null,
       status: 'pending',
       form_code: 'FORM_01_PQB',
       data: {},
@@ -355,7 +361,7 @@ describe('ProjectFormEntries Component', () => {
     expect(comp.formCategory()).toBe('Pre-Bidding & Tenders');
     const cols = comp.tableColumns();
     expect(cols.length).toBeGreaterThan(0);
-    expect(cols.some((c: any) => c.key === 'description')).toBe(true);
+    expect(cols.some((c: FormTableColumn) => c.key === 'description')).toBe(true);
   });
 
   it('should format cell values properly for table rendering', () => {

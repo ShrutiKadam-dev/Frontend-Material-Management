@@ -11,8 +11,6 @@ import { DecimalPipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { TableModule } from 'primeng/table';
-import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
 
 import { ProjectStepService } from '../../../../core/services/project-step';
@@ -104,8 +102,6 @@ export const PIPELINE_PHASES: PhaseInfo[] = [
     ButtonModule,
     DialogModule,
     TooltipModule,
-    TableModule,
-    InputTextModule,
     AppDatePipe,
     DecimalPipe,
     StepFormDialog,

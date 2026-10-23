@@ -121,7 +121,7 @@ describe('remark.utils', () => {
     });
 
     it('should filter out empty or whitespace-only items', () => {
-      const items: any[] = [
+      const items: Parameters<typeof serializeStepRemarks>[0] = [
         { text: 'Valid', user: 'string string', user_id: 1 },
         { text: '   ' },
         '',

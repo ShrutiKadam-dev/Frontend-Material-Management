@@ -143,6 +143,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       project_id: 12,
       step_number: 1,
       step_name: 'National Pre-Qualification Bid (PQB)',
+      description: 'PQB step description',
       form_code: 'FORM_01_PQB',
       status: 'in_progress',
       progress_percentage: 50,
@@ -192,9 +193,11 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       project_id: 12,
       step_number: 2,
       step_name: 'RFQ Step',
+      description: 'RFQ description',
       status: 'in_progress',
       progress_percentage: 20,
       completed_at: null,
+      data: {},
     };
 
     comp.formApiService = mockFormApiService;
@@ -231,12 +234,12 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
 
   it('should support timeline remarks management (add, remove, initials, and merging)', () => {
     const comp = Object.create(StepFormDialog.prototype);
-    let currentRemarks: any[] = [];
+    let currentRemarks: Array<Record<string, unknown>> = [];
     comp.stepRemarks = {
-      update: vi.fn((fn: (arr: any[]) => any[]) => {
+      update: vi.fn((fn: (arr: Array<Record<string, unknown>>) => Array<Record<string, unknown>>) => {
         currentRemarks = fn(currentRemarks);
       }),
-      set: vi.fn((val: any[]) => {
+      set: vi.fn((val: Array<Record<string, unknown>>) => {
         currentRemarks = val;
       }),
       mockGet: () => currentRemarks,
@@ -253,7 +256,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
     comp.addRemark();
     expect(comp.stepRemarks.update).toHaveBeenCalled();
     expect(currentRemarks.length).toBe(1);
-    expect(currentRemarks[0].remark).toBe('Audit check passed by QA');
+    expect(currentRemarks[0]['remark']).toBe('Audit check passed by QA');
     expect(comp.newRemarkInput.set).toHaveBeenCalledWith('');
 
     // Test getRemarkInitials
@@ -283,12 +286,12 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
     expect(comp.formatFileSize(1048576)).toBe('1 MB');
 
     // Test file management
-    let filesState: any[] = [];
+    let filesState: File[] = [];
     comp.uploadedFiles = Object.assign(() => filesState, {
-      update: vi.fn((fn: (arr: any[]) => any[]) => {
+      update: vi.fn((fn: (arr: File[]) => File[]) => {
         filesState = fn(filesState);
       }),
-      set: vi.fn((val: any[]) => {
+      set: vi.fn((val: File[]) => {
         filesState = val;
       }),
     });
@@ -407,6 +410,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
           { key: 'from_location', label: 'From Location', type: 'multilocation' },
           { key: 'to_location', label: 'To Location', type: 'multilocation' },
         ],
+        uploads: [],
       };
 
       (comp as any).populateForm(

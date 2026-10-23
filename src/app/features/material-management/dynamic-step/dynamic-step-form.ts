@@ -6,6 +6,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   FormArray,
@@ -15,16 +16,14 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { DecimalPipe } from '@angular/common';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
-import { TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
-import { DialogModule } from 'primeng/dialog';
 
 import { ProjectService } from '../../../core/services/project';
 import { ProjectStepService } from '../../../core/services/project-step';
@@ -36,7 +35,6 @@ import { Supplier } from '../../../core/models/supplier.model';
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../../../core/models/project-step.model';
 import {
   FORM_CATALOG,
-  FormCategory,
   FormDefinition,
   FormFieldDefinition,
   getFormDefinition,
@@ -49,16 +47,15 @@ import { StepRemarksComponent } from '../../../shared/components/step-remarks/st
   selector: 'app-dynamic-step-form',
   imports: [
     ReactiveFormsModule,
+    DecimalPipe,
     ButtonModule,
+    DialogModule,
     InputTextModule,
     TextareaModule,
     DatePickerModule,
     SelectModule,
-    TableModule,
     TooltipModule,
-    DialogModule,
     StepRemarksComponent,
-    DecimalPipe,
   ],
   templateUrl: './dynamic-step-form.html',
   styleUrl: './dynamic-step-form.scss',
@@ -118,7 +115,7 @@ export class DynamicStepForm implements OnInit {
   protected readonly filteredCatalog = computed(() => {
     const q = this.catalogSearch().toLowerCase().trim();
     const cat = this.selectedCategory();
-    return this.allCatalogForms.filter((f) => {
+    return this.allCatalogForms.filter((f: FormDefinition) => {
       const matchCat = cat === 'All' || f.category === cat;
       const matchQuery =
         !q ||
@@ -202,24 +199,21 @@ export class DynamicStepForm implements OnInit {
       resolvedDef = getFormDefinition(stepIdentifier);
     }
 
-    // Default to first form in catalog if unresolved
-    if (!resolvedDef) {
-      resolvedDef = FORM_CATALOG[0];
-    }
+    const finalDef: FormDefinition = resolvedDef ?? FORM_CATALOG[0]!;
 
     if (!resolvedStep) {
       resolvedStep = {
         id: num || Date.now(),
         project_id: this.projectId(),
         step_number: steps.length + 1,
-        step_name: resolvedDef.name,
-        description: resolvedDef.description,
+        step_name: finalDef.name,
+        description: finalDef.description,
         status: 'in_progress',
         progress_percentage: 0,
         completed_at: null,
-        form_code: resolvedDef.formCode,
-        category: resolvedDef.category,
-        phase: resolvedDef.phaseId,
+        form_code: finalDef.formCode,
+        category: finalDef.category,
+        phase: finalDef.phaseId,
         data: {},
         remarks: [],
       };
@@ -227,8 +221,8 @@ export class DynamicStepForm implements OnInit {
 
     this.currentStep.set(resolvedStep);
     this.stepRemarks.set(resolvedStep.remarks || []);
-    this.formDefinition.set(resolvedDef);
-    this.buildDynamicForm(resolvedDef, resolvedStep.data ?? {});
+    this.formDefinition.set(finalDef);
+    this.buildDynamicForm(finalDef, resolvedStep.data ?? {});
   }
 
   protected onAddRemark(text: string): void {

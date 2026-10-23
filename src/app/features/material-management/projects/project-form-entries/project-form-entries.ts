@@ -3,7 +3,6 @@ import {
   Component,
   computed,
   DestroyRef,
-  effect,
   inject,
   OnInit,
   signal,
@@ -11,10 +10,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { catchError, finalize, forkJoin, Observable, of } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
@@ -53,10 +50,7 @@ export interface EntryDisplayField {
   selector: 'app-project-form-entries',
   imports: [
     CommonModule,
-    FormsModule,
-    ReactiveFormsModule,
     ButtonModule,
-    InputTextModule,
     TableModule,
     TooltipModule,
     DialogModule,

@@ -21,13 +21,13 @@ import { AppDatePipe } from '../../../core/pipes/app-date.pipe';
 import { resolveTimeGreeting, resolveUserDisplayName } from '../../../core/utils/user.utils';
 
 @Component({
-  selector: 'app-dashbord',
+  selector: 'app-dashboard',
   imports: [RouterLink, ButtonModule, TooltipModule, DatePipe, AppDatePipe, DecimalPipe],
-  templateUrl: './dashbord.html',
-  styleUrl: './dashbord.scss',
+  templateUrl: './dashboard.html',
+  styleUrl: './dashboard.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Dashbord implements OnInit {
+export class Dashboard implements OnInit {
   private readonly dashboardService = inject(DashboardService);
   private readonly projectService = inject(ProjectService);
   private readonly authService = inject(AuthService);

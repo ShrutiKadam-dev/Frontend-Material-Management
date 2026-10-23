@@ -4473,27 +4473,4 @@
     font-variant-numeric: tabular-nums;
     font-weight: 850;
   }
-}
-
-.existing-att-block {
-  border-top: 1px dashed var(--color-border, #e7e4de);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 14px;
-  padding-top: 12px;
-
-  .existing-att-title {
-    align-items: center;
-    color: var(--color-heading, #1c1b1a);
-    display: flex;
-    font-size: 0.8rem;
-    font-weight: 750;
-    gap: 6px;
-    margin: 0;
-
-    .pi {
-      color: var(--color-primary, #c0522f);
-    }
-  }
-}
+}

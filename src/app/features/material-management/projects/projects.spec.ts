@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { FormBuilder } from '@angular/forms';
 import { of } from 'rxjs';
 import { Projects } from './projects';
+import { Project, ProjectCreateInput, ProjectUpdateInput } from '../../../core/models/project.model';
 import { signal } from '@angular/core';
 
 describe('Projects', () => {
@@ -22,8 +23,8 @@ describe('Projects', () => {
         created_at: '2026-08-27T11:00:00Z',
         updated_at: '2026-08-27T11:00:00Z',
       }),
-    createProject: (p: any) => of({ id: 1, ...p }),
-    updateProject: (id: number, p: any) => of({ id, ...p }),
+    createProject: (p: ProjectCreateInput) => of({ id: 1, ...p } as Project),
+    updateProject: (id: number, p: ProjectUpdateInput) => of({ id, ...p } as Project),
     deleteProject: (id: number) => of(undefined),
   };
 
@@ -88,17 +89,17 @@ describe('Projects', () => {
 
   it('should patch nickname and total_margin when opening edit dialog', () => {
     const comp = createComponent();
-    comp.openEditDialog({ id: 1, project_title: 'Test', total_margin: 15000 } as any);
+    comp.openEditDialog({ id: 1, project_title: 'Test', total_margin: 15000 } as unknown as Project);
     expect(comp.projectForm.get('nickname')?.value).toBe('DEMO-NICK');
     expect(comp.projectForm.get('total_margin')?.value).toBe(15000);
   });
 
   it('should include nickname and total_margin in create payload on submit', () => {
     const comp = createComponent();
-    let capturedPayload: any = null;
-    vi.spyOn(mockProjectService, 'createProject').mockImplementation((payload: any) => {
-      capturedPayload = payload;
-      return of({ id: 99, ...payload });
+    let capturedPayload: (ProjectCreateInput & Record<string, unknown>) | null = null;
+    vi.spyOn(mockProjectService, 'createProject').mockImplementation((payload: ProjectCreateInput) => {
+      capturedPayload = payload as ProjectCreateInput & Record<string, unknown>;
+      return of({ id: 99, ...payload } as Project);
     });
 
     comp.openAddDialog();
@@ -113,7 +114,7 @@ describe('Projects', () => {
 
     comp.onSubmit();
     expect(capturedPayload).toBeTruthy();
-    expect(capturedPayload.nickname).toBe('COOL-SYS');
-    expect(capturedPayload.total_margin).toBe(25000);
+    expect(capturedPayload!.nickname).toBe('COOL-SYS');
+    expect(capturedPayload!.total_margin).toBe(25000);
   });
 });

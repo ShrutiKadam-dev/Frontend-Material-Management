@@ -6,13 +6,14 @@ import { MessageService } from 'primeng/api';
 import { of } from 'rxjs';
 
 import { CustomerService } from '../../../core/services/customer';
+import { Customer as CustomerModel, CustomerCreateInput } from '../../../core/models/customer.model';
 import { Customer } from './customer';
 
 describe('Customer', () => {
   let component: Customer;
   let fixture: ComponentFixture<Customer>;
 
-  let lastPayload: any = null;
+  let lastPayload: (CustomerCreateInput & Record<string, unknown>) | null = null;
 
   const mockCustomerService = {
     getCustomers: () => of([]),
@@ -26,8 +27,8 @@ describe('Customer', () => {
         created_at: '2026-08-27T11:00:00Z',
         updated_at: '2026-08-27T11:00:00Z',
       }),
-    createCustomer: (customer: any) => {
-      lastPayload = customer;
+    createCustomer: (customer: CustomerCreateInput) => {
+      lastPayload = customer as CustomerCreateInput & Record<string, unknown>;
       return of({
         id: 1,
         ...customer,
@@ -35,8 +36,8 @@ describe('Customer', () => {
         updated_at: '2026-08-27T11:00:00Z',
       });
     },
-    updateCustomer: (id: number, customer: any) => {
-      lastPayload = customer;
+    updateCustomer: (id: number, customer: CustomerCreateInput) => {
+      lastPayload = customer as CustomerCreateInput & Record<string, unknown>;
       return of({
         id,
         ...customer,
@@ -121,24 +122,24 @@ describe('Customer', () => {
     (component as any).onSubmit();
 
     expect(lastPayload).toBeTruthy();
-    expect(lastPayload.name).toBe('Tata Motors');
-    expect(lastPayload.nickname).toBe('TML');
-    expect(lastPayload.street).toBe('Pimpri Plant Gate 2');
-    expect(lastPayload.city).toBe('Pune');
-    expect(lastPayload.state).toBe('Maharashtra');
-    expect(lastPayload.pincode).toBe('411018');
-    expect(lastPayload.country).toBe('India');
-    expect(lastPayload.address).toBeUndefined();
-    expect(lastPayload.email).toBeUndefined();
-    expect(lastPayload.contact_number).toBeUndefined();
-    expect(lastPayload.pocs.length).toBe(1);
-    expect(lastPayload.pocs[0].name).toBe('Rajesh Sharma');
-    expect(lastPayload.pocs[0].email).toBe('rajesh@tatamotors.com');
-    expect(lastPayload.pocs[0].contact_number).toBe('9876543210');
+    expect(lastPayload!.name).toBe('Tata Motors');
+    expect(lastPayload!.nickname).toBe('TML');
+    expect(lastPayload!.street).toBe('Pimpri Plant Gate 2');
+    expect(lastPayload!.city).toBe('Pune');
+    expect(lastPayload!.state).toBe('Maharashtra');
+    expect(lastPayload!.pincode).toBe('411018');
+    expect(lastPayload!.country).toBe('India');
+    expect(lastPayload!.address).toBeUndefined();
+    expect(lastPayload!.email).toBeUndefined();
+    expect(lastPayload!.contact_number).toBeUndefined();
+    expect(lastPayload!.pocs!.length).toBe(1);
+    expect(lastPayload!.pocs![0].name).toBe('Rajesh Sharma');
+    expect(lastPayload!.pocs![0].email).toBe('rajesh@tatamotors.com');
+    expect(lastPayload!.pocs![0].contact_number).toBe('9876543210');
   });
 
   it('should return formatted address for customer with structured address fields', () => {
-    const customer: any = {
+    const customer = {
       id: 5,
       name: 'Test Customer',
       street: 'Pimpri Plant Gate 2',
@@ -146,18 +147,18 @@ describe('Customer', () => {
       state: 'Maharashtra',
       pincode: '411018',
       country: 'India',
-    };
-    expect((component as any).getCleanAddr(customer)).toBe(
+    } as unknown as CustomerModel;
+    expect((component as unknown as { getCleanAddr: (c: CustomerModel) => string }).getCleanAddr(customer)).toBe(
       'Pimpri Plant Gate 2, Pune, Maharashtra - 411018, India',
     );
   });
 
   it('should fallback to legacy address property when structured fields are not present', () => {
-    const customer: any = {
+    const customer = {
       id: 6,
       name: 'Legacy Customer',
       address: 'Simple Road, City',
-    };
-    expect((component as any).getCleanAddr(customer)).toBe('Simple Road, City');
+    } as unknown as CustomerModel;
+    expect((component as unknown as { getCleanAddr: (c: CustomerModel) => string }).getCleanAddr(customer)).toBe('Simple Road, City');
   });
 });

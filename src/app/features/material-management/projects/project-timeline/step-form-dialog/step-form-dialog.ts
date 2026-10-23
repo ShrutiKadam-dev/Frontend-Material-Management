@@ -24,7 +24,6 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
-import { TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 
@@ -34,10 +33,10 @@ import { catchError } from 'rxjs/operators';
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../../../../../core/models/project-step.model';
 import { FormApiService } from '../../../../../core/services/form-api';
 import {
+  FORM_CATALOG,
   FormDefinition,
   FormFieldDefinition,
   getFormDefinition,
-  FORM_CATALOG,
 } from '../../../../../core/constants/form-catalog';
 import { SelectOption } from '../../../../../core/constants/dropdown-options.constant';
 import { getCurrentUserFromStorage } from '../../../../../core/utils/remark.utils';
@@ -53,10 +52,9 @@ import { getCurrentUserFromStorage } from '../../../../../core/utils/remark.util
     TextareaModule,
     DatePickerModule,
     SelectModule,
-    TableModule,
     TooltipModule,
-    DecimalPipe,
     DatePipe,
+    DecimalPipe,
   ],
   templateUrl: './step-form-dialog.html',
   styleUrl: './step-form-dialog.scss',

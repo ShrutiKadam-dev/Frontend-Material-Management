@@ -31,42 +31,43 @@ export class ProformaInvoiceService {
   getLatest(projectId?: number): Observable<LatestProformaInvoice | null> {
     const query = projectId ? `?project_id=${projectId}` : '';
     return this.http
-      .get<any>(
+      .get<Record<string, unknown>>(
         `${this.apiBaseUrl}/api/v1/proforma-invoices/latest${query}`,
       )
       .pipe(
-        map((res: any) => {
+        map((res: Record<string, unknown>) => {
           if (!res) return null;
-          let data = res.data !== undefined ? res.data : res;
+          let data = (res['data'] !== undefined ? res['data'] : res) as Record<string, unknown>;
           if (Array.isArray(data)) {
-            data = data[0];
+            data = (data as Array<Record<string, unknown>>)[0];
           }
           if (data && typeof data === 'object') {
-            if (data.proforma_invoice) data = data.proforma_invoice;
-            else if (data.proforma) data = data.proforma;
-            else if (data.invoice) data = data.invoice;
+            if (data['proforma_invoice']) data = data['proforma_invoice'] as Record<string, unknown>;
+            else if (data['proforma']) data = data['proforma'] as Record<string, unknown>;
+            else if (data['invoice']) data = data['invoice'] as Record<string, unknown>;
           }
           if (!data || typeof data !== 'object') return null;
 
-          const rawTotal = data.total_amount ?? data.amount ?? data.total_value ?? data.total_net_amount;
+          const rawTotal = data['total_amount'] ?? data['amount'] ?? data['total_value'] ?? data['total_net_amount'];
           const totalAmount =
             rawTotal != null && rawTotal !== '' && !isNaN(Number(rawTotal))
               ? Number(rawTotal)
-              : rawTotal;
+              : (rawTotal as number | string | undefined);
 
-          const deliveryTerms = data.delivery_terms || data.shipping_terms || data.incoterms || '';
-          const shippingTerms = data.shipping_terms || data.delivery_terms || data.incoterms || '';
-          const incoterms = data.incoterms || data.delivery_terms || data.shipping_terms || '';
-          const paymentTerms = data.payment_terms || '';
-          const warrantyPeriod = data.warranty_period || data.warranty || '';
-          const deliveryPeriod = data.delivery_period || data.delivery_terms || data.delivery_time || '';
+          const deliveryTerms = (data['delivery_terms'] || data['shipping_terms'] || data['incoterms'] || '') as string;
+          const shippingTerms = (data['shipping_terms'] || data['delivery_terms'] || data['incoterms'] || '') as string;
+          const incoterms = (data['incoterms'] || data['delivery_terms'] || data['shipping_terms'] || '') as string;
+          const paymentTerms = (data['payment_terms'] || '') as string;
+          const warrantyPeriod = (data['warranty_period'] || data['warranty'] || '') as string;
+          const deliveryPeriod = (data['delivery_period'] || data['delivery_terms'] || data['delivery_time'] || '') as string;
 
+          const rawItems = Array.isArray(data['items']) ? (data['items'] as Array<Record<string, unknown>>) : [];
           return {
-            id: data.id,
-            project_id: data.project_id,
-            proforma_invoice_no: data.proforma_invoice_no || data.invoice_no,
-            invoice_no: data.invoice_no || data.proforma_invoice_no,
-            proforma_invoice_date: data.proforma_invoice_date || data.date,
+            id: data['id'] as number | undefined,
+            project_id: data['project_id'] as number | undefined,
+            proforma_invoice_no: (data['proforma_invoice_no'] || data['invoice_no']) as string | undefined,
+            invoice_no: (data['invoice_no'] || data['proforma_invoice_no']) as string | undefined,
+            proforma_invoice_date: (data['proforma_invoice_date'] || data['date']) as string | undefined,
             delivery_period: deliveryPeriod,
             delivery_terms: deliveryTerms,
             shipping_terms: shippingTerms,
@@ -74,34 +75,32 @@ export class ProformaInvoiceService {
             payment_terms: paymentTerms,
             warranty_period: warrantyPeriod,
             total_amount: totalAmount,
-            currency: data.currency || data.currency_unit || '',
-            currency_unit: data.currency_unit || data.currency || '',
-            items: Array.isArray(data.items)
-              ? data.items.map((it: any) => ({
-                  id: it.id,
-                  material_name: it.material_name || it.item_name || it.description || 'Material Item',
-                  description: it.description || it.material_name || it.item_name || '',
-                  hsn_code: it.hsn_code || it.hsn_sac || it.hsn || '',
-                  quantity:
-                    it.quantity != null
-                      ? isNaN(Number(it.quantity))
-                        ? it.quantity
-                        : Number(it.quantity)
-                      : 1,
-                  unit_price:
-                    it.unit_price != null
-                      ? isNaN(Number(it.unit_price))
-                        ? it.unit_price
-                        : Number(it.unit_price)
-                      : 0,
-                  net_amount:
-                    it.net_amount != null
-                      ? isNaN(Number(it.net_amount))
-                        ? it.net_amount
-                        : Number(it.net_amount)
-                      : (Number(it.quantity) || 1) * (Number(it.unit_price) || 0),
-                }))
-              : [],
+            currency: (data['currency'] || data['currency_unit'] || '') as string,
+            currency_unit: (data['currency_unit'] || data['currency'] || '') as string,
+            items: rawItems.map((it: Record<string, unknown>) => ({
+              id: it['id'] as number | undefined,
+              material_name: (it['material_name'] || it['item_name'] || it['description'] || 'Material Item') as string,
+              description: (it['description'] || it['material_name'] || it['item_name'] || '') as string,
+              hsn_code: (it['hsn_code'] || it['hsn_sac'] || it['hsn'] || '') as string,
+              quantity:
+                it['quantity'] != null
+                  ? isNaN(Number(it['quantity']))
+                    ? (it['quantity'] as string | number)
+                    : Number(it['quantity'])
+                  : 1,
+              unit_price:
+                it['unit_price'] != null
+                  ? isNaN(Number(it['unit_price']))
+                    ? (it['unit_price'] as string | number)
+                    : Number(it['unit_price'])
+                  : 0,
+              net_amount:
+                it['net_amount'] != null
+                  ? isNaN(Number(it['net_amount']))
+                    ? (it['net_amount'] as string | number)
+                    : Number(it['net_amount'])
+                  : (Number(it['quantity']) || 1) * (Number(it['unit_price']) || 0),
+            })),
           };
         }),
         catchError((err) => {

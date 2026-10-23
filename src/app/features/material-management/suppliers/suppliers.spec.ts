@@ -6,13 +6,14 @@ import { MessageService } from 'primeng/api';
 import { of } from 'rxjs';
 
 import { SupplierService } from '../../../core/services/supplier';
+import { Supplier as SupplierModel, SupplierCreateInput } from '../../../core/models/supplier.model';
 import { Suppliers } from './suppliers';
 
 describe('Suppliers', () => {
   let component: Suppliers;
   let fixture: ComponentFixture<Suppliers>;
 
-  let lastPayload: any = null;
+  let lastPayload: (SupplierCreateInput & Record<string, unknown>) | null = null;
 
   const mockSupplierService = {
     getSuppliers: () => of([]),
@@ -26,8 +27,8 @@ describe('Suppliers', () => {
         created_at: '2026-08-27T11:00:00Z',
         updated_at: '2026-08-27T11:00:00Z',
       }),
-    createSupplier: (supplier: any) => {
-      lastPayload = supplier;
+    createSupplier: (supplier: SupplierCreateInput) => {
+      lastPayload = supplier as SupplierCreateInput & Record<string, unknown>;
       return of({
         id: 1,
         ...supplier,
@@ -35,8 +36,8 @@ describe('Suppliers', () => {
         updated_at: '2026-08-27T11:00:00Z',
       });
     },
-    updateSupplier: (id: number, supplier: any) => {
-      lastPayload = supplier;
+    updateSupplier: (id: number, supplier: SupplierCreateInput) => {
+      lastPayload = supplier as SupplierCreateInput & Record<string, unknown>;
       return of({
         id,
         ...supplier,
@@ -121,24 +122,24 @@ describe('Suppliers', () => {
     (component as any).onSubmit();
 
     expect(lastPayload).toBeTruthy();
-    expect(lastPayload.name).toBe('Pasaban S.A.');
-    expect(lastPayload.nickname).toBe('PAS');
-    expect(lastPayload.street).toBe('Tolosa Factory Road');
-    expect(lastPayload.city).toBe('Mumbai');
-    expect(lastPayload.state).toBe('Maharashtra');
-    expect(lastPayload.pincode).toBe('400001');
-    expect(lastPayload.country).toBe('India');
-    expect(lastPayload.address).toBeUndefined();
-    expect(lastPayload.email).toBeUndefined();
-    expect(lastPayload.contact_number).toBeUndefined();
-    expect(lastPayload.pocs.length).toBe(1);
-    expect(lastPayload.pocs[0].name).toBe('Carlos Ruiz');
-    expect(lastPayload.pocs[0].email).toBe('carlos@pasaban.com');
-    expect(lastPayload.pocs[0].contact_number).toBe('9876543210');
+    expect(lastPayload!.name).toBe('Pasaban S.A.');
+    expect(lastPayload!.nickname).toBe('PAS');
+    expect(lastPayload!.street).toBe('Tolosa Factory Road');
+    expect(lastPayload!.city).toBe('Mumbai');
+    expect(lastPayload!.state).toBe('Maharashtra');
+    expect(lastPayload!.pincode).toBe('400001');
+    expect(lastPayload!.country).toBe('India');
+    expect(lastPayload!.address).toBeUndefined();
+    expect(lastPayload!.email).toBeUndefined();
+    expect(lastPayload!.contact_number).toBeUndefined();
+    expect(lastPayload!.pocs!.length).toBe(1);
+    expect(lastPayload!.pocs![0].name).toBe('Carlos Ruiz');
+    expect(lastPayload!.pocs![0].email).toBe('carlos@pasaban.com');
+    expect(lastPayload!.pocs![0].contact_number).toBe('9876543210');
   });
 
   it('should return formatted address for supplier with structured address fields', () => {
-    const supplier: any = {
+    const supplier = {
       id: 5,
       name: 'Test Supplier',
       street: 'Tolosa Factory Road',
@@ -146,18 +147,18 @@ describe('Suppliers', () => {
       state: 'Guipuzcoa',
       pincode: '20400',
       country: 'Spain',
-    };
-    expect((component as any).getCleanAddr(supplier)).toBe(
+    } as unknown as SupplierModel;
+    expect((component as unknown as { getCleanAddr: (s: SupplierModel) => string }).getCleanAddr(supplier)).toBe(
       'Tolosa Factory Road, Tolosa, Guipuzcoa - 20400, Spain',
     );
   });
 
   it('should fallback to legacy address property when structured fields are not present', () => {
-    const supplier: any = {
+    const supplier = {
       id: 6,
       name: 'Legacy Supplier',
       address: 'Simple Road, City',
-    };
-    expect((component as any).getCleanAddr(supplier)).toBe('Simple Road, City');
+    } as unknown as SupplierModel;
+    expect((component as unknown as { getCleanAddr: (s: SupplierModel) => string }).getCleanAddr(supplier)).toBe('Simple Road, City');
   });
 });

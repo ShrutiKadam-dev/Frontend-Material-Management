@@ -2,18 +2,16 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { vi } from 'vitest';
-
 import { AuthService } from '../../../core/services/auth';
-import { Dashbord } from './dashbord';
+import { Dashboard } from './dashboard';
 
-describe('Dashbord', () => {
-  let component: Dashbord;
-  let fixture: ComponentFixture<Dashbord>;
+describe('Dashboard', () => {
+  let component: Dashboard;
+  let fixture: ComponentFixture<Dashboard>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Dashbord],
+      imports: [Dashboard],
       providers: [
         provideRouter([]),
         provideHttpClient(),
@@ -21,7 +19,7 @@ describe('Dashbord', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(Dashbord);
+    fixture = TestBed.createComponent(Dashboard);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

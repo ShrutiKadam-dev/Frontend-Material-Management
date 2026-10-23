@@ -35,25 +35,25 @@ export class PurchaseOrderService {
         `${this.apiBaseUrl}/api/v1/bid-submissions/latest${query}`,
       )
       .pipe(
-        map((res: any) => {
+        map((res: unknown) => {
           if (!res) return null;
-          const data = res.data || res;
+          const resObj = res as Record<string, unknown>;
+          const data = (resObj['data'] || resObj) as Record<string, unknown>;
+          const rawItems = Array.isArray(data['items']) ? (data['items'] as Array<Record<string, unknown>>) : [];
           return {
-            gst_rate: data.gst_rate,
-            delivery_term: data.delivery_term || data.delivery_terms,
-            delivery_terms: data.delivery_term || data.delivery_terms,
-            payment_terms: data.payment_terms,
-            warranty_period: data.warranty_period,
-            items: Array.isArray(data.items)
-              ? data.items.map((it: any) => ({
-                description: it.description || it.material_name || '',
-                material_name: it.material_name || it.description || '',
-                quantity: it.quantity || 0,
-                unit_price: it.unit_price || 0,
-                hsn_code: it.hsn_code || it.hsn_sac || '',
-                hsn_sac: it.hsn_sac || it.hsn_code || '',
-              }))
-              : [],
+            gst_rate: data['gst_rate'] as number | undefined,
+            delivery_term: (data['delivery_term'] || data['delivery_terms']) as string | undefined,
+            delivery_terms: (data['delivery_term'] || data['delivery_terms']) as string | undefined,
+            payment_terms: data['payment_terms'] as string | undefined,
+            warranty_period: data['warranty_period'] as string | undefined,
+            items: rawItems.map((it: Record<string, unknown>) => ({
+              description: String(it['description'] || it['material_name'] || ''),
+              material_name: String(it['material_name'] || it['description'] || ''),
+              quantity: Number(it['quantity']) || 0,
+              unit_price: Number(it['unit_price']) || 0,
+              hsn_code: String(it['hsn_code'] || it['hsn_sac'] || ''),
+              hsn_sac: String(it['hsn_sac'] || it['hsn_code'] || ''),
+            })),
           };
         }),
         catchError(() => of(null)),

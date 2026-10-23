@@ -7,11 +7,11 @@ import { AiAssistantService } from './ai-assistant.service';
 import { AiQueryResponse, ChatMessage } from '../models/ai-assistant.models';
 
 describe('AiAssistantService', () => {
-  function createTestService(mockHttp: any) {
-    const service: any = Object.create(AiAssistantService.prototype);
-    service.http = mockHttp;
-    service.apiBaseUrl = 'http://localhost:5000';
-    service.messages = signal<ChatMessage[]>([
+  function createTestService(mockHttp: unknown) {
+    const service = Object.create(AiAssistantService.prototype) as Record<string, unknown>;
+    service['http'] = mockHttp;
+    service['apiBaseUrl'] = 'http://localhost:5000';
+    service['messages'] = signal<ChatMessage[]>([
       {
         id: 'greeting-msg',
         role: 'assistant',
@@ -19,13 +19,13 @@ describe('AiAssistantService', () => {
         timestamp: new Date(),
       },
     ]);
-    service.loading = signal<boolean>(false);
-    service.error = signal<string | null>(null);
-    service.schemaTables = signal([]);
-    service.suggestedPrompts = [
+    service['loading'] = signal<boolean>(false);
+    service['error'] = signal<string | null>(null);
+    service['schemaTables'] = signal([]);
+    service['suggestedPrompts'] = [
       { label: 'Top 10 Customers', query: 'Show top 10 customers', category: 'customers', icon: 'pi pi-users' },
     ];
-    return service as AiAssistantService;
+    return service as unknown as AiAssistantService;
   }
 
   it('should initialize with greeting message and inactive loading', () => {

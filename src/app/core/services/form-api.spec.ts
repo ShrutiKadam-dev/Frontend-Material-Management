@@ -146,7 +146,7 @@ describe('FormApiService', () => {
 
     expect(mockHttp.get).toHaveBeenCalledWith('http://localhost:5000/api/v1/quotation-requests/42');
     expect(step.id).toBe(42);
-    expect(step.data['supplier_name']).toBe('Acme Steel');
+    expect(step.data?.['supplier_name']).toBe('Acme Steel');
   });
 
   it('createEntry should send FormData with JSON payload to dedicated endpoint', async () => {
