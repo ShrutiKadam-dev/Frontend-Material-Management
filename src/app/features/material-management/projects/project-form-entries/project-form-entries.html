@@ -2,19 +2,22 @@
 
   <!-- ── 1. Page Header Bar ───────────────────────────────────────────── -->
   <header class="page-header app-panel">
-    <div class="header-left">
-      <button
-        type="button"
-        class="modern-back-btn"
-        (click)="goBackToTimeline()"
-        pTooltip="Back to Pipeline Steps"
-        tooltipPosition="bottom"
-        aria-label="Back to project timeline">
-        <i class="pi pi-arrow-left" aria-hidden="true"></i>
-        <span>Pipeline</span>
-      </button>
+    <!-- Top Navigation & Breadcrumbs Row -->
+    <div class="header-top-nav">
+      <div class="top-nav-left">
+        <button
+          type="button"
+          class="modern-back-btn"
+          (click)="goBackToTimeline()"
+          pTooltip="Back to Pipeline Steps"
+          tooltipPosition="bottom"
+          aria-label="Back to project timeline">
+          <i class="pi pi-arrow-left" aria-hidden="true"></i>
+          <span>Pipeline</span>
+        </button>
 
-      <div class="header-title-group">
+        <span class="top-nav-sep" aria-hidden="true">/</span>
+
         <nav class="eyebrow-breadcrumbs" aria-label="Breadcrumbs">
           <button type="button" class="crumb-link" (click)="goBackToTimeline()">Project Management</button>
           <span class="crumb-sep" aria-hidden="true">/</span>
@@ -22,103 +25,111 @@
           <span class="crumb-sep" aria-hidden="true">/</span>
           <span class="crumb-category">{{ formCategory() }}</span>
         </nav>
-
-        <div class="header-title-row">
-          <div class="title-icon-badge" aria-hidden="true">
-            <i [class]="formDefinition()?.icon || 'pi pi-folder-open'"></i>
-          </div>
-          <h1 id="form-entries-page-title">
-            {{ formDefinition()?.name || 'Form Entries' }}
-          </h1>
-          <span class="entry-count-chip">
-            {{ entries().length }} {{ entries().length === 1 ? 'entry' : 'entries' }}
-          </span>
-        </div>
-
-        <div class="header-metadata-line">
-          <span class="meta-item meta-code">
-            <i class="pi pi-hashtag" aria-hidden="true"></i>
-            <span>{{ projectCode() }}</span>
-          </span>
-          @if (project()?.project_title) {
-            <span class="meta-dot" aria-hidden="true">·</span>
-            <span class="meta-item meta-title" [title]="project()?.project_title">
-              {{ project()?.project_title }}
-            </span>
-          }
-          @if (customer(); as c) {
-            <span class="meta-dot" aria-hidden="true">·</span>
-            <span class="meta-item" [title]="'Customer: ' + c.name">
-              <i class="pi pi-building" aria-hidden="true"></i>
-              <span>{{ c.name }}</span>
-            </span>
-          } @else if (project()?.customer_name) {
-            <span class="meta-dot" aria-hidden="true">·</span>
-            <span class="meta-item" [title]="'Customer: ' + project()?.customer_name">
-              <i class="pi pi-building" aria-hidden="true"></i>
-              <span>{{ project()?.customer_name }}</span>
-            </span>
-          }
-          @if (supplier(); as s) {
-            <span class="meta-dot" aria-hidden="true">·</span>
-            <span class="meta-item" [title]="'Supplier: ' + s.name">
-              <i class="pi pi-truck" aria-hidden="true"></i>
-              <span>{{ s.name }}</span>
-            </span>
-          } @else if (project()?.supplier_name) {
-            <span class="meta-dot" aria-hidden="true">·</span>
-            <span class="meta-item" [title]="'Supplier: ' + project()?.supplier_name">
-              <i class="pi pi-truck" aria-hidden="true"></i>
-              <span>{{ project()?.supplier_name }}</span>
-            </span>
-          }
-        </div>
       </div>
     </div>
 
-    <div class="header-actions">
-      <!-- Search Input within Header -->
-      <div class="header-search-wrap">
-        <i class="pi pi-search search-ico" aria-hidden="true"></i>
-        <input
-          type="text"
-          class="header-search-input"
-          [value]="searchQuery()"
-          (input)="onSearchInput($event)"
-          [placeholder]="'Filter ' + (formDefinition()?.name || 'entries') + '…'"
-          aria-label="Search entries" />
-        @if (searchQuery()) {
-          <button
-            type="button"
-            class="clear-search-ico"
-            (click)="clearSearch()"
-            aria-label="Clear search">
-            <i class="pi pi-times"></i>
-          </button>
-        }
+    <!-- Main Title & Action Bar -->
+    <div class="header-main-bar">
+      <div class="header-left">
+        <div class="title-icon-badge" aria-hidden="true">
+          <i [class]="formDefinition()?.icon || 'pi pi-folder-open'"></i>
+        </div>
+
+        <div class="header-title-group">
+          <div class="header-title-row">
+            <h1 id="form-entries-page-title">
+              {{ formDefinition()?.name || 'Form Entries' }}
+            </h1>
+            <span class="entry-count-chip">
+              {{ entries().length }} {{ entries().length === 1 ? 'entry' : 'entries' }}
+            </span>
+          </div>
+
+          <div class="header-metadata-line">
+            <span class="meta-item meta-code">
+              <i class="pi pi-hashtag" aria-hidden="true"></i>
+              <span>{{ projectCode() }}</span>
+            </span>
+            @if (project()?.project_title) {
+              <span class="meta-dot" aria-hidden="true">·</span>
+              <span class="meta-item meta-title" [title]="project()?.project_title">
+                {{ project()?.project_title }}
+              </span>
+            }
+            @if (customer(); as c) {
+              <span class="meta-dot" aria-hidden="true">·</span>
+              <span class="meta-item" [title]="'Customer: ' + c.name">
+                <i class="pi pi-building" aria-hidden="true"></i>
+                <span>{{ c.name }}</span>
+              </span>
+            } @else if (project()?.customer_name) {
+              <span class="meta-dot" aria-hidden="true">·</span>
+              <span class="meta-item" [title]="'Customer: ' + project()?.customer_name">
+                <i class="pi pi-building" aria-hidden="true"></i>
+                <span>{{ project()?.customer_name }}</span>
+              </span>
+            }
+            @if (supplier(); as s) {
+              <span class="meta-dot" aria-hidden="true">·</span>
+              <span class="meta-item" [title]="'Supplier: ' + s.name">
+                <i class="pi pi-truck" aria-hidden="true"></i>
+                <span>{{ s.name }}</span>
+              </span>
+            } @else if (project()?.supplier_name) {
+              <span class="meta-dot" aria-hidden="true">·</span>
+              <span class="meta-item" [title]="'Supplier: ' + project()?.supplier_name">
+                <i class="pi pi-truck" aria-hidden="true"></i>
+                <span>{{ project()?.supplier_name }}</span>
+              </span>
+            }
+          </div>
+        </div>
       </div>
 
-      <button
-        pButton
-        type="button"
-        icon="pi pi-refresh"
-        class="p-button-text p-button-secondary refresh-btn"
-        (click)="projectId() && loadAllData(projectId()!)"
-        pTooltip="Reload entries"
-        tooltipPosition="bottom"
-        aria-label="Reload entries">
-      </button>
+      <div class="header-actions">
+        <!-- Search Input within Header -->
+        <div class="header-search-wrap">
+          <i class="pi pi-search search-ico" aria-hidden="true"></i>
+          <input
+            type="text"
+            class="header-search-input"
+            [value]="searchQuery()"
+            (input)="onSearchInput($event)"
+            [placeholder]="'Filter ' + (formDefinition()?.name || 'entries') + '…'"
+            aria-label="Search entries" />
+          @if (searchQuery()) {
+            <button
+              type="button"
+              class="clear-search-ico"
+              (click)="clearSearch()"
+              aria-label="Clear search">
+              <i class="pi pi-times"></i>
+            </button>
+          }
+        </div>
 
-      <button
-        pButton
-        type="button"
-        icon="pi pi-plus"
-        [label]="'New ' + (formDefinition()?.name || 'Entry')"
-        class="create-entry-btn"
-        (click)="openCreateDialog()"
-        [pTooltip]="'Create an additional entry for ' + (formDefinition()?.name || 'this form')"
-        tooltipPosition="bottom">
-      </button>
+        <button
+          pButton
+          type="button"
+          icon="pi pi-refresh"
+          class="p-button-text p-button-secondary refresh-btn"
+          (click)="projectId() && loadAllData(projectId()!)"
+          pTooltip="Reload entries"
+          tooltipPosition="bottom"
+          aria-label="Reload entries">
+        </button>
+
+        <button
+          pButton
+          type="button"
+          icon="pi pi-plus"
+          [label]="'New ' + (formDefinition()?.name || 'Entry')"
+          class="create-entry-btn"
+          (click)="openCreateDialog()"
+          [pTooltip]="'Create an additional entry for ' + (formDefinition()?.name || 'this form')"
+          tooltipPosition="bottom">
+        </button>
+      </div>
     </div>
   </header>
 
@@ -230,7 +241,7 @@
                 type="button"
                 icon="pi pi-pencil"
                 label="Edit"
-                class="p-button-text p-button-secondary p-button-sm ec-action-edit"
+                class="p-button-text p-button-info p-button-sm ec-action-edit"
                 (click)="openEditDialog(entry)"
                 pTooltip="Edit commercial terms, specifications, line items, and files"
                 tooltipPosition="top"

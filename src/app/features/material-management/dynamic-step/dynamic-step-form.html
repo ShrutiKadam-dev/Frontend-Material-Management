@@ -557,16 +557,55 @@
   </ng-template>
 
   <div class="catalog-modal-content">
-    <!-- Search Bar -->
-    <div class="catalog-search-wrap">
-      <i class="pi pi-search search-icon"></i>
-      <input
-        pInputText
-        type="text"
-        [value]="catalogSearch()"
-        (input)="catalogSearch.set($any($event.target).value)"
-        placeholder="Search forms by name, code, or keyword (e.g. PQB, Invoice, Clearance)..."
-        class="catalog-search-input w-full" />
+    <!-- Enhanced Search Console -->
+    <div class="catalog-search-console" [class.has-query]="!!catalogSearch()">
+      <div class="search-input-container">
+        <div class="search-icon-badge" aria-hidden="true">
+          <i class="pi pi-search search-icon"></i>
+        </div>
+
+        <input
+          #catalogSearchInput
+          pInputText
+          type="text"
+          [value]="catalogSearch()"
+          (input)="catalogSearch.set($any($event.target).value)"
+          (keydown.escape)="clearCatalogSearch()"
+          placeholder="Search forms by name, code (e.g. PQB, PO, Delivery, RFQ), or description..."
+          class="catalog-search-input"
+          aria-label="Search forms by name or code" />
+
+        <div class="search-actions-group">
+          @if (catalogSearch()) {
+            <span
+              class="search-match-pill"
+              [class.search-match-pill--zero]="filteredCatalog().length === 0">
+              @if (filteredCatalog().length > 0) {
+                <i class="pi pi-check" aria-hidden="true"></i>
+                <span>{{ filteredCatalog().length }} {{ filteredCatalog().length === 1 ? 'match' : 'matches' }}</span>
+              } @else {
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                <span>0 matches</span>
+              }
+            </span>
+
+            <button
+              type="button"
+              class="search-clear-btn"
+              (click)="clearCatalogSearch()"
+              pTooltip="Clear search (Esc)"
+              tooltipPosition="bottom"
+              aria-label="Clear search">
+              <i class="pi pi-times" aria-hidden="true"></i>
+            </button>
+          } @else {
+            <div class="search-hint-kbd" pTooltip="Press Esc while typing to clear" tooltipPosition="bottom">
+              <kbd class="kbd-key">ESC</kbd>
+              <span class="kbd-label">to clear</span>
+            </div>
+          }
+        </div>
+      </div>
     </div>
 
     <!-- Category Filter Chips -->

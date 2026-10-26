@@ -126,6 +126,10 @@ export class DynamicStepForm implements OnInit {
     });
   });
 
+  protected clearCatalogSearch(): void {
+    this.catalogSearch.set('');
+  }
+
   protected readonly tableTotalSum = computed(() => {
     const arr = this.tableFormArray().value as Array<Record<string, unknown>>;
     const cfg = this.formDefinition()?.tableConfig;
