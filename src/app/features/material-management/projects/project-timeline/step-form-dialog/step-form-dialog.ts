@@ -40,6 +40,13 @@ import {
 } from '../../../../../core/constants/form-catalog';
 import { SelectOption } from '../../../../../core/constants/dropdown-options.constant';
 import { getCurrentUserFromStorage } from '../../../../../core/utils/remark.utils';
+import {
+  formatLocalDate,
+  formatLocalDateTime,
+  parseLocalDate,
+  parseLocalDateTime,
+  sanitizePayloadDates,
+} from '../../../../../core/utils/date.utils';
 
 @Component({
   selector: 'app-step-form-dialog',
@@ -211,6 +218,10 @@ export class StepFormDialog {
         if (match && typeof match === 'object') {
           initialVal = match.value;
         }
+      } else if (field.type === 'date') {
+        initialVal = initialVal ? parseLocalDate(initialVal as string | Date) : null;
+      } else if (field.type === 'datetime') {
+        initialVal = initialVal ? parseLocalDateTime(initialVal as string | Date) : null;
       }
       const validators = field.required ? [Validators.required] : [];
       controls[field.key] = new FormControl(initialVal, validators);
@@ -350,7 +361,10 @@ export class StepFormDialog {
     if (!def.tableConfig) return new FormGroup({});
 
     for (const col of def.tableConfig.columns) {
-      const val = initialData[col.key] ?? (col.key === 'sr_no' ? this.tableFormArray().length + 1 : '');
+      let val = initialData[col.key] ?? (col.key === 'sr_no' ? this.tableFormArray().length + 1 : '');
+      if (col.type === 'date' && val) {
+        val = formatLocalDate(val as Date | string);
+      }
       rowControls[col.key] = new FormControl(val);
     }
 
@@ -581,22 +595,32 @@ export class StepFormDialog {
 
     this.saving.set(true);
 
-    const formData: Record<string, unknown> = { ...this.formGroup().value };
+    const rawFormData: Record<string, unknown> = { ...this.formGroup().value };
     // Format multilocation fields to comma-separated string for backend compatibility
     for (const field of def.fields) {
       if (field.type === 'multilocation') {
-        const val = formData[field.key];
+        const val = rawFormData[field.key];
         if (Array.isArray(val)) {
-          formData[field.key] = val.join(', ');
+          rawFormData[field.key] = val.join(', ');
         }
       }
     }
 
     const tableData = this.tableFormArray().value;
+    const sanitizedPayload = sanitizePayloadDates(
+      {
+        ...rawFormData,
+        items: tableData,
+      },
+      def.fields,
+      def.tableConfig?.columns,
+    );
+
+    const { items: sanitizedItems, ...sanitizedFormData } = sanitizedPayload;
 
     const combinedData: Record<string, unknown> = {
-      ...formData,
-      items: tableData,
+      ...sanitizedFormData,
+      items: sanitizedItems ?? tableData,
       attachments_count: this.uploadedFiles().length,
       form_code: def.formCode,
       remarks: this.stepRemarks().map((r) => r.remark),

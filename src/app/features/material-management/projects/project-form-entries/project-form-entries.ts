@@ -594,7 +594,7 @@ export class ProjectFormEntries implements OnInit {
     if (col.type === 'number' && (typeof val === 'number' || !isNaN(Number(val)))) {
       return Number(val).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
     }
-    if (col.type === 'date' && typeof val === 'string') {
+    if (col.type === 'date' && (typeof val === 'string' || typeof val === 'number' || val instanceof Date)) {
       return formatDisplayDate(val, 'd MMM yyyy');
     }
     return String(val);
@@ -955,15 +955,31 @@ export class ProjectFormEntries implements OnInit {
     if (entry.data && typeof entry.data === 'object') {
       const d = entry.data;
       const dateKeys = [
-        'qo_date',
-        'po_date',
-        'invoice_date',
-        'tender_issue_date',
         'pqb_issuing_date',
-        'issue_date',
+        'pqb_issue_date',
+        'tender_issue_date',
+        'query_date',
+        'request_date',
+        'eoi_date',
+        'nac_date',
+        'qo_date',
+        'quotation_date',
+        'po_date',
+        'order_confirmation_date',
+        'proforma_invoice_date',
+        'invoice_date',
+        'packing_list_date',
+        'delivery_challan_date',
         'delivery_date',
         'order_date',
         'payment_date',
+        'payment_received_date',
+        'certificate_date',
+        'shipment_date',
+        'boe_filing_date',
+        'duty_paid_date',
+        'lr_rr_awb_date',
+        'issue_date',
       ];
       for (const k of dateKeys) {
         if (d[k]) {

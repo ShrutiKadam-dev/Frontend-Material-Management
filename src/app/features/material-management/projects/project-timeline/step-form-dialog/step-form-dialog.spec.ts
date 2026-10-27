@@ -17,6 +17,8 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
     fields: [
       { key: 'pqb_title', label: 'PQB Title', type: 'text', required: true },
       { key: 'pqb_no', label: 'PQB No.', type: 'text', required: true },
+      { key: 'pqb_issuing_date', label: 'PQB Issuing Date', type: 'date' },
+      { key: 'pqb_closing_date_time', label: 'PQB Closing Date & Time', type: 'datetime' },
       { key: 'budget', label: 'Budget', type: 'number' },
     ],
     tableConfig: {
@@ -121,6 +123,71 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
     expect(passedPayload['items']).toEqual([]);
     expect(comp.stepSaved.emit).toHaveBeenCalled();
     expect(comp.close).toHaveBeenCalled();
+  });
+
+  it('should format date 1/10/2026 to "2026-10-01" in saveStep preventing timezone shift to 30/09/2026', () => {
+    const comp = Object.create(StepFormDialog.prototype);
+    const mockFormApiService = {
+      createEntry: vi.fn().mockReturnValue(of({ id: 101, step_name: 'National Pre-Qualification Bid (PQB)' })),
+      updateEntry: vi.fn(),
+      deleteEntry: vi.fn(),
+    };
+    const mockMessageService = { add: vi.fn() };
+
+    comp.formApiService = mockFormApiService;
+    comp.messageService = mockMessageService;
+    comp.projectId = () => 15;
+    comp.resolvedDef = () => mockFormDef; // FORM_01_PQB has pqb_issuing_date as type 'date'
+    comp.step = () => null;
+    comp.saving = { set: vi.fn() };
+    // Datepicker selected 1/10/2026 (local Date object)
+    comp.formGroup = () => ({
+      value: {
+        pqb_title: 'National Pre-Qualification Bid',
+        pqb_no: 'PQB-001',
+        pqb_issuing_date: new Date(2026, 9, 1), // Oct 1, 2026
+        pqb_closing_date_time: new Date(2026, 9, 5, 15, 0, 0),
+      },
+    });
+    comp.tableFormArray = () => ({ value: [] });
+    comp.uploadedFiles = () => [];
+    comp.stepRemarks = () => [];
+    comp.stepSaved = { emit: vi.fn() };
+    comp.close = vi.fn();
+
+    comp.saveStep(false);
+
+    expect(mockFormApiService.createEntry).toHaveBeenCalled();
+    const passedPayload = mockFormApiService.createEntry.mock.calls[0][2];
+    expect(passedPayload['pqb_issuing_date']).toBe('2026-10-01');
+    expect(passedPayload['pqb_issuing_date']).not.toBe('2026-09-30');
+    expect(passedPayload['pqb_closing_date_time']).toBe('2026-10-05T15:00:00');
+  });
+
+  it('should populate date field as local Date object from "2026-10-01" string', () => {
+    const comp = Object.create(StepFormDialog.prototype);
+    comp.formGroup = { set: vi.fn() };
+    comp.tableFormArray = { set: vi.fn() };
+    comp.uploadedFiles = { set: vi.fn(), length: 0 };
+    comp.stepRemarks = { set: vi.fn() };
+    comp.getDefaultFieldValue = StepFormDialog.prototype['getDefaultFieldValue'];
+
+    (comp as any).populateForm(
+      mockFormDef,
+      {
+        pqb_title: 'PQB 2026',
+        pqb_no: 'PQB-100',
+        pqb_issuing_date: '2026-10-01',
+      },
+      [],
+    );
+
+    const createdGroup = comp.formGroup.set.mock.calls[0][0];
+    const dateVal = createdGroup.get('pqb_issuing_date').value;
+    expect(dateVal).toBeInstanceOf(Date);
+    expect(dateVal.getFullYear()).toBe(2026);
+    expect(dateVal.getMonth()).toBe(9); // October
+    expect(dateVal.getDate()).toBe(1);
   });
 
   it('should execute PUT when saving in EDIT mode', () => {

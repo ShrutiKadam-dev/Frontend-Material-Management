@@ -5,6 +5,7 @@ import { catchError, map, Observable, of } from 'rxjs';
 import { API_BASE_URL } from '../tokens/api-base-url.token';
 import { ProjectStep, StepStatus } from '../models/project-step.model';
 import { FORM_CATALOG_MAP, getFormDefinition } from '../constants/form-catalog';
+import { sanitizePayloadDates } from '../utils/date.utils';
 
 export interface AddStepRequest {
   form_code: string;
@@ -79,11 +80,12 @@ export class ProjectStepService {
         ? { items: (sanitizedData['items'] ?? table_items ?? []) as unknown[] }
         : {}),
     };
+    const sanitizedDataClean = sanitizePayloadDates(normalizedData, formDef?.fields, formDef?.tableConfig?.columns);
     const payload: AddStepRequest = {
       form_code: formCode,
       step_name: resolvedName,
       description: formDef?.description,
-      data: normalizedData,
+      data: sanitizedDataClean,
       status,
       progress_percentage: progressPercentage,
     };
@@ -98,7 +100,7 @@ export class ProjectStepService {
             data:
               createdStep.data && Object.keys(createdStep.data).length > 0
                 ? createdStep.data
-                : normalizedData,
+                : sanitizedDataClean,
             status: createdStep.status || status,
             progress_percentage: createdStep.progress_percentage ?? progressPercentage,
             form_code: createdStep.form_code || formCode,
@@ -123,7 +125,7 @@ export class ProjectStepService {
             form_code: formCode,
             category: formDef?.category,
             phase: formDef?.phaseId,
-            data: normalizedData,
+            data: sanitizedDataClean,
             remarks: [],
             created_at: new Date().toISOString(),
           };
@@ -147,8 +149,9 @@ export class ProjectStepService {
         ? { items: (sanitizedData['items'] ?? table_items ?? []) as unknown[] }
         : {}),
     };
+    const sanitizedDataClean = sanitizePayloadDates(normalizedData);
     const payload = {
-      data: normalizedData,
+      data: sanitizedDataClean,
       status,
       progress_percentage: progressPercentage,
       completed_at: status === 'completed' ? new Date().toISOString() : null,

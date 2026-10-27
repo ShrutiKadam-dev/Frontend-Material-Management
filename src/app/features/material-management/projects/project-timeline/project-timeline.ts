@@ -801,6 +801,13 @@ export class ProjectTimeline implements OnInit {
 
     if (d) {
       const dateVal =
+        d['pqb_issuing_date'] ||
+        d['pqb_issue_date'] ||
+        d['tender_issue_date'] ||
+        d['query_date'] ||
+        d['request_date'] ||
+        d['eoi_date'] ||
+        d['nac_date'] ||
         d['quotation_date'] ||
         d['qo_date'] ||
         d['quotation_requested_date'] ||
@@ -812,15 +819,20 @@ export class ProjectTimeline implements OnInit {
         d['proforma_invoice_date'] ||
         d['delivery_date'] ||
         d['delivery_challan_date'] ||
+        d['packing_list_date'] ||
+        d['shipment_date'] ||
+        d['boe_filing_date'] ||
+        d['duty_paid_date'] ||
+        d['lr_rr_awb_date'] ||
         d['payment_date'] ||
+        d['payment_received_date'] ||
         d['boe_date'] ||
         d['clearance_date'] ||
-        d['duty_paid_date'] ||
+        d['bid_submission_date'] ||
         d['tender_date'] ||
         d['submission_date'] ||
         d['submitted_date'] ||
         d['prepared_date'] ||
-        d['packing_list_date'] ||
         d['certificate_date'] ||
         d['date'] ||
         d['created_at'] ||

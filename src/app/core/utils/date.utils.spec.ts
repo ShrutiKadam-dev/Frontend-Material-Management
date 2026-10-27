@@ -5,6 +5,7 @@ import {
   formatLocalDateTime,
   parseLocalDate,
   parseLocalDateTime,
+  sanitizePayloadDates,
 } from './date.utils';
 
 describe('date.utils', () => {
@@ -139,11 +140,58 @@ describe('date.utils', () => {
       expect(formatDisplayDate('2026-09-10T14:30:00', 'dd-MM-yyyy, HH:mm')).toBe('10-09-2026, 14:30');
     });
 
+    it('should format 1/10/2026 accurately to 01-10-2026 without shifting to 30/09/2026', () => {
+      const d = new Date(2026, 9, 1); // 1 October 2026
+      expect(formatDisplayDate(d)).toBe('01-10-2026');
+      expect(formatDisplayDate('2026-10-01')).toBe('01-10-2026');
+      expect(formatDisplayDate('1/10/2026')).toBe('01-10-2026');
+    });
+
     it('should return fallback for null, undefined, or empty string', () => {
       expect(formatDisplayDate(null)).toBe('—');
       expect(formatDisplayDate(undefined)).toBe('—');
       expect(formatDisplayDate('')).toBe('—');
       expect(formatDisplayDate(null, 'dd-MM-yyyy', '')).toBe('');
+    });
+  });
+
+  describe('sanitizePayloadDates', () => {
+    it('should convert local Date object for 1/10/2026 to 2026-10-01 string preventing UTC shift to 30/09/2026', () => {
+      const payload = {
+        pqb_issuing_date: new Date(2026, 9, 1), // Oct 1, 2026
+        pqb_title: 'National Pre-Qualification Bid (PQB)',
+        items: [
+          { sr_no: 1, delivery_date: new Date(2026, 9, 15) },
+        ],
+      };
+
+      const result = sanitizePayloadDates(payload, [
+        { key: 'pqb_issuing_date', type: 'date' },
+        { key: 'pqb_title', type: 'text' },
+      ], [
+        { key: 'delivery_date', type: 'date' },
+      ]);
+
+      expect(result.pqb_issuing_date).toBe('2026-10-01');
+      expect(result.pqb_title).toBe('National Pre-Qualification Bid (PQB)');
+      expect(result.items[0].delivery_date).toBe('2026-10-15');
+
+      // Crucially, JSON.stringify must produce "2026-10-01", NOT "2026-09-30T18:30:00.000Z"
+      const json = JSON.stringify(result);
+      expect(json).toContain('"pqb_issuing_date":"2026-10-01"');
+      expect(json).not.toContain('2026-09-30');
+    });
+
+    it('should convert datetime field to local ISO string without converting to UTC', () => {
+      const payload = {
+        pqb_closing_date_time: new Date(2026, 9, 1, 14, 30, 0),
+      };
+
+      const result = sanitizePayloadDates(payload, [
+        { key: 'pqb_closing_date_time', type: 'datetime' },
+      ]);
+
+      expect(result.pqb_closing_date_time).toBe('2026-10-01T14:30:00');
     });
   });
 });

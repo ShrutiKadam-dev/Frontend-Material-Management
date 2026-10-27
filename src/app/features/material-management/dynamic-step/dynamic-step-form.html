@@ -191,13 +191,17 @@
             }
 
             @case ('datetime') {
-              <input
-                pInputText
-                type="text"
-                [id]="field.key"
+              <p-datepicker
+                [inputId]="field.key"
                 [formControlName]="field.key"
-                placeholder="DD-MM-YYYY HH:mm"
-                class="field-input w-full" />
+                dateFormat="dd-mm-yy"
+                [showTime]="true"
+                [showIcon]="true"
+                [placeholder]="field.placeholder || 'Select Date & Time'"
+                appendTo="body"
+                styleClass="w-full"
+                inputStyleClass="w-full">
+              </p-datepicker>
             }
 
             @case ('select') {

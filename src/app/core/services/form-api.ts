@@ -5,6 +5,7 @@ import { catchError, map, Observable, of, throwError } from 'rxjs';
 import { API_BASE_URL } from '../tokens/api-base-url.token';
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../models/project-step.model';
 import { FormDefinition } from '../constants/form-catalog';
+import { sanitizePayloadDates } from '../utils/date.utils';
 
 export function normalizeBackendEntityToStep(
   item: Record<string, unknown>,
@@ -129,15 +130,16 @@ export class FormApiService {
       ...restPayload,
       items: (payload['items'] ?? table_items ?? []) as unknown[],
     };
+    const sanitizedBody = sanitizePayloadDates(bodyPayload, formDef.fields, formDef.tableConfig?.columns);
 
     const fd = new FormData();
-    fd.append('data', JSON.stringify(bodyPayload));
+    fd.append('data', JSON.stringify(sanitizedBody));
     files.forEach((file) => fd.append('file', file, file.name));
 
     return this.http.post<Record<string, unknown>>(endpointUrl, fd).pipe(
       map((res) => {
         const item = (res && typeof res === 'object' && 'data' in res ? res['data'] : res) as Record<string, unknown>;
-        return normalizeBackendEntityToStep(item || bodyPayload, formDef, projectId);
+        return normalizeBackendEntityToStep(item || sanitizedBody, formDef, projectId);
       }),
     );
   }
@@ -163,9 +165,10 @@ export class FormApiService {
       ...restPayload,
       items: (payload['items'] ?? table_items ?? []) as unknown[],
     };
+    const sanitizedBody = sanitizePayloadDates(bodyPayload, formDef.fields, formDef.tableConfig?.columns);
 
     const fd = new FormData();
-    fd.append('data', JSON.stringify(bodyPayload));
+    fd.append('data', JSON.stringify(sanitizedBody));
     files.forEach((file) => fd.append('file', file, file.name));
 
     return this.http.patch<Record<string, unknown>>(endpointUrl, fd).pipe(

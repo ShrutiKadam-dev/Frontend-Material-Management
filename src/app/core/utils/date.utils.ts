@@ -13,23 +13,32 @@ export function formatLocalDate(val: Date | string | null | undefined): string {
   if (typeof val === 'string') {
     const trimmed = val.trim();
     if (!trimmed) return '';
-    const matchYmd = trimmed.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
-    if (matchYmd) {
-      const y = matchYmd[1];
-      const m = matchYmd[2].padStart(2, '0');
-      const d = matchYmd[3].padStart(2, '0');
-      return `${y}-${m}-${d}`;
+
+    // If string has an explicit UTC 'Z' or timezone offset, parse as standard Date which converts to local timezone
+    if (trimmed.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(trimmed)) {
+      const parsedUtc = new Date(trimmed);
+      if (!isNaN(parsedUtc.getTime())) {
+        val = parsedUtc;
+      }
+    } else {
+      const matchYmd = trimmed.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+      if (matchYmd) {
+        const y = matchYmd[1];
+        const m = matchYmd[2].padStart(2, '0');
+        const d = matchYmd[3].padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+      const matchDmy = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+      if (matchDmy) {
+        const d = matchDmy[1].padStart(2, '0');
+        const m = matchDmy[2].padStart(2, '0');
+        const y = matchDmy[3];
+        return `${y}-${m}-${d}`;
+      }
+      const parsed = new Date(trimmed);
+      if (isNaN(parsed.getTime())) return trimmed;
+      val = parsed;
     }
-    const matchDmy = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
-    if (matchDmy) {
-      const d = matchDmy[1].padStart(2, '0');
-      const m = matchDmy[2].padStart(2, '0');
-      const y = matchDmy[3];
-      return `${y}-${m}-${d}`;
-    }
-    const parsed = new Date(trimmed);
-    if (isNaN(parsed.getTime())) return trimmed;
-    val = parsed;
   }
   if (val instanceof Date && !isNaN(val.getTime())) {
     const y = val.getFullYear();
@@ -46,17 +55,15 @@ export function formatLocalDate(val: Date | string | null | undefined): string {
  */
 export function formatLocalDateTime(val: Date | string | null | undefined): string | undefined {
   if (!val) return undefined;
-  let d: Date;
+  let d: Date | null = null;
   if (typeof val === 'string') {
     const trimmed = val.trim();
     if (!trimmed) return undefined;
-    d = new Date(trimmed);
+    d = parseLocalDateTime(trimmed) || new Date(trimmed);
   } else if (val instanceof Date) {
     d = val;
-  } else {
-    return undefined;
   }
-  if (isNaN(d.getTime())) return undefined;
+  if (!d || isNaN(d.getTime())) return undefined;
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
@@ -77,6 +84,14 @@ export function parseLocalDate(val: string | Date | null | undefined): Date | nu
   }
   const str = String(val).trim();
   if (!str) return null;
+
+  // If string has an explicit UTC 'Z' or timezone offset (+HH:MM / -HH:MM),
+  // parse as standard Date which converts to the user's local timezone.
+  if (str.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(str)) {
+    const parsedUtc = new Date(str);
+    return isNaN(parsedUtc.getTime()) ? null : parsedUtc;
+  }
+
   const matchYmd = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
   if (matchYmd) {
     const year = parseInt(matchYmd[1], 10);
@@ -106,7 +121,14 @@ export function parseLocalDateTime(val: string | Date | null | undefined): Date 
   const str = String(val).trim();
   if (!str) return null;
 
-  // Check for ISO / SQL datetime with YYYY-MM-DD
+  // If string has an explicit UTC 'Z' or timezone offset (+HH:MM / -HH:MM),
+  // parse as standard Date which converts to the user's local timezone.
+  if (str.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(str)) {
+    const parsedUtc = new Date(str);
+    return isNaN(parsedUtc.getTime()) ? null : parsedUtc;
+  }
+
+  // Check for ISO / SQL datetime with YYYY-MM-DD (local without timezone)
   const matchYmdTime = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})[T\s](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
   if (matchYmdTime) {
     const y = parseInt(matchYmdTime[1], 10);
@@ -135,6 +157,79 @@ export function parseLocalDateTime(val: string | Date | null | undefined): Date 
 
   const d = new Date(str);
   return isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Sanitizes form data payload so that any Date objects or date field values
+ * are converted to local YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss strings, preventing JSON.stringify()
+ * from converting Date instances via .toISOString() (which causes UTC timezone shift back 1 day in positive UTC offsets like IST).
+ */
+export function sanitizePayloadDates<T extends Record<string, unknown>>(
+  payload: T,
+  fields?: Array<{ key: string; type: string }>,
+  tableColumns?: Array<{ key: string; type: string }>,
+): T {
+  if (!payload || typeof payload !== 'object') return payload;
+
+  const fieldTypeMap = new Map<string, string>();
+  if (fields) {
+    for (const f of fields) {
+      fieldTypeMap.set(f.key, f.type);
+    }
+  }
+
+  const tableColTypeMap = new Map<string, string>();
+  if (tableColumns) {
+    for (const col of tableColumns) {
+      tableColTypeMap.set(col.key, col.type);
+    }
+  }
+
+  const sanitized: Record<string, unknown> = { ...payload };
+
+  for (const [k, v] of Object.entries(sanitized)) {
+    const declaredType = fieldTypeMap.get(k);
+
+    if (declaredType === 'date' && v !== null && v !== undefined && v !== '') {
+      sanitized[k] = formatLocalDate(v as Date | string);
+    } else if (declaredType === 'datetime' && v !== null && v !== undefined && v !== '') {
+      sanitized[k] = formatLocalDateTime(v as Date | string) ?? v;
+    } else if (v instanceof Date) {
+      // Auto-detect Date object if not explicitly in fieldTypeMap
+      if (v.getHours() === 0 && v.getMinutes() === 0 && v.getSeconds() === 0 && v.getMilliseconds() === 0) {
+        sanitized[k] = formatLocalDate(v);
+      } else {
+        sanitized[k] = formatLocalDateTime(v);
+      }
+    } else if (k === 'items' && Array.isArray(v)) {
+      sanitized[k] = v.map((item) => {
+        if (item && typeof item === 'object') {
+          const itemObj = { ...(item as Record<string, unknown>) };
+          for (const [colKey, colVal] of Object.entries(itemObj)) {
+            const colType = tableColTypeMap.get(colKey);
+            if (colType === 'date' && colVal !== null && colVal !== undefined && colVal !== '') {
+              itemObj[colKey] = formatLocalDate(colVal as Date | string);
+            } else if (colVal instanceof Date) {
+              if (
+                colVal.getHours() === 0 &&
+                colVal.getMinutes() === 0 &&
+                colVal.getSeconds() === 0 &&
+                colVal.getMilliseconds() === 0
+              ) {
+                itemObj[colKey] = formatLocalDate(colVal);
+              } else {
+                itemObj[colKey] = formatLocalDateTime(colVal);
+              }
+            }
+          }
+          return itemObj;
+        }
+        return item;
+      });
+    }
+  }
+
+  return sanitized as T;
 }
 
 const MONTH_NAMES_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
