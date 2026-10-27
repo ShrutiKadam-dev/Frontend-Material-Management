@@ -4,14 +4,8 @@
   <header class="step-hero-header app-panel">
     <div class="hero-top-nav">
       <div class="top-nav-left">
-        <button
-          pButton
-          type="button"
-          icon="pi pi-arrow-left"
-          label="Project Pipeline"
-          class="p-button-text back-timeline-btn"
-          (click)="goBackToTimeline()"
-          aria-label="Back to project timeline">
+        <button pButton type="button" icon="pi pi-arrow-left" label="Project Pipeline"
+          class="p-button-text back-timeline-btn" (click)="goBackToTimeline()" aria-label="Back to project timeline">
         </button>
 
         @if (project(); as p) {
@@ -22,36 +16,18 @@
       </div>
 
       <div class="hero-actions">
-        <button
-          pButton
-          type="button"
-          icon="pi pi-plus-circle"
-          label="Attach Next Form"
-          class="p-button-outlined p-button-secondary add-next-btn"
-          (click)="openAddStepModal()"
-          pTooltip="Add another form as next step in this project"
-          tooltipPosition="bottom">
+        <button pButton type="button" icon="pi pi-plus-circle" label="Attach Next Form"
+          class="p-button-outlined p-button-secondary add-next-btn" (click)="openAddStepModal()"
+          pTooltip="Add another form as next step in this project" tooltipPosition="bottom">
         </button>
 
-        <button
-          pButton
-          type="button"
-          icon="pi pi-save"
-          label="Save Draft"
-          class="p-button-outlined save-draft-btn"
-          [loading]="saving()"
-          (click)="saveStep(false)">
+        <button pButton type="button" icon="pi pi-save" label="Save Draft" class="p-button-outlined save-draft-btn"
+          [loading]="saving()" (click)="saveStep(false)">
         </button>
 
-        <button
-          pButton
-          type="button"
-          icon="pi pi-check-circle"
-          [label]="isStepCompleted() ? 'Completed' : 'Mark as Complete'"
-          class="complete-step-btn"
-          [class.complete-step-btn--done]="isStepCompleted()"
-          [loading]="saving()"
-          (click)="saveStep(true)">
+        <button pButton type="button" icon="pi pi-check-circle"
+          [label]="isStepCompleted() ? 'Completed' : 'Mark as Complete'" class="complete-step-btn"
+          [class.complete-step-btn--done]="isStepCompleted()" [loading]="saving()" (click)="saveStep(true)">
         </button>
       </div>
     </div>
@@ -127,11 +103,8 @@
 
       <form [formGroup]="formGroup()" class="dynamic-fields-grid">
         @for (field of def.fields; track field.key) {
-        <div
-          class="field-col"
-          [class.col-span-1]="field.colSpan === 1"
-          [class.col-span-2]="field.colSpan === 2 || !field.colSpan"
-          [class.col-span-3]="field.colSpan === 3"
+        <div class="field-col" [class.col-span-1]="field.colSpan === 1"
+          [class.col-span-2]="field.colSpan === 2 || !field.colSpan" [class.col-span-3]="field.colSpan === 3"
           [class.col-span-4]="field.colSpan === 4">
 
           <label [for]="field.key" class="field-label">
@@ -140,144 +113,93 @@
           </label>
 
           @switch (field.type) {
-            @case ('text') {
-              <input
-                pInputText
-                type="text"
-                [id]="field.key"
-                [formControlName]="field.key"
-                [placeholder]="field.placeholder || ('Enter ' + field.label)"
-                class="field-input w-full" />
-            }
+          @case ('text') {
+          <input pInputText type="text" [id]="field.key" [formControlName]="field.key"
+            [placeholder]="field.placeholder || ('Enter ' + field.label)" class="field-input w-full" />
+          }
 
-            @case ('number') {
-              <div class="affix-input-wrap">
-                @if (field.prefix) { <span class="affix-prefix">{{ field.prefix }}</span> }
-                <input
-                  pInputText
-                  type="number"
-                  [id]="field.key"
-                  [formControlName]="field.key"
-                  [placeholder]="field.placeholder || '0.00'"
-                  class="field-input w-full" />
-                @if (field.suffix) { <span class="affix-suffix">{{ field.suffix }}</span> }
+          @case ('number') {
+          <div class="affix-input-wrap">
+            @if (field.prefix) { <span class="affix-prefix">{{ field.prefix }}</span> }
+            <input pInputText type="number" [id]="field.key" [formControlName]="field.key"
+              [placeholder]="field.placeholder || '0.00'" class="field-input w-full" />
+            @if (field.suffix) { <span class="affix-suffix">{{ field.suffix }}</span> }
+          </div>
+          }
+
+          @case ('currency') {
+          <div class="affix-input-wrap">
+            <span class="affix-prefix">{{ field.prefix || '₹' }}</span>
+            <input pInputText type="number" step="0.01" [id]="field.key" [formControlName]="field.key"
+              placeholder="0.00" class="field-input w-full" />
+          </div>
+          }
+
+          @case ('date') {
+          <p-datepicker [inputId]="field.key" [formControlName]="field.key" dateFormat="dd-mm-yy" [showIcon]="true"
+            appendTo="body" styleClass="w-full" inputStyleClass="w-full">
+          </p-datepicker>
+          }
+
+          @case ('datetime') {
+          <p-datepicker [inputId]="field.key" [formControlName]="field.key" dateFormat="dd-mm-yy" [showTime]="true"
+            [showIcon]="true" [placeholder]="field.placeholder || 'Select Date & Time'" appendTo="body"
+            styleClass="w-full" inputStyleClass="w-full">
+          </p-datepicker>
+          }
+
+          @case ('select') {
+          <p-select [id]="field.key" [formControlName]="field.key" [options]="getSelectOptions(field)"
+            optionLabel="label" optionValue="value" [placeholder]="field.placeholder || ('Select ' + field.label)"
+            appendTo="body" styleClass="w-full">
+          </p-select>
+          }
+
+          @case ('multilocation') {
+          <div class="multilocation-wrapper">
+            <div class="multilocation-input-row">
+              <div class="multilocation-input-wrap">
+                <i class="pi pi-map-marker input-prefix-icon" aria-hidden="true"></i>
+                <input #locInput pInputText type="text" [id]="field.key"
+                  [placeholder]="field.placeholder || ('Add ' + field.label + ' (press Enter)')"
+                  (keydown)="onLocationInputKeydown($event, field.key, locInput)"
+                  class="field-input w-full with-prefix" />
               </div>
+              <button type="button" class="add-loc-btn" (click)="addLocation(field.key, locInput)"
+                pTooltip="Add location" tooltipPosition="top">
+                <i class="pi pi-plus" aria-hidden="true"></i>
+                <span>Add</span>
+              </button>
+            </div>
+
+            @let locs = getLocations(field.key);
+            @if (locs.length > 0) {
+            <div class="locations-chip-list" role="list" aria-label="Locations list">
+              @for (loc of locs; track $index) {
+              <span class="location-chip" role="listitem">
+                <i class="pi pi-map-pin chip-pin" aria-hidden="true"></i>
+                <span class="chip-text">{{ loc }}</span>
+                <button type="button" class="chip-remove-btn" (click)="removeLocation(field.key, $index)"
+                  [attr.aria-label]="'Remove location ' + loc">
+                  <i class="pi pi-times" aria-hidden="true"></i>
+                </button>
+              </span>
+              }
+            </div>
+            } @else {
+            <div class="locations-empty-hint">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <span>No locations added yet. Type location above and click Add or press Enter.</span>
+            </div>
             }
+          </div>
+          }
 
-            @case ('currency') {
-              <div class="affix-input-wrap">
-                <span class="affix-prefix">{{ field.prefix || '₹' }}</span>
-                <input
-                  pInputText
-                  type="number"
-                  step="0.01"
-                  [id]="field.key"
-                  [formControlName]="field.key"
-                  placeholder="0.00"
-                  class="field-input w-full" />
-              </div>
-            }
-
-            @case ('date') {
-              <p-datepicker
-                [inputId]="field.key"
-                [formControlName]="field.key"
-                dateFormat="dd-mm-yy"
-                [showIcon]="true"
-                appendTo="body"
-                styleClass="w-full"
-                inputStyleClass="w-full">
-              </p-datepicker>
-            }
-
-            @case ('datetime') {
-              <p-datepicker
-                [inputId]="field.key"
-                [formControlName]="field.key"
-                dateFormat="dd-mm-yy"
-                [showTime]="true"
-                [showIcon]="true"
-                [placeholder]="field.placeholder || 'Select Date & Time'"
-                appendTo="body"
-                styleClass="w-full"
-                inputStyleClass="w-full">
-              </p-datepicker>
-            }
-
-            @case ('select') {
-              <p-select
-                [id]="field.key"
-                [formControlName]="field.key"
-                [options]="getSelectOptions(field)"
-                optionLabel="label"
-                optionValue="value"
-                [placeholder]="field.placeholder || ('Select ' + field.label)"
-                appendTo="body"
-                styleClass="w-full">
-              </p-select>
-            }
-
-            @case ('multilocation') {
-              <div class="multilocation-wrapper">
-                <div class="multilocation-input-row">
-                  <div class="multilocation-input-wrap">
-                    <i class="pi pi-map-marker input-prefix-icon" aria-hidden="true"></i>
-                    <input
-                      #locInput
-                      pInputText
-                      type="text"
-                      [id]="field.key"
-                      [placeholder]="field.placeholder || ('Add ' + field.label + ' (press Enter)')"
-                      (keydown)="onLocationInputKeydown($event, field.key, locInput)"
-                      class="field-input w-full with-prefix" />
-                  </div>
-                  <button
-                    type="button"
-                    class="add-loc-btn"
-                    (click)="addLocation(field.key, locInput)"
-                    pTooltip="Add location"
-                    tooltipPosition="top">
-                    <i class="pi pi-plus" aria-hidden="true"></i>
-                    <span>Add</span>
-                  </button>
-                </div>
-
-                @let locs = getLocations(field.key);
-                @if (locs.length > 0) {
-                  <div class="locations-chip-list" role="list" aria-label="Locations list">
-                    @for (loc of locs; track $index) {
-                      <span class="location-chip" role="listitem">
-                        <i class="pi pi-map-pin chip-pin" aria-hidden="true"></i>
-                        <span class="chip-text">{{ loc }}</span>
-                        <button
-                          type="button"
-                          class="chip-remove-btn"
-                          (click)="removeLocation(field.key, $index)"
-                          [attr.aria-label]="'Remove location ' + loc">
-                          <i class="pi pi-times" aria-hidden="true"></i>
-                        </button>
-                      </span>
-                    }
-                  </div>
-                } @else {
-                  <div class="locations-empty-hint">
-                    <i class="pi pi-info-circle" aria-hidden="true"></i>
-                    <span>No locations added yet. Type location above and click Add or press Enter.</span>
-                  </div>
-                }
-              </div>
-            }
-
-            @case ('textarea') {
-              <textarea
-                pTextarea
-                [id]="field.key"
-                [formControlName]="field.key"
-                rows="3"
-                class="field-textarea w-full"
-                [placeholder]="field.placeholder || ('Enter ' + field.label)">
+          @case ('textarea') {
+          <textarea pTextarea [id]="field.key" [formControlName]="field.key" rows="3" class="field-textarea w-full"
+            [placeholder]="field.placeholder || ('Enter ' + field.label)">
               </textarea>
-            }
+          }
           }
         </div>
         }
@@ -296,13 +218,8 @@
           </div>
         </div>
 
-        <button
-          pButton
-          type="button"
-          icon="pi pi-plus"
-          label="Add Item Row"
-          class="p-button-outlined p-button-sm add-row-btn"
-          (click)="addTableRow()">
+        <button pButton type="button" icon="pi pi-plus" label="Add Item Row"
+          class="p-button-outlined p-button-sm add-row-btn" (click)="addTableRow()">
         </button>
       </div>
 
@@ -322,74 +239,49 @@
               @for (col of tableCfg.columns; track col.key) {
               <td>
                 @switch (col.type) {
-                  @case ('number') {
-                    <input
-                      pInputText
-                      type="number"
-                      [formControlName]="col.key"
-                      (input)="onTableCellChange(rIdx)"
-                      class="table-cell-input table-cell-input--num" />
-                  }
-                  @case ('currency') {
-                    <input
-                      pInputText
-                      type="number"
-                      step="0.01"
-                      [formControlName]="col.key"
-                      (input)="onTableCellChange(rIdx)"
-                      class="table-cell-input table-cell-input--num" />
-                  }
-                  @case ('date') {
-                    <input
-                      pInputText
-                      type="text"
-                      placeholder="DD-MM-YYYY"
-                      [formControlName]="col.key"
-                      class="table-cell-input" />
-                  }
-                  @default {
-                    <input
-                      pInputText
-                      type="text"
-                      [formControlName]="col.key"
-                      class="table-cell-input" />
-                  }
+                @case ('number') {
+                <input pInputText type="number" [formControlName]="col.key" (input)="onTableCellChange(rIdx)"
+                  class="table-cell-input table-cell-input--num" />
+                }
+                @case ('currency') {
+                <input pInputText type="number" step="0.01" [formControlName]="col.key"
+                  (input)="onTableCellChange(rIdx)" class="table-cell-input table-cell-input--num" />
+                }
+                @case ('date') {
+                <input pInputText type="text" placeholder="DD-MM-YYYY" [formControlName]="col.key"
+                  class="table-cell-input" />
+                }
+                @default {
+                <input pInputText type="text" [formControlName]="col.key" class="table-cell-input" />
+                }
                 }
               </td>
               }
               <td style="text-align: center;">
-                <button
-                  type="button"
-                  class="row-delete-btn"
-                  (click)="removeTableRow(rIdx)"
-                  pTooltip="Delete row"
-                  tooltipPosition="top"
-                  aria-label="Delete line item">
+                <button type="button" class="row-delete-btn" (click)="removeTableRow(rIdx)" pTooltip="Delete row"
+                  tooltipPosition="top" aria-label="Delete line item">
                   <i class="pi pi-trash"></i>
                 </button>
               </td>
             </tr>
             } @empty {
-              <tr class="empty-table-row">
-                <td [attr.colspan]="tableCfg.columns.length + 1" style="text-align: center; padding: 2rem 1rem;">
-                  <div class="empty-table-prompt" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                    <i class="pi pi-inbox" style="font-size: 2rem; color: #94a3b8; margin-bottom: 0.5rem;" aria-hidden="true"></i>
-                    <p style="margin: 0 0 0.25rem; font-size: 0.875rem; font-weight: 500; color: #64748b;">No items added yet</p>
-                    <p style="margin: 0 0 1rem; font-size: 0.75rem; color: #94a3b8;">Line items are optional. Click below to add requirement rows.</p>
-                    <button
-                      pButton
-                      type="button"
-                      icon="pi pi-plus"
-                      label="Add Item Row"
-                      class="p-button-outlined p-button-sm add-row-btn"
-                      (click)="addTableRow()">
-                    </button>
+            <tr class="empty-table-row">
+              <td [attr.colspan]="tableCfg.columns.length + 1" class="empty-table-cell">
+                <div class="empty-table-prompt">
+                  <div class="empty-icon-badge">
+                    <i class="pi pi-inbox" aria-hidden="true"></i>
                   </div>
-                </td>
-              </tr>
+                  <p class="empty-title">No items added yet</p>
+                  <p class="empty-desc">Line items are optional. Click below to add requirement rows.</p>
+                  <button pButton type="button" icon="pi pi-plus" label="Add Item Row" class="empty-add-row-btn"
+                    (click)="addTableRow()">
+                  </button>
+                </div>
+              </td>
+            </tr>
             }
           </tbody>
-          @if (tableCfg.autoCalculateTotal && tableCfg.totalKey) {
+          @if (tableCfg.autoCalculateTotal && tableCfg.totalKey && tableFormArray().length > 0) {
           <tfoot>
             <tr class="table-summary-row">
               <td [attr.colspan]="tableCfg.columns.length - 1" class="text-right">
@@ -421,64 +313,52 @@
       </div>
 
       <div class="upload-cards-stack">
-        @for (upload of (def.uploads && def.uploads.length > 0 ? def.uploads : [{ key: 'main', label: 'Upload ' + def.name + ' Document', multiple: true }]); track upload.key) {
-          <div class="upload-dropzone-card">
-            <div class="upload-header">
-              <div class="upload-title-wrap">
-                <i class="pi pi-paperclip upload-icon"></i>
-                <span class="upload-label">{{ upload.label || 'Upload Step Document' }}</span>
-              </div>
-              <span class="upload-badge">{{ getFilesForUpload(upload.key).length }}</span>
+        @for (upload of (def.uploads && def.uploads.length > 0 ? def.uploads : [{ key: 'main', label: 'Upload ' +
+        def.name + ' Document', multiple: true }]); track upload.key) {
+        <div class="upload-dropzone-card">
+          <div class="upload-header">
+            <div class="upload-title-wrap">
+              <i class="pi pi-paperclip upload-icon"></i>
+              <span class="upload-label">{{ upload.label || 'Upload Step Document' }}</span>
             </div>
+            <span class="upload-badge">{{ getFilesForUpload(upload.key).length }}</span>
+          </div>
 
-            <div class="upload-body">
-              <!-- Attached Documents Stack (Identical to Customer Queries) -->
-              @if (getFilesForUpload(upload.key).length > 0) {
-                <div class="existing-files-stack">
-                  <span class="files-stack-title">Attached Documents:</span>
-                  <div class="files-chip-list">
-                    @for (file of getFilesForUpload(upload.key); track file.name + $index) {
-                      <div class="file-chip existing-chip">
-                        <i [class]="getFileIcon(file.name)" class="chip-file-icon"></i>
-                        <span class="file-name" [title]="file.name">{{ file.name }}</span>
-                        <span class="file-size">{{ file.size }}</span>
-                        <button
-                          type="button"
-                          class="remove-chip-btn"
-                          pTooltip="Remove file"
-                          tooltipPosition="top"
-                          (click)="removeUploadedFileByRef(file)">
-                          <i class="pi pi-times"></i>
-                        </button>
-                      </div>
-                    }
-                  </div>
+          <div class="upload-body">
+            <!-- Attached Documents Stack (Identical to Customer Queries) -->
+            @if (getFilesForUpload(upload.key).length > 0) {
+            <div class="existing-files-stack">
+              <span class="files-stack-title">Attached Documents:</span>
+              <div class="files-chip-list">
+                @for (file of getFilesForUpload(upload.key); track file.name + $index) {
+                <div class="file-chip existing-chip">
+                  <i [class]="getFileIcon(file.name)" class="chip-file-icon"></i>
+                  <span class="file-name" [title]="file.name">{{ file.name }}</span>
+                  <span class="file-size">{{ file.size }}</span>
+                  <button type="button" class="remove-chip-btn" pTooltip="Remove file" tooltipPosition="top"
+                    (click)="removeUploadedFileByRef(file)">
+                    <i class="pi pi-times"></i>
+                  </button>
                 </div>
-              }
-
-              <!-- Click to upload drop box with Drag & Drop support -->
-              <div
-                class="drop-box"
-                role="button"
-                tabindex="0"
-                (click)="fileInput.click()"
-                (keydown.enter)="fileInput.click()"
-                (dragover)="$event.preventDefault()"
-                (drop)="onDropFiles($event, upload.key)">
-                <i class="pi pi-cloud-upload drop-icon"></i>
-                <div class="drop-text">
-                  <span class="drop-main">Click to select files to attach</span>
-                  <span class="drop-sub">PDF, Word, Excel, Images up to 25MB</span>
-                </div>
-                <input
-                  #fileInput
-                  type="file"
-                  [multiple]="upload.multiple ?? true"
-                  class="hidden-file-input"
-                  (change)="onFilesSelected($event, upload.key)" />
+                }
               </div>
+            </div>
+            }
+
+            <!-- Click to upload drop box with Drag & Drop support -->
+            <div class="drop-box" role="button" tabindex="0" (click)="fileInput.click()"
+              (keydown.enter)="fileInput.click()" (dragover)="$event.preventDefault()"
+              (drop)="onDropFiles($event, upload.key)">
+              <i class="pi pi-cloud-upload drop-icon"></i>
+              <div class="drop-text">
+                <span class="drop-main">Click to select files to attach</span>
+                <span class="drop-sub">PDF, Word, Excel, Images up to 25MB</span>
+              </div>
+              <input #fileInput type="file" [multiple]="upload.multiple ?? true" class="hidden-file-input"
+                (change)="onFilesSelected($event, upload.key)" />
             </div>
           </div>
+        </div>
         }
       </div>
     </div>
@@ -497,9 +377,7 @@
       </div>
 
       <div class="remarks-embed-container">
-        <app-step-remarks
-          [remarks]="stepRemarks()"
-          (quickAdd)="onAddRemark($event)">
+        <app-step-remarks [remarks]="stepRemarks()" (quickAdd)="onAddRemark($event)">
         </app-step-remarks>
       </div>
     </div>
@@ -507,43 +385,21 @@
 
     <!-- Bottom Actions Bar -->
     <div class="bottom-action-panel app-panel">
-      <button
-        pButton
-        type="button"
-        icon="pi pi-arrow-left"
-        label="Back to Pipeline"
-        class="p-button-text p-button-secondary"
-        (click)="goBackToTimeline()">
+      <button pButton type="button" icon="pi pi-arrow-left" label="Back to Pipeline"
+        class="p-button-text p-button-secondary" (click)="goBackToTimeline()">
       </button>
 
       <div class="bottom-actions-right">
-        <button
-          pButton
-          type="button"
-          icon="pi pi-plus"
-          label="Add Next Form / Step"
-          class="p-button-outlined p-button-secondary"
-          (click)="openAddStepModal()">
+        <button pButton type="button" icon="pi pi-plus" label="Add Next Form / Step"
+          class="p-button-outlined p-button-secondary" (click)="openAddStepModal()">
         </button>
 
-        <button
-          pButton
-          type="button"
-          icon="pi pi-save"
-          label="Save Draft"
-          class="p-button-outlined"
-          [loading]="saving()"
-          (click)="saveStep(false)">
+        <button pButton type="button" icon="pi pi-save" label="Save Draft" class="p-button-outlined"
+          [loading]="saving()" (click)="saveStep(false)">
         </button>
 
-        <button
-          pButton
-          type="button"
-          icon="pi pi-check"
-          [label]="isStepCompleted() ? 'Completed' : 'Complete Step'"
-          class="complete-step-btn"
-          [loading]="saving()"
-          (click)="saveStep(true)">
+        <button pButton type="button" icon="pi pi-check" [label]="isStepCompleted() ? 'Completed' : 'Complete Step'"
+          class="complete-step-btn" [loading]="saving()" (click)="saveStep(true)">
         </button>
       </div>
     </div>
@@ -556,15 +412,9 @@
 <!-- ══════════════════════════════════════════════════════════════════════
      MODAL: SELECT NEXT FORM FROM CATALOG OF 28 FORMS
 ══════════════════════════════════════════════════════════════════════ -->
-<p-dialog
-  [visible]="catalogModalVisible()"
-  (visibleChange)="catalogModalVisible.set($event)"
-  [modal]="true"
-  [dismissableMask]="false"
-  [draggable]="false"
-  [resizable]="false"
-  [style]="{ width: '92vw', maxWidth: '940px', height: '85vh', maxHeight: '90vh' }"
-  styleClass="add-step-dialog"
+<p-dialog [visible]="catalogModalVisible()" (visibleChange)="catalogModalVisible.set($event)" [modal]="true"
+  [dismissableMask]="false" [draggable]="false" [resizable]="false"
+  [style]="{ width: '92vw', maxWidth: '940px', height: '85vh', maxHeight: '90vh' }" styleClass="add-step-dialog"
   appendTo="body">
 
   <ng-template pTemplate="header">
@@ -586,45 +436,32 @@
           <i class="pi pi-search search-icon"></i>
         </div>
 
-        <input
-          #catalogSearchInput
-          pInputText
-          type="text"
-          [value]="catalogSearch()"
-          (input)="catalogSearch.set($any($event.target).value)"
-          (keydown.escape)="clearCatalogSearch()"
+        <input #catalogSearchInput pInputText type="text" [value]="catalogSearch()"
+          (input)="catalogSearch.set($any($event.target).value)" (keydown.escape)="clearCatalogSearch()"
           placeholder="Search forms by name, code (e.g. PQB, PO, Delivery, RFQ), or description..."
-          class="catalog-search-input"
-          aria-label="Search forms by name or code" />
+          class="catalog-search-input" aria-label="Search forms by name or code" />
 
         <div class="search-actions-group">
           @if (catalogSearch()) {
-            <span
-              class="search-match-pill"
-              [class.search-match-pill--zero]="filteredCatalog().length === 0">
-              @if (filteredCatalog().length > 0) {
-                <i class="pi pi-check" aria-hidden="true"></i>
-                <span>{{ filteredCatalog().length }} {{ filteredCatalog().length === 1 ? 'match' : 'matches' }}</span>
-              } @else {
-                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-                <span>0 matches</span>
-              }
-            </span>
+          <span class="search-match-pill" [class.search-match-pill--zero]="filteredCatalog().length === 0">
+            @if (filteredCatalog().length > 0) {
+            <i class="pi pi-check" aria-hidden="true"></i>
+            <span>{{ filteredCatalog().length }} {{ filteredCatalog().length === 1 ? 'match' : 'matches' }}</span>
+            } @else {
+            <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+            <span>0 matches</span>
+            }
+          </span>
 
-            <button
-              type="button"
-              class="search-clear-btn"
-              (click)="clearCatalogSearch()"
-              pTooltip="Clear search (Esc)"
-              tooltipPosition="bottom"
-              aria-label="Clear search">
-              <i class="pi pi-times" aria-hidden="true"></i>
-            </button>
+          <button type="button" class="search-clear-btn" (click)="clearCatalogSearch()" pTooltip="Clear search (Esc)"
+            tooltipPosition="bottom" aria-label="Clear search">
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
           } @else {
-            <div class="search-hint-kbd" pTooltip="Press Esc while typing to clear" tooltipPosition="bottom">
-              <kbd class="kbd-key">ESC</kbd>
-              <span class="kbd-label">to clear</span>
-            </div>
+          <div class="search-hint-kbd" pTooltip="Press Esc while typing to clear" tooltipPosition="bottom">
+            <kbd class="kbd-key">ESC</kbd>
+            <span class="kbd-label">to clear</span>
+          </div>
           }
         </div>
       </div>
@@ -632,11 +469,9 @@
 
     <!-- Category Filter Chips -->
     <div class="category-chips-row">
-      @for (cat of ['All', 'Pre-Bidding & Tenders', 'Sourcing & Quotations', 'Supplier Orders & Invoices', 'Logistics & Customs', 'Customer & Supplier Settlement']; track cat) {
-      <button
-        type="button"
-        class="cat-chip"
-        [class.cat-chip--active]="selectedCategory() === cat"
+      @for (cat of ['All', 'Pre-Bidding & Tenders', 'Sourcing & Quotations', 'Supplier Orders & Invoices', 'Logistics &
+      Customs', 'Customer & Supplier Settlement']; track cat) {
+      <button type="button" class="cat-chip" [class.cat-chip--active]="selectedCategory() === cat"
         (click)="selectedCategory.set(cat)">
         {{ cat }}
       </button>
@@ -669,11 +504,7 @@
 
   <ng-template pTemplate="footer">
     <div class="catalog-dlg-footer">
-      <button
-        pButton
-        type="button"
-        label="Cancel"
-        class="p-button-text p-button-secondary"
+      <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary"
         (click)="catalogModalVisible.set(false)">
       </button>
     </div>

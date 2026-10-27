@@ -1,13 +1,6 @@
-<p-dialog
-  [visible]="visible()"
-  (visibleChange)="visible.set($event)"
-  [modal]="true"
-  [blockScroll]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [dismissableMask]="false"
-  [style]="{ width: '96vw', maxWidth: '1180px', height: '86vh', maxHeight: '90vh' }"
-  styleClass="step-form-popup-dialog"
+<p-dialog [visible]="visible()" (visibleChange)="visible.set($event)" [modal]="true" [blockScroll]="true"
+  [draggable]="false" [resizable]="false" [dismissableMask]="false"
+  [style]="{ width: '96vw', maxWidth: '1180px', height: '86vh', maxHeight: '90vh' }" styleClass="step-form-popup-dialog"
   appendTo="body">
 
   <!-- ── 1. Simple, Clean Header ──────────────────────────────────────── -->
@@ -24,541 +17,421 @@
 
   <!-- ── 2. Dialog Content Body ──────────────────────────────────────── -->
   @if (loading()) {
-    <div class="dlg-loading-state">
-      <i class="pi pi-spin pi-spinner loading-spinner"></i>
-      <p>Fetching step details & form structure...</p>
-    </div>
+  <div class="dlg-loading-state">
+    <i class="pi pi-spin pi-spinner loading-spinner"></i>
+    <p>Fetching step details & form structure...</p>
+  </div>
   } @else if (resolvedDef(); as def) {
-    <div class="dlg-body-container">
+  <div class="dlg-body-container">
 
-      <!-- Navigation Segment Tabs -->
-      <nav class="dlg-section-tabs" aria-label="Step Form Sections">
-        <button
-          type="button"
-          class="dlg-tab-btn"
-          [class.dlg-tab-btn--active]="activeTab() === 'fields'"
-          (click)="activeTab.set('fields')">
-          <i class="pi pi-align-left"></i>
-          <span>Form Inputs</span>
-          <span class="tab-badge">{{ def.fields.length }}</span>
-        </button>
+    <!-- Navigation Segment Tabs -->
+    <nav class="dlg-section-tabs" aria-label="Step Form Sections">
+      <button type="button" class="dlg-tab-btn" [class.dlg-tab-btn--active]="activeTab() === 'fields'"
+        (click)="activeTab.set('fields')">
+        <i class="pi pi-align-left"></i>
+        <span>Form Inputs</span>
+        <span class="tab-badge">{{ def.fields.length }}</span>
+      </button>
 
-        @if (def.tableConfig; as tbl) {
-        <button
-          type="button"
-          class="dlg-tab-btn"
-          [class.dlg-tab-btn--active]="activeTab() === 'table'"
-          (click)="activeTab.set('table')">
-          <i class="pi pi-table"></i>
-          <span>{{ tbl.title }}</span>
-          <span class="tab-badge">{{ tableFormArray().length }}</span>
-        </button>
-        }
-
-        <button
-          type="button"
-          class="dlg-tab-btn"
-          [class.dlg-tab-btn--active]="activeTab() === 'uploads'"
-          (click)="activeTab.set('uploads')">
-          <i class="pi pi-paperclip"></i>
-          <span>Attachments</span>
-          <span class="tab-badge">{{ uploadedFiles().length }}</span>
-        </button>
-
-        <button
-          type="button"
-          class="dlg-tab-btn"
-          [class.dlg-tab-btn--active]="activeTab() === 'remarks'"
-          (click)="activeTab.set('remarks')">
-          <i class="pi pi-comments"></i>
-          <span>Remarks</span>
-          <span class="tab-badge">{{ stepRemarks().length }}</span>
-        </button>
-      </nav>
-
-      <!-- ── TAB 1: FORM INPUTS ──────────────────────────────────────── -->
-      @if (activeTab() === 'fields') {
-        <div class="tab-panel tab-panel--fields">
-          <form [formGroup]="formGroup()" class="dynamic-inputs-grid">
-            @for (field of def.fields; track field.key) {
-              <div
-                class="input-col"
-                [class.col-span-1]="field.colSpan === 1"
-                [class.col-span-2]="field.colSpan === 2 || !field.colSpan"
-                [class.col-span-3]="field.colSpan === 3"
-                [class.col-span-4]="field.colSpan === 4">
-
-                <label [for]="'field_' + field.key" class="input-label">
-                  {{ field.label }}
-                  @if (field.required) {
-                    <span class="req-star" aria-hidden="true">*</span>
-                  }
-                </label>
-
-                @switch (field.type) {
-                  @case ('text') {
-                    <input
-                      pInputText
-                      type="text"
-                      [id]="'field_' + field.key"
-                      [formControlName]="field.key"
-                      [placeholder]="field.placeholder || ('Enter ' + field.label)"
-                      class="form-control-input w-full" />
-                  }
-
-                  @case ('number') {
-                    <input
-                      pInputText
-                      type="number"
-                      [id]="'field_' + field.key"
-                      [formControlName]="field.key"
-                      [placeholder]="field.placeholder || '0.00'"
-                      class="form-control-input w-full" />
-                  }
-
-                  @case ('currency') {
-                    <div class="currency-input-wrap">
-                      <span class="currency-prefix">{{ field.prefix || (field.key.toLowerCase().includes('eur') ? '€' : '₹') }}</span>
-                      <input
-                        pInputText
-                        type="number"
-                        [id]="'field_' + field.key"
-                        [formControlName]="field.key"
-                        [placeholder]="field.placeholder || '0.00'"
-                        class="form-control-input w-full with-prefix" />
-                    </div>
-                  }
-
-                  @case ('date') {
-                    <p-datepicker
-                      [formControlName]="field.key"
-                      [inputId]="'field_' + field.key"
-                      dateFormat="dd-mm-yy"
-                      [showIcon]="true"
-                      [placeholder]="field.placeholder || 'Select Date'"
-                      appendTo="body"
-                      styleClass="w-full">
-                    </p-datepicker>
-                  }
-
-                  @case ('datetime') {
-                    <p-datepicker
-                      [formControlName]="field.key"
-                      [inputId]="'field_' + field.key"
-                      dateFormat="dd-mm-yy"
-                      [showTime]="true"
-                      [showIcon]="true"
-                      [placeholder]="field.placeholder || 'Select Date & Time'"
-                      appendTo="body"
-                      styleClass="w-full">
-                    </p-datepicker>
-                  }
-
-                  @case ('select') {
-                    <p-select
-                      [options]="getSelectOptions(field)"
-                      optionLabel="label"
-                      optionValue="value"
-                      [formControlName]="field.key"
-                      [placeholder]="field.placeholder || ('Select ' + field.label)"
-                      appendTo="body"
-                      styleClass="w-full">
-                    </p-select>
-                  }
-
-                  @case ('multilocation') {
-                    <div class="multilocation-wrapper">
-                      <div class="multilocation-input-row">
-                        <div class="multilocation-input-wrap">
-                          <i class="pi pi-map-marker input-prefix-icon" aria-hidden="true"></i>
-                          <input
-                            #locInput
-                            pInputText
-                            type="text"
-                            [id]="'field_' + field.key"
-                            [placeholder]="field.placeholder || ('Add ' + field.label + ' (press Enter)')"
-                            (keydown)="onLocationInputKeydown($event, field.key, locInput)"
-                            class="form-control-input w-full with-prefix" />
-                        </div>
-                        <button
-                          type="button"
-                          class="add-loc-btn"
-                          (click)="addLocation(field.key, locInput)"
-                          pTooltip="Add location"
-                          tooltipPosition="top">
-                          <i class="pi pi-plus" aria-hidden="true"></i>
-                          <span>Add</span>
-                        </button>
-                      </div>
-
-                      @let locs = getLocations(field.key);
-                      @if (locs.length > 0) {
-                        <div class="locations-chip-list" role="list" aria-label="Locations list">
-                          @for (loc of locs; track $index) {
-                            <span class="location-chip" role="listitem">
-                              <i class="pi pi-map-pin chip-pin" aria-hidden="true"></i>
-                              <span class="chip-text">{{ loc }}</span>
-                              <button
-                                type="button"
-                                class="chip-remove-btn"
-                                (click)="removeLocation(field.key, $index)"
-                                [attr.aria-label]="'Remove location ' + loc">
-                                <i class="pi pi-times" aria-hidden="true"></i>
-                              </button>
-                            </span>
-                          }
-                        </div>
-                      } @else {
-                        <div class="locations-empty-hint">
-                          <i class="pi pi-info-circle" aria-hidden="true"></i>
-                          <span>No locations added yet. Type location above and click Add or press Enter.</span>
-                        </div>
-                      }
-                    </div>
-                  }
-
-                  @case ('textarea') {
-                    <textarea
-                      pTextarea
-                      [id]="'field_' + field.key"
-                      [formControlName]="field.key"
-                      [placeholder]="field.placeholder || ('Enter ' + field.label)"
-                      rows="3"
-                      class="form-control-input w-full">
-                    </textarea>
-                  }
-                }
-              </div>
-            }
-          </form>
-        </div>
+      @if (def.tableConfig; as tbl) {
+      <button type="button" class="dlg-tab-btn" [class.dlg-tab-btn--active]="activeTab() === 'table'"
+        (click)="activeTab.set('table')">
+        <i class="pi pi-table"></i>
+        <span>{{ tbl.title }}</span>
+        <span class="tab-badge">{{ tableFormArray().length }}</span>
+      </button>
       }
 
-      <!-- ── TAB 2: LINE ITEMS TABLE ─────────────────────────────────── -->
-      @if (activeTab() === 'table') {
-        <div class="tab-panel tab-panel--table">
-          @if (def.tableConfig; as tbl) {
-            <div class="table-section-bar">
-              <div class="table-title-group">
-                <h3 class="table-section-title">{{ tbl.title }}</h3>
-                <span class="table-item-count">({{ tableFormArray().length }} item{{ tableFormArray().length === 1 ? '' : 's' }})</span>
-              </div>
+      <button type="button" class="dlg-tab-btn" [class.dlg-tab-btn--active]="activeTab() === 'uploads'"
+        (click)="activeTab.set('uploads')">
+        <i class="pi pi-paperclip"></i>
+        <span>Attachments</span>
+        <span class="tab-badge">{{ uploadedFiles().length }}</span>
+      </button>
 
-              <div class="table-actions-group">
-                @if (tbl.autoCalculateTotal && tbl.totalKey) {
-                  <div class="table-total-pill">
-                    <span class="total-lbl">Net Total:</span>
-                    <strong class="total-amt">₹{{ tableTotalSum() | number:'1.2-2' }}</strong>
-                  </div>
+      <button type="button" class="dlg-tab-btn" [class.dlg-tab-btn--active]="activeTab() === 'remarks'"
+        (click)="activeTab.set('remarks')">
+        <i class="pi pi-comments"></i>
+        <span>Remarks</span>
+        <span class="tab-badge">{{ stepRemarks().length }}</span>
+      </button>
+    </nav>
+
+    <!-- ── TAB 1: FORM INPUTS ──────────────────────────────────────── -->
+    @if (activeTab() === 'fields') {
+    <div class="tab-panel tab-panel--fields">
+      <form [formGroup]="formGroup()" class="dynamic-inputs-grid">
+        @for (field of def.fields; track field.key) {
+        <div class="input-col" [class.col-span-1]="field.colSpan === 1"
+          [class.col-span-2]="field.colSpan === 2 || !field.colSpan" [class.col-span-3]="field.colSpan === 3"
+          [class.col-span-4]="field.colSpan === 4">
+
+          <label [for]="'field_' + field.key" class="input-label">
+            {{ field.label }}
+            @if (field.required) {
+            <span class="req-star" aria-hidden="true">*</span>
+            }
+          </label>
+
+          @switch (field.type) {
+          @case ('text') {
+          <input pInputText type="text" [id]="'field_' + field.key" [formControlName]="field.key"
+            [placeholder]="field.placeholder || ('Enter ' + field.label)" class="form-control-input w-full" />
+          }
+
+          @case ('number') {
+          <input pInputText type="number" [id]="'field_' + field.key" [formControlName]="field.key"
+            [placeholder]="field.placeholder || '0.00'" class="form-control-input w-full" />
+          }
+
+          @case ('currency') {
+          <div class="currency-input-wrap">
+            <span class="currency-prefix">{{ field.prefix || (field.key.toLowerCase().includes('eur') ? '€' : '₹')
+              }}</span>
+            <input pInputText type="number" [id]="'field_' + field.key" [formControlName]="field.key"
+              [placeholder]="field.placeholder || '0.00'" class="form-control-input w-full with-prefix" />
+          </div>
+          }
+
+          @case ('date') {
+          <p-datepicker [formControlName]="field.key" [inputId]="'field_' + field.key" dateFormat="dd-mm-yy"
+            [showIcon]="true" [placeholder]="field.placeholder || 'Select Date'" appendTo="body" styleClass="w-full">
+          </p-datepicker>
+          }
+
+          @case ('datetime') {
+          <p-datepicker [formControlName]="field.key" [inputId]="'field_' + field.key" dateFormat="dd-mm-yy"
+            [showTime]="true" [showIcon]="true" [placeholder]="field.placeholder || 'Select Date & Time'"
+            appendTo="body" styleClass="w-full">
+          </p-datepicker>
+          }
+
+          @case ('select') {
+          <p-select [options]="getSelectOptions(field)" optionLabel="label" optionValue="value"
+            [formControlName]="field.key" [placeholder]="field.placeholder || ('Select ' + field.label)" appendTo="body"
+            styleClass="w-full">
+          </p-select>
+          }
+
+          @case ('multilocation') {
+          <div class="multilocation-wrapper">
+            <div class="multilocation-input-row">
+              <div class="multilocation-input-wrap">
+                <i class="pi pi-map-marker input-prefix-icon" aria-hidden="true"></i>
+                <input #locInput pInputText type="text" [id]="'field_' + field.key"
+                  [placeholder]="field.placeholder || ('Add ' + field.label + ' (press Enter)')"
+                  (keydown)="onLocationInputKeydown($event, field.key, locInput)"
+                  class="form-control-input w-full with-prefix" />
+              </div>
+              <button type="button" class="add-loc-btn" (click)="addLocation(field.key, locInput)"
+                pTooltip="Add location" tooltipPosition="top">
+                <i class="pi pi-plus" aria-hidden="true"></i>
+                <span>Add</span>
+              </button>
+            </div>
+
+            @let locs = getLocations(field.key);
+            @if (locs.length > 0) {
+            <div class="locations-chip-list" role="list" aria-label="Locations list">
+              @for (loc of locs; track $index) {
+              <span class="location-chip" role="listitem">
+                <i class="pi pi-map-pin chip-pin" aria-hidden="true"></i>
+                <span class="chip-text">{{ loc }}</span>
+                <button type="button" class="chip-remove-btn" (click)="removeLocation(field.key, $index)"
+                  [attr.aria-label]="'Remove location ' + loc">
+                  <i class="pi pi-times" aria-hidden="true"></i>
+                </button>
+              </span>
+              }
+            </div>
+            } @else {
+            <div class="locations-empty-hint">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <span>No locations added yet. Type location above and click Add or press Enter.</span>
+            </div>
+            }
+          </div>
+          }
+
+          @case ('textarea') {
+          <textarea pTextarea [id]="'field_' + field.key" [formControlName]="field.key"
+            [placeholder]="field.placeholder || ('Enter ' + field.label)" rows="3" class="form-control-input w-full">
+                    </textarea>
+          }
+          }
+        </div>
+        }
+      </form>
+    </div>
+    }
+
+    <!-- ── TAB 2: LINE ITEMS TABLE ─────────────────────────────────── -->
+    @if (activeTab() === 'table') {
+    <div class="tab-panel tab-panel--table">
+      @if (def.tableConfig; as tbl) {
+      <div class="table-section-bar">
+        <div class="table-title-group">
+          <h3 class="table-section-title">{{ tbl.title }}</h3>
+          <span class="table-item-count">({{ tableFormArray().length }} item{{ tableFormArray().length === 1 ? '' : 's'
+            }})</span>
+        </div>
+
+        <div class="table-actions-group">
+          @if (tbl.autoCalculateTotal && tbl.totalKey) {
+          <div class="table-total-pill">
+            <span class="total-lbl">Net Total:</span>
+            <strong class="total-amt">₹{{ tableTotalSum() | number:'1.2-2' }}</strong>
+          </div>
+          }
+          <button pButton type="button" icon="pi pi-plus" label="Add Item Row"
+            class="p-button-outlined p-button-sm add-row-btn" (click)="addTableRow()">
+          </button>
+        </div>
+      </div>
+
+      <div class="table-scroll-wrapper">
+        <table class="dynamic-items-table">
+          <thead>
+            <tr>
+              @for (col of tbl.columns; track col.key) {
+              <th [style.width]="getColumnWidth(col.key, col.width)" [style.minWidth]="getColumnMinWidth(col.key)"
+                [class.text-right]="col.type === 'number' || col.type === 'currency'"
+                [class.text-center]="col.key === 'sr_no'">
+                {{ col.label }}
+              </th>
+              }
+              <th style="width: 50px; text-align: center;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (rowGroup of tableFormArray().controls; track $index; let rIdx = $index) {
+            <tr [formGroup]="rowGroup" class="item-table-row">
+              @for (col of tbl.columns; track col.key) {
+              <td [style.width]="getColumnWidth(col.key, col.width)" [style.minWidth]="getColumnMinWidth(col.key)"
+                [class.text-right]="col.type === 'number' || col.type === 'currency'"
+                [class.text-center]="col.key === 'sr_no'">
+
+                @if (col.key === 'sr_no') {
+                <!-- Clean Serial Number, NO bulky box -->
+                <span class="row-seq-num">{{ rIdx + 1 }}</span>
+                } @else if (col.key === tbl.totalKey && tbl.autoCalculateTotal) {
+                <!-- Clean Auto-Calculated Total, NO bulky box -->
+                <span class="row-total-display">
+                  ₹{{ (rowGroup.get(col.key)?.value || 0) | number:'1.2-2' }}
+                </span>
+                } @else if (col.type === 'currency' || col.type === 'number') {
+                <!-- Borderless / Flat Numeric Input -->
+                <input type="number" [formControlName]="col.key" (input)="onTableCellChange(rIdx)"
+                  [placeholder]="col.type === 'currency' ? '0.00' : '0'" class="table-flat-input text-right" />
+                } @else if (col.type === 'date') {
+                <!-- Clean Date Input -->
+                <input type="date" [formControlName]="col.key" class="table-flat-input date-field" />
+                } @else {
+                <!-- Clean Text Input (e.g. Description, HSN/SAC, Unit) -->
+                <input type="text" [formControlName]="col.key"
+                  [placeholder]="col.key === 'description' ? 'Item description...' : '—'" class="table-flat-input" />
                 }
-                <button
-                  pButton
-                  type="button"
-                  icon="pi pi-plus"
-                  label="Add Item Row"
-                  class="p-button-outlined p-button-sm add-row-btn"
-                  (click)="addTableRow()">
+              </td>
+              }
+              <td class="text-center action-cell">
+                <button type="button" class="table-row-del-btn" pTooltip="Remove item" tooltipPosition="top"
+                  (click)="removeTableRow(rIdx)">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </td>
+            </tr>
+            } @empty {
+            <tr class="empty-table-row">
+              <td [attr.colspan]="tbl.columns.length + 1" class="empty-table-cell">
+                <div class="empty-table-prompt">
+                  <div class="empty-icon-badge">
+                    <i class="pi pi-inbox" aria-hidden="true"></i>
+                  </div>
+                  <p class="empty-title">No items added yet</p>
+                  <p class="empty-desc">Line items are optional. Click below to add requirement rows.</p>
+                  <button pButton type="button" icon="pi pi-plus" label="Add Item Row" class="empty-add-row-btn"
+                    (click)="addTableRow()">
+                  </button>
+                </div>
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      } @else {
+      <div class="empty-tab-state">
+        <div class="empty-tab-icon">
+          <i class="pi pi-info-circle" aria-hidden="true"></i>
+        </div>
+        <p class="empty-tab-title">No Line Items Required</p>
+        <p class="empty-tab-desc">This form does not require structured line items.</p>
+      </div>
+      }
+    </div>
+    }
+
+    <!-- ── TAB 3: DOCUMENT UPLOADS (CUSTOMER QUERY ALIGNED) ────────── -->
+    @if (activeTab() === 'uploads') {
+    <div class="tab-panel tab-panel--uploads">
+      @for (up of (def.uploads && def.uploads.length > 0 ? def.uploads : [{ key: 'main', label: 'Upload ' + def.name + '
+      Document', multiple: true }]); track up.key) {
+      <div class="upload-dropzone-card">
+        <div class="upload-header">
+          <div class="upload-title-wrap">
+            <i class="pi pi-paperclip upload-icon"></i>
+            <span class="upload-label">{{ up.label || 'Upload Step Document' }}</span>
+          </div>
+          <span class="upload-badge">{{ getFilesForUpload(up.key).length }}</span>
+        </div>
+
+        <div class="upload-body">
+          <!-- Attached Documents Stack (Identical to Customer Queries) -->
+          @if (getFilesForUpload(up.key).length > 0) {
+          <div class="existing-files-stack">
+            <span class="files-stack-title">Attached Documents:</span>
+            <div class="files-chip-list">
+              @for (file of getFilesForUpload(up.key); track file.name + $index) {
+              <div class="file-chip existing-chip">
+                <i [class]="getFileIcon(file.name)" class="chip-file-icon"></i>
+                <span class="file-name" [title]="file.name">{{ file.name }}</span>
+                <span class="file-size">{{ file.size }}</span>
+                <button type="button" class="remove-chip-btn" pTooltip="Remove file" tooltipPosition="top"
+                  (click)="removeUploadedFileByRef(file)">
+                  <i class="pi pi-times"></i>
                 </button>
               </div>
+              }
+            </div>
+          </div>
+          }
+
+          <!-- Click to upload drop box with Drag & Drop support -->
+          <div class="drop-box" role="button" tabindex="0" (click)="fileInput.click()"
+            (keydown.enter)="fileInput.click()" (dragover)="$event.preventDefault()"
+            (drop)="onDropFiles($event, up.key)">
+            <i class="pi pi-cloud-upload drop-icon"></i>
+            <div class="drop-text">
+              <span class="drop-main">Click to select files to attach</span>
+              <span class="drop-sub">PDF, Word, Excel, Images up to 25MB</span>
+            </div>
+            <input #fileInput type="file" [multiple]="up.multiple ?? true" class="hidden-file-input"
+              (change)="onFilesSelected($event, up.key)" />
+          </div>
+        </div>
+      </div>
+      }
+    </div>
+    }
+
+    <!-- ── TAB 4: REMARKS / AUDIT TRAIL TIMELINE ────────────────────── -->
+    @if (activeTab() === 'remarks') {
+    <div class="tab-panel tab-panel--remarks timeline-layout">
+
+      <!-- 1. Pure Timeline Stream (NO BOX STRUCTURE) -->
+      <div class="timeline-stream-container" role="log" aria-label="Step Remarks Timeline">
+        @if (stepRemarks().length === 0) {
+        <div class="timeline-empty-state">
+          <div class="timeline-empty-icon" aria-hidden="true">
+            <i class="pi pi-history"></i>
+          </div>
+          <h4 class="timeline-empty-title">No Remarks Recorded Yet</h4>
+          <p class="timeline-empty-desc">
+            Observations, procedural notes, and audit remarks recorded for this step will appear chronologically along
+            this timeline.
+          </p>
+        </div>
+        } @else {
+        <div class="timeline-tree">
+          <!-- Continuous vertical timeline line -->
+          <div class="timeline-stem-line" aria-hidden="true"></div>
+
+          @for (rmk of stepRemarks(); track rmk.id || $index; let rIdx = $index; let isLast = $last) {
+          <div class="timeline-event" [class.timeline-event--last]="isLast">
+
+            <!-- Timeline Marker Node on the track -->
+            <div class="timeline-marker" aria-hidden="true">
+              <span class="timeline-marker-dot"></span>
             </div>
 
-            <div class="table-scroll-wrapper">
-              <table class="dynamic-items-table">
-                <thead>
-                  <tr>
-                    @for (col of tbl.columns; track col.key) {
-                      <th
-                        [style.width]="getColumnWidth(col.key, col.width)"
-                        [style.minWidth]="getColumnMinWidth(col.key)"
-                        [class.text-right]="col.type === 'number' || col.type === 'currency'"
-                        [class.text-center]="col.key === 'sr_no'">
-                        {{ col.label }}
-                      </th>
-                    }
-                    <th style="width: 50px; text-align: center;"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (rowGroup of tableFormArray().controls; track $index; let rIdx = $index) {
-                    <tr [formGroup]="rowGroup" class="item-table-row">
-                      @for (col of tbl.columns; track col.key) {
-                        <td
-                          [style.width]="getColumnWidth(col.key, col.width)"
-                          [style.minWidth]="getColumnMinWidth(col.key)"
-                          [class.text-right]="col.type === 'number' || col.type === 'currency'"
-                          [class.text-center]="col.key === 'sr_no'">
+            <!-- Timeline Content (NO BOX, NO BORDER, PURE TIMELINE) -->
+            <div class="timeline-entry">
+              <div class="timeline-entry-header">
+                <div class="timeline-author-group">
+                  <strong class="timeline-author-name">{{ rmk.user || 'Team Member' }}</strong>
+                  <span class="timeline-source-pill">
+                    {{ rmk.user === 'Form Entry' ? 'Data Log' : 'Audit Entry' }}
+                  </span>
+                </div>
 
-                          @if (col.key === 'sr_no') {
-                            <!-- Clean Serial Number, NO bulky box -->
-                            <span class="row-seq-num">{{ rIdx + 1 }}</span>
-                          } @else if (col.key === tbl.totalKey && tbl.autoCalculateTotal) {
-                            <!-- Clean Auto-Calculated Total, NO bulky box -->
-                            <span class="row-total-display">
-                              ₹{{ (rowGroup.get(col.key)?.value || 0) | number:'1.2-2' }}
-                            </span>
-                          } @else if (col.type === 'currency' || col.type === 'number') {
-                            <!-- Borderless / Flat Numeric Input -->
-                            <input
-                              type="number"
-                              [formControlName]="col.key"
-                              (input)="onTableCellChange(rIdx)"
-                              [placeholder]="col.type === 'currency' ? '0.00' : '0'"
-                              class="table-flat-input text-right" />
-                          } @else if (col.type === 'date') {
-                            <!-- Clean Date Input -->
-                            <input
-                              type="date"
-                              [formControlName]="col.key"
-                              class="table-flat-input date-field" />
-                          } @else {
-                            <!-- Clean Text Input (e.g. Description, HSN/SAC, Unit) -->
-                            <input
-                              type="text"
-                              [formControlName]="col.key"
-                              [placeholder]="col.key === 'description' ? 'Item description...' : '—'"
-                              class="table-flat-input" />
-                          }
-                        </td>
-                      }
-                      <td class="text-center action-cell">
-                        <button
-                          type="button"
-                          class="table-row-del-btn"
-                          pTooltip="Remove item"
-                          tooltipPosition="top"
-                          (click)="removeTableRow(rIdx)">
-                          <i class="pi pi-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  } @empty {
-                    <tr class="empty-table-row">
-                      <td [attr.colspan]="tbl.columns.length + 1" class="text-center py-8">
-                        <div class="empty-table-prompt">
-                          <i class="pi pi-inbox text-3xl text-slate-300 mb-2"></i>
-                          <p class="text-sm text-slate-500 font-medium mb-1">No items added yet</p>
-                          <p class="text-xs text-slate-400 mb-3">Line items are optional. Click below to add requirement rows.</p>
-                          <button
-                            pButton
-                            type="button"
-                            icon="pi pi-plus"
-                            label="Add Item Row"
-                            class="p-button-outlined p-button-sm add-row-btn"
-                            (click)="addTableRow()">
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                <div class="timeline-meta-group">
+                  @if (rmk.created_at) {
+                  <span class="timeline-entry-time" [title]="rmk.created_at">
+                    <i class="pi pi-clock" aria-hidden="true"></i>
+                    {{ rmk.created_at | date:'dd-MM-yyyy, hh:mm a' }}
+                  </span>
                   }
-                </tbody>
-              </table>
+                  <button type="button" class="timeline-del-btn" pTooltip="Delete remark" tooltipPosition="top"
+                    [attr.aria-label]="'Delete remark ' + (rIdx + 1)" (click)="removeRemark(rIdx)">
+                    <i class="pi pi-trash" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="timeline-entry-body">
+                <p class="timeline-text-content">{{ rmk.remark }}</p>
+              </div>
             </div>
-          } @else {
-            <div class="empty-tab-state">
-              <i class="pi pi-info-circle empty-state-icon"></i>
-              <p>This form does not require structured line items.</p>
-            </div>
+
+          </div>
           }
         </div>
-      }
+        }
+      </div>
 
-      <!-- ── TAB 3: DOCUMENT UPLOADS (CUSTOMER QUERY ALIGNED) ────────── -->
-      @if (activeTab() === 'uploads') {
-        <div class="tab-panel tab-panel--uploads">
-          @for (up of (def.uploads && def.uploads.length > 0 ? def.uploads : [{ key: 'main', label: 'Upload ' + def.name + ' Document', multiple: true }]); track up.key) {
-            <div class="upload-dropzone-card">
-              <div class="upload-header">
-                <div class="upload-title-wrap">
-                  <i class="pi pi-paperclip upload-icon"></i>
-                  <span class="upload-label">{{ up.label || 'Upload Step Document' }}</span>
-                </div>
-                <span class="upload-badge">{{ getFilesForUpload(up.key).length }}</span>
-              </div>
-
-              <div class="upload-body">
-                <!-- Attached Documents Stack (Identical to Customer Queries) -->
-                @if (getFilesForUpload(up.key).length > 0) {
-                  <div class="existing-files-stack">
-                    <span class="files-stack-title">Attached Documents:</span>
-                    <div class="files-chip-list">
-                      @for (file of getFilesForUpload(up.key); track file.name + $index) {
-                        <div class="file-chip existing-chip">
-                          <i [class]="getFileIcon(file.name)" class="chip-file-icon"></i>
-                          <span class="file-name" [title]="file.name">{{ file.name }}</span>
-                          <span class="file-size">{{ file.size }}</span>
-                          <button
-                            type="button"
-                            class="remove-chip-btn"
-                            pTooltip="Remove file"
-                            tooltipPosition="top"
-                            (click)="removeUploadedFileByRef(file)">
-                            <i class="pi pi-times"></i>
-                          </button>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                }
-
-                <!-- Click to upload drop box with Drag & Drop support -->
-                <div
-                  class="drop-box"
-                  role="button"
-                  tabindex="0"
-                  (click)="fileInput.click()"
-                  (keydown.enter)="fileInput.click()"
-                  (dragover)="$event.preventDefault()"
-                  (drop)="onDropFiles($event, up.key)">
-                  <i class="pi pi-cloud-upload drop-icon"></i>
-                  <div class="drop-text">
-                    <span class="drop-main">Click to select files to attach</span>
-                    <span class="drop-sub">PDF, Word, Excel, Images up to 25MB</span>
-                  </div>
-                  <input
-                    #fileInput
-                    type="file"
-                    [multiple]="up.multiple ?? true"
-                    class="hidden-file-input"
-                    (change)="onFilesSelected($event, up.key)" />
-                </div>
-              </div>
-            </div>
-          }
+      <!-- 2. Bottom Type Box / Composer (Sticky at bottom) -->
+      <div class="timeline-composer-bar">
+        <div class="composer-avatar-dot" aria-hidden="true">
+          <span>{{ getRemarkInitials(currentUser()?.user || 'TM') }}</span>
         </div>
-      }
-
-      <!-- ── TAB 4: REMARKS / AUDIT TRAIL TIMELINE ────────────────────── -->
-      @if (activeTab() === 'remarks') {
-        <div class="tab-panel tab-panel--remarks timeline-layout">
-
-          <!-- 1. Pure Timeline Stream (NO BOX STRUCTURE) -->
-          <div class="timeline-stream-container" role="log" aria-label="Step Remarks Timeline">
-            @if (stepRemarks().length === 0) {
-              <div class="timeline-empty-state">
-                <div class="timeline-empty-icon" aria-hidden="true">
-                  <i class="pi pi-history"></i>
-                </div>
-                <h4 class="timeline-empty-title">No Remarks Recorded Yet</h4>
-                <p class="timeline-empty-desc">
-                  Observations, procedural notes, and audit remarks recorded for this step will appear chronologically along this timeline.
-                </p>
-              </div>
-            } @else {
-              <div class="timeline-tree">
-                <!-- Continuous vertical timeline line -->
-                <div class="timeline-stem-line" aria-hidden="true"></div>
-
-                @for (rmk of stepRemarks(); track rmk.id || $index; let rIdx = $index; let isLast = $last) {
-                  <div class="timeline-event" [class.timeline-event--last]="isLast">
-
-                    <!-- Timeline Marker Node on the track -->
-                    <div class="timeline-marker" aria-hidden="true">
-                      <span class="timeline-marker-dot"></span>
-                    </div>
-
-                    <!-- Timeline Content (NO BOX, NO BORDER, PURE TIMELINE) -->
-                    <div class="timeline-entry">
-                      <div class="timeline-entry-header">
-                        <div class="timeline-author-group">
-                          <strong class="timeline-author-name">{{ rmk.user || 'Team Member' }}</strong>
-                          <span class="timeline-source-pill">
-                            {{ rmk.user === 'Form Entry' ? 'Data Log' : 'Audit Entry' }}
-                          </span>
-                        </div>
-
-                        <div class="timeline-meta-group">
-                          @if (rmk.created_at) {
-                            <span class="timeline-entry-time" [title]="rmk.created_at">
-                              <i class="pi pi-clock" aria-hidden="true"></i>
-                              {{ rmk.created_at | date:'dd-MM-yyyy, hh:mm a' }}
-                            </span>
-                          }
-                          <button
-                            type="button"
-                            class="timeline-del-btn"
-                            pTooltip="Delete remark"
-                            tooltipPosition="top"
-                            [attr.aria-label]="'Delete remark ' + (rIdx + 1)"
-                            (click)="removeRemark(rIdx)">
-                            <i class="pi pi-trash" aria-hidden="true"></i>
-                          </button>
-                        </div>
-                      </div>
-
-                      <div class="timeline-entry-body">
-                        <p class="timeline-text-content">{{ rmk.remark }}</p>
-                      </div>
-                    </div>
-
-                  </div>
-                }
-              </div>
-            }
-          </div>
-
-          <!-- 2. Bottom Type Box / Composer (Sticky at bottom) -->
-          <div class="timeline-composer-bar">
-            <div class="composer-avatar-dot" aria-hidden="true">
-              <span>{{ getRemarkInitials(currentUser()?.user || 'TM') }}</span>
-            </div>
-            <div class="composer-input-wrap">
-              <input
-                pInputText
-                type="text"
-                [value]="newRemarkInput()"
-                (input)="newRemarkInput.set($any($event.target).value)"
-                (keydown.enter)="$event.preventDefault(); addRemark()"
-                placeholder="Type a remark or observation for this step and press Enter to post..."
-                class="timeline-type-input w-full"
-                aria-label="Type remark" />
-            </div>
-            <button
-              pButton
-              type="button"
-              icon="pi pi-send"
-              label="Post Remark"
-              class="timeline-post-btn"
-              [disabled]="!newRemarkInput().trim()"
-              (click)="addRemark()"
-              aria-label="Post remark">
-            </button>
-          </div>
-
+        <div class="composer-input-wrap">
+          <input pInputText type="text" [value]="newRemarkInput()"
+            (input)="newRemarkInput.set($any($event.target).value)"
+            (keydown.enter)="$event.preventDefault(); addRemark()"
+            placeholder="Type a remark or observation for this step and press Enter to post..."
+            class="timeline-type-input w-full" aria-label="Type remark" />
         </div>
-      }
+        <button pButton type="button" icon="pi pi-send" label="Post Remark" class="timeline-post-btn"
+          [disabled]="!newRemarkInput().trim()" (click)="addRemark()" aria-label="Post remark">
+        </button>
+      </div>
 
     </div>
+    }
+
+  </div>
   }
 
   <!-- ── 3. Delete Confirmation Overlay Banner ───────────────────────── -->
   @if (deleteConfirmVisible()) {
-    <div class="delete-confirmation-banner" role="alert">
-      <div class="del-confirm-left">
-        <i class="pi pi-exclamation-triangle warn-ico"></i>
-        <div>
-          <strong class="warn-title">Remove this step from project?</strong>
-          <p class="warn-sub">This will permanently delete this step and its recorded form data from the project timeline.</p>
-        </div>
-      </div>
-      <div class="del-confirm-actions">
-        <button
-          pButton
-          type="button"
-          label="No, Keep Step"
-          class="p-button-text p-button-secondary p-button-sm"
-          (click)="cancelDelete()">
-        </button>
-        <button
-          pButton
-          type="button"
-          icon="pi pi-trash"
-          label="Yes, Delete Step"
-          class="p-button-danger p-button-sm"
-          [loading]="deleting()"
-          (click)="confirmDelete()">
-        </button>
+  <div class="delete-confirmation-banner" role="alert">
+    <div class="del-confirm-left">
+      <i class="pi pi-exclamation-triangle warn-ico"></i>
+      <div>
+        <strong class="warn-title">Remove this step from project?</strong>
+        <p class="warn-sub">This will permanently delete this step and its recorded form data from the project timeline.
+        </p>
       </div>
     </div>
+    <div class="del-confirm-actions">
+      <button pButton type="button" label="No, Keep Step" class="p-button-text p-button-secondary p-button-sm"
+        (click)="cancelDelete()">
+      </button>
+      <button pButton type="button" icon="pi pi-trash" label="Yes, Delete Step" class="p-button-danger p-button-sm"
+        [loading]="deleting()" (click)="confirmDelete()">
+      </button>
+    </div>
+  </div>
   }
 
   <!-- ── 4. Dialog Footer (CRUD Actions: POST, PUT, DELETE) ──────────── -->
@@ -567,49 +440,26 @@
       <!-- Left: Delete Step Button (for Existing Step - DELETE) -->
       <div class="footer-left">
         @if (isEditMode()) {
-          <button
-            pButton
-            type="button"
-            icon="pi pi-trash"
-            label="Delete Step"
-            class="p-button-danger p-button-outlined del-btn"
-            pTooltip="Remove step and delete data"
-            tooltipPosition="top"
-            [disabled]="saving() || deleting()"
-            (click)="promptDelete()">
-          </button>
+        <button pButton type="button" icon="pi pi-trash" label="Delete Step"
+          class="p-button-danger p-button-outlined del-btn" pTooltip="Remove step and delete data" tooltipPosition="top"
+          [disabled]="saving() || deleting()" (click)="promptDelete()">
+        </button>
         }
       </div>
 
       <!-- Right: Cancel, Save Draft, Mark Completed (POST / PUT) -->
       <div class="footer-right">
-        <button
-          pButton
-          type="button"
-          label="Cancel"
-          class="p-button-text p-button-secondary cancel-btn"
-          [disabled]="saving() || deleting()"
-          (click)="close()">
+        <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary cancel-btn"
+          [disabled]="saving() || deleting()" (click)="close()">
         </button>
 
-        <button
-          pButton
-          type="button"
-          icon="pi pi-save"
-          label="Save Draft"
-          class="p-button-outlined save-draft-btn"
-          [loading]="saving()"
-          (click)="saveStep(false)">
+        <button pButton type="button" icon="pi pi-save" label="Save Draft" class="p-button-outlined save-draft-btn"
+          [loading]="saving()" (click)="saveStep(false)">
         </button>
 
-        <button
-          pButton
-          type="button"
-          icon="pi pi-check"
+        <button pButton type="button" icon="pi pi-check"
           [label]="isStepCompleted() ? 'Save & Keep Completed' : 'Save & Mark Complete'"
-          class="p-button-primary complete-btn"
-          [loading]="saving()"
-          (click)="saveStep(true)">
+          class="p-button-primary complete-btn" [loading]="saving()" (click)="saveStep(true)">
         </button>
       </div>
     </div>
