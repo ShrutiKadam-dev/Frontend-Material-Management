@@ -610,7 +610,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     name: "Supplier's Proforma Invoice",
     category: 'Supplier Orders & Invoices',
     phaseId: 'phase-3',
-    icon: 'pi pi-file-invoice',
+    icon: 'pi pi-receipt',
     description: 'Proforma invoice received from vendor prior to dispatch / foreign remittance',
     apiEndpoint: '/api/v1/proforma-invoices',
     fields: [

@@ -800,3 +800,9 @@ body:has(.p-component-overlay) .content-shell {
     flex-shrink: 0 !important;
   }
 }
+
+/* ── PrimeIcons Compatibility Aliases ────────────────────────────────────── */
+.pi-file-invoice:before {
+  content: "\ea06"; /* PrimeIcon receipt / invoice glyph */
+}
+
