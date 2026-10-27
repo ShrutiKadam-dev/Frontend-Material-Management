@@ -355,6 +355,23 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'gst_pct', label: 'GST %', type: 'number', suffix: '%', colSpan: 2, sectionTitle: '5. Goods & Services Tax (GST)' },
       { key: 'gst_amount', label: 'GST Amount', type: 'currency', prefix: '₹', colSpan: 2 },
     ],
+    tableConfig: {
+      title: 'Cost Sheet Line Items & Landed Cost Breakdown',
+      autoCalculateTotal: true,
+      quantityKey: 'quantity',
+      unitPriceKey: 'price_per_unit_inr',
+      totalKey: 'selling_price_excl_gst',
+      columns: [
+        { key: 'sr_no', label: 'Sr. No.', type: 'number', width: '70px' },
+        { key: 'description', label: 'Item Description', type: 'text', width: '240px' },
+        { key: 'item_code', label: 'Item Code', type: 'text', width: '120px' },
+        { key: 'quantity', label: 'Qty', type: 'number', width: '90px' },
+        { key: 'price_per_unit_eur', label: 'Price (€)', type: 'currency', width: '120px' },
+        { key: 'customs_duty_rate', label: 'Duty %', type: 'number', width: '90px' },
+        { key: 'landed_cost_inr', label: 'Landed Cost (₹)', type: 'currency', width: '140px' },
+        { key: 'selling_price_excl_gst', label: 'Selling Price Excl. GST (₹)', type: 'currency', width: '160px' },
+      ],
+    },
     uploads: [{ key: 'upload_cost_sheet', label: 'Upload Cost Sheet', multiple: true }],
   },
 

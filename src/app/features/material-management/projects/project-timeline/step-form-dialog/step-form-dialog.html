@@ -118,7 +118,7 @@
 
                   @case ('currency') {
                     <div class="currency-input-wrap">
-                      <span class="currency-prefix">₹</span>
+                      <span class="currency-prefix">{{ field.prefix || (field.key.toLowerCase().includes('eur') ? '€' : '₹') }}</span>
                       <input
                         pInputText
                         type="number"

@@ -18,9 +18,25 @@ export function normalizeBackendEntityToStep(
   const status: StepStatus =
     rawStatus === 'in_progress' || rawStatus === 'pending' || rawStatus === 'skipped'
       ? (rawStatus as StepStatus)
-      : 'completed';
+      : rawStatus === 'draft'
+        ? 'in_progress'
+        : 'completed';
 
-  const rawTableItems = (item['items'] || item['table_items'] || item['materials'] || []) as unknown[];
+  let rawTableItems: unknown[] = [];
+  if (Array.isArray(item['items']) && (item['items'] as unknown[]).length > 0) {
+    rawTableItems = item['items'] as unknown[];
+  } else if (
+    item['output'] &&
+    typeof item['output'] === 'object' &&
+    Array.isArray((item['output'] as Record<string, unknown>)['items'])
+  ) {
+    rawTableItems = (item['output'] as Record<string, unknown>)['items'] as unknown[];
+  } else if (Array.isArray(item['table_items'])) {
+    rawTableItems = item['table_items'] as unknown[];
+  } else if (Array.isArray(item['materials'])) {
+    rawTableItems = item['materials'] as unknown[];
+  }
+
   const normalizedTableItems = Array.isArray(rawTableItems)
     ? (rawTableItems as Array<Record<string, unknown>>)
         .filter((r) => !isTableRowEmpty(r))
@@ -36,6 +52,44 @@ export function normalizeBackendEntityToStep(
     remarks: rawRemarks,
   };
   delete combinedData['table_items'];
+
+  // Bridge FORM_10_COST_SHEET globalParams and output columnTotals for seamless UI and editing
+  if (formDef.formCode === 'FORM_10_COST_SHEET') {
+    const gp = (item['globalParams'] || {}) as Record<string, unknown>;
+    const out = (item['output'] || {}) as Record<string, unknown>;
+    const ct = (out['columnTotals'] || item['columnTotals'] || {}) as Record<string, unknown>;
+
+    const sheetTitle = item['title'] || item['project_title'] || '';
+    if (sheetTitle) {
+      combinedData['title'] = sheetTitle;
+      combinedData['project_title'] = sheetTitle;
+    }
+
+    if (gp['eurToInr'] !== undefined) combinedData['eur_to_inr_rate_prep'] = gp['eurToInr'];
+    if (gp['insuranceFreightRate'] !== undefined) combinedData['freight_insurance_pct'] = gp['insuranceFreightRate'];
+    if (gp['defaultCustomsDutyRate'] !== undefined) combinedData['custom_duty_pct'] = gp['defaultCustomsDutyRate'];
+    if (gp['igstRate'] !== undefined) combinedData['igst_pct'] = gp['igstRate'];
+    if (gp['transportationRate'] !== undefined) combinedData['transportation_pct'] = gp['transportationRate'];
+    if (gp['financeChargesRate'] !== undefined) combinedData['finance_charges_pct'] = gp['financeChargesRate'];
+    if (gp['marginRate'] !== undefined) combinedData['margin_pct'] = gp['marginRate'];
+    if (gp['gstRate'] !== undefined) combinedData['gst_pct'] = gp['gstRate'];
+
+    if (ct['totalPriceEur'] !== undefined) combinedData['total_amount_eur'] = ct['totalPriceEur'];
+    if (ct['insuranceFreightInr'] !== undefined) combinedData['freight_insurance_amount'] = ct['insuranceFreightInr'];
+    if (ct['customsDutyInr'] !== undefined) combinedData['custom_duty_amount'] = ct['customsDutyInr'];
+    if (ct['igstInr'] !== undefined) combinedData['igst_amount'] = ct['igstInr'];
+    if (ct['transportationInr'] !== undefined) combinedData['transportation_amount'] = ct['transportationInr'];
+    if (ct['financingChargesInr'] !== undefined) combinedData['finance_charges_amount'] = ct['financingChargesInr'];
+    if (ct['marginInr'] !== undefined) combinedData['margin_amount'] = ct['marginInr'];
+    if (ct['totalPriceInr'] !== undefined) combinedData['total_price_inr'] = ct['totalPriceInr'];
+    if (ct['totalCostInr'] !== undefined) combinedData['total_cost_inr'] = ct['totalCostInr'];
+    if (ct['sellingPriceExclGst'] !== undefined) combinedData['selling_price_excl_gst'] = ct['sellingPriceExclGst'];
+    if (ct['sellingPriceInclGst'] !== undefined) combinedData['grand_total_incl_gst'] = ct['sellingPriceInclGst'];
+    if (item['grandTotalInclGst'] !== undefined) combinedData['grand_total_incl_gst'] = item['grandTotalInclGst'];
+    if (item['totalGst'] !== undefined) combinedData['gst_amount'] = item['totalGst'];
+    if (item['versionNumber'] !== undefined) combinedData['versionNumber'] = item['versionNumber'];
+    if (item['hasRateIncrease'] !== undefined) combinedData['hasRateIncrease'] = item['hasRateIncrease'];
+  }
 
   return {
     id: stepId,
@@ -138,6 +192,22 @@ export class FormApiService {
       ...restPayload,
       items: cleanedItems,
     };
+
+    if (formDef.formCode === 'FORM_10_COST_SHEET') {
+      const existingGp = (payload['globalParams'] || {}) as Record<string, unknown>;
+      bodyPayload['title'] = payload['title'] || payload['project_title'] || 'Cost Sheet';
+      bodyPayload['globalParams'] = {
+        eurToInr: Number(payload['eur_to_inr_rate_prep'] ?? existingGp['eurToInr'] ?? 1),
+        insuranceFreightRate: Number(payload['freight_insurance_pct'] ?? existingGp['insuranceFreightRate'] ?? 0),
+        defaultCustomsDutyRate: Number(payload['custom_duty_pct'] ?? existingGp['defaultCustomsDutyRate'] ?? 0),
+        igstRate: Number(payload['igst_pct'] ?? existingGp['igstRate'] ?? 0),
+        transportationRate: Number(payload['transportation_pct'] ?? existingGp['transportationRate'] ?? 0),
+        financeChargesRate: Number(payload['finance_charges_pct'] ?? existingGp['financeChargesRate'] ?? 0),
+        marginRate: Number(payload['margin_pct'] ?? existingGp['marginRate'] ?? 0),
+        gstRate: Number(payload['gst_pct'] ?? existingGp['gstRate'] ?? 0),
+      };
+    }
+
     const sanitizedBody = sanitizePayloadDates(bodyPayload, formDef.fields, formDef.tableConfig?.columns);
 
     const fd = new FormData();
@@ -175,6 +245,22 @@ export class FormApiService {
       ...restPayload,
       items: cleanedItems,
     };
+
+    if (formDef.formCode === 'FORM_10_COST_SHEET') {
+      const existingGp = (payload['globalParams'] || {}) as Record<string, unknown>;
+      bodyPayload['title'] = payload['title'] || payload['project_title'] || 'Cost Sheet';
+      bodyPayload['globalParams'] = {
+        eurToInr: Number(payload['eur_to_inr_rate_prep'] ?? existingGp['eurToInr'] ?? 1),
+        insuranceFreightRate: Number(payload['freight_insurance_pct'] ?? existingGp['insuranceFreightRate'] ?? 0),
+        defaultCustomsDutyRate: Number(payload['custom_duty_pct'] ?? existingGp['defaultCustomsDutyRate'] ?? 0),
+        igstRate: Number(payload['igst_pct'] ?? existingGp['igstRate'] ?? 0),
+        transportationRate: Number(payload['transportation_pct'] ?? existingGp['transportationRate'] ?? 0),
+        financeChargesRate: Number(payload['finance_charges_pct'] ?? existingGp['financeChargesRate'] ?? 0),
+        marginRate: Number(payload['margin_pct'] ?? existingGp['marginRate'] ?? 0),
+        gstRate: Number(payload['gst_pct'] ?? existingGp['gstRate'] ?? 0),
+      };
+    }
+
     const sanitizedBody = sanitizePayloadDates(bodyPayload, formDef.fields, formDef.tableConfig?.columns);
 
     const fd = new FormData();

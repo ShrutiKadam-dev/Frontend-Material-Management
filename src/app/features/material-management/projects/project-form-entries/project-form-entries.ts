@@ -47,6 +47,85 @@ export interface EntryDisplayField {
   isClause?: boolean;
 }
 
+export interface CostSheetGlobalParams {
+  eurToInr: number;
+  insuranceFreightRate: number;
+  defaultCustomsDutyRate: number;
+  igstRate: number;
+  transportationRate: number;
+  financeChargesRate: number;
+  marginRate: number;
+  gstRate: number;
+}
+
+export interface CostSheetColumnTotals {
+  totalPriceEur: number;
+  insuranceFreightEur: number;
+  landedCostEur: number;
+  totalPriceInr: number;
+  insuranceFreightInr: number;
+  customsDutyInr: number;
+  landedCostInr: number;
+  transportationInr: number;
+  financingChargesInr: number;
+  totalCostInr: number;
+  marginInr: number;
+  sellingPriceExclGst: number;
+  igstInr: number;
+  lessIgstInr: number;
+  sellingPriceInclGst: number;
+}
+
+export interface CostSheetBreakdownPct {
+  basePct: number;
+  overheadsPct: number;
+  marginPct: number;
+  taxPct: number;
+}
+
+export interface CostSheetParamRow {
+  srNo: number;
+  parameter: string;
+  description: string;
+  icon: string;
+  rateDisplay: string;
+  stage: string;
+  amountInr: number;
+  isHighlight?: boolean;
+}
+
+export interface CostSheetMatrixRow {
+  label: string;
+  description: string;
+  eurValue: number | null;
+  ratePct: number | null;
+  inrValue: number;
+  highlight?: boolean;
+  isTotal?: boolean;
+  category: 'base' | 'customs' | 'logistics' | 'margin' | 'grand';
+}
+
+export interface CostSheetViewData {
+  id: number | string;
+  title: string;
+  status: string;
+  versionNumber: number;
+  hasRateIncrease: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  globalParams: CostSheetGlobalParams;
+  columnTotals: CostSheetColumnTotals;
+  grandTotalInclGst: number;
+  totalSellingPriceExclGst: number;
+  totalGst: number;
+  totalPriceInr: number;
+  totalCostInr: number;
+  marginInr: number;
+  items: Array<Record<string, unknown>>;
+  remarks: StepRemarkItem[];
+  breakdownPct: CostSheetBreakdownPct;
+}
+
 @Component({
   selector: 'app-project-form-entries',
   imports: [
@@ -146,6 +225,8 @@ export class ProjectFormEntries implements OnInit {
   });
 
   readonly projectIdNumber = computed(() => this.projectId() || 0);
+
+  readonly isCostSheet = computed(() => this.formDefinition()?.formCode === 'FORM_10_COST_SHEET');
 
   readonly formStepNumber = computed(() => {
     const def = this.formDefinition();
@@ -590,6 +671,10 @@ export class ProjectFormEntries implements OnInit {
       (col.type === 'currency' || col.key.includes('price') || col.key.includes('amount')) &&
       (typeof val === 'number' || !isNaN(Number(val)))
     ) {
+      const isEur = col.key.toLowerCase().includes('eur') || col.label.toLowerCase().includes('€') || col.label.toLowerCase().includes('eur');
+      if (isEur) {
+        return '€\u00A0' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
       return '₹\u00A0' + Number(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     if (col.type === 'number' && (typeof val === 'number' || !isNaN(Number(val)))) {
@@ -683,7 +768,9 @@ export class ProjectFormEntries implements OnInit {
             formattedVal = match.label;
           }
         } else if (f.type === 'currency' && (typeof val === 'number' || !isNaN(Number(val)))) {
-          formattedVal = '₹\u00A0' + Number(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const prefix = f.prefix || (f.key.toLowerCase().includes('eur') ? '€' : '₹');
+          const locale = prefix === '€' ? 'en-US' : 'en-IN';
+          formattedVal = prefix + '\u00A0' + Number(val).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         } else if (f.type === 'datetime') {
           const dateInput = typeof val === 'string' || typeof val === 'number' || val instanceof Date ? val : String(val);
           formattedVal = formatDisplayDate(dateInput, 'dd-MM-yyyy, hh:mm a');
@@ -801,6 +888,7 @@ export class ProjectFormEntries implements OnInit {
     if (k.includes('warranty') || k.includes('guarantee') || k.includes('security')) return 'pi pi-shield';
     if (k.includes('valid') || k.includes('period') || k.includes('duration')) return 'pi pi-hourglass';
     if (t === 'currency' || k.includes('fee') || k.includes('amount') || k.includes('price') || k.includes('cost')) {
+      if (k.includes('eur')) return 'pi pi-euro';
       return 'pi pi-indian-rupee';
     }
     if (k.includes('customer') || k.includes('client') || k.includes('org')) return 'pi pi-building';
@@ -1013,5 +1101,306 @@ export class ProjectFormEntries implements OnInit {
       }
     }
     return formatDisplayDate(entry.created_at || entry.completed_at || new Date().toISOString(), 'd MMM yyyy');
+  }
+
+  // ── Cost Sheet Domain Presentation & Visualization ────────────────
+  getCostSheetData(entry: ProjectStep): CostSheetViewData {
+    const data = (entry.data || {}) as Record<string, unknown>;
+    const rawEntry = entry as unknown as Record<string, unknown>;
+
+    // Global Parameters
+    const gpRaw = (data['globalParams'] || rawEntry['globalParams'] || {}) as Record<string, unknown>;
+    const globalParams: CostSheetGlobalParams = {
+      eurToInr: Number(gpRaw['eurToInr'] ?? data['eur_to_inr_rate_prep'] ?? 1),
+      insuranceFreightRate: Number(gpRaw['insuranceFreightRate'] ?? data['freight_insurance_pct'] ?? 0),
+      defaultCustomsDutyRate: Number(gpRaw['defaultCustomsDutyRate'] ?? data['custom_duty_pct'] ?? 0),
+      igstRate: Number(gpRaw['igstRate'] ?? data['igst_pct'] ?? 0),
+      transportationRate: Number(gpRaw['transportationRate'] ?? data['transportation_pct'] ?? 0),
+      financeChargesRate: Number(gpRaw['financeChargesRate'] ?? data['finance_charges_pct'] ?? 0),
+      marginRate: Number(gpRaw['marginRate'] ?? data['margin_pct'] ?? 0),
+      gstRate: Number(gpRaw['gstRate'] ?? data['gst_pct'] ?? 0),
+    };
+
+    // Column totals from output or flat data
+    const outRaw = (data['output'] || rawEntry['output'] || {}) as Record<string, unknown>;
+    const ctRaw = (outRaw['columnTotals'] || data['columnTotals'] || rawEntry['columnTotals'] || {}) as Record<string, unknown>;
+
+    const columnTotals: CostSheetColumnTotals = {
+      totalPriceEur: Number(ctRaw['totalPriceEur'] ?? data['total_amount_eur'] ?? 0),
+      insuranceFreightEur: Number(ctRaw['insuranceFreightEur'] ?? 0),
+      landedCostEur: Number(ctRaw['landedCostEur'] ?? 0),
+      totalPriceInr: Number(ctRaw['totalPriceInr'] ?? data['total_price_inr'] ?? 0),
+      insuranceFreightInr: Number(ctRaw['insuranceFreightInr'] ?? data['freight_insurance_amount'] ?? 0),
+      customsDutyInr: Number(ctRaw['customsDutyInr'] ?? data['custom_duty_amount'] ?? 0),
+      landedCostInr: Number(ctRaw['landedCostInr'] ?? 0),
+      transportationInr: Number(ctRaw['transportationInr'] ?? data['transportation_amount'] ?? 0),
+      financingChargesInr: Number(ctRaw['financingChargesInr'] ?? data['finance_charges_amount'] ?? 0),
+      totalCostInr: Number(ctRaw['totalCostInr'] ?? data['total_cost_inr'] ?? 0),
+      marginInr: Number(ctRaw['marginInr'] ?? data['margin_amount'] ?? 0),
+      sellingPriceExclGst: Number(ctRaw['sellingPriceExclGst'] ?? data['selling_price_excl_gst'] ?? 0),
+      igstInr: Number(ctRaw['igstInr'] ?? data['igst_amount'] ?? 0),
+      lessIgstInr: Number(ctRaw['lessIgstInr'] ?? 0),
+      sellingPriceInclGst: Number(ctRaw['sellingPriceInclGst'] ?? data['grand_total_incl_gst'] ?? 0),
+    };
+
+    const grandTotal = Number(
+      data['grandTotalInclGst'] ??
+      ctRaw['sellingPriceInclGst'] ??
+      data['grand_total_incl_gst'] ??
+      rawEntry['grandTotalInclGst'] ??
+      0,
+    );
+
+    const totalSellingPriceExclGst = Number(
+      data['totalSellingPriceExclGst'] ??
+      ctRaw['sellingPriceExclGst'] ??
+      data['selling_price_excl_gst'] ??
+      rawEntry['totalSellingPriceExclGst'] ??
+      0,
+    );
+
+    const totalGst = Number(
+      data['totalGst'] ??
+      data['gst_amount'] ??
+      ctRaw['igstInr'] ??
+      rawEntry['totalGst'] ??
+      0,
+    );
+
+    const items = this.getTableItems(entry);
+    const remarks = this.getEntryRemarks(entry);
+
+    // Calculate percentage breakdown for visual waterfall
+    let breakdownPct: CostSheetBreakdownPct = { basePct: 0, overheadsPct: 0, marginPct: 0, taxPct: 0 };
+    if (grandTotal > 0) {
+      const baseVal = Math.max(0, columnTotals.totalPriceInr);
+      const overheadsVal = Math.max(0, columnTotals.totalCostInr - baseVal);
+      const marginVal = Math.max(0, columnTotals.marginInr);
+      const taxVal = Math.max(0, totalGst || columnTotals.igstInr);
+
+      const basePct = Math.min(100, (baseVal / grandTotal) * 100);
+      const overheadsPct = Math.min(100 - basePct, (overheadsVal / grandTotal) * 100);
+      const marginPct = Math.min(100 - basePct - overheadsPct, (marginVal / grandTotal) * 100);
+      const taxPct = Math.max(0, 100 - basePct - overheadsPct - marginPct);
+
+      breakdownPct = {
+        basePct: Number(basePct.toFixed(1)),
+        overheadsPct: Number(overheadsPct.toFixed(1)),
+        marginPct: Number(marginPct.toFixed(1)),
+        taxPct: Number(taxPct.toFixed(1)),
+      };
+    }
+
+    return {
+      id: entry.id || entry.step_number,
+      title: String(data['title'] ?? data['project_title'] ?? rawEntry['title'] ?? entry.step_name ?? 'Cost Sheet'),
+      status: String(data['status'] ?? rawEntry['status'] ?? entry.status ?? 'Draft'),
+      versionNumber: Number(data['versionNumber'] ?? rawEntry['versionNumber'] ?? 1),
+      hasRateIncrease: Boolean(data['hasRateIncrease'] ?? rawEntry['hasRateIncrease'] ?? false),
+      createdAt: entry.created_at || (rawEntry['createdAt'] as string),
+      updatedAt: entry.updated_at || (rawEntry['updatedAt'] as string),
+      globalParams,
+      columnTotals,
+      grandTotalInclGst: grandTotal,
+      totalSellingPriceExclGst,
+      totalGst,
+      totalPriceInr: columnTotals.totalPriceInr,
+      totalCostInr: columnTotals.totalCostInr,
+      marginInr: columnTotals.marginInr,
+      items,
+      remarks,
+      breakdownPct,
+    };
+  }
+
+  getCostSheetMatrixRows(cs: CostSheetViewData): CostSheetMatrixRow[] {
+    const gp = cs.globalParams;
+    const ct = cs.columnTotals;
+    return [
+      {
+        label: 'Base Item / Supply Price',
+        description: 'Vendor supply value at foreign currency base rate',
+        eurValue: ct.totalPriceEur,
+        ratePct: null,
+        inrValue: ct.totalPriceInr,
+        category: 'base',
+      },
+      {
+        label: 'Freight & Transit Insurance',
+        description: 'Overseas shipment freight & cargo transit coverage',
+        eurValue: ct.insuranceFreightEur || null,
+        ratePct: gp.insuranceFreightRate,
+        inrValue: ct.insuranceFreightInr,
+        category: 'customs',
+      },
+      {
+        label: 'CIF / Landed Value (Port)',
+        description: 'Cost, Insurance and Freight value before customs port clearance',
+        eurValue: ct.landedCostEur || null,
+        ratePct: null,
+        inrValue: ct.landedCostInr || (ct.totalPriceInr + ct.insuranceFreightInr),
+        category: 'customs',
+      },
+      {
+        label: 'Customs Duty (CD)',
+        description: 'Statutory import customs clearance duty rate',
+        eurValue: null,
+        ratePct: gp.defaultCustomsDutyRate,
+        inrValue: ct.customsDutyInr,
+        category: 'customs',
+      },
+      {
+        label: 'Inland Transportation & Logistics',
+        description: 'Local port to warehouse/site domestic transit logistics',
+        eurValue: null,
+        ratePct: gp.transportationRate,
+        inrValue: ct.transportationInr,
+        category: 'logistics',
+      },
+      {
+        label: 'Financing Charges & LC Buffer',
+        description: 'Working capital cost, LC issuance & financing overheads',
+        eurValue: null,
+        ratePct: gp.financeChargesRate,
+        inrValue: ct.financingChargesInr,
+        category: 'logistics',
+      },
+      {
+        label: 'Total Cost to Company (Landed Cost)',
+        description: 'Sum of base supply, freight, duty, transportation & financing',
+        eurValue: null,
+        ratePct: null,
+        inrValue: ct.totalCostInr,
+        highlight: true,
+        category: 'logistics',
+      },
+      {
+        label: 'Commercial Profit Margin',
+        description: 'Target company gross profit markup',
+        eurValue: null,
+        ratePct: gp.marginRate,
+        inrValue: ct.marginInr,
+        category: 'margin',
+      },
+      {
+        label: 'Selling Price (Excl. GST)',
+        description: 'Quoted customer supply price before domestic goods tax',
+        eurValue: null,
+        ratePct: null,
+        inrValue: cs.totalSellingPriceExclGst || ct.sellingPriceExclGst,
+        highlight: true,
+        category: 'margin',
+      },
+      {
+        label: 'Output GST / IGST',
+        description: 'Domestic statutory goods & service tax',
+        eurValue: null,
+        ratePct: gp.gstRate,
+        inrValue: cs.totalGst || ct.igstInr,
+        category: 'grand',
+      },
+      {
+        label: 'Grand Total (Incl. GST)',
+        description: 'Final invoiceable commercial value to client',
+        eurValue: null,
+        ratePct: null,
+        inrValue: cs.grandTotalInclGst || ct.sellingPriceInclGst,
+        isTotal: true,
+        highlight: true,
+        category: 'grand',
+      },
+    ];
+  }
+
+  formatCurrency(val: number | null | undefined, currency: 'INR' | 'EUR' = 'INR'): string {
+    const num = Number(val) || 0;
+    if (currency === 'EUR') {
+      return '€\u00A0' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    return '₹\u00A0' + num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  formatPercent(val: number | null | undefined): string {
+    return Number(val || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 }) + '%';
+  }
+
+  getCostSheetParamRows(cs: CostSheetViewData): CostSheetParamRow[] {
+    const gp = cs.globalParams;
+    const ct = cs.columnTotals;
+    return [
+      {
+        srNo: 1,
+        parameter: 'EUR / INR Forex Rate',
+        description: 'Base foreign currency exchange conversion rate',
+        icon: 'pi pi-euro',
+        rateDisplay: `€1 = ₹${gp.eurToInr}`,
+        stage: 'Forex Valuation',
+        amountInr: ct.totalPriceInr,
+      },
+      {
+        srNo: 2,
+        parameter: 'Freight & Transit Insurance',
+        description: 'Overseas shipment freight and cargo transit coverage',
+        icon: 'pi pi-truck',
+        rateDisplay: `${gp.insuranceFreightRate}%`,
+        stage: 'CIF / Port Landed',
+        amountInr: ct.insuranceFreightInr,
+      },
+      {
+        srNo: 3,
+        parameter: 'Customs Duty (CD)',
+        description: 'Statutory import customs clearance duty rate',
+        icon: 'pi pi-shield',
+        rateDisplay: `${gp.defaultCustomsDutyRate}%`,
+        stage: 'Port Customs Clearance',
+        amountInr: ct.customsDutyInr,
+      },
+      {
+        srNo: 4,
+        parameter: 'Import IGST',
+        description: 'Integrated Goods and Services Tax on overseas supply',
+        icon: 'pi pi-percentage',
+        rateDisplay: `${gp.igstRate}%`,
+        stage: 'Statutory Import Tax',
+        amountInr: ct.igstInr,
+      },
+      {
+        srNo: 5,
+        parameter: 'Inland Transportation',
+        description: 'Domestic transport logistics from port to destination',
+        icon: 'pi pi-map-marker',
+        rateDisplay: `${gp.transportationRate}%`,
+        stage: 'Inland Logistics',
+        amountInr: ct.transportationInr,
+      },
+      {
+        srNo: 6,
+        parameter: 'Financing Charges & LC Buffer',
+        description: 'Working capital cost, LC issuance, and financing overheads',
+        icon: 'pi pi-credit-card',
+        rateDisplay: `${gp.financeChargesRate}%`,
+        stage: 'Financial Overheads',
+        amountInr: ct.financingChargesInr,
+      },
+      {
+        srNo: 7,
+        parameter: 'Commercial Profit Margin',
+        description: 'Target company gross profit markup percentage',
+        icon: 'pi pi-chart-line',
+        rateDisplay: `${gp.marginRate}%`,
+        stage: 'Gross Profit Markup',
+        amountInr: ct.marginInr,
+        isHighlight: true,
+      },
+      {
+        srNo: 8,
+        parameter: 'Domestic Output GST',
+        description: 'Standard domestic statutory goods and services tax',
+        icon: 'pi pi-building',
+        rateDisplay: `${gp.gstRate}%`,
+        stage: 'Statutory Client Tax',
+        amountInr: cs.totalGst || ct.igstInr,
+      },
+    ];
   }
 }

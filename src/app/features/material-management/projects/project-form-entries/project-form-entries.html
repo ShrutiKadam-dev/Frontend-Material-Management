@@ -215,7 +215,286 @@
     <!-- ── 4. Entries Cards List ─────────────────────────────────────── -->
     <div class="entries-list-container" role="feed" [attr.aria-label]="(formDefinition()?.name || 'Form') + ' entries'">
       @for (entry of filteredEntries(); track (entry.id || entry.step_number); let idx = $index) {
-        <article class="entry-card app-panel" [attr.aria-labelledby]="'entry-heading-' + (entry.id || idx)">
+        @if (isCostSheet()) {
+          @let cs = getCostSheetData(entry);
+          <article class="entry-card app-panel" [attr.aria-labelledby]="'entry-heading-' + (entry.id || idx)">
+
+            <!-- ── Card Top Header Ribbon (Matched with Theme & Other Components) ── -->
+            <header class="ec-header">
+              <div class="ec-header-left">
+                <span class="ec-num-badge">
+                  <i class="pi pi-calculator" aria-hidden="true"></i>
+                  <span>Cost Sheet #{{ idx + 1 }}</span>
+                </span>
+                <h2 [id]="'entry-heading-' + (entry.id || idx)" class="ec-entry-title">
+                  {{ cs.title || (formDefinition()?.name + ' (Entry #' + (idx + 1) + ')') }}
+                </h2>
+                <span class="ec-meta-pill ec-meta-pill--date">
+                  <i class="pi pi-calendar" aria-hidden="true"></i>
+                  <span>{{ getEntryDate(entry) }}</span>
+                </span>
+                <span class="cs-theme-pill cs-theme-pill--version" title="Revision number">
+                  v{{ cs.versionNumber }}
+                </span>
+                <span
+                  class="cs-theme-pill"
+                  [class.cs-theme-pill--draft]="cs.status.toLowerCase() === 'draft'"
+                  [class.cs-theme-pill--approved]="cs.status.toLowerCase() === 'approved' || cs.status.toLowerCase() === 'completed'"
+                  [class.cs-theme-pill--in-progress]="cs.status.toLowerCase().includes('progress')">
+                  {{ cs.status }}
+                </span>
+                @if (cs.hasRateIncrease) {
+                  <span class="cs-theme-pill cs-theme-pill--warning">
+                    <i class="pi pi-arrow-up-right" aria-hidden="true"></i> Rate Increase
+                  </span>
+                }
+              </div>
+
+              <!-- Right Side: Edit & Delete Action Buttons (Text buttons matching other forms) -->
+              <div class="ec-header-actions">
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-pencil"
+                  label="Edit"
+                  class="p-button-text p-button-info p-button-sm ec-action-edit"
+                  (click)="openEditDialog(entry)"
+                  pTooltip="Edit commercial rates, markup, specifications, and line items"
+                  tooltipPosition="top"
+                  [attr.aria-label]="'Edit cost sheet ' + (entry.id || idx)">
+                </button>
+
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-trash"
+                  label="Delete"
+                  class="p-button-text p-button-danger p-button-sm ec-action-delete"
+                  (click)="confirmDeleteEntry(entry, $event)"
+                  pTooltip="Delete this cost sheet"
+                  tooltipPosition="top"
+                  [attr.aria-label]="'Delete cost sheet ' + (entry.id || idx)">
+                </button>
+              </div>
+            </header>
+
+            <!-- ── Card Body (Theme-Matched Clean Split Layout) ── -->
+            <div class="ec-card-body">
+
+              <!-- Top Split: Specifications on Left (1.35fr), Remarks on Right (1fr) -->
+              <div class="ec-top-split">
+
+                <!-- Left Column: Commercial Highlights & Global Rates Grid -->
+                <section class="ec-summary-area" aria-label="Commercial specifications & cost summary">
+                  <div class="summary-specs-panel">
+
+                    <!-- Commercial Summary Highlights Strip (StanTech Paper-Stone Palette) -->
+                    <div class="cs-summary-strip">
+                      <div class="cs-summary-cell cs-summary-cell--primary">
+                        <span class="cs-cell-label">Grand Total (Incl. GST)</span>
+                        <span class="cs-cell-value">{{ formatCurrency(cs.grandTotalInclGst) }}</span>
+                        <span class="cs-cell-sub">Final Client Quotation</span>
+                      </div>
+                      <div class="cs-summary-cell">
+                        <span class="cs-cell-label">Selling Price (Excl. GST)</span>
+                        <span class="cs-cell-value">{{ formatCurrency(cs.totalSellingPriceExclGst) }}</span>
+                        <span class="cs-cell-sub">+{{ cs.globalParams.marginRate }}% Margin Markup</span>
+                      </div>
+                      <div class="cs-summary-cell">
+                        <span class="cs-cell-label">Total Landed Cost</span>
+                        <span class="cs-cell-value">{{ formatCurrency(cs.totalCostInr) }}</span>
+                        <span class="cs-cell-sub">Company Cost Base</span>
+                      </div>
+                      <div class="cs-summary-cell">
+                        <span class="cs-cell-label">Margin &amp; Tax</span>
+                        <span class="cs-cell-value">{{ formatCurrency(cs.marginInr) }}</span>
+                        <span class="cs-cell-sub">+{{ formatCurrency(cs.totalGst) }} GST ({{ cs.globalParams.gstRate }}%)</span>
+                      </div>
+                    </div>
+
+                    <!-- Commercial Parameters Section Header -->
+                    <div class="specs-section-header">
+                      <div class="ssh-title-group">
+                        <span class="ssh-icon-badge" aria-hidden="true">
+                          <i class="pi pi-sliders-h"></i>
+                        </span>
+                        <div class="ssh-text">
+                          <h3 class="ssh-heading">Commercial Parameters &amp; Rates</h3>
+                          <span class="ssh-subtext">Active foreign exchange rate, duties, and logistics markups</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Commercial Parameters & Rates Table -->
+                    <div class="modern-table-frame cs-params-table-frame">
+                      <table class="cs-params-table" aria-label="Commercial Parameters and Rates">
+                        <thead>
+                          <tr>
+                            <th scope="col" class="th-sr">#</th>
+                            <th scope="col" class="th-param">Parameter / Cost Component</th>
+                            <th scope="col" class="th-rate">Configured Rate</th>
+                            <th scope="col" class="th-amount">Calculated Amount (₹)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (p of getCostSheetParamRows(cs); track p.parameter) {
+                            <tr class="cs-param-row" [class.cs-param-row--highlight]="p.isHighlight">
+                              <td class="td-sr">
+                                <span class="sr-badge-pill">{{ p.srNo }}</span>
+                              </td>
+                              <td class="td-param">
+                                <div class="param-title-wrap">
+                                  <i [class]="p.icon" class="param-icon" aria-hidden="true"></i>
+                                  <div>
+                                    <span class="param-name">{{ p.parameter }}</span>
+                                    <span class="param-desc">{{ p.description }}</span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td class="td-rate">
+                                <span class="rate-plain-val">{{ p.rateDisplay }}</span>
+                              </td>
+                              <td class="td-amount">
+                                <span class="currency-cell-val">{{ formatCurrency(p.amountInr) }}</span>
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                        <tfoot>
+                          <tr class="cs-params-tfoot-row">
+                            <td colspan="3" class="tfoot-label">Total Landed Cost Base</td>
+                            <td class="tfoot-val">{{ formatCurrency(cs.totalCostInr) }}</td>
+                          </tr>
+                          <tr class="cs-params-tfoot-row cs-params-tfoot-row--grand">
+                            <td colspan="3" class="tfoot-label">Final Client Quotation (Grand Total Incl. GST)</td>
+                            <td class="tfoot-val">{{ formatCurrency(cs.grandTotalInclGst) }}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+
+                    <!-- Simple Cost Composition Bar (Only if totals are calculated) -->
+                    @if (cs.grandTotalInclGst > 0) {
+                      <div class="cs-composition-wrap">
+                        <div class="cs-comp-header">
+                          <span class="cs-comp-title">Cost Composition</span>
+                          <div class="cs-comp-legend">
+                            <span><span class="cs-dot cs-dot--base"></span>Base Supply ({{ cs.breakdownPct.basePct }}%)</span>
+                            <span><span class="cs-dot cs-dot--overheads"></span>Freight &amp; Duty ({{ cs.breakdownPct.overheadsPct }}%)</span>
+                            <span><span class="cs-dot cs-dot--margin"></span>Margin ({{ cs.breakdownPct.marginPct }}%)</span>
+                            <span><span class="cs-dot cs-dot--tax"></span>GST ({{ cs.breakdownPct.taxPct }}%)</span>
+                          </div>
+                        </div>
+                        <div class="cs-comp-track">
+                          <div class="cs-comp-seg cs-comp-seg--base" [style.width.%]="cs.breakdownPct.basePct" [pTooltip]="'Base Supply: ' + cs.breakdownPct.basePct + '%'"></div>
+                          <div class="cs-comp-seg cs-comp-seg--overheads" [style.width.%]="cs.breakdownPct.overheadsPct" [pTooltip]="'Freight & Duties: ' + cs.breakdownPct.overheadsPct + '%'"></div>
+                          <div class="cs-comp-seg cs-comp-seg--margin" [style.width.%]="cs.breakdownPct.marginPct" [pTooltip]="'Profit Margin: ' + cs.breakdownPct.marginPct + '%'"></div>
+                          <div class="cs-comp-seg cs-comp-seg--tax" [style.width.%]="cs.breakdownPct.taxPct" [pTooltip]="'Statutory Tax: ' + cs.breakdownPct.taxPct + '%'"></div>
+                        </div>
+                      </div>
+                    }
+
+                  </div>
+                </section>
+
+                <!-- Right Column: Audit Remarks & Team Notes (Standard Component) -->
+                <aside class="ec-remarks-col" aria-label="Team remarks & audit notes">
+                  <app-step-remarks
+                    [remarks]="cs.remarks"
+                    [defaultDate]="getEntryDate(entry)"
+                    [loading]="quickRemarkPending()"
+                    (quickAdd)="onQuickAddRemarkToEntry(entry, $event)"
+                    (deleteRemark)="onDeleteRemarkFromEntry(entry, $event)">
+                  </app-step-remarks>
+                </aside>
+
+              </div>
+
+              <!-- Bottom Section: Quoted Line Items Table (Matches other tables) -->
+              @if (cs.items.length > 0) {
+                <section class="ec-table-full-section" aria-label="Cost sheet line items">
+                  <div class="table-section-header">
+                    <div class="tsh-left">
+                      <div class="tsh-icon-wrap" aria-hidden="true">
+                        <i class="pi pi-table"></i>
+                      </div>
+                      <div class="tsh-titles">
+                        <h3 class="tsh-title">{{ formDefinition()?.tableConfig?.title || 'Quoted Items & Commercial Breakdown' }}</h3>
+                        <span class="tsh-sub">Commercial specifications & item-wise duty breakdown</span>
+                      </div>
+                    </div>
+                    <div class="tsh-right">
+                      <span class="tsh-count-badge">
+                        <i class="pi pi-box" aria-hidden="true"></i>
+                        <span>{{ cs.items.length }} {{ cs.items.length === 1 ? 'item' : 'items' }}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="modern-table-frame">
+                    <p-table
+                      [value]="cs.items"
+                      [paginator]="cs.items.length > 8"
+                      [rows]="8"
+                      [rowsPerPageOptions]="[8, 15, 25, 50]"
+                      [showCurrentPageReport]="true"
+                      currentPageReportTemplate="Showing {first} to {last} of {totalRecords} items"
+                      styleClass="p-datatable-sm modern-items-datatable"
+                      responsiveLayout="scroll">
+                      <ng-template pTemplate="header">
+                        <tr>
+                          @for (col of tableColumns(); track col.key) {
+                            <th
+                              scope="col"
+                              [style.width]="col.width || 'auto'"
+                              [style.text-align]="col.key === 'sr_no' ? 'center' : (col.type === 'number' || col.type === 'currency' ? 'right' : 'left')">
+                              {{ col.label }}
+                            </th>
+                          }
+                        </tr>
+                      </ng-template>
+
+                      <ng-template pTemplate="body" let-item let-itemIdx="rowIndex">
+                        <tr class="modern-table-row">
+                          @for (col of tableColumns(); track col.key) {
+                            <td
+                              [style.text-align]="col.key === 'sr_no' ? 'center' : (col.type === 'number' || col.type === 'currency' ? 'right' : 'left')">
+                              @if (col.key === 'sr_no') {
+                                <span class="sr-badge-pill">{{ formatCellValue(item, col, itemIdx) }}</span>
+                              } @else if (col.type === 'currency' || col.key.includes('price') || col.key.includes('amount') || col.key.includes('cost')) {
+                                <span class="currency-cell-val">{{ formatCellValue(item, col, itemIdx) }}</span>
+                              } @else if (col.type === 'number') {
+                                <span class="qty-badge-pill">{{ formatCellValue(item, col, itemIdx) }}</span>
+                              } @else if (col.key === 'item_code') {
+                                <span class="hsn-code-pill">{{ formatCellValue(item, col, itemIdx) }}</span>
+                              } @else {
+                                <span class="cell-desc-text">{{ formatCellValue(item, col, itemIdx) }}</span>
+                              }
+                            </td>
+                          }
+                        </tr>
+                      </ng-template>
+                    </p-table>
+                  </div>
+                </section>
+              } @else {
+                <!-- Empty Line Items Prompt (Standard Theme-Consistent Banner) -->
+                <div class="empty-entry-fields">
+                  <div class="eef-icon-wrap" aria-hidden="true">
+                    <i class="pi pi-box"></i>
+                  </div>
+                  <div class="eef-text">
+                    <strong>No line items quoted in this cost sheet yet</strong>
+                    <span>Click "Edit" above to enter quoted materials, unit prices in EUR, customs duty rates, and calculate landed costs.</span>
+                  </div>
+                </div>
+              }
+
+            </div>
+
+          </article>
+        } @else {
+          <article class="entry-card app-panel" [attr.aria-labelledby]="'entry-heading-' + (entry.id || idx)">
 
           <!-- Card Top Header Ribbon -->
           <!-- Card Top Header Ribbon (Single Aligned Horizontal Row) -->
@@ -477,6 +756,7 @@
           </div>
 
         </article>
+        }
       }
     </div>
   }

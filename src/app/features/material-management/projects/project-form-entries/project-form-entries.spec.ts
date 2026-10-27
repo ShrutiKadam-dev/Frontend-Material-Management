@@ -435,4 +435,254 @@ describe('ProjectFormEntries Component', () => {
     const items = comp.getTableItems(entryWithGhostRow);
     expect(items.length).toBe(0);
   });
+
+  describe('Cost Sheet Visualization & Domain Presentation', () => {
+    it('should identify cost sheet form and compute isCostSheet', () => {
+      const comp = createComponent([], 'FORM_10_COST_SHEET');
+      comp.isCostSheet = () => {
+        const def = comp.formDefinition();
+        return def?.formCode === 'FORM_10_COST_SHEET';
+      };
+      expect(comp.isCostSheet()).toBe(true);
+
+      const nonCsComp = createComponent([], 'FORM_01_PQB');
+      nonCsComp.isCostSheet = () => {
+        const def = nonCsComp.formDefinition();
+        return def?.formCode === 'FORM_10_COST_SHEET';
+      };
+      expect(nonCsComp.isCostSheet()).toBe(false);
+    });
+
+    it('should parse the exact backend /api/v1/cost-sheets payload in getCostSheetData', () => {
+      const comp = createComponent([], 'FORM_10_COST_SHEET');
+      const rawPayload = {
+        id: 19,
+        project_id: 19,
+        step_number: 4,
+        step_name: 'Cost Sheet',
+        title: 'etrt',
+        status: 'Draft',
+        versionNumber: 1,
+        hasRateIncrease: false,
+        createdAt: '2026-10-27T12:35:26.257965+05:30',
+        updatedAt: '2026-10-27T12:35:26.257965+05:30',
+        grandTotalInclGst: 0.0,
+        totalSellingPriceExclGst: 0.0,
+        totalGst: 0.0,
+        totalPriceInr: 0.0,
+        cumulativeProjectCostInr: 0.0,
+        globalParams: {
+          defaultCustomsDutyRate: 7,
+          eurToInr: 6.0,
+          financeChargesRate: 6,
+          gstRate: 8,
+          igstRate: 45,
+          insuranceFreightRate: 3,
+          marginRate: 8,
+          transportationRate: 8,
+        },
+        output: {
+          columnTotals: {
+            customsDutyInr: 0.0,
+            financingChargesInr: 0.0,
+            igstInr: 0.0,
+            insuranceFreightEur: 0.0,
+            insuranceFreightInr: 0.0,
+            landedCostEur: 0.0,
+            landedCostInr: 0.0,
+            lessIgstInr: 0.0,
+            marginInr: 0.0,
+            sellingPriceExclGst: 0.0,
+            sellingPriceInclGst: 0.0,
+            totalCostInr: 0.0,
+            totalPriceEur: 0.0,
+            totalPriceInr: 0.0,
+            transportationInr: 0.0,
+          },
+          globalParams: {
+            defaultCustomsDutyRate: 7,
+            eurToInr: 6.0,
+            financeChargesRate: 6,
+            gstRate: 8,
+            igstRate: 45,
+            insuranceFreightRate: 3,
+            marginRate: 8,
+            transportationRate: 8,
+          },
+          grandTotalInclGst: 0.0,
+          items: [],
+          totalGst: 0.0,
+          totalSellingPriceExclGst: 0.0,
+        },
+        data: {
+          title: 'etrt',
+          globalParams: {
+            defaultCustomsDutyRate: 7,
+            eurToInr: 6.0,
+            financeChargesRate: 6,
+            gstRate: 8,
+            igstRate: 45,
+            insuranceFreightRate: 3,
+            marginRate: 8,
+            transportationRate: 8,
+          },
+          output: {
+            columnTotals: {
+              customsDutyInr: 0.0,
+              financingChargesInr: 0.0,
+              igstInr: 0.0,
+              insuranceFreightEur: 0.0,
+              insuranceFreightInr: 0.0,
+              landedCostEur: 0.0,
+              landedCostInr: 0.0,
+              lessIgstInr: 0.0,
+              marginInr: 0.0,
+              sellingPriceExclGst: 0.0,
+              sellingPriceInclGst: 0.0,
+              totalCostInr: 0.0,
+              totalPriceEur: 0.0,
+              totalPriceInr: 0.0,
+              transportationInr: 0.0,
+            },
+          },
+        },
+        items: [],
+        remarks: [],
+      } as unknown as ProjectStep;
+
+      const cs = comp.getCostSheetData(rawPayload);
+      expect(cs.id).toBe(19);
+      expect(cs.title).toBe('etrt');
+      expect(cs.status).toBe('Draft');
+      expect(cs.versionNumber).toBe(1);
+      expect(cs.hasRateIncrease).toBe(false);
+      expect(cs.globalParams.eurToInr).toBe(6.0);
+      expect(cs.globalParams.insuranceFreightRate).toBe(3);
+      expect(cs.globalParams.defaultCustomsDutyRate).toBe(7);
+      expect(cs.globalParams.igstRate).toBe(45);
+      expect(cs.globalParams.transportationRate).toBe(8);
+      expect(cs.globalParams.financeChargesRate).toBe(6);
+      expect(cs.globalParams.marginRate).toBe(8);
+      expect(cs.globalParams.gstRate).toBe(8);
+      expect(cs.items).toEqual([]);
+    });
+
+    it('should generate matrix rows with complete calculation structure', () => {
+      const comp = createComponent([], 'FORM_10_COST_SHEET');
+      const cs = comp.getCostSheetData({
+        id: 19,
+        step_number: 4,
+        data: {
+          globalParams: {
+            eurToInr: 90.5,
+            insuranceFreightRate: 3,
+            defaultCustomsDutyRate: 7.5,
+            marginRate: 15,
+            gstRate: 18,
+          },
+          output: {
+            columnTotals: {
+              totalPriceEur: 1000,
+              totalPriceInr: 90500,
+              insuranceFreightInr: 2715,
+              customsDutyInr: 6991,
+              landedCostInr: 100206,
+              totalCostInr: 105000,
+              marginInr: 15750,
+              sellingPriceExclGst: 120750,
+              igstInr: 21735,
+              sellingPriceInclGst: 142485,
+            },
+          },
+          grandTotalInclGst: 142485,
+          totalSellingPriceExclGst: 120750,
+          totalGst: 21735,
+        },
+      } as unknown as ProjectStep);
+
+      const rows = comp.getCostSheetMatrixRows(cs);
+      expect(rows.length).toBe(11);
+      expect(rows[0].label).toBe('Base Item / Supply Price');
+      expect(rows[0].eurValue).toBe(1000);
+      expect(rows[0].inrValue).toBe(90500);
+
+      const totalRow = rows.find((r: { isTotal?: boolean }) => r.isTotal);
+      expect(totalRow).toBeDefined();
+      expect(totalRow?.label).toBe('Grand Total (Incl. GST)');
+      expect(totalRow?.inrValue).toBe(142485);
+    });
+
+    it('should format currency correctly in INR and EUR', () => {
+      const comp = createComponent([], 'FORM_10_COST_SHEET');
+      const inrStr = comp.formatCurrency(50000, 'INR');
+      expect(inrStr).toContain('50,000');
+      expect(inrStr).toContain('₹');
+
+      const eurStr = comp.formatCurrency(1200, 'EUR');
+      expect(eurStr).toContain('1,200');
+      expect(eurStr).toContain('€');
+
+      // Test icon and cell formatting for EUR
+      expect(comp.getFieldIcon('total_amount_eur', 'currency')).toBe('pi pi-euro');
+      const formattedCell = comp.formatCellValue(
+        { price_per_unit_eur: 450 },
+        { key: 'price_per_unit_eur', label: 'Price (€)', type: 'currency' },
+        0,
+      );
+      expect(formattedCell).toContain('€');
+      expect(formattedCell).toContain('450.00');
+    });
+
+    it('should generate commercial parameters table rows with all 8 cost parameters', () => {
+      const comp = createComponent([], 'FORM_10_COST_SHEET');
+      const cs = comp.getCostSheetData({
+        id: 19,
+        step_number: 4,
+        data: {
+          globalParams: {
+            eurToInr: 6.0,
+            insuranceFreightRate: 3,
+            defaultCustomsDutyRate: 7,
+            igstRate: 45,
+            transportationRate: 8,
+            financeChargesRate: 6,
+            marginRate: 8,
+            gstRate: 8,
+          },
+          output: {
+            columnTotals: {
+              totalPriceInr: 600,
+              insuranceFreightInr: 18,
+              customsDutyInr: 42,
+              transportationInr: 48,
+              financingChargesInr: 36,
+              marginInr: 56,
+              igstInr: 270,
+            },
+          },
+        },
+      } as unknown as ProjectStep);
+
+      const paramRows = comp.getCostSheetParamRows(cs);
+      expect(paramRows.length).toBe(8);
+      expect(paramRows[0].parameter).toBe('EUR / INR Forex Rate');
+      expect(paramRows[0].rateDisplay).toBe('€1 = ₹6');
+      expect(paramRows[0].amountInr).toBe(600);
+      expect(paramRows[1].parameter).toBe('Freight & Transit Insurance');
+      expect(paramRows[1].rateDisplay).toBe('3%');
+      expect(paramRows[2].parameter).toBe('Customs Duty (CD)');
+      expect(paramRows[2].rateDisplay).toBe('7%');
+      expect(paramRows[3].parameter).toBe('Import IGST');
+      expect(paramRows[3].rateDisplay).toBe('45%');
+      expect(paramRows[4].parameter).toBe('Inland Transportation');
+      expect(paramRows[4].rateDisplay).toBe('8%');
+      expect(paramRows[5].parameter).toBe('Financing Charges & LC Buffer');
+      expect(paramRows[5].rateDisplay).toBe('6%');
+      expect(paramRows[6].parameter).toBe('Commercial Profit Margin');
+      expect(paramRows[6].rateDisplay).toBe('8%');
+      expect(paramRows[6].isHighlight).toBe(true);
+      expect(paramRows[7].parameter).toBe('Domestic Output GST');
+      expect(paramRows[7].rateDisplay).toBe('8%');
+    });
+  });
 });
