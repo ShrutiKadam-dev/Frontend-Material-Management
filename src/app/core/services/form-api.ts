@@ -6,6 +6,7 @@ import { API_BASE_URL } from '../tokens/api-base-url.token';
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../models/project-step.model';
 import { FormDefinition } from '../constants/form-catalog';
 import { sanitizePayloadDates } from '../utils/date.utils';
+import { cleanTableItems, isTableRowEmpty, normalizeTableRow } from '../utils/form.utils';
 
 export function normalizeBackendEntityToStep(
   item: Record<string, unknown>,
@@ -20,12 +21,17 @@ export function normalizeBackendEntityToStep(
       : 'completed';
 
   const rawTableItems = (item['items'] || item['table_items'] || item['materials'] || []) as unknown[];
+  const normalizedTableItems = Array.isArray(rawTableItems)
+    ? (rawTableItems as Array<Record<string, unknown>>)
+        .filter((r) => !isTableRowEmpty(r))
+        .map(normalizeTableRow)
+    : [];
   const rawAttachments = (item['attachments'] || []) as unknown[];
   const rawRemarks = (item['remarks'] || []) as unknown[];
 
   const combinedData: Record<string, unknown> = {
     ...item,
-    items: rawTableItems,
+    items: normalizedTableItems,
     attachments: rawAttachments,
     remarks: rawRemarks,
   };
@@ -125,10 +131,12 @@ export class FormApiService {
 
     const endpointUrl = `${this.apiBaseUrl}${formDef.apiEndpoint}`;
     const { table_items, ...restPayload } = payload;
+    const rawItems = (payload['items'] ?? table_items ?? []) as Array<Record<string, unknown>>;
+    const cleanedItems = cleanTableItems(rawItems);
     const bodyPayload: Record<string, unknown> = {
       project_id: projectId,
       ...restPayload,
-      items: (payload['items'] ?? table_items ?? []) as unknown[],
+      items: cleanedItems,
     };
     const sanitizedBody = sanitizePayloadDates(bodyPayload, formDef.fields, formDef.tableConfig?.columns);
 
@@ -160,10 +168,12 @@ export class FormApiService {
 
     const endpointUrl = `${this.apiBaseUrl}${formDef.apiEndpoint}/${stepId}`;
     const { table_items, ...restPayload } = payload;
+    const rawItems = (payload['items'] ?? table_items ?? []) as Array<Record<string, unknown>>;
+    const cleanedItems = cleanTableItems(rawItems);
     const bodyPayload: Record<string, unknown> = {
       project_id: projectId,
       ...restPayload,
-      items: (payload['items'] ?? table_items ?? []) as unknown[],
+      items: cleanedItems,
     };
     const sanitizedBody = sanitizePayloadDates(bodyPayload, formDef.fields, formDef.tableConfig?.columns);
 

@@ -412,4 +412,27 @@ describe('ProjectFormEntries Component', () => {
     comp.toggleRemarks(101);
     expect(comp.isRemarksOpen(101)).toBe(false);
   });
+
+  it('should filter out ghost empty rows in getTableItems', () => {
+    const comp = createComponent();
+    const entryWithGhostRow: ProjectStep = {
+      id: 301,
+      project_id: 5,
+      step_number: 1,
+      step_name: 'National Pre-Qualification Bid (PQB)',
+      description: 'PQB Submission',
+      status: 'in_progress',
+      progress_percentage: 50,
+      completed_at: null,
+      form_code: 'FORM_01_PQB',
+      data: {
+        pqb_title: 'Turbine Overhaul',
+        items: [{ sr_no: 1, description: '', quantity: '', unit: '', unit_price: '' }],
+      },
+      remarks: [],
+    };
+
+    const items = comp.getTableItems(entryWithGhostRow);
+    expect(items.length).toBe(0);
+  });
 });

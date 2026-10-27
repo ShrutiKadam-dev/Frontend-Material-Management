@@ -369,6 +369,24 @@
                 </button>
               </td>
             </tr>
+            } @empty {
+              <tr class="empty-table-row">
+                <td [attr.colspan]="tableCfg.columns.length + 1" style="text-align: center; padding: 2rem 1rem;">
+                  <div class="empty-table-prompt" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <i class="pi pi-inbox" style="font-size: 2rem; color: #94a3b8; margin-bottom: 0.5rem;" aria-hidden="true"></i>
+                    <p style="margin: 0 0 0.25rem; font-size: 0.875rem; font-weight: 500; color: #64748b;">No items added yet</p>
+                    <p style="margin: 0 0 1rem; font-size: 0.75rem; color: #94a3b8;">Line items are optional. Click below to add requirement rows.</p>
+                    <button
+                      pButton
+                      type="button"
+                      icon="pi pi-plus"
+                      label="Add Item Row"
+                      class="p-button-outlined p-button-sm add-row-btn"
+                      (click)="addTableRow()">
+                    </button>
+                  </div>
+                </td>
+              </tr>
             }
           </tbody>
           @if (tableCfg.autoCalculateTotal && tableCfg.totalKey) {

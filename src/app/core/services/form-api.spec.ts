@@ -56,7 +56,9 @@ describe('FormApiService', () => {
     expect(step.form_code).toBe('FORM_09_RFQ');
     expect(step.status).toBe('in_progress');
     expect(step.data).toBeDefined();
-    expect(step.data?.['items']).toEqual([{ description: 'High-tensile Bolt', quantity: 100 }]);
+    expect(step.data?.['items']).toEqual([
+      expect.objectContaining({ description: 'High-tensile Bolt', quantity: 100, material_name: 'High-tensile Bolt' }),
+    ]);
     expect(step.data?.['table_items']).toBeUndefined();
     expect(step.data?.['supplier_name']).toBe('Acme Steel Corp');
   });
@@ -183,7 +185,9 @@ describe('FormApiService', () => {
     expect(url).toBe('http://localhost:5000/api/v1/quotation-requests');
     expect(fd instanceof FormData).toBe(true);
     const sentData = JSON.parse(fd.get('data') as string);
-    expect(sentData.items).toEqual([{ item_name: 'Pipe', qty: 10 }]);
+    expect(sentData.items).toEqual([
+      expect.objectContaining({ item_name: 'Pipe', description: 'Pipe', material_name: 'Pipe', qty: 10, quantity: 10 }),
+    ]);
     expect(sentData.table_items).toBeUndefined();
     expect(created.id).toBe(55);
     expect(created.form_code).toBe('FORM_09_RFQ');

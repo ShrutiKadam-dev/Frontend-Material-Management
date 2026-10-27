@@ -47,6 +47,12 @@ import {
   parseLocalDateTime,
   sanitizePayloadDates,
 } from '../../../../../core/utils/date.utils';
+import {
+  cleanTableItems,
+  getTableRowCellValue,
+  isTableRowEmpty,
+  normalizeTableRow,
+} from '../../../../../core/utils/form.utils';
 
 @Component({
   selector: 'app-step-form-dialog',
@@ -170,12 +176,38 @@ export class StepFormDialog {
         next: (freshStep) => {
           this.loading.set(false);
           const activeStep = freshStep || step;
-          const savedData = (activeStep.data as Record<string, unknown>) || {};
+          let savedData: Record<string, unknown> = {};
+          if (typeof activeStep.data === 'string') {
+            try {
+              savedData = JSON.parse(activeStep.data);
+            } catch {
+              savedData = {};
+            }
+          } else if (activeStep.data && typeof activeStep.data === 'object') {
+            savedData = { ...(activeStep.data as Record<string, unknown>) };
+          }
+          const activeRec = activeStep as unknown as Record<string, unknown>;
+          if (!savedData['items'] && Array.isArray(activeRec['items'])) {
+            savedData['items'] = activeRec['items'];
+          }
           this.populateForm(def!, savedData, activeStep.remarks || []);
         },
         error: () => {
           this.loading.set(false);
-          const savedData = (step.data as Record<string, unknown>) || {};
+          let savedData: Record<string, unknown> = {};
+          if (typeof step.data === 'string') {
+            try {
+              savedData = JSON.parse(step.data);
+            } catch {
+              savedData = {};
+            }
+          } else if (step.data && typeof step.data === 'object') {
+            savedData = { ...(step.data as Record<string, unknown>) };
+          }
+          const stepRec = step as unknown as Record<string, unknown>;
+          if (!savedData['items'] && Array.isArray(stepRec['items'])) {
+            savedData['items'] = stepRec['items'];
+          }
           this.populateForm(def!, savedData, step.remarks || []);
         },
       });
@@ -231,17 +263,22 @@ export class StepFormDialog {
     // 2. Line-Item Table Rows
     if (def.tableConfig) {
       const rowsArray = new FormArray<FormGroup>([]);
-      const rawRows = savedData['items'] ?? savedData['table_items'];
+      const rawRows =
+        savedData['items'] ??
+        savedData['table_items'] ??
+        savedData['materials'] ??
+        savedData['requirements'] ??
+        savedData['query_items'] ??
+        savedData['customer_query_items'] ??
+        (Array.isArray((savedData as Record<string, unknown>)['items']) ? savedData['items'] : undefined);
       const savedRows = Array.isArray(rawRows)
         ? (rawRows as Array<Record<string, unknown>>)
+            .filter((r) => !isTableRowEmpty(r))
+            .map(normalizeTableRow)
         : [];
 
-      if (savedRows.length > 0) {
-        for (const row of savedRows) {
-          rowsArray.push(this.createTableRowGroup(def, row));
-        }
-      } else {
-        rowsArray.push(this.createTableRowGroup(def, { sr_no: 1 }));
+      for (const row of savedRows) {
+        rowsArray.push(this.createTableRowGroup(def, row));
       }
       this.tableFormArray.set(rowsArray);
     } else {
@@ -361,11 +398,18 @@ export class StepFormDialog {
     if (!def.tableConfig) return new FormGroup({});
 
     for (const col of def.tableConfig.columns) {
-      let val = initialData[col.key] ?? (col.key === 'sr_no' ? this.tableFormArray().length + 1 : '');
+      let val = getTableRowCellValue(initialData, col.key);
+      if (val === undefined || val === null) {
+        val = col.key === 'sr_no' ? this.tableFormArray().length + 1 : '';
+      }
       if (col.type === 'date' && val) {
         val = formatLocalDate(val as Date | string);
       }
       rowControls[col.key] = new FormControl(val);
+    }
+
+    if (initialData['id'] !== undefined && initialData['id'] !== null) {
+      rowControls['id'] = new FormControl(initialData['id']);
     }
 
     return new FormGroup(rowControls);
@@ -405,13 +449,11 @@ export class StepFormDialog {
   }
 
   removeTableRow(index: number): void {
-    if (this.tableFormArray().length > 1) {
+    if (this.tableFormArray().length > 0) {
       this.tableFormArray().removeAt(index);
-    } else {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Cannot Remove',
-        detail: 'At least one item row is required.',
+      // Re-sequence remaining row sr_no
+      this.tableFormArray().controls.forEach((group, idx) => {
+        group.get('sr_no')?.setValue(idx + 1);
       });
     }
   }
@@ -606,11 +648,13 @@ export class StepFormDialog {
       }
     }
 
-    const tableData = this.tableFormArray().value;
+    const rawTableData = (this.tableFormArray().value || []) as Array<Record<string, unknown>>;
+    const cleanedTableData = cleanTableItems(rawTableData);
+
     const sanitizedPayload = sanitizePayloadDates(
       {
         ...rawFormData,
-        items: tableData,
+        items: cleanedTableData,
       },
       def.fields,
       def.tableConfig?.columns,
@@ -620,7 +664,7 @@ export class StepFormDialog {
 
     const combinedData: Record<string, unknown> = {
       ...sanitizedFormData,
-      items: sanitizedItems ?? tableData,
+      items: (sanitizedItems ?? cleanedTableData) as unknown[],
       attachments_count: this.uploadedFiles().length,
       form_code: def.formCode,
       remarks: this.stepRemarks().map((r) => r.remark),

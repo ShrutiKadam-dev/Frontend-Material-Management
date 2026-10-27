@@ -331,6 +331,24 @@
                         </button>
                       </td>
                     </tr>
+                  } @empty {
+                    <tr class="empty-table-row">
+                      <td [attr.colspan]="tbl.columns.length + 1" class="text-center py-8">
+                        <div class="empty-table-prompt">
+                          <i class="pi pi-inbox text-3xl text-slate-300 mb-2"></i>
+                          <p class="text-sm text-slate-500 font-medium mb-1">No items added yet</p>
+                          <p class="text-xs text-slate-400 mb-3">Line items are optional. Click below to add requirement rows.</p>
+                          <button
+                            pButton
+                            type="button"
+                            icon="pi pi-plus"
+                            label="Add Item Row"
+                            class="p-button-outlined p-button-sm add-row-btn"
+                            (click)="addTableRow()">
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   }
                 </tbody>
               </table>

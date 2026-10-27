@@ -1,6 +1,7 @@
 import '@angular/compiler';
 import { describe, expect, it, vi } from 'vitest';
 import { of } from 'rxjs';
+import { FormArray, FormControl, FormGroup } from '@angular/forms';
 import { StepFormDialog } from './step-form-dialog';
 import { ProjectStep } from '../../../../../core/models/project-step.model';
 import { FormDefinition } from '../../../../../core/constants/form-catalog';
@@ -492,6 +493,123 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       const createdGroup = comp.formGroup.set.mock.calls[0][0];
       expect(createdGroup.get('from_location').value).toEqual(['Mumbai', 'Pune']);
       expect(createdGroup.get('to_location').value).toEqual(['Chennai', 'Hyderabad']);
+    });
+  });
+
+  describe('Table item handling and ghost row elimination', () => {
+    it('should not add a default empty row when opening form with no saved items', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.formGroup = { set: vi.fn() };
+      comp.tableFormArray = { set: vi.fn() };
+      comp.uploadedFiles = { set: vi.fn(), length: 0 };
+      comp.stepRemarks = { set: vi.fn() };
+      comp.getDefaultFieldValue = StepFormDialog.prototype['getDefaultFieldValue'];
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+
+      (comp as any).populateForm(mockFormDef, {}, []);
+
+      expect(comp.tableFormArray.set).toHaveBeenCalled();
+      const rowsArray = comp.tableFormArray.set.mock.calls[0][0];
+      expect(rowsArray.length).toBe(0);
+    });
+
+    it('should filter out ghost empty row with only sr_no during saveStep', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const mockFormApiService = {
+        createEntry: vi.fn().mockReturnValue(of({ id: 201, step_name: 'PQB' })),
+      };
+      comp.formApiService = mockFormApiService;
+      comp.messageService = { add: vi.fn() };
+      comp.projectId = () => 10;
+      comp.resolvedDef = () => mockFormDef;
+      comp.step = () => null;
+      comp.saving = { set: vi.fn() };
+      comp.formGroup = () => ({ value: { pqb_title: 'Test PQB' } });
+      // User did not fill item details, but row had { sr_no: 1, description: '', quantity: '' }
+      comp.tableFormArray = () => ({
+        value: [{ sr_no: 1, description: '', quantity: '', unit: '', unit_price: '' }],
+      });
+      comp.uploadedFiles = () => [];
+      comp.stepRemarks = () => [];
+      comp.stepSaved = { emit: vi.fn() };
+      comp.close = vi.fn();
+
+      comp.saveStep(false);
+
+      expect(mockFormApiService.createEntry).toHaveBeenCalled();
+      const payload = mockFormApiService.createEntry.mock.calls[0][2];
+      expect(payload['items']).toEqual([]);
+    });
+
+    it('should allow removing rows down to 0 and re-sequence sr_no', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const row1 = new FormGroup({ sr_no: new FormControl(1), description: new FormControl('Item A') });
+      const row2 = new FormGroup({ sr_no: new FormControl(2), description: new FormControl('Item B') });
+      const formArray = new FormArray([row1, row2]);
+      comp.tableFormArray = () => formArray;
+
+      // Remove first row
+      comp.removeTableRow(0);
+      expect(formArray.length).toBe(1);
+      expect(formArray.at(0).get('sr_no')?.value).toBe(1);
+      expect(formArray.at(0).get('description')?.value).toBe('Item B');
+
+      // Remove last remaining row down to 0
+      comp.removeTableRow(0);
+      expect(formArray.length).toBe(0);
+    });
+
+    it('should patch Description from material_name when editing Query from Customer', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.formGroup = { set: vi.fn() };
+      comp.tableFormArray = Object.assign(() => new FormArray([]), { set: vi.fn() });
+      comp.uploadedFiles = { set: vi.fn(), length: 0 };
+      comp.stepRemarks = { set: vi.fn() };
+      comp.getDefaultFieldValue = StepFormDialog.prototype['getDefaultFieldValue'];
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+
+      const customerQueryDef: FormDefinition = {
+        id: 8,
+        formCode: 'FORM_08_CUSTOMER_QUERY',
+        name: 'Query from Customer',
+        category: 'Sourcing & Quotations',
+        phaseId: 'phase-2',
+        icon: 'pi pi-question-circle',
+        description: 'Customer inquiry',
+        fields: [
+          { key: 'customer_name', label: 'Customer Name', type: 'text' },
+          { key: 'query_date', label: 'Query Date', type: 'date' },
+        ],
+        tableConfig: {
+          title: 'Requirement',
+          columns: [
+            { key: 'sr_no', label: 'Sr. No.', type: 'number', width: '80px' },
+            { key: 'description', label: 'Description', type: 'text' },
+            { key: 'quantity', label: 'Quantity', type: 'number', width: '140px' },
+          ],
+        },
+        uploads: [],
+      };
+
+      // Backend returns items using `material_name` instead of `description`
+      const savedData = {
+        customer_name: 'Bharat Heavy Electricals',
+        query_date: '2026-10-15',
+        items: [
+          { id: 42, material_name: 'High Precision Turbine Blades', quantity: 20 },
+        ],
+      };
+
+      (comp as any).populateForm(customerQueryDef, savedData, []);
+
+      expect(comp.tableFormArray.set).toHaveBeenCalled();
+      const rowsArray: FormArray<FormGroup> = comp.tableFormArray.set.mock.calls[0][0];
+      expect(rowsArray.length).toBe(1);
+
+      const firstRow = rowsArray.at(0);
+      expect(firstRow.get('description')?.value).toBe('High Precision Turbine Blades');
+      expect(firstRow.get('quantity')?.value).toBe(20);
+      expect(firstRow.get('id')?.value).toBe(42);
     });
   });
 });

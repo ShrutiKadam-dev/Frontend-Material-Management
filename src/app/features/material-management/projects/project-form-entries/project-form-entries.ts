@@ -27,6 +27,7 @@ import { CustomerService } from '../../../../core/services/customer';
 import { SupplierService } from '../../../../core/services/supplier';
 import { FormApiService } from '../../../../core/services/form-api';
 import { formatDisplayDate } from '../../../../core/utils/date.utils';
+import { getTableRowCellValue, isTableRowEmpty, normalizeTableRow } from '../../../../core/utils/form.utils';
 import { createStepRemarkItem, parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { StepFormDialog } from '../project-timeline/step-form-dialog/step-form-dialog';
@@ -569,7 +570,7 @@ export class ProjectFormEntries implements OnInit {
     if (col.key === 'sr_no') {
       return String(row['sr_no'] ?? (rowIndex + 1));
     }
-    let val = row[col.key];
+    let val = getTableRowCellValue(row, col.key);
 
     // If total column is blank/dash, check if we can compute from quantity * unit_price
     if (
@@ -826,14 +827,38 @@ export class ProjectFormEntries implements OnInit {
   }
 
   getTableItems(entry: ProjectStep): Array<Record<string, unknown>> {
-    if (!entry.data || typeof entry.data !== 'object') return [];
-    if (Array.isArray(entry.data['items'])) {
-      return entry.data['items'] as Array<Record<string, unknown>>;
+    let raw: Array<Record<string, unknown>> = [];
+    if (entry.data && typeof entry.data === 'object') {
+      if (Array.isArray(entry.data['items'])) {
+        raw = entry.data['items'] as Array<Record<string, unknown>>;
+      } else if (Array.isArray(entry.data['table_items'])) {
+        raw = entry.data['table_items'] as Array<Record<string, unknown>>;
+      } else if (Array.isArray(entry.data['materials'])) {
+        raw = entry.data['materials'] as Array<Record<string, unknown>>;
+      }
+    } else if (typeof entry.data === 'string') {
+      try {
+        const parsed = JSON.parse(entry.data);
+        if (parsed && typeof parsed === 'object') {
+          if (Array.isArray(parsed['items'])) {
+            raw = parsed['items'];
+          } else if (Array.isArray(parsed['table_items'])) {
+            raw = parsed['table_items'];
+          } else if (Array.isArray(parsed['materials'])) {
+            raw = parsed['materials'];
+          }
+        }
+      } catch {
+        // ignore JSON parse error
+      }
     }
-    if (Array.isArray(entry.data['table_items'])) {
-      return entry.data['table_items'] as Array<Record<string, unknown>>;
+
+    const entryRec = entry as unknown as Record<string, unknown>;
+    if (!raw.length && Array.isArray(entryRec['items'])) {
+      raw = entryRec['items'] as Array<Record<string, unknown>>;
     }
-    return [];
+
+    return raw.filter((r) => !isTableRowEmpty(r)).map(normalizeTableRow);
   }
 
   getEntryAttachments(entry: ProjectStep): Array<{ name: string; size: string }> {

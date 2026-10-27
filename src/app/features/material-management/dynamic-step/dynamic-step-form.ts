@@ -49,6 +49,12 @@ import {
   parseLocalDateTime,
   sanitizePayloadDates,
 } from '../../../core/utils/date.utils';
+import {
+  cleanTableItems,
+  getTableRowCellValue,
+  isTableRowEmpty,
+  normalizeTableRow,
+} from '../../../core/utils/form.utils';
 
 @Component({
   selector: 'app-dynamic-step-form',
@@ -286,18 +292,22 @@ export class DynamicStepForm implements OnInit {
     // Build Table FormArray if configured
     if (def.tableConfig) {
       const rowsArray = new FormArray<FormGroup>([]);
-      const rawRows = savedData['items'] ?? savedData['table_items'];
+      const rawRows =
+        savedData['items'] ??
+        savedData['table_items'] ??
+        savedData['materials'] ??
+        savedData['requirements'] ??
+        savedData['query_items'] ??
+        savedData['customer_query_items'] ??
+        (Array.isArray((savedData as Record<string, unknown>)['items']) ? savedData['items'] : undefined);
       const savedRows = Array.isArray(rawRows)
         ? (rawRows as Array<Record<string, unknown>>)
+            .filter((r) => !isTableRowEmpty(r))
+            .map(normalizeTableRow)
         : [];
 
-      if (savedRows.length > 0) {
-        for (const row of savedRows) {
-          rowsArray.push(this.createTableRowGroup(def, row));
-        }
-      } else {
-        // Start with 1 default blank row
-        rowsArray.push(this.createTableRowGroup(def, { sr_no: 1 }));
+      for (const row of savedRows) {
+        rowsArray.push(this.createTableRowGroup(def, row));
       }
       this.tableFormArray.set(rowsArray);
     } else {
@@ -373,11 +383,18 @@ export class DynamicStepForm implements OnInit {
     if (!def.tableConfig) return new FormGroup({});
 
     for (const col of def.tableConfig.columns) {
-      let val = initialData[col.key] ?? (col.key === 'sr_no' ? this.tableFormArray().length + 1 : '');
+      let val = getTableRowCellValue(initialData, col.key);
+      if (val === undefined || val === null) {
+        val = col.key === 'sr_no' ? this.tableFormArray().length + 1 : '';
+      }
       if (col.type === 'date' && val) {
         val = formatLocalDate(val as Date | string);
       }
       rowControls[col.key] = new FormControl(val);
+    }
+
+    if (initialData['id'] !== undefined && initialData['id'] !== null) {
+      rowControls['id'] = new FormControl(initialData['id']);
     }
 
     return new FormGroup(rowControls);
@@ -391,13 +408,11 @@ export class DynamicStepForm implements OnInit {
   }
 
   protected removeTableRow(index: number): void {
-    if (this.tableFormArray().length > 1) {
+    if (this.tableFormArray().length > 0) {
       this.tableFormArray().removeAt(index);
-    } else {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Cannot Remove',
-        detail: 'At least one row is required in the table.',
+      // Re-sequence remaining row sr_no
+      this.tableFormArray().controls.forEach((group, idx) => {
+        group.get('sr_no')?.setValue(idx + 1);
       });
     }
   }
@@ -551,12 +566,13 @@ export class DynamicStepForm implements OnInit {
         }
       }
     }
-    const tableData = this.tableFormArray().value;
+    const rawTableData = (this.tableFormArray().value || []) as Array<Record<string, unknown>>;
+    const cleanedTableData = cleanTableItems(rawTableData);
 
     const sanitizedPayload = sanitizePayloadDates(
       {
         ...rawFormData,
-        items: tableData,
+        items: cleanedTableData,
       },
       def?.fields,
       def?.tableConfig?.columns,
@@ -566,7 +582,7 @@ export class DynamicStepForm implements OnInit {
 
     const combinedData: Record<string, unknown> = {
       ...sanitizedFormData,
-      items: sanitizedItems ?? tableData,
+      items: (sanitizedItems ?? cleanedTableData) as unknown[],
       attachments_count: this.uploadedFiles().length,
       form_code: cur.form_code,
     };
