@@ -547,7 +547,7 @@ export class DynamicStepForm implements OnInit {
     return 'pi pi-file';
   }
 
-  protected saveStep(markAsCompleted: boolean = false): void {
+  protected saveStep(): void {
     const pId = this.projectId();
     const cur = this.currentStep();
     if (!pId || !cur) return;
@@ -587,8 +587,8 @@ export class DynamicStepForm implements OnInit {
       form_code: cur.form_code,
     };
 
-    const status: StepStatus = markAsCompleted ? 'completed' : 'in_progress';
-    const progress = markAsCompleted ? 100 : 60;
+    const status: StepStatus = 'completed';
+    const progress = 100;
 
     const stepId = cur.id || cur.step_number;
 
@@ -597,11 +597,9 @@ export class DynamicStepForm implements OnInit {
         this.saving.set(false);
         this.currentStep.set(updated);
         this.messageService.add({
-          severity: markAsCompleted ? 'success' : 'info',
-          summary: markAsCompleted ? 'Step Completed!' : 'Draft Saved',
-          detail: markAsCompleted
-            ? `${cur.step_name} is marked as completed.`
-            : 'Changes saved successfully.',
+          severity: 'success',
+          summary: 'Step Saved',
+          detail: `${cur.step_name} has been saved successfully.`,
         });
       },
       error: () => {

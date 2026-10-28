@@ -107,7 +107,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
     comp.close = vi.fn();
 
     // Trigger saveStep
-    comp.saveStep(false);
+    comp.saveStep();
 
     expect(mockFormApiService.createEntry).toHaveBeenCalledWith(
       mockFormDef,
@@ -156,7 +156,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
     comp.stepSaved = { emit: vi.fn() };
     comp.close = vi.fn();
 
-    comp.saveStep(false);
+    comp.saveStep();
 
     expect(mockFormApiService.createEntry).toHaveBeenCalled();
     const passedPayload = mockFormApiService.createEntry.mock.calls[0][2];
@@ -233,8 +233,8 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
     comp.stepSaved = { emit: vi.fn() };
     comp.close = vi.fn();
 
-    // Trigger saveStep marking complete
-    comp.saveStep(true);
+    // Trigger saveStep
+    comp.saveStep();
 
     expect(mockFormApiService.updateEntry).toHaveBeenCalledWith(
       mockFormDef,
@@ -534,7 +534,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       comp.stepSaved = { emit: vi.fn() };
       comp.close = vi.fn();
 
-      comp.saveStep(false);
+      comp.saveStep();
 
       expect(mockFormApiService.createEntry).toHaveBeenCalled();
       const payload = mockFormApiService.createEntry.mock.calls[0][2];

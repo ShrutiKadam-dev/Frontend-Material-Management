@@ -30,7 +30,7 @@ import { MessageService } from 'primeng/api';
 import { of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
-import { ProjectStep, ProjectStepRemark, StepStatus } from '../../../../../core/models/project-step.model';
+import { ProjectStep, ProjectStepRemark } from '../../../../../core/models/project-step.model';
 import { FormApiService } from '../../../../../core/services/form-api';
 import {
   FORM_CATALOG,
@@ -122,9 +122,6 @@ export class StepFormDialog {
     return def ? `Attach Form: ${def.name}` : 'Form Details';
   });
 
-  readonly isStepCompleted = computed(() => {
-    return this.step()?.status === 'completed';
-  });
 
   readonly tableTotalSum = computed(() => {
     const arr = this.tableFormArray().value as Array<Record<string, unknown>>;
@@ -630,7 +627,7 @@ export class StepFormDialog {
   }
 
   // ── POST / PUT: SAVE STEP DATA ──────────────────────────────────────
-  saveStep(markAsCompleted: boolean = false): void {
+  saveStep(): void {
     const pId = this.projectId();
     const def = this.resolvedDef();
     if (!pId || !def) return;
@@ -668,10 +665,8 @@ export class StepFormDialog {
       attachments_count: this.uploadedFiles().length,
       form_code: def.formCode,
       remarks: this.stepRemarks().map((r) => r.remark),
+      status: 'completed',
     };
-
-    const status: StepStatus = markAsCompleted ? 'completed' : 'in_progress';
-    const progress = markAsCompleted ? 100 : 50;
 
     const existingStep = this.step();
     const rawFiles = this.uploadedFiles()
@@ -687,8 +682,8 @@ export class StepFormDialog {
           next: (updatedStep) => {
             this.saving.set(false);
             this.messageService.add({
-              severity: markAsCompleted ? 'success' : 'info',
-              summary: markAsCompleted ? 'Step Completed!' : 'Draft Saved',
+              severity: 'success',
+              summary: 'Changes Saved',
               detail: `${updatedStep.step_name} has been updated successfully.`,
             });
             this.stepSaved.emit(updatedStep);
@@ -712,7 +707,7 @@ export class StepFormDialog {
             this.saving.set(false);
             this.messageService.add({
               severity: 'success',
-              summary: markAsCompleted ? 'Step Created & Completed!' : 'Form Attached!',
+              summary: 'Form Attached!',
               detail: `${def.name} has been added to the project pipeline.`,
             });
             this.stepSaved.emit(newStep);

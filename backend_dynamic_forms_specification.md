@@ -104,7 +104,7 @@ Run this seed migration to populate the 28 form definitions:
 ```sql
 INSERT INTO form_definitions (id, form_code, name, category, phase_id, icon, description, has_table) VALUES
 (1, 'FORM_01_PQB', 'National Pre-Qualification Bid (PQB)', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-file-edit', 'Pre-qualification bid terms, submission schedule, supply locations, and requirements', TRUE),
-(2, 'FORM_02_PQB_BID_DOCUMENT', 'Bid Document for PQB', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-book', 'Documentation for PQB submission, dates, and recorded corrigendum count', FALSE),
+(2, 'FORM_02_PQB_BID_DOCUMENT', 'Bid Document for PQB', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-book', 'Documentation for PQB submission, dates, and recorded corrigendum count', TRUE),
 (3, 'FORM_03_CORRIGENDUM', 'Corrigendum', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-sync', 'Corrigendum amendment notices issued against EOI, PQB, or Tender notices', FALSE),
 (4, 'FORM_04_LTE', 'Limited Tender Enquiry (LTE)', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-briefcase', 'LTE invitation terms, tender fee, EMD amounts, deadlines, and item specifications', TRUE),
 (5, 'FORM_05_NAC', 'Notification of Award of Contract (NAC)', 'Pre-Bidding & Tenders', 'phase-2', 'pi pi-verified', 'Formal contract award notice and itemized awarded material price breakdown', TRUE),
@@ -130,7 +130,10 @@ INSERT INTO form_definitions (id, form_code, name, category, phase_id, icon, des
 (25, 'FORM_25_CUSTOMER_PACKING_LIST', 'Packing List to Customer', 'Customer & Supplier Settlement', 'phase-4', 'pi pi-box', 'Final packing list delivered to the customer with tare and box specifications', TRUE),
 (26, 'FORM_26_TAX_INVOICE_CUSTOMER', 'Tax Invoice to Customer', 'Customer & Supplier Settlement', 'phase-4', 'pi pi-file', 'Final sales tax invoice billed to the customer for complete supply and service', TRUE),
 (27, 'FORM_27_SHIPPING_CLEARANCE', 'Shipping & Clearance', 'Logistics & Customs', 'phase-3', 'pi pi-globe', 'Port logistics, customs Bill of Entry (BOE), duties, IGST, and clearance tracking', FALSE),
-(28, 'FORM_28_FREIGHT_CHA', 'Freight Forwarder / CHA Details', 'Logistics & Customs', 'phase-3', 'pi pi-users', 'Customs House Agent (CHA) invoices, freight handling disbursements and fee records', TRUE);
+(28, 'FORM_28_FREIGHT_CHA', 'Freight Forwarder / CHA Details', 'Logistics & Customs', 'phase-3', 'pi pi-users', 'Customs House Agent (CHA) invoices, freight handling disbursements and fee records', TRUE),
+(29, 'FORM_29_BID_DOC_TECHNO_COMMERCIAL', 'Bid Document - Techno Commercial Tender', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-file-check', 'Techno commercial tender bid submission, delivery terms, warranty, and material price schedule', TRUE),
+(30, 'FORM_30_TECHNO_COMMERCIAL_TENDER', 'Techno Commercial Tender', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-file-edit', 'Techno commercial tender enquiry terms, submission deadlines, EMD, fee, and requirements', TRUE),
+(31, 'FORM_31_BID_DOC_LTE', 'Bid Document - Limited Tender Enquiry (LTE)', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-book', 'Limited tender enquiry bid submission data, delivery terms, corrigendum, and material pricing', TRUE);
 ```
 
 ---
@@ -316,7 +319,7 @@ Returns all active steps attached to this project, ordered by `step_order ASC`.
 | Form ID & Code | Form Name | Primary Fields | Table Columns | Upload Fields |
 |---|---|---|---|---|
 | **1. FORM_01_PQB** | National Pre-Qualification Bid (PQB) | `pqb_title`, `pqb_no`, `pqb_issuing_date`, `pqb_closing_date_time`, `pqb_opening_date_time`, `mode_of_bid_submission`, `supply_location` | `sr_no`, `description`, `unit`, `quantity` | `upload_pqb` |
-| **2. FORM_02_PQB_BID_DOCUMENT** | Bid Document for PQB | `pqb_title`, `pqb_no`, `pqb_issue_date`, `pqb_closing_date_time`, `pqb_opening_date_time`, `total_no_corrigendum_issued` | *None* | `upload_bid_document_pqb` |
+| **2. FORM_02_PQB_BID_DOCUMENT** | Bid Document for PQB | `pqb_title`, `pqb_no`, `pqb_issue_date`, `pqb_closing_date_time`, `pqb_opening_date_time`, `total_no_corrigendum_issued` | `sr_no`, `description`, `hsn_sac`, `quantity`, `unit_price`, `total_amount` | `upload_bid_document_pqb` |
 | **3. FORM_03_CORRIGENDUM** | Corrigendum | `corrigendum_no`, `against_ref_no`, `ref_title` | *None* | `upload_corrigendum` |
 | **4. FORM_04_LTE** | Limited Tender Enquiry (LTE) | `pqb_no`, `tender_title`, `tender_enquiry_no`, `tender_issue_date`, `bid_submission_due_date_time`, `bid_opening_date_time`, `tender_fee`, `emd`, `tender_validity` | `sr_no`, `description`, `unit`, `quantity` | `upload_lte` |
 | **5. FORM_05_NAC** | Notification of Award of Contract (NAC) | `nac_no`, `nac_date`, `nac_title` | `sr_no`, `description`, `quantity`, `per_unit_price`, `total_amount` | `upload_nac` |
@@ -343,6 +346,9 @@ Returns all active steps attached to this project, ordered by `step_order ASC`.
 | **26. FORM_26_TAX_INVOICE_CUSTOMER** | Tax Invoice to Customer | `customer_name`, `invoice_no`, `invoice_date` | `sr_no`, `description`, `hsn_sac`, `quantity`, `unit_price`, `total_amount` | `upload_invoice` |
 | **27. FORM_27_SHIPPING_CLEARANCE** | Shipping & Clearance | `logistic_mode`, `shipment_date`, `awb_bl_no`, `flight_vessel_name`, `flight_vessel_no`, `port_loading`, `port_discharge`, `bill_of_entry_no`, `boe_filing_date`, `total_assessable_value`, `basic_custom_duty_bcd`, `sws`, `igst`, `duty_paid_date`, `challan_no`, `payment_ref_no`, `customs_location`, `cfs_name` | *None* | `upload_shipping_doc`, `upload_boe`, `upload_other_doc` |
 | **28. FORM_28_FREIGHT_CHA** | Freight Forwarder / CHA Details | `freight_forwarder_name`, `cha_name`, `invoice_no`, `invoice_date`, `invoice_amount`, `payment_date`, `payment_amount` | `sr_no`, `description`, `amount` | `upload_supporting_doc` |
+| **29. FORM_29_BID_DOC_TECHNO_COMMERCIAL** | Bid Document - Techno Commercial Tender | `customer_name`, `tender_title`, `tender_no`, `tender_issue_date`, `total_no_corrigendum_issued`, `bid_submission_date`, `delivery_terms`, `delivery_period`, `bid_validity`, `payment_terms`, `warranty_period`, `gst_pct` | `sr_no`, `description`, `hsn_sac`, `quantity`, `unit_price`, `total_amount` | `upload_bid_document` |
+| **30. FORM_30_TECHNO_COMMERCIAL_TENDER** | Techno Commercial Tender | `pqb_no`, `tender_title`, `tender_no`, `tender_issue_date`, `bid_submission_due_date_time`, `bid_opening_date_time`, `tender_fee`, `emd`, `tender_validity` | `sr_no`, `description`, `unit`, `quantity` | `upload_techno_commercial_tender` |
+| **31. FORM_31_BID_DOC_LTE** | Bid Document - Limited Tender Enquiry (LTE) | `customer_name`, `tender_title`, `tender_no`, `tender_issue_date`, `total_no_corrigendum_issued`, `bid_submission_date`, `delivery_terms`, `delivery_period`, `bid_validity`, `payment_terms`, `warranty_period`, `gst_pct` | `sr_no`, `description`, `hsn_sac`, `quantity`, `unit_price`, `total_amount` | `upload_bid_document_lte` |
 
 ---
 

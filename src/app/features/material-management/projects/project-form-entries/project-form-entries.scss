@@ -8,15 +8,15 @@
 :host {
   /* ── Unified Responsive Typography Strategy ───────────────────────── */
   /* Level 1: Major Section Titles (Commercial Specs, Remarks & Notes, Line Items) */
-  --entry-section-title-size: clamp(0.92rem, 0.8vw + 0.82rem, 0.98rem);
-  --entry-section-subtitle-size: clamp(0.72rem, 0.4vw + 0.65rem, 0.75rem);
-  --entry-section-badge-size: 0.72rem;
+  --entry-section-title-size: clamp(1.10rem, 0.6vw + 1.00rem, 1.25rem);
+  --entry-section-subtitle-size: clamp(0.78rem, 0.3vw + 0.74rem, 0.84rem);
+  --entry-section-badge-size: 0.76rem;
 
   /* Level 2: Field Titles / Labels (Tender Title, Delivery Terms, Incoterms, etc.) */
-  --entry-field-label-size: clamp(0.70rem, 0.3vw + 0.65rem, 0.74rem);
+  --entry-field-label-size: clamp(0.82rem, 0.2vw + 0.78rem, 0.86rem);
 
   /* Level 3: Field Data / Values (Tender Title text, Delivery Terms badge, Clause text, etc.) */
-  --entry-field-data-size: clamp(0.82rem, 0.4vw + 0.75rem, 0.86rem);
+  --entry-field-data-size: clamp(0.74rem, 0.15vw + 0.71rem, 0.77rem);
 }
 
 .form-entries-page {
@@ -739,9 +739,9 @@
 
       .qe-section-title {
         color: #0f172a;
-        font-size: var(--entry-section-title-size, clamp(0.92rem, 0.8vw + 0.82rem, 0.98rem)) !important;
-        font-weight: 800;
-        letter-spacing: -0.01em;
+        font-size: var(--entry-section-title-size) !important;
+        font-weight: 850;
+        letter-spacing: -0.015em;
         line-height: 1.3;
         margin: 0;
         text-transform: none !important;
@@ -749,14 +749,14 @@
 
       .qe-section-subtitle {
         color: #64748b;
-        font-size: var(--entry-section-subtitle-size, clamp(0.72rem, 0.4vw + 0.65rem, 0.75rem)) !important;
+        font-size: var(--entry-section-subtitle-size) !important;
         font-weight: 500;
         line-height: 1.35;
         margin-top: 1px;
       }
 
       .chat-count-pill {
-        font-size: var(--entry-section-badge-size, 0.72rem);
+        font-size: var(--entry-section-badge-size);
         font-weight: 750;
         padding: 2px 9px;
       }
@@ -774,9 +774,9 @@
 
 .strip-header {
   align-items: center;
-  color: #64748b;
+  color: #475569;
   display: flex;
-  font-size: var(--entry-field-label-size, clamp(0.70rem, 0.3vw + 0.65rem, 0.74rem));
+  font-size: var(--entry-field-label-size);
   font-weight: 750;
   gap: 6px;
   letter-spacing: 0.04em;
@@ -871,28 +871,29 @@
   border-bottom: 1px solid var(--color-border-soft, #edeae4);
   display: flex;
   justify-content: space-between;
-  padding-bottom: 10px;
+  padding-bottom: 12px;
 }
 
 .ssh-title-group {
   align-items: center;
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 
 .ssh-icon-badge {
   align-items: center;
   background: #fef3f2;
-  border-radius: 8px;
+  border: 1px solid rgba(192, 82, 47, 0.15);
+  border-radius: 9px;
   color: var(--color-primary, #c0522f);
   display: flex;
   flex-shrink: 0;
-  height: 32px;
+  height: 36px;
   justify-content: center;
-  width: 32px;
+  width: 36px;
 
   i {
-    font-size: 0.88rem;
+    font-size: 0.96rem;
   }
 }
 
@@ -904,9 +905,9 @@
 
 .ssh-heading {
   color: #0f172a;
-  font-size: var(--entry-section-title-size, clamp(0.92rem, 0.8vw + 0.82rem, 0.98rem));
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-size: var(--entry-section-title-size);
+  font-weight: 850;
+  letter-spacing: -0.015em;
   line-height: 1.3;
   margin: 0;
   text-transform: none;
@@ -914,7 +915,7 @@
 
 .ssh-subtext {
   color: #64748b;
-  font-size: var(--entry-section-subtitle-size, clamp(0.72rem, 0.4vw + 0.65rem, 0.75rem));
+  font-size: var(--entry-section-subtitle-size);
   font-weight: 500;
   line-height: 1.35;
 }
@@ -924,9 +925,9 @@
   border: 1px solid #e2e8f0;
   border-radius: 9999px;
   color: #475569;
-  font-size: var(--entry-section-badge-size, 0.72rem);
+  font-size: var(--entry-section-badge-size);
   font-weight: 750;
-  padding: 2px 9px;
+  padding: 3px 10px;
 }
 
 /* Clean Specifications Grid - Responsive 4-Column Rectilinear Alignment */
@@ -952,7 +953,7 @@
 .spec-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   margin: 0;
   min-width: 0;
 
@@ -993,12 +994,12 @@
 
 .spec-label {
   align-items: flex-start;
-  color: #64748b;
+  color: #334155;
   display: flex;
-  font-size: var(--entry-field-label-size, clamp(0.70rem, 0.3vw + 0.65rem, 0.74rem));
+  font-size: var(--entry-field-label-size);
   font-weight: 750;
   gap: 6px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.035em;
   line-height: 1.35;
   margin: 0;
   text-transform: uppercase;
@@ -1006,7 +1007,7 @@
   .spec-icon {
     color: var(--color-primary, #c0522f);
     flex-shrink: 0;
-    font-size: 0.80rem;
+    font-size: 0.84rem;
     margin-top: 1px;
     transition: transform 140ms ease;
 
@@ -1024,7 +1025,8 @@
 .spec-value {
   align-items: flex-start;
   display: flex;
-  font-size: var(--entry-field-data-size, clamp(0.82rem, 0.4vw + 0.75rem, 0.86rem));
+  font-size: var(--entry-field-data-size);
+  font-weight: 400;
   margin: 0;
   min-width: 0;
 }
@@ -1034,22 +1036,49 @@
   background: #f1f5f9;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
-  color: #0f172a;
+  color: #1e293b;
   display: inline-flex;
-  font-size: var(--entry-field-data-size, clamp(0.82rem, 0.4vw + 0.75rem, 0.86rem));
-  font-weight: 600;
+  font-size: var(--entry-field-data-size);
+  font-weight: 500;
   letter-spacing: 0.01em;
   line-height: 1.35;
-  padding: 3px 10px;
+  padding: 3px 9px;
   white-space: nowrap;
 }
 
-.spec-title-value,
-.spec-clause-value,
+.spec-title-value {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid var(--color-primary, #c0522f);
+  border-radius: 6px;
+  color: #334155;
+  display: block;
+  font-size: var(--entry-field-data-size);
+  font-weight: 450;
+  line-height: 1.5;
+  padding: 8px 12px;
+  width: 100%;
+  word-break: break-word;
+}
+
+.spec-clause-value {
+  background: #fafaf9;
+  border: 1px solid #edeae4;
+  border-radius: 6px;
+  color: #334155;
+  display: block;
+  font-size: var(--entry-field-data-size);
+  font-weight: 400;
+  line-height: 1.5;
+  padding: 8px 12px;
+  width: 100%;
+  word-break: break-word;
+}
+
 .spec-text-value {
-  color: #0f172a;
-  font-size: var(--entry-field-data-size, clamp(0.82rem, 0.4vw + 0.75rem, 0.86rem));
-  font-weight: 600;
+  color: #334155;
+  font-size: var(--entry-field-data-size);
+  font-weight: 400;
   line-height: 1.45;
   word-break: break-word;
 }
@@ -1102,9 +1131,9 @@
 
 .tsh-title {
   color: #0f172a;
-  font-size: var(--entry-section-title-size, clamp(0.92rem, 0.8vw + 0.82rem, 0.98rem));
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-size: var(--entry-section-title-size);
+  font-weight: 850;
+  letter-spacing: -0.015em;
   line-height: 1.3;
   margin: 0;
   text-transform: none;
@@ -1112,7 +1141,7 @@
 
 .tsh-sub {
   color: #64748b;
-  font-size: var(--entry-section-subtitle-size, clamp(0.72rem, 0.4vw + 0.65rem, 0.75rem));
+  font-size: var(--entry-section-subtitle-size);
   font-weight: 500;
   line-height: 1.35;
 }
@@ -1124,10 +1153,10 @@
   border-radius: 9999px;
   color: #1e293b;
   display: inline-flex;
-  font-size: var(--entry-section-badge-size, 0.72rem);
+  font-size: var(--entry-section-badge-size);
   font-weight: 750;
   gap: 6px;
-  padding: 2px 9px;
+  padding: 3px 10px;
 
   i {
     color: var(--color-primary, #c0522f);
@@ -1153,7 +1182,7 @@
     border-left: none !important;
     border-right: none !important;
     color: #475569 !important;
-    font-size: var(--entry-field-label-size, clamp(0.70rem, 0.3vw + 0.65rem, 0.74rem)) !important;
+    font-size: var(--entry-field-label-size) !important;
     font-weight: 750 !important;
     letter-spacing: 0.05em !important;
     padding: 12px 16px !important;
@@ -1171,7 +1200,9 @@
     > td {
       border: none !important;
       padding: 10px 16px !important;
-      font-size: var(--entry-field-data-size, clamp(0.82rem, 0.4vw + 0.75rem, 0.86rem)) !important;
+      font-size: var(--entry-field-data-size) !important;
+      font-weight: 400 !important;
+      color: #334155 !important;
       vertical-align: middle !important;
     }
   }
@@ -1728,14 +1759,14 @@
 
   th, td {
     padding: 8px 12px;
-    font-size: var(--entry-field-data-size, clamp(0.82rem, 0.4vw + 0.75rem, 0.86rem));
+    font-size: var(--entry-field-data-size);
   }
 
   thead th {
     background: #f8fafc;
     border-bottom: 1px solid #e2e8f0;
     color: #475569;
-    font-size: var(--entry-field-label-size, clamp(0.70rem, 0.3vw + 0.65rem, 0.74rem));
+    font-size: var(--entry-field-label-size);
     font-weight: 750;
     letter-spacing: 0.04em;
     text-transform: uppercase;

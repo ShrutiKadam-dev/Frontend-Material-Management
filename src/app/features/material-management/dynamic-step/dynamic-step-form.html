@@ -21,13 +21,9 @@
           pTooltip="Add another form as next step in this project" tooltipPosition="bottom">
         </button>
 
-        <button pButton type="button" icon="pi pi-save" label="Save Draft" class="p-button-outlined save-draft-btn"
-          [loading]="saving()" (click)="saveStep(false)">
-        </button>
-
         <button pButton type="button" icon="pi pi-check-circle"
-          [label]="isStepCompleted() ? 'Completed' : 'Mark as Complete'" class="complete-step-btn"
-          [class.complete-step-btn--done]="isStepCompleted()" [loading]="saving()" (click)="saveStep(true)">
+          label="Save Step" class="complete-step-btn"
+          [loading]="saving()" (click)="saveStep()">
         </button>
       </div>
     </div>
@@ -394,12 +390,8 @@
           class="p-button-outlined p-button-secondary" (click)="openAddStepModal()">
         </button>
 
-        <button pButton type="button" icon="pi pi-save" label="Save Draft" class="p-button-outlined"
-          [loading]="saving()" (click)="saveStep(false)">
-        </button>
-
-        <button pButton type="button" icon="pi pi-check" [label]="isStepCompleted() ? 'Completed' : 'Complete Step'"
-          class="complete-step-btn" [loading]="saving()" (click)="saveStep(true)">
+        <button pButton type="button" icon="pi pi-check" label="Save Step"
+          class="complete-step-btn" [loading]="saving()" (click)="saveStep()">
         </button>
       </div>
     </div>
@@ -410,7 +402,7 @@
 </section>
 
 <!-- ══════════════════════════════════════════════════════════════════════
-     MODAL: SELECT NEXT FORM FROM CATALOG OF 28 FORMS
+     MODAL: SELECT NEXT FORM FROM CATALOG
 ══════════════════════════════════════════════════════════════════════ -->
 <p-dialog [visible]="catalogModalVisible()" (visibleChange)="catalogModalVisible.set($event)" [modal]="true"
   [dismissableMask]="false" [draggable]="false" [resizable]="false"

@@ -33,7 +33,7 @@
 
         <button pButton type="button" icon="pi pi-plus-circle" label="Attach Form as Step"
           class="p-button-outlined p-button-primary" (click)="openAddStepModal()"
-          pTooltip="Select from catalog of 28 forms to attach to this project" tooltipPosition="bottom">
+          pTooltip="Select from catalog of forms to attach to this project" tooltipPosition="bottom">
         </button>
 
         @if (!loading() && activeStep(); as active) {
@@ -324,10 +324,10 @@
       </div>
       <div>
         <h3 class="quick-add-title">Attach Next Form as Step</h3>
-        <p class="quick-add-sub">Choose from 28 available forms across Tenders, RFQs, Invoices, Customs, and Settlements</p>
+        <p class="quick-add-sub">Choose from {{ allCatalogForms.length }} available forms across Tenders, RFQs, Invoices, Customs, and Settlements</p>
       </div>
     </div>
-    <button pButton type="button" icon="pi pi-plus" label="Browse 28 Forms" class="p-button-outlined quick-add-btn"></button>
+    <button pButton type="button" icon="pi pi-plus" [label]="'Browse ' + allCatalogForms.length + ' Forms'" class="p-button-outlined quick-add-btn"></button>
   </div>
   }
 

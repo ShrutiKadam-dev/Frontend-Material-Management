@@ -447,19 +447,15 @@
         }
       </div>
 
-      <!-- Right: Cancel, Save Draft, Mark Completed (POST / PUT) -->
+      <!-- Right: Cancel, Save Step (POST / PUT) -->
       <div class="footer-right">
         <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary cancel-btn"
           [disabled]="saving() || deleting()" (click)="close()">
         </button>
 
-        <button pButton type="button" icon="pi pi-save" label="Save Draft" class="p-button-outlined save-draft-btn"
-          [loading]="saving()" (click)="saveStep(false)">
-        </button>
-
         <button pButton type="button" icon="pi pi-check"
-          [label]="isStepCompleted() ? 'Save & Keep Completed' : 'Save & Mark Complete'"
-          class="p-button-primary complete-btn" [loading]="saving()" (click)="saveStep(true)">
+          [label]="isEditMode() ? 'Save Changes' : 'Save Step'"
+          class="p-button-primary complete-btn" [loading]="saving()" (click)="saveStep()">
         </button>
       </div>
     </div>
