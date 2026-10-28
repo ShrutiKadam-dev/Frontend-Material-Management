@@ -183,7 +183,7 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'bid_opening_date_time', label: 'Bid Opening Date & Time', type: 'datetime', colSpan: 2 },
       { key: 'tender_fee', label: 'Tender Fee', type: 'currency', prefix: '₹', colSpan: 1 },
       { key: 'emd', label: 'EMD (Earnest Money Deposit)', type: 'currency', prefix: '₹', colSpan: 1 },
-      { key: 'tender_validity', label: 'Tender Validity (e.g. 90 Days)', type: 'text', colSpan: 2 },
+      { key: 'tender_validity', label: 'Tender Validity', type: 'text', colSpan: 2 },
     ],
     tableConfig: {
       title: 'Requirements',
@@ -1048,7 +1048,7 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'bid_opening_date_time', label: 'Bid Opening Date & Time', type: 'datetime', colSpan: 2 },
       { key: 'tender_fee', label: 'Tender Fee', type: 'currency', prefix: '₹', colSpan: 1 },
       { key: 'emd', label: 'EMD (Earnest Money Deposit)', type: 'currency', prefix: '₹', colSpan: 1 },
-      { key: 'tender_validity', label: 'Tender Validity (e.g. 90 Days)', type: 'text', colSpan: 2 },
+      { key: 'tender_validity', label: 'Tender Validity', type: 'text', colSpan: 2 },
     ],
     tableConfig: {
       title: 'Requirements',

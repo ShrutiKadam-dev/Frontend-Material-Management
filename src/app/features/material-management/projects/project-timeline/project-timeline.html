@@ -94,8 +94,8 @@
         <div class="commercial-col commercial-col--value"
           [title]="'Total Project Value: ₹' + ((p.total_value || 0) | number:'1.2-2')">
           <span class="commercial-label">Contract Value</span>
-          <strong class="commercial-value commercial-value--currency">₹{{ (p.total_value || 0) | number:'1.2-2'
-            }}</strong>
+          <span class="commercial-value commercial-value--currency">₹{{ (p.total_value || 0) | number:'1.2-2'
+            }}</span>
         </div>
         }
 
@@ -105,8 +105,8 @@
         <div class="commercial-col commercial-col--value"
           [title]="'Total Margin: ₹' + ((p.total_margin || 0) | number:'1.2-2')">
           <span class="commercial-label">Total Margin</span>
-          <strong class="commercial-value commercial-value--currency" style="color: #059669;">₹{{ (p.total_margin || 0) | number:'1.2-2'
-            }}</strong>
+          <span class="commercial-value commercial-value--currency" style="color: #059669;">₹{{ (p.total_margin || 0) | number:'1.2-2'
+            }}</span>
         </div>
         }
       </div>
@@ -119,7 +119,7 @@
       <div class="progress-meta-line">
         <div class="progress-headline">
           <span class="progress-title">Pipeline Progress</span>
-          <span class="progress-pct">{{ progressPercent() }}%</span>
+          <span class="progress-pct" [class.progress-pct--completed]="progressPercent() === 100">{{ progressPercent() }}%</span>
           <span class="progress-steps-count">({{ completedCount() }} of {{ steps().length }} completed)</span>
         </div>
 
@@ -146,7 +146,7 @@
 
       <div class="progress-track" role="progressbar" [attr.aria-valuenow]="progressPercent()" aria-valuemin="0"
         aria-valuemax="100">
-        <div class="progress-fill" [style.width.%]="progressPercent()"></div>
+        <div class="progress-fill" [style.width.%]="progressPercent()" [class.progress-fill--completed]="progressPercent() === 100"></div>
       </div>
     </div>
     }
@@ -220,7 +220,7 @@
 
       <!-- Timeline Steps (Structured Grid Columns for Clean Alignment) -->
       <ol class="phase-steps-timeline">
-        @for (step of phase.steps; track (step.id || step.step_number); let isLastStep = $last) {
+        @for (step of phase.steps; track (step.id || step.step_number); let isLastStep = $last; let isFirstStep = $first) {
         <li class="timeline-row" [class.timeline-row--completed]="step.status === 'completed'"
           [class.timeline-row--active]="step.status === 'in_progress'"
           [class.timeline-row--pending]="step.status === 'pending' || step.status === 'skipped'"
@@ -239,8 +239,14 @@
               <span class="node-num">{{ step.step_number }}</span>
               }
             </div>
-            @if (!(isLastPhase && isLastStep)) {
-            <span class="spine-line"></span>
+            @if (phase.steps.length > 1) {
+              @if (isFirstStep) {
+              <span class="spine-line spine-line--first"></span>
+              } @else if (isLastStep) {
+              <span class="spine-line spine-line--last"></span>
+              } @else {
+              <span class="spine-line"></span>
+              }
             }
           </div>
 
@@ -250,7 +256,6 @@
                 }}</span>
                 <div class="row-text-stack">
                   <strong class="row-step-title" [title]="step.step_name">{{ step.step_name }}</strong>
-                  <span class="row-step-desc" [title]="step.description">{{ step.description }}</span>
                 </div>
           </div>
 
@@ -366,9 +371,6 @@
         <span class="history-status-indicator" [class]="'history-status--' + currentStep.status">
           <i class="pi" [class]="statusIcon(currentStep.status)" aria-hidden="true"></i>
           {{ statusLabel(currentStep.status) }} ({{ currentStep.progress_percentage }}%)
-        </span>
-        <span class="history-desc-snippet" [title]="currentStep.description">
-          {{ currentStep.description }}
         </span>
       </div>
 

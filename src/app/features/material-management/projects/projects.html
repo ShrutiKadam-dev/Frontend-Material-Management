@@ -128,19 +128,19 @@
   ══════════════════════════════════════════════════════════════════ -->
   <div class="table-container app-panel">
     <p-table [value]="filteredProjects()" [paginator]="filteredProjects().length > 10" [rows]="10"
-      styleClass="p-datatable-sm items-table-wrap" responsiveLayout="scroll">
+      styleClass="p-datatable-sm items-table-wrap projects-datatable" responsiveLayout="scroll">
       <ng-template pTemplate="header">
         <tr>
-          <th scope="col" style="min-width: 120px; text-align: center;">Project Code</th>
-          <th scope="col" style="min-width: 220px;">Project Title</th>
-          <th scope="col" style="min-width: 180px;">Customer</th>
-          <th scope="col" style="min-width: 180px;">Supplier</th>
-          <th scope="col" style="min-width: 220px;">Pipeline Step & Progress</th>
-          <th scope="col" style="min-width: 130px; text-align: right;">Total Value</th>
-          <th scope="col" style="min-width: 130px; text-align: right;">Total Margin</th>
-          <th scope="col" style="min-width: 120px; text-align: center;">Status</th>
-          <th scope="col" style="min-width: 200px;">Next Action</th>
-          <th scope="col" style="width: 110px; text-align: center;">Actions</th>
+          <th scope="col" style="min-width: 105px; text-align: center;">Project Code</th>
+          <th scope="col" style="min-width: 280px;">Project Title</th>
+          <th scope="col" style="min-width: 165px;">Customer</th>
+          <th scope="col" style="min-width: 165px;">Supplier</th>
+          <th scope="col" style="min-width: 215px;">Pipeline Step & Progress</th>
+          <th scope="col" style="min-width: 125px; text-align: right;">Total Value</th>
+          <th scope="col" style="min-width: 125px; text-align: right;">Total Margin</th>
+          <th scope="col" style="min-width: 110px; text-align: center;">Status</th>
+          <th scope="col" style="min-width: 170px;">Next Action</th>
+          <th scope="col" style="width: 105px; text-align: center;">Actions</th>
         </tr>
       </ng-template>
 
@@ -153,46 +153,56 @@
           </td>
           <td>
             <div class="tbl-title-cluster">
-              <strong class="tbl-project-title" (click)="openDetailsDialog(p)"
+              <span class="tbl-project-title" (click)="openDetailsDialog(p)"
+                [title]="p.project_title"
                 [innerHTML]="highlightText(p.project_title, searchQuery())">
-              </strong>
+              </span>
             </div>
-            <span class="tbl-date-sub">Created: {{ p.created_at | appDate }} · Updated: {{ (p.updated_at ||
-              p.created_at) | appDate }}</span>
-          </td>
-          <td>
-            <div class="tbl-party-cell">
-              <i class="pi pi-building" aria-hidden="true"></i>
-              <span
-                [innerHTML]="highlightText(p.customer_name || getCustomerName(p.customer_id), searchQuery())"></span>
+            <div class="tbl-date-sub">
+              <span>Created: {{ p.created_at | appDate }}</span>
+              <span class="tbl-date-dot">·</span>
+              <span>Updated: {{ (p.updated_at || p.created_at) | appDate }}</span>
             </div>
           </td>
           <td>
-            <div class="tbl-party-cell">
-              <i class="pi pi-truck" aria-hidden="true"></i>
-              <span
-                [innerHTML]="highlightText(p.supplier_name || getSupplierName(p.supplier_id), searchQuery())"></span>
+            <div class="tbl-party-cell customer">
+              <span class="party-icon-wrap customer" aria-hidden="true">
+                <i class="pi pi-building"></i>
+              </span>
+              <span class="party-name"
+                [class.is-unknown]="!(p.customer_name || getCustomerName(p.customer_id))"
+                [innerHTML]="highlightText(p.customer_name || getCustomerName(p.customer_id) || 'Unknown Customer', searchQuery())"></span>
+            </div>
+          </td>
+          <td>
+            <div class="tbl-party-cell supplier">
+              <span class="party-icon-wrap supplier" aria-hidden="true">
+                <i class="pi pi-truck"></i>
+              </span>
+              <span class="party-name"
+                [class.is-unknown]="!(p.supplier_name || getSupplierName(p.supplier_id))"
+                [innerHTML]="highlightText(p.supplier_name || getSupplierName(p.supplier_id) || 'Unknown Supplier', searchQuery())"></span>
             </div>
           </td>
           <td>
             <div class="tbl-progress-cell">
               <div class="tbl-step-title" (click)="openStepFromProject(p, $event)" [title]="'Open ' + (p.current_step_name || 'Customer Query')" style="cursor: pointer;">
-                <span>Step {{ p.current_step_number || 1 }}: {{ p.current_step_name || 'Active' }}</span>
-                <strong>{{ getProgressPercent(p) }}%</strong>
+                <span class="step-label">Step {{ p.current_step_number || 1 }}: {{ p.current_step_name || 'Active' }}</span>
+                <span class="step-pct" [class.step-pct--done]="getProgressPercent(p) >= 100">{{ getProgressPercent(p) }}%</span>
               </div>
-              <div class="progress-track" style="height: 5px;">
-                <div class="progress-fill" [style.width.%]="getProgressPercent(p)"></div>
+              <div class="progress-track" [class.progress-track--done]="getProgressPercent(p) >= 100">
+                <div class="progress-fill" [class.progress-fill--done]="getProgressPercent(p) >= 100" [style.width.%]="getProgressPercent(p)"></div>
               </div>
             </div>
           </td>
-          <td style="text-align: right; font-weight: 800; color: var(--color-heading);">
-            ₹&nbsp;{{ (p.total_value || 0) | number:'1.2-2' }}
+          <td class="tbl-amount-cell">
+            <span class="tbl-currency">₹</span>&nbsp;<span class="tbl-val-num">{{ (p.total_value || 0) | number:'1.2-2' }}</span>
           </td>
-          <td style="text-align: right; font-weight: 700; color: #059669;">
+          <td class="tbl-amount-cell tbl-margin-cell">
             @if (p.total_margin !== undefined && p.total_margin !== null) {
-            ₹&nbsp;{{ p.total_margin | number:'1.2-2' }}
+            <span class="tbl-currency">₹</span>&nbsp;<span class="tbl-val-num">{{ p.total_margin | number:'1.2-2' }}</span>
             } @else {
-            <span style="color: var(--color-muted); font-weight: 400;">—</span>
+            <span class="tbl-empty-dash">—</span>
             }
           </td>
           <td style="text-align: center;">
@@ -207,15 +217,15 @@
             </span>
           </td>
           <td style="text-align: center;">
-            <div class="actions-cell" style="justify-content: center;">
-              <button pButton type="button" icon="pi pi-arrow-right" class="p-button-text p-button-sm qe-edit"
+            <div class="actions-cell">
+              <button pButton type="button" icon="pi pi-arrow-right" class="p-button-text p-button-sm tbl-action-btn view-btn"
                 pTooltip="Open Pipeline Steps" tooltipPosition="top" (click)="openDetailsDialog(p)"
                 aria-label="Open pipeline steps"></button>
-              <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm qe-edit"
+              <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm tbl-action-btn edit-btn"
                 pTooltip="Edit Project" tooltipPosition="top" (click)="openEditDialog(p)"
                 aria-label="Edit project"></button>
               <button pButton type="button" icon="pi pi-trash"
-                class="p-button-text p-button-sm p-button-danger qe-delete" pTooltip="Remove Project"
+                class="p-button-text p-button-sm p-button-danger tbl-action-btn delete-btn" pTooltip="Remove Project"
                 tooltipPosition="top" (click)="deleteProject(p)" aria-label="Remove project"></button>
             </div>
           </td>

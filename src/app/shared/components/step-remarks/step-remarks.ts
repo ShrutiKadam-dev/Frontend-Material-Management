@@ -34,7 +34,6 @@ import { createStepRemarkItem, parseStepRemarks } from '../../../core/utils/rema
           </div>
           <div>
             <p class="qe-section-title">{{ title() }}</p>
-            <span class="qe-section-subtitle">Audit trail & collaboration</span>
           </div>
         </div>
         <span class="chat-count-pill">{{ parsedRemarks().length }} {{ parsedRemarks().length === 1 ? 'note' : 'notes' }}</span>

@@ -320,7 +320,6 @@
                         </span>
                         <div class="ssh-text">
                           <h3 class="ssh-heading">Commercial Parameters &amp; Rates</h3>
-                          <span class="ssh-subtext">Active foreign exchange rate, duties, and logistics markups</span>
                         </div>
                       </div>
                     </div>
@@ -347,7 +346,6 @@
                                   <i [class]="p.icon" class="param-icon" aria-hidden="true"></i>
                                   <div>
                                     <span class="param-name">{{ p.parameter }}</span>
-                                    <span class="param-desc">{{ p.description }}</span>
                                   </div>
                                 </div>
                               </td>
@@ -420,7 +418,6 @@
                       </div>
                       <div class="tsh-titles">
                         <h3 class="tsh-title">{{ formDefinition()?.tableConfig?.title || 'Quoted Items & Commercial Breakdown' }}</h3>
-                        <span class="tsh-sub">Commercial specifications & item-wise duty breakdown</span>
                       </div>
                     </div>
                     <div class="tsh-right">
@@ -563,7 +560,6 @@
                           </span>
                           <div class="ssh-text">
                             <h3 class="ssh-heading">Commercial Specifications</h3>
-                            <span class="ssh-subtext">Commercial terms & contract requirements</span>
                           </div>
                         </div>
                         <span class="specs-count-badge">
@@ -575,6 +571,7 @@
                         @for (field of getDisplayFields(entry); track field.key || field.label) {
                           <div
                             class="spec-item"
+                            [class.spec-item--title]="field.isTitle"
                             [class.spec-item--span-4]="field.colSpan === 4"
                             [class.spec-item--span-2]="field.colSpan === 2"
                             [class.spec-item--span-1]="field.colSpan === 1"
@@ -592,6 +589,8 @@
                                 <span class="spec-title-value">{{ field.value }}</span>
                               } @else if (field.isClause) {
                                 <span class="spec-clause-value">{{ field.value }}</span>
+                              } @else if (field.isCode) {
+                                <span class="spec-code-value">{{ field.value }}</span>
                               } @else {
                                 <span class="spec-text-value">{{ field.value }}</span>
                               }
@@ -671,7 +670,6 @@
                     </div>
                     <div class="tsh-titles">
                       <h3 class="tsh-title">{{ formDefinition()?.tableConfig?.title || 'Structured Line Items' }}</h3>
-                      <span class="tsh-sub">Commercial specifications & line item requirements</span>
                     </div>
                   </div>
                   <div class="tsh-right">

@@ -82,8 +82,8 @@
 #step-page-title {
   color: var(--color-heading, #1c1b1a);
   font-family: var(--app-display-font, inherit);
-  font-size: clamp(1.25rem, 2vw, 1.55rem);
-  font-weight: 800;
+  font-size: clamp(1.2rem, 1.8vw, 1.45rem);
+  font-weight: 600;
   line-height: 1.25;
   margin: 0;
   overflow: hidden;
@@ -879,12 +879,12 @@
 
 .qe-section-title {
   align-items: center;
-  color: var(--color-muted);
+  color: var(--color-heading, #1e293b);
   display: flex;
-  font-size: 0.72rem;
-  font-weight: 800;
+  font-size: 0.8rem;
+  font-weight: 600;
   gap: 6px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
   margin: 0;
   text-transform: none;
 
@@ -912,17 +912,17 @@
   gap: 1px;
 
   .term-label {
-    color: var(--color-muted-light);
-    font-size: 0.66rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
   }
 
   .term-val {
-    color: var(--color-heading);
-    font-size: 0.82rem;
-    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.84rem;
+    font-weight: 500;
   }
 }
 
@@ -1436,11 +1436,11 @@
     border-bottom: 1px solid var(--color-border-soft);
 
     th {
-      color: var(--color-muted);
-      font-size: 0.7rem;
-      font-weight: 800;
-      letter-spacing: 0.05em;
-      padding: 8px 12px;
+      color: var(--color-muted, #475569);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 9px 12px;
       text-align: left;
       text-transform: uppercase;
     }
@@ -2114,29 +2114,29 @@
 
   .p-datatable-thead>tr>th,
   thead tr th {
-    background: var(--color-surface-muted) !important;
-    border-bottom: 1px solid var(--color-border) !important;
+    background: var(--color-surface-muted, #faf9f6) !important;
+    border-bottom: 1px solid var(--color-border-soft, #edeae4) !important;
     border-top: none !important;
     border-left: none !important;
     border-right: none !important;
-    color: var(--color-heading) !important;
-    font-size: 0.72rem !important;
-    font-weight: 800 !important;
-    letter-spacing: 0.06em !important;
-    line-height: 1.2 !important;
-    padding: 9px 12px !important;
+    color: #475569 !important;
+    font-size: 0.73rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.04em !important;
+    line-height: 1.25 !important;
+    padding: 10px 14px !important;
     text-transform: uppercase !important;
     white-space: nowrap !important;
     transition: background 150ms ease, color 150ms ease;
 
     &:hover {
-      background: var(--color-primary-soft) !important;
-      color: var(--color-primary) !important;
+      background: var(--color-primary-soft, #fef2f2) !important;
+      color: var(--color-primary, #c0522f) !important;
     }
 
     .p-sortable-column-icon,
     .p-icon {
-      color: var(--color-primary) !important;
+      color: var(--color-primary, #c0522f) !important;
       font-size: 0.75rem !important;
       margin-left: 6px !important;
       vertical-align: middle;
@@ -2145,15 +2145,15 @@
 
   .p-datatable-tbody>tr>td,
   tbody tr td {
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border-soft) !important;
+    background: var(--color-surface, #ffffff);
+    border-bottom: 1px solid var(--color-border-soft, #edeae4) !important;
     border-top: none !important;
     border-left: none !important;
     border-right: none !important;
-    color: var(--color-text) !important;
+    color: var(--color-text, #1e293b) !important;
     font-size: 0.84rem !important;
-    line-height: 1.25 !important;
-    padding: 7px 12px !important;
+    line-height: 1.3 !important;
+    padding: 10px 14px !important;
     vertical-align: middle !important;
     transition: background 120ms ease;
   }

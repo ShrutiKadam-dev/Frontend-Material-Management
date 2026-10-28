@@ -45,6 +45,8 @@ export interface EntryDisplayField {
   isPill?: boolean;
   isTitle?: boolean;
   isClause?: boolean;
+  isCode?: boolean;
+  isDate?: boolean;
 }
 
 export interface CostSheetGlobalParams {
@@ -867,6 +869,8 @@ export class ProjectFormEntries implements OnInit {
           isPill: !!isPill,
           isTitle: !!isTitle,
           isClause: !!isClause,
+          isCode: !!isRefNumber,
+          isDate: !!isDateOrTime,
           _order: order,
         });
       }
