@@ -612,5 +612,66 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(firstRow.get('id')?.value).toBe(42);
     });
   });
+
+  describe('Form Dialog Button Disabled Validation', () => {
+    it('should calculate isSaveDisabled as true when form is invalid or saving or deleting', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.isFormInvalid = () => true;
+      comp.saving = () => false;
+      comp.deleting = () => false;
+      comp.loading = () => false;
+
+      // When form is invalid
+      expect(comp.checkSaveDisabled()).toBe(true);
+
+      // When form is valid but saving is true
+      comp.isFormInvalid = () => false;
+      comp.saving = () => true;
+      expect(comp.checkSaveDisabled()).toBe(true);
+
+      // When form is valid but deleting is true
+      comp.saving = () => false;
+      comp.deleting = () => true;
+      expect(comp.checkSaveDisabled()).toBe(true);
+
+      // When form is valid and not saving/deleting
+      comp.deleting = () => false;
+      expect(comp.checkSaveDisabled()).toBe(false);
+    });
+
+    it('should stop saveStep and notify with warning when formGroup is invalid', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const mockFormApiService = {
+        createEntry: vi.fn(),
+        updateEntry: vi.fn(),
+      };
+      const mockMessageService = { add: vi.fn() };
+      const markAllAsTouched = vi.fn();
+
+      comp.formApiService = mockFormApiService;
+      comp.messageService = mockMessageService;
+      comp.projectId = () => 10;
+      comp.resolvedDef = () => mockFormDef;
+      comp.saving = { set: vi.fn() };
+      comp.isFormInvalid = { set: vi.fn() };
+      comp.formGroup = () => ({
+        invalid: true,
+        markAllAsTouched,
+        value: { pqb_title: '', pqb_no: '' },
+      });
+
+      comp.saveStep();
+
+      expect(markAllAsTouched).toHaveBeenCalled();
+      expect(mockMessageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'warn',
+          summary: 'Required Fields Missing',
+        }),
+      );
+      expect(mockFormApiService.createEntry).not.toHaveBeenCalled();
+      expect(comp.saving.set).not.toHaveBeenCalled();
+    });
+  });
 });
 

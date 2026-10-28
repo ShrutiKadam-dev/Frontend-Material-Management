@@ -23,7 +23,7 @@
 
         <button pButton type="button" icon="pi pi-check-circle"
           label="Save Step" class="complete-step-btn"
-          [loading]="saving()" (click)="saveStep()">
+          [loading]="saving()" [disabled]="isSaveDisabled()" (click)="saveStep()">
         </button>
       </div>
     </div>
@@ -391,7 +391,7 @@
         </button>
 
         <button pButton type="button" icon="pi pi-check" label="Save Step"
-          class="complete-step-btn" [loading]="saving()" (click)="saveStep()">
+          class="complete-step-btn" [loading]="saving()" [disabled]="isSaveDisabled()" (click)="saveStep()">
         </button>
       </div>
     </div>

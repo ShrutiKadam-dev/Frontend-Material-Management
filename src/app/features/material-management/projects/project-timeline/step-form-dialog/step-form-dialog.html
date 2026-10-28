@@ -455,7 +455,8 @@
 
         <button pButton type="button" icon="pi pi-check"
           [label]="isEditMode() ? 'Save Changes' : 'Save Step'"
-          class="p-button-primary complete-btn" [loading]="saving()" (click)="saveStep()">
+          class="p-button-primary complete-btn" [loading]="saving()"
+          [disabled]="isSaveDisabled()" (click)="saveStep()">
         </button>
       </div>
     </div>

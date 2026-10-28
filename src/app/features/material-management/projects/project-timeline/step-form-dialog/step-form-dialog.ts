@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   input,
@@ -27,7 +28,7 @@ import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 
-import { of } from 'rxjs';
+import { of, Subscription } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 import { ProjectStep, ProjectStepRemark } from '../../../../../core/models/project-step.model';
@@ -99,6 +100,10 @@ export class StepFormDialog {
 
   readonly resolvedDef = signal<FormDefinition | null>(null);
   readonly formGroup = signal<FormGroup>(new FormGroup({}));
+  readonly isFormInvalid = signal<boolean>(false);
+  private formStatusSub?: Subscription;
+  private readonly destroyRef = inject(DestroyRef, { optional: true });
+
   readonly tableFormArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
   readonly uploadedFiles = signal<
     Array<{ name: string; size: string; uploadKey: string; fileRef?: File }>
@@ -112,6 +117,15 @@ export class StepFormDialog {
   // ── Derived Signals ─────────────────────────────────────────────────
   readonly isEditMode = computed(() => !!this.step());
   readonly currentUser = computed(() => getCurrentUserFromStorage());
+
+  checkSaveDisabled(): boolean {
+    if (this.saving() || this.deleting() || this.loading()) {
+      return true;
+    }
+    return Boolean(this.isFormInvalid?.());
+  }
+
+  readonly isSaveDisabled = computed(() => this.checkSaveDisabled());
 
   readonly modalTitle = computed(() => {
     const s = this.step();
@@ -131,6 +145,10 @@ export class StepFormDialog {
   });
 
   constructor() {
+    this.destroyRef?.onDestroy(() => {
+      this.formStatusSub?.unsubscribe();
+    });
+
     // Synchronize form when dialog becomes visible or step/definition changes
     effect(() => {
       const isVis = this.visible();
@@ -255,7 +273,13 @@ export class StepFormDialog {
       const validators = field.required ? [Validators.required] : [];
       controls[field.key] = new FormControl(initialVal, validators);
     }
-    this.formGroup.set(new FormGroup(controls));
+    const fg = new FormGroup(controls);
+    this.formGroup.set(fg);
+    this.isFormInvalid?.set?.(fg.invalid);
+    this.formStatusSub?.unsubscribe();
+    this.formStatusSub = fg.statusChanges?.subscribe?.(() => {
+      this.isFormInvalid?.set?.(fg.invalid);
+    });
 
     // 2. Line-Item Table Rows
     if (def.tableConfig) {
@@ -631,6 +655,17 @@ export class StepFormDialog {
     const pId = this.projectId();
     const def = this.resolvedDef();
     if (!pId || !def) return;
+
+    if (this.formGroup()?.invalid) {
+      this.formGroup()?.markAllAsTouched?.();
+      this.isFormInvalid.set(true);
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Required Fields Missing',
+        detail: 'Please fill in all required fields before saving.',
+      });
+      return;
+    }
 
     this.saving.set(true);
 

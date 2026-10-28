@@ -776,3 +776,45 @@
     margin: 0;
   }
 }
+
+/* ── Modal Dialog Footer Actions ── */
+.dlg-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  background: var(--color-surface-muted, #faf9f6);
+  border-top: 1px solid var(--color-border-soft, #edeae4);
+
+  .submit-btn {
+    background: var(--color-primary, #c0522f) !important;
+    border-color: var(--color-primary, #c0522f) !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+
+    &:hover:not(:disabled) {
+      background: var(--color-primary-hover, #aa4525) !important;
+      border-color: var(--color-primary-hover, #aa4525) !important;
+    }
+
+    &:disabled,
+    &.p-disabled {
+      background: var(--p-button-disabled-background, #d1d5db) !important;
+      border-color: var(--p-button-disabled-border-color, #d1d5db) !important;
+      color: var(--p-button-disabled-color, #9ca3af) !important;
+      cursor: not-allowed !important;
+      opacity: 0.65 !important;
+      pointer-events: none !important;
+    }
+  }
+
+  .cancel-btn {
+    color: var(--color-muted, #6b6864) !important;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.04) !important;
+      color: var(--color-heading, #1c1b1a) !important;
+    }
+  }
+}

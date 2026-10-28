@@ -1198,9 +1198,18 @@
   border-color: #059669 !important;
   font-weight: 600 !important;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: #047857 !important;
     border-color: #047857 !important;
+  }
+
+  &:disabled,
+  &.p-disabled {
+    background: var(--p-button-disabled-background, #d1d5db) !important;
+    border-color: var(--p-button-disabled-border-color, #d1d5db) !important;
+    color: var(--p-button-disabled-color, #9ca3af) !important;
+    cursor: not-allowed !important;
+    opacity: 0.65 !important;
   }
 }
 

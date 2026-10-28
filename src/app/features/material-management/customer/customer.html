@@ -611,7 +611,7 @@
       <button pButton type="submit"
         [label]="submitting() ? 'Saving...' : (isEditMode() ? 'Save Changes' : 'Create Customer')"
         [icon]="submitting() ? 'pi pi-spin pi-spinner' : (isEditMode() ? 'pi pi-check' : 'pi pi-plus')"
-        [disabled]="submitting()" class="submit-dialog-btn"></button>
+        [disabled]="submitting() || customerForm.invalid" class="submit-dialog-btn"></button>
     </div>
   </form>
 </p-dialog>

@@ -2,10 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
   OnInit,
   signal,
 } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { DecimalPipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -95,11 +97,19 @@ export class DynamicStepForm implements OnInit {
   protected readonly allSteps = signal<ProjectStep[]>([]);
   protected readonly loading = signal<boolean>(true);
   protected readonly saving = signal<boolean>(false);
+  protected readonly isFormInvalid = signal<boolean>(false);
+  private formStatusSub?: Subscription;
+  private readonly destroyRef = inject(DestroyRef, { optional: true });
 
   // ── Form Definition & Structure ───────────────────────────────────
   protected readonly formDefinition = signal<FormDefinition | null>(null);
   protected readonly formGroup = signal<FormGroup>(new FormGroup({}));
   protected readonly tableFormArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+
+  protected readonly isSaveDisabled = computed(() => {
+    if (this.saving() || this.loading()) return true;
+    return this.isFormInvalid();
+  });
 
   // ── Uploaded Attachments Simulation / Tracking ────────────────────
   protected readonly uploadedFiles = signal<Array<{ name: string; size: string; uploadKey: string }>>([]);
@@ -151,6 +161,10 @@ export class DynamicStepForm implements OnInit {
   });
 
   ngOnInit(): void {
+    this.destroyRef?.onDestroy(() => {
+      this.formStatusSub?.unsubscribe();
+    });
+
     this.route.paramMap.subscribe((params) => {
       const pId = Number(params.get('projectId'));
       const sId = params.get('stepId') || params.get('formCode') || '';
@@ -288,6 +302,11 @@ export class DynamicStepForm implements OnInit {
 
     const group = new FormGroup(controls);
     this.formGroup.set(group);
+    this.isFormInvalid?.set?.(group.invalid);
+    this.formStatusSub?.unsubscribe();
+    this.formStatusSub = group.statusChanges?.subscribe?.(() => {
+      this.isFormInvalid?.set?.(group.invalid);
+    });
 
     // Build Table FormArray if configured
     if (def.tableConfig) {
@@ -551,6 +570,17 @@ export class DynamicStepForm implements OnInit {
     const pId = this.projectId();
     const cur = this.currentStep();
     if (!pId || !cur) return;
+
+    if (this.formGroup()?.invalid) {
+      this.formGroup()?.markAllAsTouched?.();
+      this.isFormInvalid.set(true);
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Required Fields Missing',
+        detail: 'Please fill in all required fields before saving.',
+      });
+      return;
+    }
 
     this.saving.set(true);
 
