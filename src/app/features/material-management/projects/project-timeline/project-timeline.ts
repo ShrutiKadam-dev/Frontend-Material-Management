@@ -304,7 +304,7 @@ export class ProjectTimeline implements OnInit {
         } else if (phase.id === 'phase-3') {
           return s.step_number === 14 || (s.step_number >= 16 && s.step_number <= 20);
         } else if (phase.id === 'phase-4') {
-          return s.step_number === 21 || s.step_number === 27 || s.step_number === 28;
+          return s.step_number === 21 || s.step_number === 27 || s.step_number === 28 || s.step_number === 32;
         } else if (phase.id === 'phase-5') {
           return s.step_number >= 22 && s.step_number <= 26;
         }
@@ -729,7 +729,7 @@ export class ProjectTimeline implements OnInit {
     if (stepNumber <= 7 || stepNumber === 13 || stepNumber === 15 || (stepNumber >= 29 && stepNumber <= 31)) return PIPELINE_PHASES[0];
     if (stepNumber <= 12) return PIPELINE_PHASES[1];
     if (stepNumber === 14 || (stepNumber >= 16 && stepNumber <= 20)) return PIPELINE_PHASES[2];
-    if (stepNumber === 21 || stepNumber === 27 || stepNumber === 28) return PIPELINE_PHASES[3];
+    if (stepNumber === 21 || stepNumber === 27 || stepNumber === 28 || stepNumber === 32) return PIPELINE_PHASES[3];
     return PIPELINE_PHASES[4];
   }
 

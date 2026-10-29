@@ -228,3 +228,8 @@ export const LOGISTIC_TYPE_OPTIONS: SelectOption<string>[] = [
   { label: 'Air Freight', value: 'air' },
   { label: 'Sea Freight', value: 'sea' },
 ];
+
+/**
+ * Standard E-Way Bill transportation mode options
+ */
+export const EWAY_BILL_MODE_OPTIONS: string[] = ['Road', 'Rail', 'Air', 'Ship'];

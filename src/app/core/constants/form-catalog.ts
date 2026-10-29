@@ -1,4 +1,5 @@
 import {
+  EWAY_BILL_MODE_OPTIONS,
   INCOTERMS_OPTIONS,
   SelectOption,
   WARRANTY_PERIOD_OPTIONS,
@@ -895,7 +896,7 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'invoice_no', label: 'Invoice No.', type: 'text', required: true, colSpan: 1 },
       { key: 'invoice_date', label: 'Invoice Date', type: 'date', colSpan: 1 },
-      { key: 'gst_rate_pct', label: 'GST Rate %', type: 'number', suffix: '%', colSpan: 1 },
+      { key: 'gst_pct', label: 'GST (%)', type: 'number', suffix: '%', colSpan: 2 },
     ],
     tableConfig: {
       title: 'Material Description & Pricing',
@@ -1103,6 +1104,33 @@ export const FORM_CATALOG: FormDefinition[] = [
       ],
     },
     uploads: [{ key: 'upload_bid_document_lte', label: 'Upload Bid Document (LTE)', multiple: true }],
+  },
+
+  // ── 32. E-WAY BILL ───────────────────────────────────────────────────────
+  {
+    id: 32,
+    formCode: 'FORM_32_EWAY_BILL',
+    name: 'E-Way Bill',
+    category: 'Logistics & Customs',
+    phaseId: 'phase-4',
+    icon: 'pi pi-truck',
+    description: 'Electronic waybill tracking for movement of goods, transport details, and consignment validity',
+    apiEndpoint: '/api/v1/eway-bills',
+    fields: [
+      { key: 'eway_bill_no', label: 'E-Way Bill No.', type: 'text', required: true, colSpan: 2 },
+      { key: 'eway_bill_date', label: 'E-Way Bill Date', type: 'date', required: true, colSpan: 2 },
+      { key: 'valid_from', label: 'Valid From', type: 'date', colSpan: 2 },
+      { key: 'valid_until', label: 'Valid Until', type: 'date', colSpan: 2 },
+      { key: 'document_no', label: 'Document No.', type: 'text', colSpan: 2 },
+      { key: 'document_date', label: 'Document Date', type: 'date', colSpan: 2 },
+      { key: 'value', label: 'Value', type: 'currency', prefix: '₹', colSpan: 2 },
+      { key: 'place_of_dispatch', label: 'Place of Dispatch', type: 'text', colSpan: 2 },
+      { key: 'place_of_delivery', label: 'Place of Delivery', type: 'text', colSpan: 2 },
+      { key: 'transporter', label: 'Transporter', type: 'text', colSpan: 2 },
+      { key: 'mode', label: 'Mode', type: 'select', options: EWAY_BILL_MODE_OPTIONS, colSpan: 2 },
+      { key: 'vehicle_trans_doc_no', label: 'Vehicle / Trans Doc No.', type: 'text', colSpan: 2 },
+    ],
+    uploads: [{ key: 'upload_eway_bill', label: 'Upload E-Way Bill', multiple: true }],
   },
 ];
 

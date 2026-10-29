@@ -5,10 +5,10 @@ import {
   getFormDefinition,
 } from './form-catalog';
 
-describe('FORM_CATALOG New Tender Forms (29, 30, 31)', () => {
-  it('should contain 31 total forms in catalog', () => {
-    expect(FORM_CATALOG.length).toBe(31);
-    expect(FORM_CATALOG_MAP.size).toBe(31);
+describe('FORM_CATALOG Extended Forms (26, 29, 30, 31, 32)', () => {
+  it('should contain 32 total forms in catalog', () => {
+    expect(FORM_CATALOG.length).toBe(32);
+    expect(FORM_CATALOG_MAP.size).toBe(32);
   });
 
   describe('Form 2: BID DOCUMENT FOR PQB', () => {
@@ -204,6 +204,80 @@ describe('FORM_CATALOG New Tender Forms (29, 30, 31)', () => {
       const def = getFormDefinition(31)!;
       expect(def.uploads.length).toBeGreaterThan(0);
       expect(def.uploads[0].key).toBe('upload_bid_document_lte');
+    });
+  });
+
+  describe('Form 26: TAX INVOICE TO CUSTOMER', () => {
+    it('should be registered with code FORM_26_TAX_INVOICE_CUSTOMER and id 26', () => {
+      const def = getFormDefinition('FORM_26_TAX_INVOICE_CUSTOMER');
+      expect(def).toBeDefined();
+      expect(def?.id).toBe(26);
+      expect(def?.name).toBe('Tax Invoice to Customer');
+      expect(def?.category).toBe('Customer & Supplier Settlement');
+      expect(def?.phaseId).toBe('phase-5');
+      expect(getFormDefinition(26)).toEqual(def);
+    });
+
+    it('should have GST (%) field configured', () => {
+      const def = getFormDefinition(26)!;
+      const gstField = def.fields.find((f) => f.key === 'gst_pct');
+      expect(gstField).toBeDefined();
+      expect(gstField?.label).toBe('GST (%)');
+      expect(gstField?.type).toBe('number');
+      expect(gstField?.suffix).toBe('%');
+    });
+  });
+
+  describe('Form 32: E-WAY BILL', () => {
+    it('should be registered with code FORM_32_EWAY_BILL and id 32', () => {
+      const def = getFormDefinition('FORM_32_EWAY_BILL');
+      expect(def).toBeDefined();
+      expect(def?.id).toBe(32);
+      expect(def?.name).toBe('E-Way Bill');
+      expect(def?.category).toBe('Logistics & Customs');
+      expect(def?.phaseId).toBe('phase-4');
+      expect(getFormDefinition(32)).toEqual(def);
+    });
+
+    it('should have all 12 fields matching specification', () => {
+      const def = getFormDefinition(32)!;
+      const fieldKeys = def.fields.map((f) => f.key);
+      expect(fieldKeys).toEqual([
+        'eway_bill_no',
+        'eway_bill_date',
+        'valid_from',
+        'valid_until',
+        'document_no',
+        'document_date',
+        'value',
+        'place_of_dispatch',
+        'place_of_delivery',
+        'transporter',
+        'mode',
+        'vehicle_trans_doc_no',
+      ]);
+
+      const ewayNo = def.fields.find((f) => f.key === 'eway_bill_no');
+      expect(ewayNo?.required).toBe(true);
+
+      const ewayDate = def.fields.find((f) => f.key === 'eway_bill_date');
+      expect(ewayDate?.required).toBe(true);
+      expect(ewayDate?.type).toBe('date');
+
+      const valueField = def.fields.find((f) => f.key === 'value');
+      expect(valueField?.type).toBe('currency');
+      expect(valueField?.prefix).toBe('₹');
+
+      const modeField = def.fields.find((f) => f.key === 'mode');
+      expect(modeField?.type).toBe('select');
+      expect(modeField?.options).toEqual(['Road', 'Rail', 'Air', 'Ship']);
+    });
+
+    it('should configure upload for e-way bill document', () => {
+      const def = getFormDefinition(32)!;
+      expect(def.uploads.length).toBeGreaterThan(0);
+      expect(def.uploads[0].key).toBe('upload_eway_bill');
+      expect(def.uploads[0].label).toBe('Upload E-Way Bill');
     });
   });
 });

@@ -48,7 +48,7 @@ export class CustomerDeliveryService {
             po_no: poNumber,
             po_date: String(data['po_date'] ?? data['date'] ?? ''),
             warranty_period: String(data['warranty_period'] ?? ''),
-            gst_rate: Number(data['gst_rate'] ?? 0),
+            gst_rate: Number(data['gst_rate'] ?? data['gst_pct'] ?? data['gst_rate_pct'] ?? 0),
             gst_amount: Number(data['gst_amount'] ?? 0),
             total_net_amount: Number(data['total_net_amount'] ?? data['total_amount'] ?? 0),
             total_gross_amount: Number(
@@ -88,7 +88,7 @@ export class CustomerDeliveryService {
                   po_no: poNumber,
                   po_date: String(data['po_date'] ?? data['date'] ?? ''),
                   warranty_period: String(data['warranty_period'] ?? ''),
-                  gst_rate: Number(data['gst_rate'] ?? 0),
+                  gst_rate: Number(data['gst_rate'] ?? data['gst_pct'] ?? data['gst_rate_pct'] ?? 0),
                   gst_amount: Number(data['gst_amount'] ?? 0),
                   total_net_amount: Number(data['total_net_amount'] ?? data['total_amount'] ?? 0),
                   total_gross_amount: Number(

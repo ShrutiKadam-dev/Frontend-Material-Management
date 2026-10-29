@@ -133,7 +133,8 @@ INSERT INTO form_definitions (id, form_code, name, category, phase_id, icon, des
 (28, 'FORM_28_FREIGHT_CHA', 'Freight Forwarder / CHA Details', 'Logistics & Customs', 'phase-3', 'pi pi-users', 'Customs House Agent (CHA) invoices, freight handling disbursements and fee records', TRUE),
 (29, 'FORM_29_BID_DOC_TECHNO_COMMERCIAL', 'Bid Document - Techno Commercial Tender', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-file-check', 'Techno commercial tender bid submission, delivery terms, warranty, and material price schedule', TRUE),
 (30, 'FORM_30_TECHNO_COMMERCIAL_TENDER', 'Techno Commercial Tender', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-file-edit', 'Techno commercial tender enquiry terms, submission deadlines, EMD, fee, and requirements', TRUE),
-(31, 'FORM_31_BID_DOC_LTE', 'Bid Document - Limited Tender Enquiry (LTE)', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-book', 'Limited tender enquiry bid submission data, delivery terms, corrigendum, and material pricing', TRUE);
+(31, 'FORM_31_BID_DOC_LTE', 'Bid Document - Limited Tender Enquiry (LTE)', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-book', 'Limited tender enquiry bid submission data, delivery terms, corrigendum, and material pricing', TRUE),
+(32, 'FORM_32_EWAY_BILL', 'E-Way Bill', 'Logistics & Customs', 'phase-4', 'pi pi-truck', 'Electronic waybill tracking for movement of goods, transport details, and consignment validity', FALSE);
 ```
 
 ---
@@ -343,12 +344,13 @@ Returns all active steps attached to this project, ordered by `step_order ASC`.
 | **23. FORM_23_WARRANTY_CERTIFICATE** | Warranty Certificate | `certificate_date`, `warranty_period`, `po_no`, `po_date`, `invoice_no`, `invoice_date` | *None* | `upload_warranty_certificate` |
 | **24. FORM_24_DELIVERY_CHALLAN** | Delivery Challan to Customer | `delivery_challan_no`, `delivery_challan_date` | `sr_no`, `description`, `hsn_sac`, `unit_price`, `total_amount` | `upload_delivery_challan` |
 | **25. FORM_25_CUSTOMER_PACKING_LIST** | Packing List to Customer | `packing_list_no`, `packing_list_date`, `gross_weight`, `net_weight`, `total_no_packages` | `sr_no`, `description`, `hsn_sac`, `unit_weight`, `total_weight` | `upload_packing_list` |
-| **26. FORM_26_TAX_INVOICE_CUSTOMER** | Tax Invoice to Customer | `customer_name`, `invoice_no`, `invoice_date` | `sr_no`, `description`, `hsn_sac`, `quantity`, `unit_price`, `total_amount` | `upload_invoice` |
+| **26. FORM_26_TAX_INVOICE_CUSTOMER** | Tax Invoice to Customer | `customer_name`, `invoice_no`, `invoice_date`, `gst_pct` | `sr_no`, `description`, `hsn_sac`, `quantity`, `unit_price`, `total_amount` | `upload_invoice` |
 | **27. FORM_27_SHIPPING_CLEARANCE** | Shipping & Clearance | `logistic_mode`, `shipment_date`, `awb_bl_no`, `flight_vessel_name`, `flight_vessel_no`, `port_loading`, `port_discharge`, `bill_of_entry_no`, `boe_filing_date`, `total_assessable_value`, `basic_custom_duty_bcd`, `sws`, `igst`, `duty_paid_date`, `challan_no`, `payment_ref_no`, `customs_location`, `cfs_name` | *None* | `upload_shipping_doc`, `upload_boe`, `upload_other_doc` |
 | **28. FORM_28_FREIGHT_CHA** | Freight Forwarder / CHA Details | `freight_forwarder_name`, `cha_name`, `invoice_no`, `invoice_date`, `invoice_amount`, `payment_date`, `payment_amount` | `sr_no`, `description`, `amount` | `upload_supporting_doc` |
 | **29. FORM_29_BID_DOC_TECHNO_COMMERCIAL** | Bid Document - Techno Commercial Tender | `customer_name`, `tender_title`, `tender_no`, `tender_issue_date`, `total_no_corrigendum_issued`, `bid_submission_date`, `delivery_terms`, `delivery_period`, `bid_validity`, `payment_terms`, `warranty_period`, `gst_pct` | `sr_no`, `description`, `hsn_sac`, `quantity`, `unit_price`, `total_amount` | `upload_bid_document` |
 | **30. FORM_30_TECHNO_COMMERCIAL_TENDER** | Techno Commercial Tender | `pqb_no`, `tender_title`, `tender_no`, `tender_issue_date`, `bid_submission_due_date_time`, `bid_opening_date_time`, `tender_fee`, `emd`, `tender_validity` | `sr_no`, `description`, `unit`, `quantity` | `upload_techno_commercial_tender` |
 | **31. FORM_31_BID_DOC_LTE** | Bid Document - Limited Tender Enquiry (LTE) | `customer_name`, `tender_title`, `tender_no`, `tender_issue_date`, `total_no_corrigendum_issued`, `bid_submission_date`, `delivery_terms`, `delivery_period`, `bid_validity`, `payment_terms`, `warranty_period`, `gst_pct` | `sr_no`, `description`, `hsn_sac`, `quantity`, `unit_price`, `total_amount` | `upload_bid_document_lte` |
+| **32. FORM_32_EWAY_BILL** | E-Way Bill | `eway_bill_no`, `eway_bill_date`, `valid_from`, `valid_until`, `document_no`, `document_date`, `value`, `place_of_dispatch`, `place_of_delivery`, `transporter`, `mode`, `vehicle_trans_doc_no` | *None* | `upload_eway_bill` |
 
 ---
 

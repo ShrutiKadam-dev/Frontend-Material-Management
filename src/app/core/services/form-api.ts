@@ -97,6 +97,16 @@ export function normalizeBackendEntityToStep(
     if (item['hasRateIncrease'] !== undefined) combinedData['hasRateIncrease'] = item['hasRateIncrease'];
   }
 
+  // Bridge FORM_26_TAX_INVOICE_CUSTOMER gst_pct and gst_rate_pct
+  if (formDef.formCode === 'FORM_26_TAX_INVOICE_CUSTOMER') {
+    const rate = extractGstRate(item, formDef.fields);
+    if (rate !== null && rate !== undefined) {
+      combinedData['gst_pct'] = rate;
+      combinedData['gst_rate_pct'] = rate;
+      combinedData['gst_rate'] = rate;
+    }
+  }
+
   // Calculate and bridge total_net_amount and total_gross_amount for tables with autoCalculateTotal
   if (formDef.tableConfig?.autoCalculateTotal) {
     const tKey = formDef.tableConfig.totalKey || 'total_amount';
@@ -253,6 +263,15 @@ export class FormApiService {
       };
     }
 
+    if (formDef.formCode === 'FORM_26_TAX_INVOICE_CUSTOMER') {
+      const rate = extractGstRate(bodyPayload, formDef.fields);
+      if (rate !== null && rate !== undefined) {
+        bodyPayload['gst_pct'] = rate;
+        bodyPayload['gst_rate_pct'] = rate;
+        bodyPayload['gst_rate'] = rate;
+      }
+    }
+
     if (formDef.tableConfig?.autoCalculateTotal) {
       const tKey = formDef.tableConfig.totalKey || 'total_amount';
       const computedNet = cleanedItems.reduce((sum, row) => sum + (Number(row[tKey]) || 0), 0);
@@ -332,6 +351,15 @@ export class FormApiService {
         marginRate: Number(payload['margin_pct'] ?? existingGp['marginRate'] ?? 0),
         gstRate: Number(payload['gst_pct'] ?? existingGp['gstRate'] ?? 0),
       };
+    }
+
+    if (formDef.formCode === 'FORM_26_TAX_INVOICE_CUSTOMER') {
+      const rate = extractGstRate(bodyPayload, formDef.fields);
+      if (rate !== null && rate !== undefined) {
+        bodyPayload['gst_pct'] = rate;
+        bodyPayload['gst_rate_pct'] = rate;
+        bodyPayload['gst_rate'] = rate;
+      }
     }
 
     if (formDef.tableConfig?.autoCalculateTotal) {
