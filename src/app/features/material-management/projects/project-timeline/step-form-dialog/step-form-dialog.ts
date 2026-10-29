@@ -49,8 +49,11 @@ import {
   sanitizePayloadDates,
 } from '../../../../../core/utils/date.utils';
 import {
+  calculateTableTotalsWithGst,
   cleanTableItems,
+  extractGstRate,
   getTableRowCellValue,
+  hasGstConfigured,
   isTableRowEmpty,
   normalizeTableRow,
 } from '../../../../../core/utils/form.utils';
@@ -137,11 +140,53 @@ export class StepFormDialog {
   });
 
 
+  readonly tableVersion = signal<number>(0);
+  readonly formVersion = signal<number>(0);
+
   readonly tableTotalSum = computed(() => {
-    const arr = this.tableFormArray().value as Array<Record<string, unknown>>;
+    this.tableVersion();
+    const arr = (this.tableFormArray()?.value || []) as Array<Record<string, unknown>>;
     const cfg = this.resolvedDef()?.tableConfig;
     if (!cfg || !cfg.totalKey) return 0;
     return arr.reduce((sum, row) => sum + (Number(row[cfg.totalKey!]) || 0), 0);
+  });
+
+  readonly tableNetAmount = computed(() => this.tableTotalSum());
+
+  readonly tableGstRate = computed(() => {
+    this.formVersion();
+    const def = this.resolvedDef();
+    const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
+    return extractGstRate(formVals, def?.fields) ?? 0;
+  });
+
+  readonly tableGstAmount = computed(() => {
+    this.formVersion();
+    const net = this.tableNetAmount();
+    const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
+    const explicitGst =
+      formVals['gst_amount'] !== undefined && formVals['gst_amount'] !== null && formVals['gst_amount'] !== ''
+        ? Number(formVals['gst_amount'])
+        : null;
+    return calculateTableTotalsWithGst(net, this.tableGstRate(), explicitGst).gst_amount;
+  });
+
+  readonly tableGrossTotalSum = computed(() => {
+    this.formVersion();
+    const net = this.tableNetAmount();
+    const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
+    const explicitGst =
+      formVals['gst_amount'] !== undefined && formVals['gst_amount'] !== null && formVals['gst_amount'] !== ''
+        ? Number(formVals['gst_amount'])
+        : null;
+    return calculateTableTotalsWithGst(net, this.tableGstRate(), explicitGst).total_gross_amount;
+  });
+
+  readonly hasTableGst = computed(() => {
+    this.formVersion();
+    const def = this.resolvedDef();
+    const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
+    return hasGstConfigured(def?.fields, formVals) || this.tableGstRate() > 0 || this.tableGstAmount() > 0;
   });
 
   constructor() {
@@ -277,8 +322,9 @@ export class StepFormDialog {
     this.formGroup.set(fg);
     this.isFormInvalid?.set?.(fg.invalid);
     this.formStatusSub?.unsubscribe();
-    this.formStatusSub = fg.statusChanges?.subscribe?.(() => {
+    this.formStatusSub = fg.valueChanges?.subscribe?.(() => {
       this.isFormInvalid?.set?.(fg.invalid);
+      this.formVersion.update((v) => v + 1);
     });
 
     // 2. Line-Item Table Rows
@@ -467,6 +513,7 @@ export class StepFormDialog {
     if (!def || !def.tableConfig) return;
     const nextSr = this.tableFormArray().length + 1;
     this.tableFormArray().push(this.createTableRowGroup(def, { sr_no: nextSr }));
+    this.tableVersion?.update?.((v) => v + 1);
   }
 
   removeTableRow(index: number): void {
@@ -476,6 +523,7 @@ export class StepFormDialog {
       this.tableFormArray().controls.forEach((group, idx) => {
         group.get('sr_no')?.setValue(idx + 1);
       });
+      this.tableVersion?.update?.((v) => v + 1);
     }
   }
 
@@ -494,6 +542,11 @@ export class StepFormDialog {
     if (qty >= 0 && price >= 0) {
       const total = qty * price;
       row.patchValue({ [tKey]: total }, { emitEvent: false });
+    }
+    this.tableVersion.update((v) => v + 1);
+
+    if (this.hasTableGst() && this.formGroup()?.get('gst_amount')) {
+      this.formGroup().patchValue({ gst_amount: this.tableGstAmount() }, { emitEvent: false });
     }
   }
 
@@ -702,6 +755,26 @@ export class StepFormDialog {
       remarks: this.stepRemarks().map((r) => r.remark),
       status: 'completed',
     };
+
+    if (def.tableConfig?.autoCalculateTotal) {
+      const net =
+        typeof this.tableNetAmount === 'function'
+          ? this.tableNetAmount()
+          : typeof this.tableTotalSum === 'function'
+            ? this.tableTotalSum()
+            : 0;
+      combinedData['total_net_amount'] = net;
+      if (typeof this.hasTableGst === 'function' && this.hasTableGst()) {
+        const gross = typeof this.tableGrossTotalSum === 'function' ? this.tableGrossTotalSum() : net;
+        const gstAmt = typeof this.tableGstAmount === 'function' ? this.tableGstAmount() : 0;
+        combinedData['total_gross_amount'] = gross;
+        combinedData['gst_amount'] = gstAmt;
+        combinedData['total_amount'] = gross;
+      } else {
+        combinedData['total_gross_amount'] = net;
+        combinedData['total_amount'] = net;
+      }
+    }
 
     const existingStep = this.step();
     const rawFiles = this.uploadedFiles()

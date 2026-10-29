@@ -736,14 +736,41 @@
 
                     @if (calculateTableTotal(entry) !== null) {
                       <ng-template pTemplate="footer">
-                        <tr class="table-total-row">
-                          <td [attr.colspan]="tableColumns().length - 1" class="total-label-cell">
-                            Total ({{ getTableItems(entry).length }} {{ getTableItems(entry).length === 1 ? 'item' : 'items' }})
-                          </td>
-                          <td class="total-val-cell">
-                            {{ getTableTotalFormatted(entry) }}
-                          </td>
-                        </tr>
+                        @if (hasEntryGst(entry) && getEntryTotals(entry)?.has_gst) {
+                          <tr class="table-total-row net-total-row">
+                            <td [attr.colspan]="tableColumns().length - 1" class="total-label-cell">
+                              Total Net Amount (Excl. GST)
+                            </td>
+                            <td class="total-val-cell">
+                              {{ getTableNetTotalFormatted(entry) }}
+                            </td>
+                          </tr>
+                          <tr class="table-total-row gst-total-row">
+                            <td [attr.colspan]="tableColumns().length - 1" class="total-label-cell">
+                              GST ({{ getEntryGstRate(entry) }}%):
+                            </td>
+                            <td class="total-val-cell gst-val">
+                              {{ getTableGstAmountFormatted(entry) }}
+                            </td>
+                          </tr>
+                          <tr class="table-total-row gross-total-row">
+                            <td [attr.colspan]="tableColumns().length - 1" class="total-label-cell">
+                              Total Gross Amount (Incl. GST)
+                            </td>
+                            <td class="total-val-cell gross-val-highlight">
+                              {{ getTableGrossTotalFormatted(entry) }}
+                            </td>
+                          </tr>
+                        } @else {
+                          <tr class="table-total-row">
+                            <td [attr.colspan]="tableColumns().length - 1" class="total-label-cell">
+                              Total ({{ getTableItems(entry).length }} {{ getTableItems(entry).length === 1 ? 'item' : 'items' }})
+                            </td>
+                            <td class="total-val-cell">
+                              {{ getTableTotalFormatted(entry) }}
+                            </td>
+                          </tr>
+                        }
                       </ng-template>
                     }
                   </p-table>

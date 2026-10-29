@@ -278,6 +278,35 @@
           </tbody>
           @if (tableCfg.autoCalculateTotal && tableCfg.totalKey && tableFormArray().length > 0) {
           <tfoot>
+            @if (hasTableGst()) {
+            <tr class="table-summary-row net-row">
+              <td [attr.colspan]="tableCfg.columns.length - 1" class="text-right">
+                <strong>Total Net Amount (Excl. GST):</strong>
+              </td>
+              <td class="total-value-cell">
+                <strong>₹{{ tableNetAmount() | number:'1.2-2' }}</strong>
+              </td>
+              <td></td>
+            </tr>
+            <tr class="table-summary-row gst-row">
+              <td [attr.colspan]="tableCfg.columns.length - 1" class="text-right">
+                <span>GST ({{ tableGstRate() }}%):</span>
+              </td>
+              <td class="total-value-cell gst-val">
+                <span>₹{{ tableGstAmount() | number:'1.2-2' }}</span>
+              </td>
+              <td></td>
+            </tr>
+            <tr class="table-summary-row gross-row">
+              <td [attr.colspan]="tableCfg.columns.length - 1" class="text-right">
+                <strong>Total Gross Amount (Incl. GST):</strong>
+              </td>
+              <td class="total-value-cell gross-val-highlight">
+                <strong>₹{{ tableGrossTotalSum() | number:'1.2-2' }}</strong>
+              </td>
+              <td></td>
+            </tr>
+            } @else {
             <tr class="table-summary-row">
               <td [attr.colspan]="tableCfg.columns.length - 1" class="text-right">
                 <strong>Cumulative Total:</strong>
@@ -287,6 +316,7 @@
               </td>
               <td></td>
             </tr>
+            }
           </tfoot>
           }
         </table>

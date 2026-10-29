@@ -61,6 +61,7 @@ export interface ProformaInvoice {
   weight?: number | string;
   total_amount?: number;
   total_net_amount?: number;
+  total_gross_amount?: number;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
   status?: string;
@@ -83,6 +84,7 @@ export interface ProformaInvoiceCreateInput {
   weight?: number | string;
   total_amount?: number;
   total_net_amount?: number;
+  total_gross_amount?: number;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
   items: ProformaInvoiceItem[];
@@ -101,6 +103,7 @@ export interface ProformaInvoiceUpdateInput {
   weight?: number | string;
   total_amount?: number;
   total_net_amount?: number;
+  total_gross_amount?: number;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
   items?: ProformaInvoiceItem[];

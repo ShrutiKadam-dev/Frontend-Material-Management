@@ -147,3 +147,145 @@ export function cleanTableItems(
       };
     });
 }
+
+/**
+ * Known keys for GST rate percentages across various forms and backend payloads.
+ */
+export const GST_RATE_KEYS = [
+  'gst_rate',
+  'gst_rate_pct',
+  'gst_pct',
+  'gst',
+  'tax_rate',
+  'igst_rate',
+  'igst_pct',
+  'gst_percentage',
+  'gstRate',
+  'igstRate',
+] as const;
+
+/**
+ * Extracts a numeric GST rate percentage (e.g. 18 for 18%) from an object (formData or step.data)
+ * or checks matching fields in the form definition.
+ */
+export function extractGstRate(
+  data: Record<string, unknown> | null | undefined,
+  fields?: Array<{ key: string; label?: string }> | null,
+): number | null {
+  if (!data && !fields) return null;
+
+  // 1. Check data keys directly
+  if (data) {
+    for (const key of GST_RATE_KEYS) {
+      const val = data[key];
+      if (val !== undefined && val !== null && val !== '') {
+        const num = Number(val);
+        if (!isNaN(num) && num >= 0) {
+          return num;
+        }
+      }
+    }
+
+    // Check nested globalParams (e.g. in Cost Sheet)
+    if (data['globalParams'] && typeof data['globalParams'] === 'object') {
+      const gp = data['globalParams'] as Record<string, unknown>;
+      const gpRate = Number(gp['gstRate'] ?? gp['igstRate']);
+      if (!isNaN(gpRate) && gpRate >= 0) {
+        return gpRate;
+      }
+    }
+  }
+
+  // 2. Check form definition fields
+  if (fields && data) {
+    for (const f of fields) {
+      const k = f.key.toLowerCase();
+      if (
+        (k.includes('gst') || k.includes('tax')) &&
+        (k.includes('rate') || k.includes('pct') || k.includes('%') || (f.label || '').includes('%'))
+      ) {
+        const val = data[f.key];
+        if (val !== undefined && val !== null && val !== '') {
+          const num = Number(val);
+          if (!isNaN(num) && num >= 0) {
+            return num;
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Checks whether GST is configured or present for a form definition and data.
+ */
+export function hasGstConfigured(
+  fields?: Array<{ key: string; label?: string }> | null,
+  data?: Record<string, unknown> | null,
+): boolean {
+  if (fields) {
+    const hasField = fields.some((f) => {
+      const k = f.key.toLowerCase();
+      const l = (f.label || '').toLowerCase();
+      return (
+        (k.includes('gst') || k.includes('igst')) &&
+        (k.includes('rate') || k.includes('pct') || l.includes('gst') || l.includes('igst'))
+      );
+    });
+    if (hasField) return true;
+  }
+  if (data) {
+    return (
+      extractGstRate(data, fields) !== null ||
+      data['gst_amount'] !== undefined ||
+      data['total_gross_amount'] !== undefined
+    );
+  }
+  return false;
+}
+
+export interface TableTotalsCalculation {
+  total_net_amount: number;
+  gst_rate: number;
+  gst_amount: number;
+  total_gross_amount: number;
+  has_gst: boolean;
+}
+
+/**
+ * Computes total_net_amount (excl. GST), gst_amount, and total_gross_amount (incl. GST).
+ */
+export function calculateTableTotalsWithGst(
+  netTotal: number,
+  gstRate: number | null | undefined,
+  explicitGstAmount?: number | null,
+): TableTotalsCalculation {
+  const safeNet = Math.max(0, netTotal || 0);
+  const rate = gstRate !== null && gstRate !== undefined ? Number(gstRate) : 0;
+  let gstAmount = 0;
+
+  if (
+    explicitGstAmount !== undefined &&
+    explicitGstAmount !== null &&
+    !isNaN(Number(explicitGstAmount)) &&
+    Number(explicitGstAmount) > 0
+  ) {
+    gstAmount = Number(explicitGstAmount);
+  } else if (rate > 0) {
+    gstAmount = Math.round(((safeNet * rate) / 100) * 100) / 100;
+  }
+
+  const grossTotal = Math.round((safeNet + gstAmount) * 100) / 100;
+  const hasGst = rate > 0 || gstAmount > 0;
+
+  return {
+    total_net_amount: safeNet,
+    gst_rate: rate,
+    gst_amount: gstAmount,
+    total_gross_amount: grossTotal,
+    has_gst: hasGst,
+  };
+}
+

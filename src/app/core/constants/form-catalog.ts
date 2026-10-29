@@ -895,6 +895,7 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'invoice_no', label: 'Invoice No.', type: 'text', required: true, colSpan: 1 },
       { key: 'invoice_date', label: 'Invoice Date', type: 'date', colSpan: 1 },
+      { key: 'gst_rate_pct', label: 'GST Rate %', type: 'number', suffix: '%', colSpan: 1 },
     ],
     tableConfig: {
       title: 'Material Description & Pricing',

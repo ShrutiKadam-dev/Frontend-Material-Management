@@ -23,6 +23,7 @@ export interface CustomerQuotation {
   currency_unit?: string;
   currency_symbol?: string;
   total_net_amount?: number;
+  total_gross_amount?: number;
   validity: string;
   incoterms?: string;
   payment_terms?: string;
@@ -44,6 +45,7 @@ export interface CustomerQuotationCreateInput {
   currency_unit?: string;
   currency_symbol?: string;
   total_net_amount?: number;
+  total_gross_amount?: number;
   validity: string;
   incoterms?: string;
   payment_terms?: string;
@@ -62,6 +64,7 @@ export interface CustomerQuotationUpdateInput {
   currency_unit?: string;
   currency_symbol?: string;
   total_net_amount?: number;
+  total_gross_amount?: number;
   validity?: string;
   incoterms?: string;
   payment_terms?: string;

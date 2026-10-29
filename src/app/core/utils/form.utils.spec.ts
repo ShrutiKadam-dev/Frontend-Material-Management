@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   cleanTableItems,
+  calculateTableTotalsWithGst,
+  extractGstRate,
   getTableRowCellValue,
   isTableRowEmpty,
   normalizeTableRow,
@@ -134,4 +136,44 @@ describe('form.utils', () => {
       expect(cleaned).toEqual([]);
     });
   });
+
+  describe('extractGstRate and calculateTableTotalsWithGst', () => {
+    it('should extract gst rate from gst_rate_pct, gst_pct, or gst_rate', () => {
+      expect(extractGstRate({ gst_rate_pct: 18 })).toBe(18);
+      expect(extractGstRate({ gst_pct: 12 })).toBe(12);
+      expect(extractGstRate({ gst_rate: 5 })).toBe(5);
+      expect(extractGstRate({ igst_pct: 18 })).toBe(18);
+      expect(extractGstRate({})).toBeNull();
+    });
+
+    it('should extract gst rate from globalParams nested object', () => {
+      expect(extractGstRate({ globalParams: { gstRate: 18 } })).toBe(18);
+    });
+
+    it('should calculate net total (excl. gst) and gross total (incl. gst) properly', () => {
+      const result = calculateTableTotalsWithGst(1000, 18);
+      expect(result.total_net_amount).toBe(1000);
+      expect(result.gst_rate).toBe(18);
+      expect(result.gst_amount).toBe(180);
+      expect(result.total_gross_amount).toBe(1180);
+      expect(result.has_gst).toBe(true);
+    });
+
+    it('should use explicit gst amount when provided', () => {
+      const result = calculateTableTotalsWithGst(1000, 18, 200);
+      expect(result.total_net_amount).toBe(1000);
+      expect(result.gst_amount).toBe(200);
+      expect(result.total_gross_amount).toBe(1200);
+      expect(result.has_gst).toBe(true);
+    });
+
+    it('should return zero tax when gst rate is not provided', () => {
+      const result = calculateTableTotalsWithGst(1000, null);
+      expect(result.total_net_amount).toBe(1000);
+      expect(result.gst_amount).toBe(0);
+      expect(result.total_gross_amount).toBe(1000);
+      expect(result.has_gst).toBe(false);
+    });
+  });
 });
+

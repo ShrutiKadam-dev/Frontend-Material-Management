@@ -76,6 +76,7 @@ export interface OrderConfirmation {
   payment_terms?: string;
   total_amount?: number;
   total_net_amount?: number;
+  total_gross_amount?: number;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
   status?: string;
@@ -99,6 +100,7 @@ export interface OrderConfirmationCreateInput {
   payment_terms?: string;
   total_amount?: number;
   total_net_amount?: number;
+  total_gross_amount?: number;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
   items: OrderConfirmationItem[];
@@ -118,6 +120,7 @@ export interface OrderConfirmationUpdateInput {
   payment_terms?: string;
   total_amount?: number;
   total_net_amount?: number;
+  total_gross_amount?: number;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
   items?: OrderConfirmationItem[];

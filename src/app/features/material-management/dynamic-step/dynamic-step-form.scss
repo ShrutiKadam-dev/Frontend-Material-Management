@@ -579,8 +579,30 @@
     border-top: 2px solid #cbd5e1;
 
     td {
-      padding: 12px 14px;
+      padding: 10px 14px;
       vertical-align: middle;
+    }
+
+    tr.table-summary-row {
+      &.net-row td {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 600;
+      }
+
+      &.gst-row td {
+        background: #fffbeb;
+        color: #b45309;
+        font-size: 13px;
+      }
+
+      &.gross-row td {
+        background: #f0fdf4;
+        border-top: 1.5px solid #a7f3d0;
+        color: #166534;
+        font-size: 14px;
+        font-weight: 700;
+      }
     }
   }
 }
@@ -611,8 +633,20 @@
 
 .total-value-cell {
   color: #059669;
-  font-size: 15px;
+  font-size: 14px;
+  font-weight: 600;
   text-align: right;
+
+  &.gst-val {
+    color: #d97706;
+    font-weight: 600;
+  }
+
+  &.gross-val-highlight {
+    color: #15803d;
+    font-size: 16px;
+    font-weight: 800;
+  }
 }
 
 /* ── File Upload Section (Customer Query Aligned) ────────────────────────── */

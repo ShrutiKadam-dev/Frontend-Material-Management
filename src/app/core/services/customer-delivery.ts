@@ -51,6 +51,10 @@ export class CustomerDeliveryService {
             gst_rate: Number(data['gst_rate'] ?? 0),
             gst_amount: Number(data['gst_amount'] ?? 0),
             total_net_amount: Number(data['total_net_amount'] ?? data['total_amount'] ?? 0),
+            total_gross_amount: Number(
+              data['total_gross_amount'] ??
+                Number(data['total_net_amount'] ?? data['total_amount'] ?? 0) + Number(data['gst_amount'] ?? 0),
+            ),
             items: rawItems.map((it: unknown) => {
               const item = it as Record<string, unknown>;
               return {
@@ -87,6 +91,10 @@ export class CustomerDeliveryService {
                   gst_rate: Number(data['gst_rate'] ?? 0),
                   gst_amount: Number(data['gst_amount'] ?? 0),
                   total_net_amount: Number(data['total_net_amount'] ?? data['total_amount'] ?? 0),
+                  total_gross_amount: Number(
+                    data['total_gross_amount'] ??
+                      Number(data['total_net_amount'] ?? data['total_amount'] ?? 0) + Number(data['gst_amount'] ?? 0),
+                  ),
                   items: rawItems.map((it: unknown) => {
                     const item = it as Record<string, unknown>;
                     return {
@@ -119,6 +127,12 @@ export class CustomerDeliveryService {
             invoice_no: String(data['invoice_no'] ?? data['tax_invoice_no'] ?? ''),
             invoice_date: String(data['invoice_date'] ?? data['date'] ?? ''),
             net_total: Number(data['net_total'] ?? data['total_amount'] ?? 0),
+            total_net_amount: Number(data['total_net_amount'] ?? data['net_total'] ?? data['total_amount'] ?? 0),
+            total_gross_amount: Number(
+              data['total_gross_amount'] ??
+                Number(data['total_net_amount'] ?? data['net_total'] ?? data['total_amount'] ?? 0) +
+                  Number(data['gst_amount'] ?? 0),
+            ),
             gst_rate: data['gst_rate'] !== undefined ? Number(data['gst_rate']) : undefined,
             gst_amount: data['gst_amount'] !== undefined ? Number(data['gst_amount']) : undefined,
             round_off: data['round_off'] !== undefined ? Number(data['round_off']) : undefined,
@@ -138,6 +152,12 @@ export class CustomerDeliveryService {
                   invoice_no: String(data['invoice_no'] ?? data['tax_invoice_no'] ?? ''),
                   invoice_date: String(data['invoice_date'] ?? data['date'] ?? ''),
                   net_total: Number(data['net_total'] ?? data['total_amount'] ?? 0),
+                  total_net_amount: Number(data['total_net_amount'] ?? data['net_total'] ?? data['total_amount'] ?? 0),
+                  total_gross_amount: Number(
+                    data['total_gross_amount'] ??
+                      Number(data['total_net_amount'] ?? data['net_total'] ?? data['total_amount'] ?? 0) +
+                        Number(data['gst_amount'] ?? 0),
+                  ),
                   gst_rate: data['gst_rate'] !== undefined ? Number(data['gst_rate']) : undefined,
                   gst_amount: data['gst_amount'] !== undefined ? Number(data['gst_amount']) : undefined,
                   round_off: data['round_off'] !== undefined ? Number(data['round_off']) : undefined,

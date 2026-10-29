@@ -212,4 +212,96 @@ describe('FormApiService', () => {
     expect(mockHttp.delete).toHaveBeenCalledWith('http://localhost:5000/api/v1/quotation-requests/99');
     expect(result).toBe(true);
   });
+
+  it('normalizeBackendEntityToStep should compute total_net_amount and total_gross_amount for forms with GST', () => {
+    const defWithGstTable: FormDefinition = {
+      id: 26,
+      formCode: 'FORM_26_TAX_INVOICE_CUSTOMER',
+      name: 'Tax Invoice (Customer)',
+      category: 'Customer & Supplier Settlement',
+      phaseId: 'phase-3',
+      icon: 'pi pi-file',
+      description: 'Tax Invoice',
+      fields: [{ key: 'gst_rate_pct', label: 'GST Rate %', type: 'number' }],
+      tableConfig: {
+        title: 'Tax Invoice Items',
+        columns: [
+          { key: 'quantity', label: 'Qty', type: 'number' },
+          { key: 'unit_price', label: 'Price', type: 'currency' },
+          { key: 'total_amount', label: 'Total', type: 'currency' },
+        ],
+        autoCalculateTotal: true,
+        totalKey: 'total_amount',
+      },
+      uploads: [],
+    };
+
+    const rawEntity = {
+      id: 120,
+      project_id: 10,
+      gst_rate_pct: 18,
+      items: [
+        { quantity: 2, unit_price: 1000, total_amount: 2000 },
+        { quantity: 3, unit_price: 2000, total_amount: 6000 },
+      ],
+    };
+
+    const step = normalizeBackendEntityToStep(rawEntity, defWithGstTable, 10);
+    expect(step.data?.['total_net_amount']).toBe(8000);
+    expect(step.data?.['gst_amount']).toBe(1440);
+    expect(step.data?.['total_gross_amount']).toBe(9440);
+  });
+
+  it('createEntry should compute and attach total_net_amount and total_gross_amount in the payload', async () => {
+    const mockHttp = {
+      get: vi.fn(),
+      post: vi.fn().mockReturnValue(of({ id: 105, total_net_amount: 5000, total_gross_amount: 5900 })),
+      patch: vi.fn(),
+      delete: vi.fn(),
+    };
+
+    const defWithGstTable: FormDefinition = {
+      id: 14,
+      formCode: 'FORM_14_PURCHASE_ORDER',
+      name: 'Purchase Order',
+      category: 'Supplier Orders & Invoices',
+      phaseId: 'phase-2',
+      icon: 'pi pi-shopping-cart',
+      description: 'PO',
+      apiEndpoint: '/api/v1/purchase-orders',
+      fields: [{ key: 'gst_rate_pct', label: 'GST %', type: 'number' }],
+      tableConfig: {
+        title: 'PO Line Items',
+        columns: [{ key: 'total_amount', label: 'Total', type: 'currency' }],
+        autoCalculateTotal: true,
+        totalKey: 'total_amount',
+      },
+      uploads: [],
+    };
+
+    const service = Object.create(FormApiService.prototype);
+    service.http = mockHttp;
+    service.apiBaseUrl = 'http://localhost:5000';
+
+    await new Promise((resolve) => {
+      service
+        .createEntry(
+          defWithGstTable,
+          4,
+          {
+            gst_rate_pct: 18,
+            items: [{ description: 'Material A', total_amount: 5000 }],
+          },
+          [],
+        )
+        .subscribe(resolve);
+    });
+
+    const postCall = mockHttp.post.mock.calls[0];
+    const fd = postCall[1] as FormData;
+    const sentData = JSON.parse(fd.get('data') as string);
+    expect(sentData.total_net_amount).toBe(5000);
+    expect(sentData.gst_amount).toBe(900);
+    expect(sentData.total_gross_amount).toBe(5900);
+  });
 });

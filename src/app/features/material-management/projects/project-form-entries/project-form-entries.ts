@@ -27,7 +27,14 @@ import { CustomerService } from '../../../../core/services/customer';
 import { SupplierService } from '../../../../core/services/supplier';
 import { FormApiService } from '../../../../core/services/form-api';
 import { formatDisplayDate } from '../../../../core/utils/date.utils';
-import { getTableRowCellValue, isTableRowEmpty, normalizeTableRow } from '../../../../core/utils/form.utils';
+import {
+  calculateTableTotalsWithGst,
+  extractGstRate,
+  getTableRowCellValue,
+  hasGstConfigured,
+  isTableRowEmpty,
+  normalizeTableRow,
+} from '../../../../core/utils/form.utils';
 import { createStepRemarkItem, parseStepRemarks, serializeStepRemarks } from '../../../../core/utils/remark.utils';
 import { StepRemarkItem } from '../../../../core/models/step-remark.model';
 import { StepFormDialog } from '../project-timeline/step-form-dialog/step-form-dialog';
@@ -746,6 +753,54 @@ export class ProjectFormEntries implements OnInit {
     const total = this.calculateTableTotal(entry);
     if (total === null) return null;
     return '₹\u00A0' + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  hasEntryGst(entry: ProjectStep): boolean {
+    const def = this.formDefinition();
+    return hasGstConfigured(def?.fields, entry?.data);
+  }
+
+  getEntryGstRate(entry: ProjectStep): number | null {
+    const def = this.formDefinition();
+    return extractGstRate(entry?.data, def?.fields);
+  }
+
+  getEntryTotals(entry: ProjectStep) {
+    const netTotal =
+      this.calculateTableTotal(entry) ??
+      (typeof entry?.data?.['total_net_amount'] === 'number' ? Number(entry.data['total_net_amount']) : null);
+    if (netTotal === null) {
+      return null;
+    }
+    const gstRate = this.getEntryGstRate(entry);
+    let explicitGstAmount: number | undefined;
+    if (typeof entry?.data?.['gst_amount'] === 'number') {
+      explicitGstAmount = Number(entry.data['gst_amount']);
+    } else if (
+      typeof entry?.data?.['total_gross_amount'] === 'number' &&
+      typeof entry?.data?.['total_net_amount'] === 'number'
+    ) {
+      explicitGstAmount = Math.max(0, Number(entry.data['total_gross_amount']) - Number(entry.data['total_net_amount']));
+    }
+    return calculateTableTotalsWithGst(netTotal, gstRate, explicitGstAmount);
+  }
+
+  getTableNetTotalFormatted(entry: ProjectStep): string | null {
+    const totals = this.getEntryTotals(entry);
+    if (!totals) return null;
+    return '₹\u00A0' + totals.total_net_amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  getTableGstAmountFormatted(entry: ProjectStep): string | null {
+    const totals = this.getEntryTotals(entry);
+    if (!totals || totals.gst_amount === undefined) return null;
+    return '₹\u00A0' + totals.gst_amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  getTableGrossTotalFormatted(entry: ProjectStep): string | null {
+    const totals = this.getEntryTotals(entry);
+    if (!totals) return null;
+    return '₹\u00A0' + totals.total_gross_amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   // ── Helper Presentation Methods ─────────────────────────────────────

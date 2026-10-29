@@ -27,6 +27,7 @@ export interface SupplierInvoice {
   delivery_period?: string;
   total_amount?: number;
   total_net_amount?: number;
+  total_gross_amount?: number;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
   status?: string;
@@ -46,6 +47,7 @@ export interface SupplierInvoiceCreateInput {
   delivery_period?: string;
   total_amount?: number;
   total_net_amount?: number;
+  total_gross_amount?: number;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
   items: SupplierInvoiceItem[];
@@ -62,6 +64,7 @@ export interface SupplierInvoiceUpdateInput {
   delivery_period?: string;
   total_amount?: number;
   total_net_amount?: number;
+  total_gross_amount?: number;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
   items?: SupplierInvoiceItem[];

@@ -28,6 +28,7 @@ export interface BidSubmission {
   gst_rate?: number;
   gst_amount?: number;
   total_net_amount?: number;
+  total_gross_amount?: number;
   total_amount?: number;
   status?: string;
   remark?: string;
@@ -53,6 +54,7 @@ export interface BidSubmissionCreateInput {
   gst_rate?: number;
   gst_amount?: number;
   total_net_amount?: number;
+  total_gross_amount?: number;
   total_amount?: number;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
@@ -74,8 +76,10 @@ export interface BidSubmissionUpdateInput {
   gst_rate?: number;
   gst_amount?: number;
   total_net_amount?: number;
+  total_gross_amount?: number;
   total_amount?: number;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
   items?: BidSubmissionItem[];
 }
+

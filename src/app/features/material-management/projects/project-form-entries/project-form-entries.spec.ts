@@ -684,5 +684,75 @@ describe('ProjectFormEntries Component', () => {
       expect(paramRows[7].parameter).toBe('Domestic Output GST');
       expect(paramRows[7].rateDisplay).toBe('8%');
     });
+
+    it('should calculate and format table totals including and excluding GST when GST is configured', () => {
+      const comp = createComponent();
+      const taxInvoiceDef = FORM_CATALOG.find((f) => f.formCode === 'FORM_26_TAX_INVOICE_CUSTOMER');
+      comp.formDefinition = () => taxInvoiceDef || null;
+
+      const invoiceStep: ProjectStep = {
+        id: 701,
+        project_id: 5,
+        step_number: 26,
+        step_name: 'Customer Tax Invoice',
+        description: 'Customer Tax Invoice',
+        status: 'completed',
+        progress_percentage: 100,
+        completed_at: '2026-10-20',
+        form_code: 'FORM_26_TAX_INVOICE_CUSTOMER',
+        data: {
+          gst_rate_pct: 18,
+          table_items: [
+            { sr_no: 1, description: 'Service Item 1', quantity: 2, unit_price: 5000, total_amount: 10000 },
+            { sr_no: 2, description: 'Service Item 2', quantity: 1, unit_price: 10000, total_amount: 10000 },
+          ],
+        },
+        remarks: [],
+      };
+
+      expect(comp.hasEntryGst(invoiceStep)).toBe(true);
+      expect(comp.getEntryGstRate(invoiceStep)).toBe(18);
+
+      const totals = comp.getEntryTotals(invoiceStep);
+      expect(totals).not.toBeNull();
+      expect(totals?.total_net_amount).toBe(20000);
+      expect(totals?.gst_rate).toBe(18);
+      expect(totals?.gst_amount).toBe(3600);
+      expect(totals?.total_gross_amount).toBe(23600);
+      expect(totals?.has_gst).toBe(true);
+
+      expect(comp.getTableNetTotalFormatted(invoiceStep)).toContain('20,000');
+      expect(comp.getTableGstAmountFormatted(invoiceStep)).toContain('3,600');
+      expect(comp.getTableGrossTotalFormatted(invoiceStep)).toContain('23,600');
+    });
+
+    it('should fallback total_gross_amount to total_net_amount when no GST is present', () => {
+      const comp = createComponent();
+      comp.formDefinition = () => pqbDef;
+
+      const stepWithoutGst: ProjectStep = {
+        id: 801,
+        project_id: 5,
+        step_number: 1,
+        step_name: 'PQB Step',
+        description: 'PQB Step',
+        status: 'completed',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_01_PQB',
+        data: {
+          table_items: [
+            { sr_no: 1, description: 'Item A', quantity: 10, total_amount: 5000 },
+          ],
+        },
+        remarks: [],
+      };
+
+      expect(comp.hasEntryGst(stepWithoutGst)).toBe(false);
+      const totals = comp.getEntryTotals(stepWithoutGst);
+      expect(totals?.total_net_amount).toBe(5000);
+      expect(totals?.total_gross_amount).toBe(5000);
+      expect(totals?.has_gst).toBe(false);
+    });
   });
 });

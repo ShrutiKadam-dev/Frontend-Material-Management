@@ -17,6 +17,7 @@ export interface SupplierQuotationParsedExcel {
   currency_symbol?: string;
   quotation_value?: string | number;
   total_net_amount?: number;
+  total_gross_amount?: number;
   validity?: string;
   incoterms?: string;
   payment_terms?: string;
@@ -39,6 +40,7 @@ export interface SupplierQuotation {
   currency_unit?: string;
   currency_symbol?: string;
   total_net_amount?: number;
+  total_gross_amount?: number;
   validity: string;
   incoterms: string;
   payment_terms: string;
@@ -61,6 +63,7 @@ export interface SupplierQuotationCreateInput {
   currency_unit?: string;
   currency_symbol?: string;
   total_net_amount?: number;
+  total_gross_amount?: number;
   validity: string;
   incoterms: string;
   payment_terms: string;
@@ -80,6 +83,7 @@ export interface SupplierQuotationUpdateInput {
   currency_unit?: string;
   currency_symbol?: string;
   total_net_amount?: number;
+  total_gross_amount?: number;
   validity?: string;
   incoterms?: string;
   payment_terms?: string;

@@ -315,6 +315,39 @@
     font-size: 14px;
     font-weight: 700;
   }
+
+  &--net {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    .total-lbl {
+      color: #475569;
+    }
+    .total-amt {
+      color: #1e293b;
+    }
+  }
+
+  &--gst {
+    background: #fffbeb;
+    border-color: #fde68a;
+    .total-lbl {
+      color: #b45309;
+    }
+    .total-amt {
+      color: #92400e;
+    }
+  }
+
+  &--gross {
+    background: #f0fdf4;
+    border-color: #86efac;
+    .total-lbl {
+      color: #166534;
+    }
+    .total-amt {
+      color: #14532d;
+    }
+  }
 }
 
 .table-scroll-wrapper {
@@ -564,6 +597,54 @@
       i {
         color: var(--color-primary, #c0522f);
         font-size: 0.75rem;
+      }
+    }
+  }
+
+  tfoot {
+    background: #f8fafc;
+    border-top: 2px solid #cbd5e1;
+
+    td {
+      padding: 10px 14px;
+      vertical-align: middle;
+    }
+
+    tr.table-summary-row {
+      &.net-row td {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 600;
+      }
+
+      &.gst-row td {
+        background: #fffbeb;
+        color: #b45309;
+        font-size: 13px;
+      }
+
+      &.gross-row td {
+        background: #f0fdf4;
+        border-top: 1.5px solid #a7f3d0;
+        color: #166534;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .total-cell-val {
+        font-size: 14px;
+        font-weight: 700;
+
+        &.gst-val {
+          color: #b45309;
+          font-weight: 600;
+        }
+
+        &.gross-val {
+          color: #166534;
+          font-size: 15px;
+          font-weight: 800;
+        }
       }
     }
   }

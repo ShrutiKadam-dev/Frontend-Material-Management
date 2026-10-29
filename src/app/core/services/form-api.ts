@@ -6,7 +6,13 @@ import { API_BASE_URL } from '../tokens/api-base-url.token';
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../models/project-step.model';
 import { FormDefinition } from '../constants/form-catalog';
 import { sanitizePayloadDates } from '../utils/date.utils';
-import { cleanTableItems, isTableRowEmpty, normalizeTableRow } from '../utils/form.utils';
+import {
+  calculateTableTotalsWithGst,
+  cleanTableItems,
+  extractGstRate,
+  isTableRowEmpty,
+  normalizeTableRow,
+} from '../utils/form.utils';
 
 export function normalizeBackendEntityToStep(
   item: Record<string, unknown>,
@@ -89,6 +95,45 @@ export function normalizeBackendEntityToStep(
     if (item['totalGst'] !== undefined) combinedData['gst_amount'] = item['totalGst'];
     if (item['versionNumber'] !== undefined) combinedData['versionNumber'] = item['versionNumber'];
     if (item['hasRateIncrease'] !== undefined) combinedData['hasRateIncrease'] = item['hasRateIncrease'];
+  }
+
+  // Calculate and bridge total_net_amount and total_gross_amount for tables with autoCalculateTotal
+  if (formDef.tableConfig?.autoCalculateTotal) {
+    const tKey = formDef.tableConfig.totalKey || 'total_amount';
+    const computedNet = normalizedTableItems.reduce((sum, row) => sum + (Number(row[tKey]) || 0), 0);
+    const existingNet =
+      combinedData['total_net_amount'] !== undefined && combinedData['total_net_amount'] !== null && combinedData['total_net_amount'] !== ''
+        ? Number(combinedData['total_net_amount'])
+        : combinedData['net_total'] !== undefined && combinedData['net_total'] !== null && combinedData['net_total'] !== ''
+          ? Number(combinedData['net_total'])
+          : undefined;
+    const netTotal = existingNet !== undefined && !isNaN(existingNet) ? existingNet : computedNet;
+    combinedData['total_net_amount'] = netTotal;
+
+    const rate = extractGstRate(combinedData, formDef.fields);
+    const explicitGst =
+      combinedData['gst_amount'] !== undefined && combinedData['gst_amount'] !== null && combinedData['gst_amount'] !== ''
+        ? Number(combinedData['gst_amount'])
+        : null;
+    const totals = calculateTableTotalsWithGst(netTotal, rate, explicitGst);
+
+    if (
+      combinedData['total_gross_amount'] === undefined ||
+      combinedData['total_gross_amount'] === null ||
+      combinedData['total_gross_amount'] === '' ||
+      isNaN(Number(combinedData['total_gross_amount']))
+    ) {
+      combinedData['total_gross_amount'] = totals.total_gross_amount;
+    }
+    if (
+      totals.has_gst &&
+      (combinedData['gst_amount'] === undefined ||
+        combinedData['gst_amount'] === null ||
+        combinedData['gst_amount'] === '' ||
+        isNaN(Number(combinedData['gst_amount'])))
+    ) {
+      combinedData['gst_amount'] = totals.gst_amount;
+    }
   }
 
   return {
@@ -208,6 +253,34 @@ export class FormApiService {
       };
     }
 
+    if (formDef.tableConfig?.autoCalculateTotal) {
+      const tKey = formDef.tableConfig.totalKey || 'total_amount';
+      const computedNet = cleanedItems.reduce((sum, row) => sum + (Number(row[tKey]) || 0), 0);
+      const existingNet =
+        bodyPayload['total_net_amount'] !== undefined && bodyPayload['total_net_amount'] !== null && bodyPayload['total_net_amount'] !== ''
+          ? Number(bodyPayload['total_net_amount'])
+          : undefined;
+      const netTotal = existingNet !== undefined && !isNaN(existingNet) ? existingNet : computedNet;
+      bodyPayload['total_net_amount'] = netTotal;
+
+      const rate = extractGstRate(bodyPayload, formDef.fields);
+      const explicitGst =
+        bodyPayload['gst_amount'] !== undefined && bodyPayload['gst_amount'] !== null && bodyPayload['gst_amount'] !== ''
+          ? Number(bodyPayload['gst_amount'])
+          : null;
+      const totals = calculateTableTotalsWithGst(netTotal, rate, explicitGst);
+
+      if (bodyPayload['total_gross_amount'] === undefined || bodyPayload['total_gross_amount'] === null || bodyPayload['total_gross_amount'] === '') {
+        bodyPayload['total_gross_amount'] = totals.total_gross_amount;
+      }
+      if (totals.has_gst && (bodyPayload['gst_amount'] === undefined || bodyPayload['gst_amount'] === null || bodyPayload['gst_amount'] === '')) {
+        bodyPayload['gst_amount'] = totals.gst_amount;
+      }
+      if (bodyPayload['total_amount'] === undefined) {
+        bodyPayload['total_amount'] = totals.has_gst ? totals.total_gross_amount : netTotal;
+      }
+    }
+
     const sanitizedBody = sanitizePayloadDates(bodyPayload, formDef.fields, formDef.tableConfig?.columns);
 
     const fd = new FormData();
@@ -259,6 +332,34 @@ export class FormApiService {
         marginRate: Number(payload['margin_pct'] ?? existingGp['marginRate'] ?? 0),
         gstRate: Number(payload['gst_pct'] ?? existingGp['gstRate'] ?? 0),
       };
+    }
+
+    if (formDef.tableConfig?.autoCalculateTotal) {
+      const tKey = formDef.tableConfig.totalKey || 'total_amount';
+      const computedNet = cleanedItems.reduce((sum, row) => sum + (Number(row[tKey]) || 0), 0);
+      const existingNet =
+        bodyPayload['total_net_amount'] !== undefined && bodyPayload['total_net_amount'] !== null && bodyPayload['total_net_amount'] !== ''
+          ? Number(bodyPayload['total_net_amount'])
+          : undefined;
+      const netTotal = existingNet !== undefined && !isNaN(existingNet) ? existingNet : computedNet;
+      bodyPayload['total_net_amount'] = netTotal;
+
+      const rate = extractGstRate(bodyPayload, formDef.fields);
+      const explicitGst =
+        bodyPayload['gst_amount'] !== undefined && bodyPayload['gst_amount'] !== null && bodyPayload['gst_amount'] !== ''
+          ? Number(bodyPayload['gst_amount'])
+          : null;
+      const totals = calculateTableTotalsWithGst(netTotal, rate, explicitGst);
+
+      if (bodyPayload['total_gross_amount'] === undefined || bodyPayload['total_gross_amount'] === null || bodyPayload['total_gross_amount'] === '') {
+        bodyPayload['total_gross_amount'] = totals.total_gross_amount;
+      }
+      if (totals.has_gst && (bodyPayload['gst_amount'] === undefined || bodyPayload['gst_amount'] === null || bodyPayload['gst_amount'] === '')) {
+        bodyPayload['gst_amount'] = totals.gst_amount;
+      }
+      if (bodyPayload['total_amount'] === undefined) {
+        bodyPayload['total_amount'] = totals.has_gst ? totals.total_gross_amount : netTotal;
+      }
     }
 
     const sanitizedBody = sanitizePayloadDates(bodyPayload, formDef.fields, formDef.tableConfig?.columns);

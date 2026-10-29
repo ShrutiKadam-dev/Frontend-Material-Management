@@ -21,6 +21,8 @@ export interface CustomerTaxInvoice {
   gst_amount: number;
   round_off: number;
   net_total: number;
+  total_net_amount?: number;
+  total_gross_amount?: number;
   remark?: string | null;
   remarks?: Array<{ remark: string }> | string[];
   items: DeliveryItem[];
@@ -37,6 +39,8 @@ export interface CustomerTaxInvoiceCreateInput {
   gst_amount: number;
   round_off: number;
   net_total: number;
+  total_net_amount?: number;
+  total_gross_amount?: number;
   remark?: string;
   remarks?: Array<{ remark: string }> | string[];
   items: DeliveryItem[];
@@ -187,6 +191,7 @@ export interface LatestPurchaseOrderTemplate {
   gst_rate?: number;
   gst_amount?: number;
   total_net_amount?: number;
+  total_gross_amount?: number;
   items?: Array<{
     material_name: string;
     hsn_code: string;
@@ -201,6 +206,8 @@ export interface LatestCustomerTaxInvoiceTemplate {
   invoice_no?: string;
   invoice_date?: string;
   net_total?: number;
+  total_net_amount?: number;
+  total_gross_amount?: number;
   gst_rate?: number;
   gst_amount?: number;
   round_off?: number;

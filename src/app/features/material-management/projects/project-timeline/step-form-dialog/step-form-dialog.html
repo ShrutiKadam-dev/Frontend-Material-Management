@@ -178,10 +178,25 @@
 
         <div class="table-actions-group">
           @if (tbl.autoCalculateTotal && tbl.totalKey) {
-          <div class="table-total-pill">
-            <span class="total-lbl">Net Total:</span>
-            <strong class="total-amt">₹{{ tableTotalSum() | number:'1.2-2' }}</strong>
-          </div>
+            @if (hasTableGst()) {
+            <div class="table-total-pill table-total-pill--net" title="Total Net Amount (Excl. GST)">
+              <span class="total-lbl">Net (Excl. GST):</span>
+              <strong class="total-amt">₹{{ tableNetAmount() | number:'1.2-2' }}</strong>
+            </div>
+            <div class="table-total-pill table-total-pill--gst" title="GST Amount">
+              <span class="total-lbl">GST ({{ tableGstRate() }}%):</span>
+              <strong class="total-amt">₹{{ tableGstAmount() | number:'1.2-2' }}</strong>
+            </div>
+            <div class="table-total-pill table-total-pill--gross" title="Total Gross Amount (Incl. GST)">
+              <span class="total-lbl">Gross (Incl. GST):</span>
+              <strong class="total-amt">₹{{ tableGrossTotalSum() | number:'1.2-2' }}</strong>
+            </div>
+            } @else {
+            <div class="table-total-pill">
+              <span class="total-lbl">Net Total:</span>
+              <strong class="total-amt">₹{{ tableTotalSum() | number:'1.2-2' }}</strong>
+            </div>
+            }
           }
           <button pButton type="button" icon="pi pi-plus" label="Add Item Row"
             class="p-button-outlined p-button-sm add-row-btn" (click)="addTableRow()">
@@ -257,6 +272,49 @@
             </tr>
             }
           </tbody>
+          @if (tbl.autoCalculateTotal && tbl.totalKey && tableFormArray().length > 0) {
+          <tfoot>
+            @if (hasTableGst()) {
+            <tr class="table-summary-row net-row">
+              <td [attr.colspan]="tbl.columns.length - 1" class="text-right">
+                <strong>Total Net Amount (Excl. GST):</strong>
+              </td>
+              <td class="text-right total-cell-val">
+                <strong>₹{{ tableNetAmount() | number:'1.2-2' }}</strong>
+              </td>
+              <td></td>
+            </tr>
+            <tr class="table-summary-row gst-row">
+              <td [attr.colspan]="tbl.columns.length - 1" class="text-right">
+                <span>GST ({{ tableGstRate() }}%):</span>
+              </td>
+              <td class="text-right total-cell-val gst-val">
+                <span>₹{{ tableGstAmount() | number:'1.2-2' }}</span>
+              </td>
+              <td></td>
+            </tr>
+            <tr class="table-summary-row gross-row">
+              <td [attr.colspan]="tbl.columns.length - 1" class="text-right">
+                <strong>Total Gross Amount (Incl. GST):</strong>
+              </td>
+              <td class="text-right total-cell-val gross-val">
+                <strong>₹{{ tableGrossTotalSum() | number:'1.2-2' }}</strong>
+              </td>
+              <td></td>
+            </tr>
+            } @else {
+            <tr class="table-summary-row">
+              <td [attr.colspan]="tbl.columns.length - 1" class="text-right">
+                <strong>Cumulative Total:</strong>
+              </td>
+              <td class="text-right total-cell-val">
+                <strong>₹{{ tableTotalSum() | number:'1.2-2' }}</strong>
+              </td>
+              <td></td>
+            </tr>
+            }
+          </tfoot>
+          }
         </table>
       </div>
       } @else {

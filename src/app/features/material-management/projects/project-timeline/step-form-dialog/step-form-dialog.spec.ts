@@ -672,6 +672,120 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(mockFormApiService.createEntry).not.toHaveBeenCalled();
       expect(comp.saving.set).not.toHaveBeenCalled();
     });
+
+    it('should calculate total_net_amount, gst_amount, and total_gross_amount during saveStep when GST is present', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const mockFormApiService = {
+        createEntry: vi.fn().mockReturnValue(of({ id: 100 })),
+        updateEntry: vi.fn(),
+      };
+      const mockMessageService = { add: vi.fn() };
+
+      const defWithGst = {
+        ...mockFormDef,
+        fields: [
+          ...mockFormDef.fields,
+          { key: 'gst_rate_pct', label: 'GST %', type: 'number' },
+        ],
+        tableConfig: {
+          key: 'table_items',
+          columns: [{ key: 'total_amount', label: 'Total', type: 'currency' }],
+          autoCalculateTotal: true,
+          totalKey: 'total_amount',
+        },
+      };
+
+      comp.formApiService = mockFormApiService;
+      comp.messageService = mockMessageService;
+      comp.projectId = () => 10;
+      comp.resolvedDef = () => defWithGst;
+      comp.step = () => null;
+      comp.saving = { set: vi.fn() };
+      comp.formGroup = () => ({
+        invalid: false,
+        value: { pqb_title: 'Title', pqb_no: '001', gst_rate_pct: 18 },
+      });
+      comp.tableFormArray = () => ({
+        value: [
+          { sr_no: 1, description: 'Item 1', total_amount: 10000 },
+          { sr_no: 2, description: 'Item 2', total_amount: 20000 },
+        ],
+      });
+      comp.uploadedFiles = () => [];
+      comp.stepRemarks = () => [];
+      comp.stepSaved = { emit: vi.fn() };
+      comp.close = vi.fn();
+      comp.tableNetAmount = () => 30000;
+      comp.hasTableGst = () => true;
+      comp.tableGstAmount = () => 5400;
+      comp.tableGrossTotalSum = () => 35400;
+
+      comp.saveStep();
+
+      expect(mockFormApiService.createEntry).toHaveBeenCalledWith(
+        defWithGst,
+        10,
+        expect.objectContaining({
+          total_net_amount: 30000,
+          gst_amount: 5400,
+          total_gross_amount: 35400,
+          total_amount: 35400,
+        }),
+        [],
+      );
+    });
+
+    it('should set total_gross_amount equal to total_net_amount during saveStep when GST is not present', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const mockFormApiService = {
+        createEntry: vi.fn().mockReturnValue(of({ id: 101 })),
+        updateEntry: vi.fn(),
+      };
+      const mockMessageService = { add: vi.fn() };
+
+      const defWithoutGst = {
+        ...mockFormDef,
+        tableConfig: {
+          key: 'table_items',
+          columns: [{ key: 'total_amount', label: 'Total', type: 'currency' }],
+          autoCalculateTotal: true,
+          totalKey: 'total_amount',
+        },
+      };
+
+      comp.formApiService = mockFormApiService;
+      comp.messageService = mockMessageService;
+      comp.projectId = () => 10;
+      comp.resolvedDef = () => defWithoutGst;
+      comp.step = () => null;
+      comp.saving = { set: vi.fn() };
+      comp.formGroup = () => ({
+        invalid: false,
+        value: { pqb_title: 'Title', pqb_no: '001' },
+      });
+      comp.tableFormArray = () => ({
+        value: [{ sr_no: 1, description: 'Item 1', total_amount: 5000 }],
+      });
+      comp.uploadedFiles = () => [];
+      comp.stepRemarks = () => [];
+      comp.stepSaved = { emit: vi.fn() };
+      comp.close = vi.fn();
+      comp.tableNetAmount = () => 5000;
+      comp.hasTableGst = () => false;
+
+      comp.saveStep();
+
+      expect(mockFormApiService.createEntry).toHaveBeenCalledWith(
+        defWithoutGst,
+        10,
+        expect.objectContaining({
+          total_net_amount: 5000,
+          total_gross_amount: 5000,
+          total_amount: 5000,
+        }),
+        [],
+      );
+    });
   });
 });
 

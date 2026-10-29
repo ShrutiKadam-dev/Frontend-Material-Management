@@ -1245,6 +1245,74 @@
     }
   }
 
+  .p-datatable-tfoot > tr.table-total-row,
+  tr.table-total-row {
+    background: #f8fafc;
+    border-top: 2px solid #cbd5e1;
+
+    td {
+      border: none !important;
+      padding: 10px 14px !important;
+      font-size: 0.8125rem !important;
+      vertical-align: middle !important;
+    }
+
+    .total-label-cell {
+      color: #334155;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .total-val-cell {
+      color: #0f172a;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.92rem;
+      font-weight: 800;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    &.net-total-row {
+      background: #f8fafc;
+      .total-label-cell {
+        color: #475569;
+        font-weight: 600;
+      }
+      .total-val-cell {
+        color: #1e293b;
+        font-weight: 700;
+      }
+    }
+
+    &.gst-total-row {
+      background: #fffbeb;
+      border-top: 1px solid #fde68a;
+      .total-label-cell {
+        color: #b45309;
+        font-weight: 600;
+      }
+      .total-val-cell.gst-val {
+        color: #b45309;
+        font-weight: 700;
+      }
+    }
+
+    &.gross-total-row {
+      background: #f0fdf4;
+      border-top: 1.5px solid #86efac;
+      .total-label-cell {
+        color: #166534;
+        font-size: 0.85rem;
+        font-weight: 800;
+      }
+      .total-val-cell.gross-val-highlight {
+        color: #15803d;
+        font-size: 1rem;
+        font-weight: 800;
+      }
+    }
+  }
+
   .p-paginator {
     align-items: center !important;
     background: #ffffff !important;

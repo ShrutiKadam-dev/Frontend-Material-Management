@@ -52,8 +52,11 @@ import {
   sanitizePayloadDates,
 } from '../../../core/utils/date.utils';
 import {
+  calculateTableTotalsWithGst,
   cleanTableItems,
+  extractGstRate,
   getTableRowCellValue,
+  hasGstConfigured,
   isTableRowEmpty,
   normalizeTableRow,
 } from '../../../core/utils/form.utils';
@@ -153,11 +156,53 @@ export class DynamicStepForm implements OnInit {
     this.catalogSearch.set('');
   }
 
+  protected readonly tableVersion = signal<number>(0);
+  protected readonly formVersion = signal<number>(0);
+
   protected readonly tableTotalSum = computed(() => {
-    const arr = this.tableFormArray().value as Array<Record<string, unknown>>;
+    this.tableVersion();
+    const arr = (this.tableFormArray()?.value || []) as Array<Record<string, unknown>>;
     const cfg = this.formDefinition()?.tableConfig;
     if (!cfg || !cfg.totalKey) return 0;
     return arr.reduce((sum, row) => sum + (Number(row[cfg.totalKey!]) || 0), 0);
+  });
+
+  protected readonly tableNetAmount = computed(() => this.tableTotalSum());
+
+  protected readonly tableGstRate = computed(() => {
+    this.formVersion();
+    const def = this.formDefinition();
+    const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
+    return extractGstRate(formVals, def?.fields) ?? 0;
+  });
+
+  protected readonly tableGstAmount = computed(() => {
+    this.formVersion();
+    const net = this.tableNetAmount();
+    const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
+    const explicitGst =
+      formVals['gst_amount'] !== undefined && formVals['gst_amount'] !== null && formVals['gst_amount'] !== ''
+        ? Number(formVals['gst_amount'])
+        : null;
+    return calculateTableTotalsWithGst(net, this.tableGstRate(), explicitGst).gst_amount;
+  });
+
+  protected readonly tableGrossTotalSum = computed(() => {
+    this.formVersion();
+    const net = this.tableNetAmount();
+    const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
+    const explicitGst =
+      formVals['gst_amount'] !== undefined && formVals['gst_amount'] !== null && formVals['gst_amount'] !== ''
+        ? Number(formVals['gst_amount'])
+        : null;
+    return calculateTableTotalsWithGst(net, this.tableGstRate(), explicitGst).total_gross_amount;
+  });
+
+  protected readonly hasTableGst = computed(() => {
+    this.formVersion();
+    const def = this.formDefinition();
+    const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
+    return hasGstConfigured(def?.fields, formVals) || this.tableGstRate() > 0 || this.tableGstAmount() > 0;
   });
 
   ngOnInit(): void {
@@ -304,8 +349,9 @@ export class DynamicStepForm implements OnInit {
     this.formGroup.set(group);
     this.isFormInvalid?.set?.(group.invalid);
     this.formStatusSub?.unsubscribe();
-    this.formStatusSub = group.statusChanges?.subscribe?.(() => {
+    this.formStatusSub = group.valueChanges?.subscribe?.(() => {
       this.isFormInvalid?.set?.(group.invalid);
+      this.formVersion.update((v) => v + 1);
     });
 
     // Build Table FormArray if configured
@@ -424,6 +470,7 @@ export class DynamicStepForm implements OnInit {
     if (!def || !def.tableConfig) return;
     const nextSr = this.tableFormArray().length + 1;
     this.tableFormArray().push(this.createTableRowGroup(def, { sr_no: nextSr }));
+    this.tableVersion?.update?.((v) => v + 1);
   }
 
   protected removeTableRow(index: number): void {
@@ -433,6 +480,7 @@ export class DynamicStepForm implements OnInit {
       this.tableFormArray().controls.forEach((group, idx) => {
         group.get('sr_no')?.setValue(idx + 1);
       });
+      this.tableVersion?.update?.((v) => v + 1);
     }
   }
 
@@ -451,6 +499,11 @@ export class DynamicStepForm implements OnInit {
     if (qty >= 0 && price >= 0) {
       const total = qty * price;
       row.patchValue({ [tKey]: total }, { emitEvent: false });
+    }
+    this.tableVersion.update((v) => v + 1);
+
+    if (this.hasTableGst() && this.formGroup()?.get('gst_amount')) {
+      this.formGroup().patchValue({ gst_amount: this.tableGstAmount() }, { emitEvent: false });
     }
   }
 
@@ -616,6 +669,26 @@ export class DynamicStepForm implements OnInit {
       attachments_count: this.uploadedFiles().length,
       form_code: cur.form_code,
     };
+
+    if (def?.tableConfig?.autoCalculateTotal) {
+      const net =
+        typeof this.tableNetAmount === 'function'
+          ? this.tableNetAmount()
+          : typeof this.tableTotalSum === 'function'
+            ? this.tableTotalSum()
+            : 0;
+      combinedData['total_net_amount'] = net;
+      if (typeof this.hasTableGst === 'function' && this.hasTableGst()) {
+        const gross = typeof this.tableGrossTotalSum === 'function' ? this.tableGrossTotalSum() : net;
+        const gstAmt = typeof this.tableGstAmount === 'function' ? this.tableGstAmount() : 0;
+        combinedData['total_gross_amount'] = gross;
+        combinedData['gst_amount'] = gstAmt;
+        combinedData['total_amount'] = gross;
+      } else {
+        combinedData['total_gross_amount'] = net;
+        combinedData['total_amount'] = net;
+      }
+    }
 
     const status: StepStatus = 'completed';
     const progress = 100;
