@@ -289,6 +289,26 @@ textarea {
   overflow: hidden !important;
   padding: 6px !important;
 
+  .p-select-header {
+    padding: 6px 8px 8px 8px !important;
+    border-bottom: 1px solid var(--color-border-soft, #edeae4) !important;
+    margin-bottom: 4px !important;
+
+    .p-select-filter {
+      width: 100% !important;
+      padding: 7px 12px !important;
+      border-radius: 8px !important;
+      font-size: 0.88rem !important;
+      border: 1px solid var(--color-border, #e7e4de) !important;
+      background: var(--color-surface-muted, #faf9f6) !important;
+
+      &:focus {
+        border-color: var(--color-primary, #c0522f) !important;
+        outline: none !important;
+      }
+    }
+  }
+
   .p-select-list,
   .p-dropdown-items {
     display: flex !important;

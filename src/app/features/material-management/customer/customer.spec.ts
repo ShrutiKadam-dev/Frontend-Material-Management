@@ -6,6 +6,7 @@ import { MessageService } from 'primeng/api';
 import { of } from 'rxjs';
 
 import { CustomerService } from '../../../core/services/customer';
+import { LocationService } from '../../../core/services/location';
 import { Customer as CustomerModel, CustomerCreateInput } from '../../../core/models/customer.model';
 import { Customer } from './customer';
 
@@ -14,6 +15,31 @@ describe('Customer', () => {
   let fixture: ComponentFixture<Customer>;
 
   let lastPayload: (CustomerCreateInput & Record<string, unknown>) | null = null;
+
+  const mockLocationService = {
+    getCountries: () => of(['India', 'United States', 'United Arab Emirates']),
+    getStates: (country?: string | null) => {
+      if (country === 'United Arab Emirates') {
+        return of(['Dubai', 'Abu Dhabi']);
+      }
+      return of(['Maharashtra', 'Gujarat']);
+    },
+    getCities: (country?: string | null, state?: string | null) => {
+      if (state === 'Gujarat') {
+        return of(['Ahmedabad', 'Surat', 'Vadodara', 'Vapi']);
+      }
+      if (country === 'United Arab Emirates' || state === 'Dubai') {
+        return of(['Dubai', 'Jebel Ali']);
+      }
+      return of(['Pune', 'Mumbai']);
+    },
+    lookupCity: (city?: string | null) => {
+      if (city === 'Ahmedabad') {
+        return of({ city: 'Ahmedabad', state: 'Gujarat', country: 'India' });
+      }
+      return of({ city: 'Pune', state: 'Maharashtra', country: 'India' });
+    },
+  };
 
   const mockCustomerService = {
     getCustomers: () => of([]),
@@ -56,6 +82,7 @@ describe('Customer', () => {
         provideNoopAnimations(),
         MessageService,
         { provide: CustomerService, useValue: mockCustomerService },
+        { provide: LocationService, useValue: mockLocationService },
       ],
     }).compileComponents();
 
@@ -161,4 +188,27 @@ describe('Customer', () => {
     } as unknown as CustomerModel;
     expect((component as unknown as { getCleanAddr: (c: CustomerModel) => string }).getCleanAddr(customer)).toBe('Simple Road, City');
   });
+
+  it('should update state and city options when country and state change', () => {
+    (component as any).openAddDialog();
+    (component as any).onCountryChange('United Arab Emirates');
+    expect((component as any).stateOptions()).toContain('Dubai');
+    expect((component as any).stateOptions()).toContain('Abu Dhabi');
+
+    (component as any).onStateChange('Dubai');
+    expect((component as any).cityOptions()).toContain('Dubai');
+    expect((component as any).cityOptions()).toContain('Jebel Ali');
+  });
+
+  it('should filter city options when state is selected for India', () => {
+    (component as any).openAddDialog();
+    (component as any).onCountryChange('India');
+    (component as any).onStateChange('Gujarat');
+    expect((component as any).cityOptions()).toContain('Ahmedabad');
+    expect((component as any).cityOptions()).toContain('Surat');
+    expect((component as any).cityOptions()).toContain('Vadodara');
+    expect((component as any).cityOptions()).toContain('Vapi');
+    expect((component as any).cityOptions()).not.toContain('Mumbai');
+  });
 });
+

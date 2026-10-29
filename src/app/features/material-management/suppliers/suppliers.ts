@@ -7,15 +7,15 @@ import { DialogModule } from 'primeng/dialog';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
 
 import { Supplier as SupplierModel, SupplierCreateInput } from '../../../core/models/supplier.model';
 import { SupplierService } from '../../../core/services/supplier';
+import { LocationService } from '../../../core/services/location';
 import {
   getEntityFullAddress,
-  lookupCityLocation,
   parseAddressString,
-  POPULAR_CITIES,
   StructuredAddress,
 } from '../../../core/models/address.model';
 import {
@@ -35,6 +35,7 @@ export type ViewModeType = 'grid' | 'table';
     IconFieldModule,
     InputIconModule,
     InputTextModule,
+    SelectModule,
     TooltipModule,
     ReactiveFormsModule,
     DialogModule,
@@ -46,6 +47,7 @@ export type ViewModeType = 'grid' | 'table';
 })
 export class Suppliers implements OnInit {
   private readonly supplierService = inject(SupplierService);
+  private readonly locationService = inject(LocationService);
   private readonly fb = inject(FormBuilder);
   private readonly messageService = inject(MessageService);
 
@@ -61,7 +63,11 @@ export class Suppliers implements OnInit {
   // Search & View controls
   protected readonly searchQuery = signal<string>('');
   protected readonly viewMode = signal<ViewModeType>('grid');
-  protected readonly popularCities = POPULAR_CITIES;
+
+  // Location Selector Signals
+  protected readonly countryOptions = signal<string[]>([]);
+  protected readonly stateOptions = signal<string[]>([]);
+  protected readonly cityOptions = signal<string[]>([]);
 
   // Form definition
   protected readonly supplierForm = this.fb.group({
@@ -139,6 +145,9 @@ export class Suppliers implements OnInit {
 
   ngOnInit(): void {
     this.loadSuppliers();
+    this.locationService.getCountries().subscribe((c) => this.countryOptions.set(c));
+    this.locationService.getStates('India').subscribe((s) => this.stateOptions.set(s));
+    this.locationService.getCities('India').subscribe((c) => this.cityOptions.set(c));
     this.supplierForm.get('city')?.valueChanges.subscribe((cityVal) => {
       this.onCityChanged(cityVal);
     });
@@ -214,6 +223,10 @@ export class Suppliers implements OnInit {
       country: '',
     });
 
+    this.locationService.getCountries().subscribe((c) => this.countryOptions.set(c));
+    this.locationService.getStates('India').subscribe((s) => this.stateOptions.set(s));
+    this.locationService.getCities('India').subscribe((c) => this.cityOptions.set(c));
+
     const pocs = this.supplierForm.get('pocs') as FormArray;
     pocs.clear();
     pocs.push(this.createPocGroup({ designation: 'Primary Representative' }));
@@ -268,15 +281,23 @@ export class Suppliers implements OnInit {
           );
         }
 
+        const countryVal = freshSupplier.country || parsedAddr.country || '';
+        const stateVal = freshSupplier.state || parsedAddr.state || '';
+        const cityVal = freshSupplier.city || parsedAddr.city || '';
+
+        this.locationService.getCountries().subscribe((c) => this.countryOptions.set(c));
+        this.locationService.getStates(countryVal || 'India').subscribe((s) => this.stateOptions.set(s));
+        this.locationService.getCities(countryVal || 'India', stateVal).subscribe((c) => this.cityOptions.set(c));
+
         this.supplierForm.patchValue({
           name: displayName,
           nickname: nickname || '',
           street: freshSupplier.street || parsedAddr.street,
           area: freshSupplier.area || parsedAddr.area || '',
-          city: freshSupplier.city || parsedAddr.city,
-          state: freshSupplier.state || parsedAddr.state,
+          city: cityVal,
+          state: stateVal,
           pincode: freshSupplier.pincode || parsedAddr.pincode,
-          country: freshSupplier.country || parsedAddr.country || '',
+          country: countryVal,
         });
         this.isEditMode.set(true);
         this.dialogVisible.set(true);
@@ -509,21 +530,68 @@ export class Suppliers implements OnInit {
     return parseAddressString(addr);
   }
 
-  protected onCityChanged(cityInput: string | null | undefined): void {
-    const match = lookupCityLocation(cityInput);
-    if (match) {
-      this.supplierForm.patchValue(
-        {
-          state: match.state,
-          country: match.country,
-        },
-        { emitEvent: false },
-      );
+  protected onCountryChange(countryVal: string | null | undefined): void {
+    const cleanCountry = (countryVal || '').trim();
+    this.locationService.getStates(cleanCountry || 'India').subscribe((states) => {
+      this.stateOptions.set(states);
+
+      const currentState = this.supplierForm.get('state')?.value;
+      if (currentState && !states.some((s) => s.toLowerCase() === currentState.toLowerCase())) {
+        this.supplierForm.patchValue({ state: '', city: '' }, { emitEvent: false });
+        this.locationService.getCities(cleanCountry || 'India').subscribe((cities) => {
+          this.cityOptions.set(cities);
+        });
+      } else {
+        this.locationService.getCities(cleanCountry || 'India', currentState).subscribe((cities) => {
+          this.cityOptions.set(cities);
+        });
+      }
+    });
+  }
+
+  protected onStateChange(stateVal: string | null | undefined): void {
+    const currentCountry = this.supplierForm.get('country')?.value || 'India';
+    const cleanState = (stateVal || '').trim();
+    this.locationService.getCities(currentCountry, cleanState).subscribe((cities) => {
+      this.cityOptions.set(cities);
+    });
+
+    if (!this.supplierForm.get('country')?.value) {
+      this.supplierForm.patchValue({ country: 'India' }, { emitEvent: false });
     }
+  }
+
+  protected onCitySelect(cityVal: string | null | undefined): void {
+    this.onCityChanged(cityVal);
+  }
+
+  protected onCityChanged(cityInput: string | null | undefined): void {
+    if (!cityInput || typeof cityInput !== 'string') return;
+    this.locationService.lookupCity(cityInput).subscribe((match) => {
+      if (match) {
+        const currentCountry = this.supplierForm.get('country')?.value;
+        const currentState = this.supplierForm.get('state')?.value;
+
+        const patchObj: Record<string, string> = {};
+        if (!currentState || currentState.toLowerCase() !== match.state.toLowerCase()) {
+          patchObj['state'] = match.state;
+        }
+        if (!currentCountry || currentCountry.toLowerCase() !== match.country.toLowerCase()) {
+          patchObj['country'] = match.country;
+        }
+
+        if (Object.keys(patchObj).length > 0) {
+          this.supplierForm.patchValue(patchObj, { emitEvent: false });
+        }
+
+        this.locationService.getStates(match.country).subscribe((states) => this.stateOptions.set(states));
+        this.locationService.getCities(match.country, match.state).subscribe((cities) => this.cityOptions.set(cities));
+      }
+    });
   }
 
   protected onCityInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.onCityChanged(input.value);
+    this.onCityChanged(input?.value);
   }
 }

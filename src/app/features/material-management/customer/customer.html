@@ -513,29 +513,29 @@
       </p-iconfield>
     </div>
 
-    <!-- City & State (Two Columns) -->
+    <!-- Country & State (Two Columns) -->
     <div class="form-grid-2col">
-      <!-- City / District -->
+      <!-- Country -->
       <div class="form-field-group">
-        <label for="customer-city" class="form-label">
-          City / District <span class="required-star">*</span>
+        <label for="customer-country" class="form-label">
+          Country <span class="required-star">*</span>
         </label>
-        <p-iconfield>
-          <p-inputicon class="pi pi-map" />
-          <input pInputText id="customer-city" formControlName="city" list="customer-city-list"
-            (input)="onCityInput($event)" (change)="onCityInput($event)" placeholder="Enter city" class="dialog-input"
-            [attr.aria-invalid]="customerForm.get('city')?.invalid && customerForm.get('city')?.touched" />
-        </p-iconfield>
-        <datalist id="customer-city-list">
-          @for (c of popularCities; track c) {
-          <option [value]="c"></option>
-          }
-        </datalist>
-        @if (customerForm.get('city')?.invalid && (customerForm.get('city')?.dirty ||
-        customerForm.get('city')?.touched)) {
+        <p-select
+          id="customer-country"
+          formControlName="country"
+          [options]="countryOptions()"
+          (onChange)="onCountryChange($event.value)"
+          [filter]="true"
+          placeholder="Select country"
+          [fluid]="true"
+          appendTo="body"
+          [attr.aria-invalid]="customerForm.get('country')?.invalid && customerForm.get('country')?.touched"
+        />
+        @if (customerForm.get('country')?.invalid && (customerForm.get('country')?.dirty ||
+        customerForm.get('country')?.touched)) {
         <p class="field-error-msg" role="alert">
           <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-          City is required.
+          Country is required.
         </p>
         }
       </div>
@@ -545,11 +545,18 @@
         <label for="customer-state" class="form-label">
           State / Province <span class="required-star">*</span>
         </label>
-        <p-iconfield>
-          <p-inputicon class="pi pi-flag" />
-          <input pInputText id="customer-state" formControlName="state" placeholder="Enter state" class="dialog-input"
-            [attr.aria-invalid]="customerForm.get('state')?.invalid && customerForm.get('state')?.touched" />
-        </p-iconfield>
+        <p-select
+          id="customer-state"
+          formControlName="state"
+          [options]="stateOptions()"
+          (onChange)="onStateChange($event.value)"
+          [filter]="true"
+          [editable]="true"
+          placeholder="Select or enter state"
+          [fluid]="true"
+          appendTo="body"
+          [attr.aria-invalid]="customerForm.get('state')?.invalid && customerForm.get('state')?.touched"
+        />
         @if (customerForm.get('state')?.invalid && (customerForm.get('state')?.dirty ||
         customerForm.get('state')?.touched)) {
         <p class="field-error-msg" role="alert">
@@ -560,8 +567,34 @@
       </div>
     </div>
 
-    <!-- PIN Code & Country (Two Columns) -->
+    <!-- City & PIN Code (Two Columns) -->
     <div class="form-grid-2col">
+      <!-- City / District -->
+      <div class="form-field-group">
+        <label for="customer-city" class="form-label">
+          City / District <span class="required-star">*</span>
+        </label>
+        <p-select
+          id="customer-city"
+          formControlName="city"
+          [options]="cityOptions()"
+          (onChange)="onCitySelect($event.value)"
+          [filter]="true"
+          [editable]="true"
+          placeholder="Select or enter city"
+          [fluid]="true"
+          appendTo="body"
+          [attr.aria-invalid]="customerForm.get('city')?.invalid && customerForm.get('city')?.touched"
+        />
+        @if (customerForm.get('city')?.invalid && (customerForm.get('city')?.dirty ||
+        customerForm.get('city')?.touched)) {
+        <p class="field-error-msg" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          City is required.
+        </p>
+        }
+      </div>
+
       <!-- PIN Code / Postal Code -->
       <div class="form-field-group">
         <label for="customer-pin" class="form-label">
@@ -578,26 +611,6 @@
         <p class="field-error-msg" role="alert">
           <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
           Postal / PIN code required.
-        </p>
-        }
-      </div>
-
-      <!-- Country -->
-      <div class="form-field-group">
-        <label for="customer-country" class="form-label">
-          Country <span class="required-star">*</span>
-        </label>
-        <p-iconfield>
-          <p-inputicon class="pi pi-globe" />
-          <input pInputText id="customer-country" formControlName="country" placeholder="Enter country"
-            class="dialog-input"
-            [attr.aria-invalid]="customerForm.get('country')?.invalid && customerForm.get('country')?.touched" />
-        </p-iconfield>
-        @if (customerForm.get('country')?.invalid && (customerForm.get('country')?.dirty ||
-        customerForm.get('country')?.touched)) {
-        <p class="field-error-msg" role="alert">
-          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-          Country is required.
         </p>
         }
       </div>

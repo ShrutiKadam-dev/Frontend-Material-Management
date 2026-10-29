@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   formatStructuredAddress,
   getEntityFullAddress,
-  lookupCityLocation,
   parseAddressString,
   StructuredAddress,
 } from './address.model';
@@ -151,39 +150,4 @@ describe('Address Utilities', () => {
       expect(parsedUndefined.country).toBe('');
     });
   });
-
-  describe('lookupCityLocation', () => {
-    it('should find exact city match and return state and country', () => {
-      const match = lookupCityLocation('Mumbai');
-      expect(match).toEqual({ state: 'Maharashtra', country: 'India' });
-    });
-
-    it('should handle case-insensitive city search', () => {
-      const match = lookupCityLocation('pune');
-      expect(match).toEqual({ state: 'Maharashtra', country: 'India' });
-    });
-
-    it('should find Delhi and NCR cities', () => {
-      const delhi = lookupCityLocation('New Delhi');
-      expect(delhi).toEqual({ state: 'Delhi', country: 'India' });
-
-      const gurgaon = lookupCityLocation('Gurgaon');
-      expect(gurgaon).toEqual({ state: 'Haryana', country: 'India' });
-
-      const noida = lookupCityLocation('Noida');
-      expect(noida).toEqual({ state: 'Uttar Pradesh', country: 'India' });
-    });
-
-    it('should find international cities', () => {
-      const dubai = lookupCityLocation('Dubai');
-      expect(dubai).toEqual({ state: 'Dubai', country: 'United Arab Emirates' });
-    });
-
-    it('should return null for unknown or empty input', () => {
-      expect(lookupCityLocation('')).toBeNull();
-      expect(lookupCityLocation(null)).toBeNull();
-      expect(lookupCityLocation('UnknownCity123')).toBeNull();
-    });
-  });
 });
-
