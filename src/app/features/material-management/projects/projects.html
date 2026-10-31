@@ -7,7 +7,7 @@
         <i class="pi pi-folder-open"></i>
       </div>
       <div class="header-title-group">
-        <span class="eyebrow">Project Management · 15-Step Pipelines</span>
+        <span class="eyebrow">Project Management · Dynamic Project Workflows</span>
         <h1 id="projects-title">Projects</h1>
       </div>
     </div>
@@ -135,11 +135,10 @@
           <th scope="col" style="min-width: 280px;">Project Title</th>
           <th scope="col" style="min-width: 165px;">Customer</th>
           <th scope="col" style="min-width: 165px;">Supplier</th>
-          <th scope="col" style="min-width: 215px;">Pipeline Step & Progress</th>
-          <th scope="col" style="min-width: 125px; text-align: right;">Total Value</th>
-          <th scope="col" style="min-width: 125px; text-align: right;">Total Margin</th>
+          <th scope="col" style="min-width: 220px;">Forms & Progress</th>
+          <th scope="col" style="min-width: 130px; text-align: right;">Total Value</th>
+          <th scope="col" style="min-width: 130px; text-align: right;">Total Margin</th>
           <th scope="col" style="min-width: 110px; text-align: center;">Status</th>
-          <th scope="col" style="min-width: 170px;">Next Action</th>
           <th scope="col" style="width: 105px; text-align: center;">Actions</th>
         </tr>
       </ng-template>
@@ -186,12 +185,18 @@
           </td>
           <td>
             <div class="tbl-progress-cell">
-              <div class="tbl-step-title" (click)="openStepFromProject(p, $event)" [title]="'Open ' + (p.current_step_name || 'Customer Query')" style="cursor: pointer;">
-                <span class="step-label">Step {{ p.current_step_number || 1 }}: {{ p.current_step_name || 'Active' }}</span>
+              <div class="tbl-step-title" (click)="openStepFromProject(p, $event)" [title]="'Open ' + (p.current_step_name || 'Workflow Forms')" style="cursor: pointer;">
+                <span class="step-label">
+                  <i class="pi pi-file-edit tbl-step-icon" aria-hidden="true"></i>
+                  {{ p.current_step_name || 'No forms attached' }}
+                </span>
                 <span class="step-pct" [class.step-pct--done]="getProgressPercent(p) >= 100">{{ getProgressPercent(p) }}%</span>
               </div>
               <div class="progress-track" [class.progress-track--done]="getProgressPercent(p) >= 100">
                 <div class="progress-fill" [class.progress-fill--done]="getProgressPercent(p) >= 100" [style.width.%]="getProgressPercent(p)"></div>
+              </div>
+              <div class="tbl-forms-submeta">
+                <span class="forms-count-text">{{ getFormsCountLabel(p) }}</span>
               </div>
             </div>
           </td>
@@ -209,11 +214,6 @@
             <span class="mpc-chip mpc-chip--phase"
               [class]="'mpc-chip mpc-chip--phase ' + getStatusBadgeClass(getProjectStatus(p))">
               {{ getStatusLabel(getProjectStatus(p)) }}
-            </span>
-          </td>
-          <td>
-            <span class="tbl-next-action" [title]="p.next_action || 'Pending action'">
-              {{ p.next_action || '—' }}
             </span>
           </td>
           <td style="text-align: center;">
@@ -234,7 +234,7 @@
         <!-- Matched Items Next Row (Clean, Aligned Table Subrow) -->
         @if (p.matched_items && p.matched_items.length > 0) {
         <tr class="table-matched-subrow" aria-label="Matched items in project">
-          <td colspan="10" class="subrow-items-cell">
+          <td colspan="9" class="subrow-items-cell">
             <div class="matched-items-stack">
               <div class="stack-header">
                 <div class="sh-title">

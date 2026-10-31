@@ -224,8 +224,8 @@ export class Suppliers implements OnInit {
     });
 
     this.locationService.getCountries().subscribe((c) => this.countryOptions.set(c));
-    this.locationService.getStates('India').subscribe((s) => this.stateOptions.set(s));
-    this.locationService.getCities('India').subscribe((c) => this.cityOptions.set(c));
+    this.stateOptions.set([]);
+    this.cityOptions.set([]);
 
     const pocs = this.supplierForm.get('pocs') as FormArray;
     pocs.clear();
@@ -285,20 +285,45 @@ export class Suppliers implements OnInit {
         const stateVal = freshSupplier.state || parsedAddr.state || '';
         const cityVal = freshSupplier.city || parsedAddr.city || '';
 
-        this.locationService.getCountries().subscribe((c) => this.countryOptions.set(c));
-        this.locationService.getStates(countryVal || 'India').subscribe((s) => this.stateOptions.set(s));
-        this.locationService.getCities(countryVal || 'India', stateVal).subscribe((c) => this.cityOptions.set(c));
-
-        this.supplierForm.patchValue({
-          name: displayName,
-          nickname: nickname || '',
-          street: freshSupplier.street || parsedAddr.street,
-          area: freshSupplier.area || parsedAddr.area || '',
-          city: cityVal,
-          state: stateVal,
-          pincode: freshSupplier.pincode || parsedAddr.pincode,
-          country: countryVal,
+        this.locationService.getCountries().subscribe((c) => {
+          let countries = [...c];
+          if (countryVal && !countries.some((x) => x.toLowerCase() === countryVal.toLowerCase())) {
+            countries.push(countryVal);
+          }
+          this.countryOptions.set(countries);
         });
+
+        if (countryVal) {
+          this.locationService.getStates(countryVal).subscribe((s) => {
+            let states = [...s];
+            if (stateVal && !states.some((x) => x.toLowerCase() === stateVal.toLowerCase())) {
+              states.unshift(stateVal);
+            }
+            this.stateOptions.set(states);
+          });
+          this.locationService.getCities(countryVal, stateVal).subscribe((c) => {
+            let cities = [...c];
+            const cleanCityVal = cityVal?.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim();
+            if (cleanCityVal && !cities.some((x) => x.toLowerCase() === cleanCityVal.toLowerCase())) {
+              cities.unshift(cleanCityVal);
+            }
+            this.cityOptions.set(cities);
+          });
+        }
+
+        this.supplierForm.patchValue(
+          {
+            name: displayName,
+            nickname: nickname || '',
+            street: freshSupplier.street || parsedAddr.street,
+            area: freshSupplier.area || parsedAddr.area || '',
+            city: cityVal,
+            state: stateVal,
+            pincode: freshSupplier.pincode || parsedAddr.pincode,
+            country: countryVal,
+          },
+          { emitEvent: false },
+        );
         this.isEditMode.set(true);
         this.dialogVisible.set(true);
         this.loading.set(false);
@@ -532,33 +557,43 @@ export class Suppliers implements OnInit {
 
   protected onCountryChange(countryVal: string | null | undefined): void {
     const cleanCountry = (countryVal || '').trim();
-    this.locationService.getStates(cleanCountry || 'India').subscribe((states) => {
+    if (!cleanCountry) return;
+
+    this.locationService.getStates(cleanCountry).subscribe((states) => {
       this.stateOptions.set(states);
 
-      const currentState = this.supplierForm.get('state')?.value;
-      if (currentState && !states.some((s) => s.toLowerCase() === currentState.toLowerCase())) {
-        this.supplierForm.patchValue({ state: '', city: '' }, { emitEvent: false });
-        this.locationService.getCities(cleanCountry || 'India').subscribe((cities) => {
-          this.cityOptions.set(cities);
-        });
-      } else {
-        this.locationService.getCities(cleanCountry || 'India', currentState).subscribe((cities) => {
-          this.cityOptions.set(cities);
-        });
+      const currentState = (this.supplierForm.get('state')?.value || '').trim();
+      if (currentState) {
+        const matched = states.find(
+          (s) =>
+            s.toLowerCase() === currentState.toLowerCase() ||
+            s.toLowerCase().includes(currentState.toLowerCase()) ||
+            currentState.toLowerCase().includes(s.toLowerCase()),
+        );
+
+        if (matched && matched !== currentState) {
+          this.supplierForm.patchValue({ state: matched }, { emitEvent: false });
+        } else if (!matched) {
+          this.supplierForm.patchValue({ state: '', city: '' }, { emitEvent: false });
+        }
       }
+
+      const activeState = this.supplierForm.get('state')?.value || '';
+      this.locationService.getCities(cleanCountry, activeState).subscribe((cities) => {
+        this.cityOptions.set(cities);
+      });
     });
   }
 
   protected onStateChange(stateVal: string | null | undefined): void {
-    const currentCountry = this.supplierForm.get('country')?.value || 'India';
     const cleanState = (stateVal || '').trim();
+    if (!cleanState) return;
+
+    const currentCountry = (this.supplierForm.get('country')?.value || '').trim() || 'India';
+
     this.locationService.getCities(currentCountry, cleanState).subscribe((cities) => {
       this.cityOptions.set(cities);
     });
-
-    if (!this.supplierForm.get('country')?.value) {
-      this.supplierForm.patchValue({ country: 'India' }, { emitEvent: false });
-    }
   }
 
   protected onCitySelect(cityVal: string | null | undefined): void {
@@ -567,25 +602,56 @@ export class Suppliers implements OnInit {
 
   protected onCityChanged(cityInput: string | null | undefined): void {
     if (!cityInput || typeof cityInput !== 'string') return;
-    this.locationService.lookupCity(cityInput).subscribe((match) => {
-      if (match) {
-        const currentCountry = this.supplierForm.get('country')?.value;
-        const currentState = this.supplierForm.get('state')?.value;
+    const cleanCity = cityInput.trim();
+    if (cleanCity.length < 2) return;
 
+    const currentCountry = (this.supplierForm.get('country')?.value || '').trim();
+    const currentState = (this.supplierForm.get('state')?.value || '').trim();
+
+    this.locationService.lookupCity(cleanCity, currentCountry, currentState).subscribe((match) => {
+      if (match) {
         const patchObj: Record<string, string> = {};
-        if (!currentState || currentState.toLowerCase() !== match.state.toLowerCase()) {
-          patchObj['state'] = match.state;
-        }
-        if (!currentCountry || currentCountry.toLowerCase() !== match.country.toLowerCase()) {
+
+        // Only auto-fill country if user hasn't selected a country yet
+        if (!currentCountry && match.country) {
           patchObj['country'] = match.country;
+        }
+
+        // Only auto-fill state if state is currently empty
+        if (!currentState && match.state) {
+          patchObj['state'] = match.state;
         }
 
         if (Object.keys(patchObj).length > 0) {
           this.supplierForm.patchValue(patchObj, { emitEvent: false });
         }
 
-        this.locationService.getStates(match.country).subscribe((states) => this.stateOptions.set(states));
-        this.locationService.getCities(match.country, match.state).subscribe((cities) => this.cityOptions.set(cities));
+        const effectiveCountry = this.supplierForm.get('country')?.value || match.country || 'India';
+        const effectiveState = this.supplierForm.get('state')?.value || match.state || '';
+
+        if (effectiveCountry) {
+          this.locationService.getStates(effectiveCountry).subscribe((states) => {
+            let stateList = [...states];
+            if (effectiveState && !stateList.includes(effectiveState)) {
+              const matched = stateList.find(
+                (s) =>
+                  s.toLowerCase() === effectiveState.toLowerCase() ||
+                  effectiveState.toLowerCase().includes(s.toLowerCase()) ||
+                  s.toLowerCase().includes(effectiveState.toLowerCase()),
+              );
+              if (matched) {
+                this.supplierForm.patchValue({ state: matched }, { emitEvent: false });
+              } else {
+                stateList.unshift(effectiveState);
+              }
+            }
+            this.stateOptions.set(stateList);
+          });
+
+          this.locationService.getCities(effectiveCountry, effectiveState).subscribe((cities) => {
+            this.cityOptions.set(cities);
+          });
+        }
       }
     });
   }

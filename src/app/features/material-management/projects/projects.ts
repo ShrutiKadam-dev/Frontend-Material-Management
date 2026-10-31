@@ -107,14 +107,16 @@ export class Projects implements OnInit {
   // ── Status Helper & Filter Counts ───────────────────────────────
   protected getProjectStatus(p: Project): 'in_progress' | 'pending' | 'completed' | string {
     const s = p.status?.toLowerCase().trim().replace(/\s+/g, '_');
-    if (s === 'completed' || s === 'pending' || s === 'in_progress') {
+    if (s === 'completed' || s === 'pending' || s === 'in_progress' || s === 'on_hold' || s === 'cancelled') {
       return s;
     }
-    if ((p.progress_percentage ?? 0) >= 100) {
-      return 'completed';
-    }
-    if ((p.progress_percentage ?? 0) === 0 && (!p.current_step_number || p.current_step_number <= 1)) {
+    const total = p.total_steps ?? 0;
+    const completed = p.completed_steps_count ?? 0;
+    if (total === 0) {
       return 'pending';
+    }
+    if (total > 0 && completed >= total && (p.customer_payment_status === 'completed' || p.progress_percentage === 100)) {
+      return 'completed';
     }
     return 'in_progress';
   }
@@ -289,6 +291,10 @@ export class Projects implements OnInit {
     if (event) {
       event.stopPropagation();
     }
+    if (project.current_form_code) {
+      this.router.navigate(['/projects', project.id, 'forms', project.current_form_code]);
+      return;
+    }
     const stepNum = project.current_step_number || 1;
     const stepName = (project.current_step_name || '').toLowerCase();
     if (stepNum === 1 || stepName.includes('query')) {
@@ -296,6 +302,16 @@ export class Projects implements OnInit {
       return;
     }
     this.router.navigate(['/projects', project.id, 'steps']);
+  }
+
+
+  protected getFormsCountLabel(p: Project): string {
+    const total = p.total_steps ?? 0;
+    if (total === 0) {
+      return '0 forms attached';
+    }
+    const completed = p.completed_steps_count ?? (this.getProgressPercent(p) >= 100 ? total : 0);
+    return `${completed} of ${total} ${total === 1 ? 'form' : 'forms'} done`;
   }
 
   protected openAddDialog(): void {
@@ -452,10 +468,12 @@ export class Projects implements OnInit {
 
   protected getProgressPercent(project: Project): number {
     if (project.progress_percentage !== undefined && project.progress_percentage !== null) {
-      return project.progress_percentage;
+      return Math.min(100, Math.max(0, project.progress_percentage));
     }
-    const step = project.current_step_number || 1;
-    return Math.round((step / 15) * 100);
+    const total = project.total_steps || 0;
+    if (total === 0) return 0;
+    const completed = project.completed_steps_count ?? 0;
+    return Math.round((completed / total) * 100);
   }
 
   protected getHealthBadgeClass(health?: string): string {

@@ -519,17 +519,10 @@
         <label for="supplier-country" class="form-label">
           Country <span class="required-star">*</span>
         </label>
-        <p-select
-          id="supplier-country"
-          formControlName="country"
-          [options]="countryOptions()"
-          (onChange)="onCountryChange($event.value)"
-          [filter]="true"
-          placeholder="Select country"
-          [fluid]="true"
-          appendTo="body"
-          [attr.aria-invalid]="supplierForm.get('country')?.invalid && supplierForm.get('country')?.touched"
-        />
+        <p-select id="supplier-country" formControlName="country" [options]="countryOptions()"
+          (onChange)="onCountryChange($event.value)" [filter]="true" filterPlaceholder="Search country..."
+          placeholder="Select country" [fluid]="true" appendTo="body"
+          [attr.aria-invalid]="supplierForm.get('country')?.invalid && supplierForm.get('country')?.touched" />
         @if (supplierForm.get('country')?.invalid && (supplierForm.get('country')?.dirty ||
         supplierForm.get('country')?.touched)) {
         <p class="field-error-msg" role="alert">
@@ -544,18 +537,10 @@
         <label for="supplier-state" class="form-label">
           State / Province <span class="required-star">*</span>
         </label>
-        <p-select
-          id="supplier-state"
-          formControlName="state"
-          [options]="stateOptions()"
-          (onChange)="onStateChange($event.value)"
-          [filter]="true"
-          [editable]="true"
-          placeholder="Select or enter state"
-          [fluid]="true"
-          appendTo="body"
-          [attr.aria-invalid]="supplierForm.get('state')?.invalid && supplierForm.get('state')?.touched"
-        />
+        <p-select id="supplier-state" formControlName="state" [options]="stateOptions()"
+          (onChange)="onStateChange($event.value)" [filter]="true" filterPlaceholder="Search state..."
+          placeholder="Select state" [fluid]="true" appendTo="body"
+          [attr.aria-invalid]="supplierForm.get('state')?.invalid && supplierForm.get('state')?.touched" />
         @if (supplierForm.get('state')?.invalid && (supplierForm.get('state')?.dirty ||
         supplierForm.get('state')?.touched)) {
         <p class="field-error-msg" role="alert">
@@ -571,20 +556,12 @@
       <!-- City / District -->
       <div class="form-field-group">
         <label for="supplier-city" class="form-label">
-          City / District <span class="required-star">*</span>
+          City <span class="required-star">*</span>
         </label>
-        <p-select
-          id="supplier-city"
-          formControlName="city"
-          [options]="cityOptions()"
-          (onChange)="onCitySelect($event.value)"
-          [filter]="true"
-          [editable]="true"
-          placeholder="Select or enter city"
-          [fluid]="true"
-          appendTo="body"
-          [attr.aria-invalid]="supplierForm.get('city')?.invalid && supplierForm.get('city')?.touched"
-        />
+        <p-select id="supplier-city" formControlName="city" [options]="cityOptions()"
+          (onChange)="onCitySelect($event.value)" [filter]="true" filterPlaceholder="Search city..."
+          placeholder="Select city" [fluid]="true" appendTo="body"
+          [attr.aria-invalid]="supplierForm.get('city')?.invalid && supplierForm.get('city')?.touched" />
         @if (supplierForm.get('city')?.invalid && (supplierForm.get('city')?.dirty ||
         supplierForm.get('city')?.touched)) {
         <p class="field-error-msg" role="alert">

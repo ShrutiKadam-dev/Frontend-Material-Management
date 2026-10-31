@@ -18,7 +18,9 @@ export interface Project {
   status?: string; // 'in_progress' | 'completed' | 'on_hold' | 'cancelled'
   current_step_number?: number;
   current_step_name?: string;
+  current_form_code?: string;
   total_steps?: number;
+  completed_steps_count?: number;
   progress_percentage?: number;
   total_value?: number;
   total_margin?: number;

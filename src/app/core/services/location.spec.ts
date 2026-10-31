@@ -95,6 +95,27 @@ describe('LocationService', () => {
     expect(result).toEqual({ city: 'Pune', state: 'Maharashtra', country: 'India' });
   });
 
+  it('should pass country and state parameters when performing city lookup', () => {
+    const mockLookup = {
+      success: true,
+      data: { city: 'Tolosa', state: 'Guipuzcoa', country: 'Spain' },
+    };
+    httpClientMock.get.mockReturnValue(of(mockLookup));
+
+    let result: unknown = null;
+    service.lookupCity('Tolosa', 'Spain').subscribe((res) => {
+      result = res;
+    });
+
+    expect(result).toEqual({ city: 'Tolosa', state: 'Guipuzcoa', country: 'Spain' });
+    expect(httpClientMock.get).toHaveBeenCalledWith(
+      'http://localhost:5000/api/v1/locations/lookup',
+      expect.objectContaining({
+        params: expect.any(Object),
+      }),
+    );
+  });
+
   it('should gracefully return null when city lookup fails with 404 or network error', () => {
     httpClientMock.get.mockReturnValue(throwError(() => new Error('Not found')));
 
@@ -104,5 +125,21 @@ describe('LocationService', () => {
     });
 
     expect(result).toBeNull();
+  });
+
+  it('should normalize and deduplicate city entries with diacritical marks or macrons', () => {
+    const mockCities = {
+      success: true,
+      count: 4,
+      data: ['Kolhapur', 'Kolhāpur', 'Thāne', 'Thane', 'Pune'],
+    };
+    httpClientMock.get.mockReturnValue(of(mockCities));
+
+    let cities: string[] = [];
+    service.getCities('India', 'Maharashtra').subscribe((res) => {
+      cities = res;
+    });
+
+    expect(cities).toEqual(['Kolhapur', 'Thane', 'Pune']);
   });
 });

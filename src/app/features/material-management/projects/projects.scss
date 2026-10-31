@@ -746,11 +746,20 @@
   }
 
   .step-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 155px;
+
+    .tbl-step-icon {
+      font-size: 0.72rem;
+      color: #c0522f;
+      flex-shrink: 0;
+    }
   }
 
   .step-pct {
@@ -788,6 +797,21 @@
   }
 }
 
+.tbl-forms-submeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: #64748b;
+  margin-top: 1px;
+
+  .forms-count-text {
+    font-size: 0.68rem;
+    color: #64748b;
+    font-weight: 500;
+  }
+}
+
 .tbl-amount-cell {
   text-align: right;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -820,16 +844,6 @@
   }
 }
 
-.tbl-next-action {
-  font-size: 0.79rem;
-  font-weight: 450;
-  color: #475569;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-height: 1.35;
-}
 
 .actions-cell {
   display: flex;

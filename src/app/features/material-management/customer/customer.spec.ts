@@ -22,6 +22,9 @@ describe('Customer', () => {
       if (country === 'United Arab Emirates') {
         return of(['Dubai', 'Abu Dhabi']);
       }
+      if (country === 'Spain') {
+        return of(['Guipuzcoa', 'Basque Country']);
+      }
       return of(['Maharashtra', 'Gujarat']);
     },
     getCities: (country?: string | null, state?: string | null) => {
@@ -31,11 +34,17 @@ describe('Customer', () => {
       if (country === 'United Arab Emirates' || state === 'Dubai') {
         return of(['Dubai', 'Jebel Ali']);
       }
+      if (country === 'Spain' || state === 'Guipuzcoa') {
+        return of(['Tolosa', 'San Sebastian']);
+      }
       return of(['Pune', 'Mumbai']);
     },
     lookupCity: (city?: string | null) => {
       if (city === 'Ahmedabad') {
         return of({ city: 'Ahmedabad', state: 'Gujarat', country: 'India' });
+      }
+      if (city === 'Tolosa') {
+        return of({ city: 'Tolosa', state: 'Guipuzcoa', country: 'Spain' });
       }
       return of({ city: 'Pune', state: 'Maharashtra', country: 'India' });
     },
@@ -126,6 +135,25 @@ describe('Customer', () => {
     form.get('city').setValue('Pune');
     expect(form.get('state').value).toBe('Maharashtra');
     expect(form.get('country').value).toBe('India');
+  });
+
+  it('should auto-patch state and country when Tolosa is entered', () => {
+    (component as any).openAddDialog();
+    const form = (component as any).customerForm;
+
+    form.get('city').setValue('Tolosa');
+    expect(form.get('state').value).toBe('Guipuzcoa');
+    expect(form.get('country').value).toBe('Spain');
+  });
+
+  it('should not overwrite selected country Spain when Tolosa is entered', () => {
+    (component as any).openAddDialog();
+    const form = (component as any).customerForm;
+
+    form.get('country').setValue('Spain');
+    form.get('city').setValue('Tolosa');
+    expect(form.get('country').value).toBe('Spain');
+    expect(form.get('state').value).toBe('Guipuzcoa');
   });
 
   it('should send structured production payload without combined address or email outside pocs', () => {

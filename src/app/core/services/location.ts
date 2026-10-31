@@ -27,6 +27,32 @@ export class LocationService {
   private countriesCache$?: Observable<string[]>;
 
   /**
+   * Normalizes strings by removing unicode diacritical marks/macrons (e.g. Kolhāpur -> Kolhapur)
+   * and deduplicates case-insensitively while preserving order.
+   */
+  private deduplicateLocations(items: string[]): string[] {
+    const map = new Map<string, string>();
+    for (const item of items) {
+      if (!item || typeof item !== 'string') continue;
+      const trimmed = item.trim();
+      if (!trimmed) continue;
+
+      const normalized = trimmed.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+      const key = normalized.toLowerCase();
+
+      if (!map.has(key)) {
+        map.set(key, normalized);
+      } else {
+        const existing = map.get(key)!;
+        if (/[^\x00-\x7F]/.test(existing) && !/[^\x00-\x7F]/.test(normalized)) {
+          map.set(key, normalized);
+        }
+      }
+    }
+    return Array.from(map.values());
+  }
+
+  /**
    * Retrieves the dynamic list of countries from backend.
    * Cached in-memory to minimize network calls.
    */
@@ -35,7 +61,7 @@ export class LocationService {
       this.countriesCache$ = this.http
         .get<ApiResponse<string[]>>(`${this.apiBaseUrl}/api/v1/locations/countries`)
         .pipe(
-          map((res) => (res && Array.isArray(res.data) ? res.data : [])),
+          map((res) => this.deduplicateLocations(res && Array.isArray(res.data) ? res.data : [])),
           catchError(() => of(['India'])),
           shareReplay(1)
         );
@@ -55,7 +81,7 @@ export class LocationService {
     return this.http
       .get<ApiResponse<string[]>>(`${this.apiBaseUrl}/api/v1/locations/states`, { params })
       .pipe(
-        map((res) => (res && Array.isArray(res.data) ? res.data : [])),
+        map((res) => this.deduplicateLocations(res && Array.isArray(res.data) ? res.data : [])),
         catchError(() => of([]))
       );
   }
@@ -82,24 +108,43 @@ export class LocationService {
     return this.http
       .get<ApiResponse<string[]>>(`${this.apiBaseUrl}/api/v1/locations/cities`, { params })
       .pipe(
-        map((res) => (res && Array.isArray(res.data) ? res.data : [])),
+        map((res) => this.deduplicateLocations(res && Array.isArray(res.data) ? res.data : [])),
         catchError(() => of([]))
       );
   }
 
   /**
-   * Dynamic lookup: given a city name, resolves corresponding state and country.
+   * Dynamic lookup: given a city name (and optional contextual country and state),
+   * resolves corresponding state and country.
    */
-  lookupCity(cityName?: string | null): Observable<LocationLookupResult | null> {
+  lookupCity(
+    cityName?: string | null,
+    country?: string | null,
+    state?: string | null,
+  ): Observable<LocationLookupResult | null> {
     if (!cityName?.trim()) {
       return of(null);
     }
 
-    const params = new HttpParams().set('city', cityName.trim());
+    let params = new HttpParams().set('city', cityName.trim());
+    if (country?.trim()) {
+      params = params.set('country', country.trim());
+    }
+    if (state?.trim()) {
+      params = params.set('state', state.trim());
+    }
+
     return this.http
       .get<ApiResponse<LocationLookupResult>>(`${this.apiBaseUrl}/api/v1/locations/lookup`, { params })
       .pipe(
-        map((res) => (res && res.success && res.data ? res.data : null)),
+        map((res) => {
+          if (!res || !res.success || !res.data) return null;
+          return {
+            city: res.data.city ? res.data.city.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim() : '',
+            state: res.data.state ? res.data.state.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim() : '',
+            country: res.data.country ? res.data.country.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim() : '',
+          };
+        }),
         catchError(() => of(null))
       );
   }
