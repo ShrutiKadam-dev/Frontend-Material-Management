@@ -24,18 +24,9 @@ export const INCOTERMS_OPTIONS: SelectOption<string>[] = [
  * Major world currencies with symbols
  */
 export const CURRENCY_OPTIONS: SelectOption<string>[] = [
-  { label: 'USD ($)', value: 'USD' },
   { label: 'INR (₹)', value: 'INR' },
+  { label: 'USD ($)', value: 'USD' },
   { label: 'EUR (€)', value: 'EUR' },
-  { label: 'GBP (£)', value: 'GBP' },
-  { label: 'AED (AED)', value: 'AED' },
-  { label: 'SAR (SAR)', value: 'SAR' },
-  { label: 'JPY (¥)', value: 'JPY' },
-  { label: 'CNY (¥)', value: 'CNY' },
-  { label: 'CAD ($)', value: 'CAD' },
-  { label: 'AUD ($)', value: 'AUD' },
-  { label: 'SGD ($)', value: 'SGD' },
-  { label: 'CHF (CHF)', value: 'CHF' },
 ];
 
 /**
@@ -116,14 +107,18 @@ export function getCurrencySymbol(code?: string): string {
 /**
  * Helper to extract currency symbol from a formatted quotation value string (e.g. 'USD 15000' -> '$')
  */
-export function getQuotationCurrencySymbol(quotationValue?: string | number): string {
-  if (!quotationValue) return '$';
+export function getQuotationCurrencySymbol(quotationValue?: string | number, fallback = '₹'): string {
+  if (!quotationValue) return fallback;
   const str = String(quotationValue).trim();
   const match = str.match(/^([A-Za-z]{3})\s*/);
   if (match) {
     return getCurrencySymbol(match[1]);
   }
-  return '$';
+  if (str.startsWith('₹')) return '₹';
+  if (str.startsWith('$')) return '$';
+  if (str.startsWith('€')) return '€';
+  if (str.startsWith('£')) return '£';
+  return fallback;
 }
 
 /**
@@ -159,7 +154,7 @@ export function formatCurrencyAmount(value?: string | number | null, defaultCurr
  * Parses a compound currency amount string like "USD 15000.00" or "15000.00"
  * into separate currency code and numerical amount string.
  */
-export function parseCurrencyAmount(raw?: string | null, fallbackCurrency = 'USD'): { currency: string; amount: string } {
+export function parseCurrencyAmount(raw?: string | null, fallbackCurrency = 'INR'): { currency: string; amount: string } {
   if (!raw) return { currency: fallbackCurrency, amount: '' };
   const str = String(raw).trim();
   const match = str.match(/^([A-Za-z]{3})\s*(.+)$/);
@@ -167,6 +162,15 @@ export function parseCurrencyAmount(raw?: string | null, fallbackCurrency = 'USD
     return {
       currency: match[1].toUpperCase(),
       amount: match[2].trim(),
+    };
+  }
+  const symMatch = str.match(/^([₹$€£¥])\s*(.+)$/);
+  if (symMatch) {
+    const sym = symMatch[1];
+    const code = Object.keys(CURRENCY_SYMBOLS).find((k) => CURRENCY_SYMBOLS[k] === sym) || fallbackCurrency;
+    return {
+      currency: code,
+      amount: symMatch[2].trim(),
     };
   }
   return {

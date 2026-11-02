@@ -440,7 +440,7 @@
                       responsiveLayout="scroll">
                       <ng-template pTemplate="header">
                         <tr>
-                          @for (col of tableColumns(); track col.key) {
+                          @for (col of getEntryTableColumns(entry); track col.key) {
                             <th
                               scope="col"
                               [style.width]="col.width || 'auto'"
@@ -453,19 +453,19 @@
 
                       <ng-template pTemplate="body" let-item let-itemIdx="rowIndex">
                         <tr class="modern-table-row">
-                          @for (col of tableColumns(); track col.key) {
+                          @for (col of getEntryTableColumns(entry); track col.key) {
                             <td
                               [style.text-align]="col.key === 'sr_no' ? 'center' : (col.type === 'number' || col.type === 'currency' ? 'right' : 'left')">
                               @if (col.key === 'sr_no') {
-                                <span class="sr-badge-pill">{{ formatCellValue(item, col, itemIdx) }}</span>
+                                <span class="sr-badge-pill">{{ formatCellValue(item, col, itemIdx, entry) }}</span>
                               } @else if (col.type === 'currency' || col.key.includes('price') || col.key.includes('amount') || col.key.includes('cost')) {
-                                <span class="currency-cell-val">{{ formatCellValue(item, col, itemIdx) }}</span>
+                                <span class="currency-cell-val">{{ formatCellValue(item, col, itemIdx, entry) }}</span>
                               } @else if (col.type === 'number') {
-                                <span class="qty-badge-pill">{{ formatCellValue(item, col, itemIdx) }}</span>
+                                <span class="qty-badge-pill">{{ formatCellValue(item, col, itemIdx, entry) }}</span>
                               } @else if (col.key === 'item_code') {
-                                <span class="hsn-code-pill">{{ formatCellValue(item, col, itemIdx) }}</span>
+                                <span class="hsn-code-pill">{{ formatCellValue(item, col, itemIdx, entry) }}</span>
                               } @else {
-                                <span class="cell-desc-text">{{ formatCellValue(item, col, itemIdx) }}</span>
+                                <span class="cell-desc-text">{{ formatCellValue(item, col, itemIdx, entry) }}</span>
                               }
                             </td>
                           }
@@ -579,7 +579,11 @@
                             [class.spec-item--clause]="field.isClause"
                             [class.spec-item--highlight]="field.isHighlight">
                             <dt class="spec-label">
-                              <i [class]="field.icon" class="spec-icon" aria-hidden="true"></i>
+                              @if (field.currencySymbol && field.icon === 'pi pi-money-bill') {
+                                <span class="spec-icon spec-currency-text" aria-hidden="true">{{ field.currencySymbol }}</span>
+                              } @else {
+                                <i [class]="field.icon" class="spec-icon" aria-hidden="true"></i>
+                              }
                               <span>{{ field.label }}</span>
                             </dt>
                             <dd class="spec-value">
@@ -692,7 +696,7 @@
                     responsiveLayout="scroll">
                     <ng-template pTemplate="header">
                       <tr>
-                        @for (col of tableColumns(); track col.key) {
+                        @for (col of getEntryTableColumns(entry); track col.key) {
                           <th
                             scope="col"
                             [style.width]="col.width || 'auto'"
@@ -706,27 +710,27 @@
 
                     <ng-template pTemplate="body" let-item let-itemIdx="rowIndex">
                       <tr class="modern-table-row">
-                        @for (col of tableColumns(); track col.key) {
+                        @for (col of getEntryTableColumns(entry); track col.key) {
                           <td
                             [style.text-align]="col.key === 'sr_no' ? 'center' : (col.type === 'number' || col.type === 'currency' ? 'right' : 'left')"
                             [style.white-space]="col.type === 'currency' ? 'nowrap' : 'normal'">
                             @if (col.key === 'sr_no') {
-                              <span class="sr-badge-pill">{{ formatCellValue(item, col, itemIdx) }}</span>
+                              <span class="sr-badge-pill">{{ formatCellValue(item, col, itemIdx, entry) }}</span>
                             } @else if (col.type === 'currency' || col.key.includes('price') || col.key.includes('amount')) {
-                              <span class="currency-cell-val">{{ formatCellValue(item, col, itemIdx) }}</span>
+                              <span class="currency-cell-val">{{ formatCellValue(item, col, itemIdx, entry) }}</span>
                             } @else if (col.type === 'number') {
-                              <span class="qty-badge-pill">{{ formatCellValue(item, col, itemIdx) }}</span>
+                              <span class="qty-badge-pill">{{ formatCellValue(item, col, itemIdx, entry) }}</span>
                             } @else if (col.key === 'hsn_sac') {
-                              <span class="hsn-code-pill">{{ formatCellValue(item, col, itemIdx) }}</span>
+                              <span class="hsn-code-pill">{{ formatCellValue(item, col, itemIdx, entry) }}</span>
                             } @else if (col.key === 'unit') {
-                              @if (formatCellValue(item, col, itemIdx) !== '—') {
-                                <span class="unit-badge-pill">{{ formatCellValue(item, col, itemIdx) }}</span>
+                              @if (formatCellValue(item, col, itemIdx, entry) !== '—') {
+                                <span class="unit-badge-pill">{{ formatCellValue(item, col, itemIdx, entry) }}</span>
                               } @else {
                                 <span class="muted-dash">—</span>
                               }
                             } @else {
-                              <span class="cell-desc-text" [title]="formatCellValue(item, col, itemIdx)">
-                                {{ formatCellValue(item, col, itemIdx) }}
+                              <span class="cell-desc-text" [title]="formatCellValue(item, col, itemIdx, entry)">
+                                {{ formatCellValue(item, col, itemIdx, entry) }}
                               </span>
                             }
                           </td>
@@ -738,7 +742,7 @@
                       <ng-template pTemplate="footer">
                         @if (hasEntryGst(entry) && getEntryTotals(entry)?.has_gst) {
                           <tr class="table-total-row net-total-row">
-                            <td [attr.colspan]="tableColumns().length - 1" class="total-label-cell">
+                            <td [attr.colspan]="getEntryTableColumns(entry).length - 1" class="total-label-cell">
                               Total Net Amount (Excl. GST)
                             </td>
                             <td class="total-val-cell">
@@ -746,7 +750,7 @@
                             </td>
                           </tr>
                           <tr class="table-total-row gst-total-row">
-                            <td [attr.colspan]="tableColumns().length - 1" class="total-label-cell">
+                            <td [attr.colspan]="getEntryTableColumns(entry).length - 1" class="total-label-cell">
                               GST ({{ getEntryGstRate(entry) }}%):
                             </td>
                             <td class="total-val-cell gst-val">
@@ -754,7 +758,7 @@
                             </td>
                           </tr>
                           <tr class="table-total-row gross-total-row">
-                            <td [attr.colspan]="tableColumns().length - 1" class="total-label-cell">
+                            <td [attr.colspan]="getEntryTableColumns(entry).length - 1" class="total-label-cell">
                               Total Gross Amount (Incl. GST)
                             </td>
                             <td class="total-val-cell gross-val-highlight">
@@ -763,7 +767,7 @@
                           </tr>
                         } @else {
                           <tr class="table-total-row">
-                            <td [attr.colspan]="tableColumns().length - 1" class="total-label-cell">
+                            <td [attr.colspan]="getEntryTableColumns(entry).length - 1" class="total-label-cell">
                               Total ({{ getTableItems(entry).length }} {{ getTableItems(entry).length === 1 ? 'item' : 'items' }})
                             </td>
                             <td class="total-val-cell">

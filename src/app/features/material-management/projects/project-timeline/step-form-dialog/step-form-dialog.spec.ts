@@ -870,5 +870,138 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       );
     });
   });
+
+  describe('Quotation from Supplier Dynamic Currency Selection & Table Updating', () => {
+    const supplierQuotationDef: FormDefinition = {
+      id: 11,
+      formCode: 'FORM_11_SUPPLIER_QUOTATION',
+      name: 'Quotation from Supplier',
+      category: 'Sourcing & Quotations',
+      phaseId: 'phase-2',
+      icon: 'pi pi-tags',
+      description: 'Detailed quotation received from vendor',
+      apiEndpoint: '/api/v1/supplier-quotations',
+      fields: [
+        { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true },
+        { key: 'quotation_no', label: 'Quotation No.', type: 'text', required: true },
+        { key: 'quotation_value', label: 'Quotation Value', type: 'currency', hasCurrencySelect: true },
+      ],
+      tableConfig: {
+        title: 'Quoted Materials & Pricing',
+        autoCalculateTotal: true,
+        columns: [
+          { key: 'sr_no', label: 'Sr. No.', type: 'number' },
+          { key: 'description', label: 'Description', type: 'text' },
+          { key: 'quantity', label: 'Quantity', type: 'number' },
+          { key: 'unit_price', label: 'Unit Price', type: 'currency' },
+          { key: 'total_amount', label: 'Total Amount', type: 'currency' },
+        ],
+      },
+    };
+
+    it('should identify quotation_value as currency field with select', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const qvField = supplierQuotationDef.fields.find((f) => f.key === 'quotation_value');
+      expect(comp.isCurrencyWithSelect(qvField!)).toBe(true);
+
+      const regularField = supplierQuotationDef.fields.find((f) => f.key === 'supplier_name');
+      expect(comp.isCurrencyWithSelect(regularField!)).toBe(false);
+    });
+
+    it('should dynamically update currency and column headers on currency selection', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const fg = new FormGroup({
+        currency_unit: new FormControl('INR'),
+        currency_symbol: new FormControl('₹'),
+        quotation_value: new FormControl(50000),
+      });
+      comp.formGroup = () => fg;
+      comp.resolvedDef = () => supplierQuotationDef;
+      comp.selectedCurrency = {
+        val: 'INR',
+        set(v: string) { this.val = v; },
+      };
+      // Bind signals as functions
+      const curSig = () => comp.selectedCurrency.val;
+      comp.selectedCurrency = Object.assign(curSig, comp.selectedCurrency);
+      comp.tableCurrencySymbol = () => comp.selectedCurrency() === 'USD' ? '$' : (comp.selectedCurrency() === 'EUR' ? '€' : '₹');
+      comp.formVersion = { update: vi.fn() };
+
+      const unitPriceCol = supplierQuotationDef.tableConfig!.columns.find((c) => c.key === 'unit_price')!;
+      const totalAmountCol = supplierQuotationDef.tableConfig!.columns.find((c) => c.key === 'total_amount')!;
+
+      // Default state: INR
+      expect(comp.getColumnLabel(unitPriceCol)).toBe('Unit Price (₹)');
+      expect(comp.getColumnLabel(totalAmountCol)).toBe('Total Amount (₹)');
+
+      // User changes currency to USD
+      comp.onCurrencyChange('USD');
+
+      expect(comp.selectedCurrency()).toBe('USD');
+      expect(comp.tableCurrencySymbol()).toBe('$');
+      expect(fg.get('currency_unit')?.value).toBe('USD');
+      expect(fg.get('currency_symbol')?.value).toBe('$');
+
+      // Table column headers dynamically update to USD ($)
+      expect(comp.getColumnLabel(unitPriceCol)).toBe('Unit Price ($)');
+      expect(comp.getColumnLabel(totalAmountCol)).toBe('Total Amount ($)');
+
+      // User changes currency to EUR
+      comp.onCurrencyChange('EUR');
+      expect(comp.selectedCurrency()).toBe('EUR');
+      expect(comp.tableCurrencySymbol()).toBe('€');
+      expect(comp.getColumnLabel(unitPriceCol)).toBe('Unit Price (€)');
+      expect(comp.getColumnLabel(totalAmountCol)).toBe('Total Amount (€)');
+    });
+
+    it('should include selected currency and symbol in payload on save', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const mockFormApiService = {
+        createEntry: vi.fn().mockReturnValue(of({ id: 101, step_name: 'Quotation from Supplier' })),
+        updateEntry: vi.fn().mockReturnValue(of({ id: 101, step_name: 'Quotation from Supplier' })),
+      };
+
+      comp.formApiService = mockFormApiService;
+      comp.messageService = { add: vi.fn() };
+      comp.projectId = () => 42;
+      comp.resolvedDef = () => supplierQuotationDef;
+      comp.step = () => null;
+      comp.saving = { set: vi.fn() };
+      comp.selectedCurrency = () => 'EUR';
+
+      const fg = new FormGroup({
+        supplier_name: new FormControl('Global Tech Vendor'),
+        quotation_no: new FormControl('QT-2026-099'),
+        quotation_value: new FormControl(75000),
+        currency_unit: new FormControl('EUR'),
+        currency_symbol: new FormControl('€'),
+      });
+      comp.formGroup = () => fg;
+      comp.tableFormArray = () => ({
+        value: [{ sr_no: 1, description: 'Motor Parts', quantity: 10, unit_price: 7500, total_amount: 75000 }],
+      });
+      comp.uploadedFiles = () => [];
+      comp.stepRemarks = () => [];
+      comp.stepSaved = { emit: vi.fn() };
+      comp.close = vi.fn();
+      comp.tableNetAmount = () => 75000;
+      comp.hasTableGst = () => false;
+
+      comp.saveStep();
+
+      expect(mockFormApiService.createEntry).toHaveBeenCalledWith(
+        supplierQuotationDef,
+        42,
+        expect.objectContaining({
+          currency_unit: 'EUR',
+          currency_symbol: '€',
+          currency: 'EUR',
+          quotation_value: 75000,
+          total_net_amount: 75000,
+        }),
+        [],
+      );
+    });
+  });
 });
 

@@ -97,6 +97,11 @@ describe('ProjectFormEntries Component', () => {
       return getFormDefinition(c) || null;
     };
 
+    comp.tableColumns = () => {
+      const def = comp.formDefinition();
+      return def?.tableConfig?.columns || [];
+    };
+
     comp.entries = () => {
       const def = comp.formDefinition();
       const rawCode = (comp.formCode() || '').toLowerCase();
@@ -753,6 +758,140 @@ describe('ProjectFormEntries Component', () => {
       expect(totals?.total_net_amount).toBe(5000);
       expect(totals?.total_gross_amount).toBe(5000);
       expect(totals?.has_gst).toBe(false);
+    });
+  });
+
+  describe('Dynamic Currency Handling in Entry Card and Table', () => {
+    it('should determine correct icon and currency symbol based on entry data', () => {
+      const comp = createComponent();
+
+      // USD
+      expect(comp.getFieldIcon('quotation_value', 'currency', { currency_unit: 'USD' })).toBe('pi pi-dollar');
+      expect(comp.getFieldIcon('quotation_value', 'currency', { quotation_value: '$ 32,434.00' })).toBe('pi pi-dollar');
+      expect(comp.getFieldIcon('quotation_value', 'currency', { currency_symbol: '$' })).toBe('pi pi-dollar');
+
+      // EUR
+      expect(comp.getFieldIcon('quotation_value', 'currency', { currency_unit: 'EUR' })).toBe('pi pi-euro');
+      expect(comp.getFieldIcon('quotation_value', 'currency', { quotation_value: '€ 15,000.00' })).toBe('pi pi-euro');
+
+      // GBP
+      expect(comp.getFieldIcon('quotation_value', 'currency', { currency_unit: 'GBP' })).toBe('pi pi-pound');
+      expect(comp.getFieldIcon('quotation_value', 'currency', { quotation_value: '£ 8,500.00' })).toBe('pi pi-pound');
+
+      // INR default
+      expect(comp.getFieldIcon('quotation_value', 'currency', { currency_unit: 'INR' })).toBe('pi pi-indian-rupee');
+      expect(comp.getFieldIcon('quotation_value', 'currency', {})).toBe('pi pi-indian-rupee');
+
+      // Custom currency like AED
+      expect(comp.getFieldIcon('quotation_value', 'currency', { currency_unit: 'AED' })).toBe('pi pi-money-bill');
+    });
+
+    it('should format quotation value and display pi-dollar icon in getDisplayFields for USD supplier quotation', () => {
+      const comp = createComponent([], 'FORM_11_SUPPLIER_QUOTATION');
+      const suppDef = FORM_CATALOG.find((f) => f.formCode === 'FORM_11_SUPPLIER_QUOTATION')!;
+      comp.formDefinition = () => suppDef;
+
+      const usdStep: ProjectStep = {
+        id: 901,
+        project_id: 5,
+        step_number: 11,
+        step_name: 'Quotation from Supplier',
+        description: 'Supplier Quote',
+        status: 'completed',
+        progress_percentage: 100,
+        completed_at: '2026-10-15T12:00:00.000Z',
+        form_code: 'FORM_11_SUPPLIER_QUOTATION',
+        data: {
+          supplier_name: 'Acme Turbines LLC',
+          quotation_value: 32434,
+          currency_unit: 'USD',
+          currency_symbol: '$',
+          items: [
+            { sr_no: 1, item_name: 'Turbine Blade', unit: 'Pcs', quantity: 2, unit_price: 16217, total_amount: 32434 },
+          ],
+        },
+        remarks: [],
+      };
+
+      const fields = comp.getDisplayFields(usdStep);
+      const qvField = fields.find((f: EntryDisplayField) => f.key === 'quotation_value');
+
+      expect(qvField).toBeDefined();
+      expect(qvField?.icon).toBe('pi pi-dollar');
+      expect(qvField?.currencySymbol).toBe('$');
+      expect(qvField?.value).toContain('$');
+      expect(qvField?.value).toContain('32,434.00');
+    });
+
+    it('should dynamically update line-item table columns with selected currency symbol', () => {
+      const comp = createComponent([], 'FORM_11_SUPPLIER_QUOTATION');
+      const suppDef = FORM_CATALOG.find((f) => f.formCode === 'FORM_11_SUPPLIER_QUOTATION')!;
+      comp.formDefinition = () => suppDef;
+
+      const usdStep: ProjectStep = {
+        id: 902,
+        project_id: 5,
+        step_number: 11,
+        step_name: 'Quotation from Supplier',
+        description: 'Supplier Quote',
+        status: 'completed',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_11_SUPPLIER_QUOTATION',
+        data: {
+          quotation_value: 'USD 50000',
+          currency_unit: 'USD',
+        },
+        remarks: [],
+      };
+
+      const cols = comp.getEntryTableColumns(usdStep);
+      const unitPriceCol = cols.find((c: FormTableColumn) => c.key === 'unit_price');
+      const totalAmountCol = cols.find((c: FormTableColumn) => c.key === 'total_amount');
+
+      expect(unitPriceCol?.label).toBe('Unit Price ($)');
+      expect(totalAmountCol?.label).toBe('Total Amount ($)');
+    });
+
+    it('should format table cells and totals using the entry currency', () => {
+      const comp = createComponent([], 'FORM_11_SUPPLIER_QUOTATION');
+      const suppDef = FORM_CATALOG.find((f) => f.formCode === 'FORM_11_SUPPLIER_QUOTATION')!;
+      comp.formDefinition = () => suppDef;
+
+      const eurStep: ProjectStep = {
+        id: 903,
+        project_id: 5,
+        step_number: 11,
+        step_name: 'Quotation from Supplier',
+        description: 'Supplier Quote EUR',
+        status: 'completed',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_11_SUPPLIER_QUOTATION',
+        data: {
+          currency_unit: 'EUR',
+          items: [
+            { sr_no: 1, item_name: 'Inverter', unit: 'Sets', quantity: 2, unit_price: 5000, total_amount: 10000 },
+          ],
+        },
+        remarks: [],
+      };
+
+      const cols = comp.getEntryTableColumns(eurStep);
+      const unitPriceCol = cols.find((c: FormTableColumn) => c.key === 'unit_price')!;
+      const totalCol = cols.find((c: FormTableColumn) => c.key === 'total_amount')!;
+
+      const formattedUnitPrice = comp.formatCellValue(eurStep.data.items[0], unitPriceCol, 0, eurStep);
+      const formattedTotal = comp.formatCellValue(eurStep.data.items[0], totalCol, 0, eurStep);
+
+      expect(formattedUnitPrice).toContain('€');
+      expect(formattedUnitPrice).toContain('5,000.00');
+      expect(formattedTotal).toContain('€');
+      expect(formattedTotal).toContain('10,000.00');
+
+      const footerTotal = comp.getTableTotalFormatted(eurStep);
+      expect(footerTotal).toContain('€');
+      expect(footerTotal).toContain('10,000.00');
     });
   });
 });

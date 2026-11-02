@@ -28,8 +28,7 @@ import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 
-import { of, Subscription } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, of, Subscription } from 'rxjs';
 
 import { ProjectStep, ProjectStepRemark } from '../../../../../core/models/project-step.model';
 import { FormApiService } from '../../../../../core/services/form-api';
@@ -37,9 +36,16 @@ import {
   FORM_CATALOG,
   FormDefinition,
   FormFieldDefinition,
+  FormTableColumn,
   getFormDefinition,
 } from '../../../../../core/constants/form-catalog';
-import { SelectOption } from '../../../../../core/constants/dropdown-options.constant';
+import {
+  CURRENCY_OPTIONS,
+  CURRENCY_SYMBOLS,
+  getCurrencySymbol,
+  parseCurrencyAmount,
+  SelectOption,
+} from '../../../../../core/constants/dropdown-options.constant';
 import { getCurrentUserFromStorage } from '../../../../../core/utils/remark.utils';
 import {
   formatLocalDate,
@@ -223,6 +229,44 @@ export class StepFormDialog {
     const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
     return hasGstConfigured(def?.fields, formVals) || this.tableGstRate() > 0 || this.tableGstAmount() > 0;
   });
+
+  // ── Currency Selection & Dynamic Table Currency ─────────────────────
+  readonly currencyOptions = CURRENCY_OPTIONS;
+  readonly selectedCurrency = signal<string>('INR');
+  readonly selectedCurrencySymbol = computed(() => getCurrencySymbol(this.selectedCurrency()));
+
+  readonly tableCurrencySymbol = computed(() => {
+    this.formVersion();
+    const def = this.resolvedDef();
+    const hasCurrencySelect = def?.fields.some((f) => this.isCurrencyWithSelect(f));
+    if (hasCurrencySelect) {
+      return this.selectedCurrencySymbol();
+    }
+    return '₹';
+  });
+
+  isCurrencyWithSelect(field: FormFieldDefinition): boolean {
+    return Boolean(field.hasCurrencySelect || field.key === 'quotation_value');
+  }
+
+  onCurrencyChange(newCurrency: string): void {
+    if (!newCurrency) return;
+    const clean = newCurrency.trim().toUpperCase();
+    this.selectedCurrency.set(clean);
+    const fg = this.formGroup();
+    if (fg) {
+      fg.get('currency_unit')?.setValue(clean, { emitEvent: false });
+      fg.get('currency_symbol')?.setValue(getCurrencySymbol(clean), { emitEvent: false });
+    }
+    this.formVersion.update((v) => v + 1);
+  }
+
+  getColumnLabel(col: FormTableColumn): string {
+    if (col.type === 'currency' && !col.label.includes('(')) {
+      return `${col.label} (${this.tableCurrencySymbol()})`;
+    }
+    return col.label;
+  }
 
   constructor() {
     this.destroyRef?.onDestroy(() => {
@@ -409,6 +453,25 @@ export class StepFormDialog {
   ): void {
     // 1. Dynamic Catalog Form Controls
     const controls: Record<string, FormControl> = {};
+    const hasCurrencySelectField = def.fields.some((f) => this.isCurrencyWithSelect(f));
+    let detectedCurrency = 'INR';
+
+    if (hasCurrencySelectField) {
+      const rawUnit = savedData['currency_unit'] || savedData['currency'];
+      const rawVal = savedData['quotation_value'];
+      if (typeof rawUnit === 'string' && rawUnit.trim()) {
+        detectedCurrency = rawUnit.trim().toUpperCase();
+      } else if (typeof rawVal === 'string' && rawVal.trim()) {
+        const parsed = parseCurrencyAmount(rawVal, 'INR');
+        if (parsed.currency) detectedCurrency = parsed.currency;
+      } else if (savedData['currency_symbol']) {
+        const sym = String(savedData['currency_symbol']).trim();
+        const found = Object.keys(CURRENCY_SYMBOLS).find((k) => CURRENCY_SYMBOLS[k] === sym);
+        if (found) detectedCurrency = found;
+      }
+      this.selectedCurrency.set(detectedCurrency);
+    }
+
     for (const field of def.fields) {
       let initialVal = savedData[field.key];
       if (
@@ -417,6 +480,10 @@ export class StepFormDialog {
         (typeof initialVal === 'string' && !initialVal.trim())
       ) {
         initialVal = this.getDefaultFieldValue(field);
+      }
+      if (this.isCurrencyWithSelect(field) && typeof initialVal === 'string' && initialVal.trim()) {
+        const parsed = parseCurrencyAmount(initialVal, detectedCurrency);
+        initialVal = parsed.amount !== '' && !isNaN(Number(parsed.amount)) ? Number(parsed.amount) : parsed.amount;
       }
       if (field.type === 'multilocation') {
         if (Array.isArray(initialVal)) {
@@ -442,6 +509,12 @@ export class StepFormDialog {
       const validators = field.required ? [Validators.required] : [];
       controls[field.key] = new FormControl(initialVal, validators);
     }
+
+    if (hasCurrencySelectField) {
+      controls['currency_unit'] = new FormControl(detectedCurrency);
+      controls['currency_symbol'] = new FormControl(getCurrencySymbol(detectedCurrency));
+    }
+
     const fg = new FormGroup(controls);
     this.formGroup.set(fg);
     this.isFormInvalid?.set?.(fg.invalid);
@@ -450,6 +523,17 @@ export class StepFormDialog {
       this.isFormInvalid?.set?.(fg.invalid);
       this.formVersion.update((v) => v + 1);
     });
+
+    if (hasCurrencySelectField) {
+      fg.get('currency_unit')?.valueChanges?.subscribe((val) => {
+        if (val && typeof val === 'string' && val.trim().toUpperCase() !== this.selectedCurrency()) {
+          const code = val.trim().toUpperCase();
+          this.selectedCurrency.set(code);
+          fg.get('currency_symbol')?.setValue(getCurrencySymbol(code), { emitEvent: false });
+          this.formVersion.update((v) => v + 1);
+        }
+      });
+    }
 
     // 2. Line-Item Table Rows
     if (def.tableConfig) {
@@ -696,6 +780,14 @@ export class StepFormDialog {
     if (this.hasTableGst() && this.formGroup()?.get('gst_amount')) {
       this.formGroup().patchValue({ gst_amount: this.tableGstAmount() }, { emitEvent: false });
     }
+
+    const qvCtrl = this.formGroup()?.get('quotation_value');
+    if (qvCtrl && (!qvCtrl.value || qvCtrl.pristine)) {
+      const totalAmt = this.hasTableGst() ? this.tableGrossTotalSum() : this.tableNetAmount();
+      if (totalAmt > 0) {
+        qvCtrl.setValue(totalAmt, { emitEvent: false });
+      }
+    }
   }
 
   // ── File Upload Handling (Customer Query Aligned) ──────────────────
@@ -903,6 +995,13 @@ export class StepFormDialog {
       remarks: this.stepRemarks().map((r) => r.remark),
       status: 'completed',
     };
+
+    if (def.fields.some((f) => this.isCurrencyWithSelect(f))) {
+      const cur = this.selectedCurrency();
+      combinedData['currency_unit'] = cur;
+      combinedData['currency_symbol'] = getCurrencySymbol(cur);
+      combinedData['currency'] = cur;
+    }
 
     if (def.tableConfig?.autoCalculateTotal) {
       const net =

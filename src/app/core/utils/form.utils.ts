@@ -295,7 +295,7 @@ export function calculateTableTotalsWithGst(
 export function isCustomerField(key?: string | null): boolean {
   if (!key) return false;
   const k = key.toLowerCase();
-  return k === 'customer_name';
+  return k === 'customer_name' || k === 'customer' || k === 'client_name';
 }
 
 /**
@@ -304,7 +304,7 @@ export function isCustomerField(key?: string | null): boolean {
 export function isSupplierField(key?: string | null): boolean {
   if (!key) return false;
   const k = key.toLowerCase();
-  return k === 'supplier_name';
+  return k === 'supplier_name' || k === 'supplier' || k === 'vendor_name';
 }
 
 /**
@@ -313,7 +313,7 @@ export function isSupplierField(key?: string | null): boolean {
 export function isProjectTitleField(key?: string | null): boolean {
   if (!key) return false;
   const k = key.toLowerCase();
-  return k === 'project_title';
+  return k === 'project_title' || k === 'project_name';
 }
 
 

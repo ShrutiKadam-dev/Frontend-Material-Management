@@ -33,6 +33,7 @@ export interface FormFieldDefinition {
   prefix?: string;
   colSpan?: 1 | 2 | 3 | 4; // grid column width out of 4
   sectionTitle?: string; // section header title banner
+  hasCurrencySelect?: boolean; // when true, allows selecting currency alongside amount
 }
 
 export interface FormTableColumn {
@@ -405,7 +406,7 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true, colSpan: 2 },
       { key: 'quotation_no', label: 'Quotation No.', type: 'text', required: true, colSpan: 1 },
       { key: 'quotation_date', label: 'Quotation Date', type: 'date', colSpan: 1 },
-      { key: 'quotation_value', label: 'Quotation Value', type: 'currency', colSpan: 2 },
+      { key: 'quotation_value', label: 'Quotation Value', type: 'currency', hasCurrencySelect: true, colSpan: 2 },
       { key: 'quotation_validity', label: 'Quotation Validity', type: 'text', colSpan: 2 },
       { key: 'incoterms', label: 'Incoterms', type: 'select', options: INCOTERMS_OPTIONS, colSpan: 1 },
       { key: 'payment_terms', label: 'Payment Terms', type: 'text', colSpan: 1 },
@@ -444,7 +445,7 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'quotation_no', label: 'Quotation No.', type: 'text', required: true, colSpan: 1 },
       { key: 'quotation_date', label: 'Quotation Date', type: 'date', colSpan: 1 },
-      { key: 'quotation_value', label: 'Quotation Value', type: 'currency', colSpan: 2 },
+      { key: 'quotation_value', label: 'Quotation Value', type: 'currency', hasCurrencySelect: true, colSpan: 2 },
       { key: 'quotation_validity', label: 'Quotation Validity', type: 'text', colSpan: 2 },
     ],
     tableConfig: {

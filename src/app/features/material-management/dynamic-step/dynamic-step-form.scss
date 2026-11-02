@@ -384,6 +384,28 @@
   }
 }
 
+.currency-compound-wrap {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  width: 100%;
+
+  .currency-select-container {
+    flex-shrink: 0;
+    width: 135px;
+
+    :deep(.p-select) {
+      font-size: 13px;
+      height: 40px;
+    }
+  }
+
+  .affix-input-wrap {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
 .affix-input-wrap {
   align-items: center;
   display: flex;

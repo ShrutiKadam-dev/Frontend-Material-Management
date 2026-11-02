@@ -1042,6 +1042,8 @@
     &.pi-hourglass { color: #d97706; }           /* Amber - Validity & Durations */
     &.pi-indian-rupee,
     &.pi-euro,
+    &.pi-pound,
+    &.pi-money-bill,
     &.pi-dollar { color: #059669; }              /* Emerald Green - Financials & Fees */
     &.pi-shield { color: #16a34a; }              /* Forest Green - Security & Guarantees */
     &.pi-truck { color: #0284c7; }               /* Sky Blue - Logistics & Delivery */
@@ -1051,6 +1053,18 @@
     &.pi-file,
     &.pi-send { color: #2563eb; }                /* Royal Blue - Submission Mode & Files */
     &.pi-info-circle { color: #3b82f6; }         /* Blue - Status & General Info */
+  }
+
+  .spec-currency-text {
+    align-items: center;
+    color: #059669;
+    display: inline-flex;
+    flex-shrink: 0;
+    font-size: 0.74rem;
+    font-weight: 700;
+    justify-content: center;
+    line-height: 1;
+    min-width: 14px;
   }
 }
 

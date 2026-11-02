@@ -22,6 +22,12 @@ import { Customer } from '../../../../core/models/customer.model';
 import { Supplier } from '../../../../core/models/supplier.model';
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../../../../core/models/project-step.model';
 import { FormDefinition, FormTableColumn, FORM_CATALOG, getFormDefinition } from '../../../../core/constants/form-catalog';
+import {
+  CURRENCY_SYMBOLS,
+  getCurrencySymbol,
+  getQuotationCurrencySymbol,
+  parseCurrencyAmount,
+} from '../../../../core/constants/dropdown-options.constant';
 import { ProjectService } from '../../../../core/services/project';
 import { CustomerService } from '../../../../core/services/customer';
 import { SupplierService } from '../../../../core/services/supplier';
@@ -47,6 +53,7 @@ export interface EntryDisplayField {
   type: string;
   colSpan: number;
   icon: string;
+  currencySymbol?: string;
   isLongText: boolean;
   isHighlight?: boolean;
   isPill?: boolean;
@@ -678,7 +685,82 @@ export class ProjectFormEntries implements OnInit {
     });
   }
 
-  formatCellValue(row: Record<string, unknown>, col: FormTableColumn, rowIndex: number): string {
+  getNormalizedEntryData(entry: ProjectStep): Record<string, unknown> | null {
+    if (!entry) return null;
+    if (entry.data && typeof entry.data === 'object') {
+      return entry.data as Record<string, unknown>;
+    }
+    if (typeof entry.data === 'string') {
+      try {
+        const parsed = JSON.parse(entry.data);
+        if (parsed && typeof parsed === 'object') {
+          return parsed as Record<string, unknown>;
+        }
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  getEntryCurrencySymbol(entry: ProjectStep): string {
+    const data = this.getNormalizedEntryData(entry);
+    if (!data) return '₹';
+
+    const unit = (data['currency_unit'] || data['currency']) as string;
+    if (typeof unit === 'string' && unit.trim()) {
+      return getCurrencySymbol(unit.trim());
+    }
+    if (typeof data['currency_symbol'] === 'string' && data['currency_symbol'].trim()) {
+      return data['currency_symbol'].trim();
+    }
+    if (data['quotation_value']) {
+      const sym = getQuotationCurrencySymbol(data['quotation_value'] as string | number);
+      if (sym) return sym;
+    }
+    return '₹';
+  }
+
+  getEntryCurrencyUnit(entry: ProjectStep): string {
+    const data = this.getNormalizedEntryData(entry);
+    if (!data) return 'INR';
+
+    const unit = (data['currency_unit'] || data['currency']) as string;
+    if (typeof unit === 'string' && unit.trim()) {
+      return unit.trim().toUpperCase();
+    }
+    if (data['quotation_value']) {
+      const parsed = parseCurrencyAmount(String(data['quotation_value']));
+      if (parsed.currency) return parsed.currency.toUpperCase();
+    }
+    const sym = this.getEntryCurrencySymbol(entry);
+    for (const [code, s] of Object.entries(CURRENCY_SYMBOLS)) {
+      if (s === sym) return code;
+    }
+    return 'INR';
+  }
+
+  getEntryTableColumns(entry: ProjectStep): FormTableColumn[] {
+    const def = this.formDefinition();
+    const baseCols =
+      def?.tableConfig?.columns && def.tableConfig.columns.length > 0
+        ? def.tableConfig.columns
+        : typeof this.tableColumns === 'function'
+          ? this.tableColumns()
+          : [];
+    const sym = this.getEntryCurrencySymbol(entry);
+    return baseCols.map((col) => {
+      let label = col.label;
+      if (label.includes('₹') || label.includes('$') || label.includes('€') || label.includes('£')) {
+        label = label.replace(/\([₹$€£]\)/g, `(${sym})`).replace(/[₹$€£]/g, sym);
+      } else if (col.type === 'currency' && !label.includes('(')) {
+        label = `${label} (${sym})`;
+      }
+      return { ...col, label };
+    });
+  }
+
+  formatCellValue(row: Record<string, unknown>, col: FormTableColumn, rowIndex: number, entry?: ProjectStep): string {
     if (col.key === 'sr_no') {
       return String(row['sr_no'] ?? (rowIndex + 1));
     }
@@ -703,10 +785,18 @@ export class ProjectFormEntries implements OnInit {
       (typeof val === 'number' || !isNaN(Number(val)))
     ) {
       const isEur = col.key.toLowerCase().includes('eur') || col.label.toLowerCase().includes('€') || col.label.toLowerCase().includes('eur');
-      if (isEur) {
-        return '€\u00A0' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      let currencyUnit = (row['currency_unit'] || row['currency'] || '') as string;
+      let sym = '';
+      if (currencyUnit) {
+        sym = getCurrencySymbol(currencyUnit);
+      } else if (entry) {
+        sym = this.getEntryCurrencySymbol(entry);
+        currencyUnit = this.getEntryCurrencyUnit(entry);
+      } else {
+        sym = isEur ? '€' : '₹';
       }
-      return '₹\u00A0' + Number(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const locale = currencyUnit === 'INR' || sym === '₹' ? 'en-IN' : 'en-US';
+      return sym + '\u00A0' + Number(val).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     if (col.type === 'number' && (typeof val === 'number' || !isNaN(Number(val)))) {
       return Number(val).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
@@ -774,7 +864,10 @@ export class ProjectFormEntries implements OnInit {
   getTableTotalFormatted(entry: ProjectStep): string | null {
     const total = this.calculateTableTotal(entry);
     if (total === null) return null;
-    return '₹\u00A0' + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const sym = this.getEntryCurrencySymbol(entry);
+    const unit = this.getEntryCurrencyUnit(entry);
+    const locale = sym === '₹' || unit === 'INR' ? 'en-IN' : 'en-US';
+    return sym + '\u00A0' + total.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   hasEntryGst(entry: ProjectStep): boolean {
@@ -810,32 +903,46 @@ export class ProjectFormEntries implements OnInit {
   getTableNetTotalFormatted(entry: ProjectStep): string | null {
     const totals = this.getEntryTotals(entry);
     if (!totals) return null;
-    return '₹\u00A0' + totals.total_net_amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const sym = this.getEntryCurrencySymbol(entry);
+    const unit = this.getEntryCurrencyUnit(entry);
+    const locale = sym === '₹' || unit === 'INR' ? 'en-IN' : 'en-US';
+    return sym + '\u00A0' + totals.total_net_amount.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   getTableGstAmountFormatted(entry: ProjectStep): string | null {
     const totals = this.getEntryTotals(entry);
     if (!totals || totals.gst_amount === undefined) return null;
-    return '₹\u00A0' + totals.gst_amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const sym = this.getEntryCurrencySymbol(entry);
+    const unit = this.getEntryCurrencyUnit(entry);
+    const locale = sym === '₹' || unit === 'INR' ? 'en-IN' : 'en-US';
+    return sym + '\u00A0' + totals.gst_amount.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   getTableGrossTotalFormatted(entry: ProjectStep): string | null {
     const totals = this.getEntryTotals(entry);
     if (!totals) return null;
-    return '₹\u00A0' + totals.total_gross_amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const sym = this.getEntryCurrencySymbol(entry);
+    const unit = this.getEntryCurrencyUnit(entry);
+    const locale = sym === '₹' || unit === 'INR' ? 'en-IN' : 'en-US';
+    return sym + '\u00A0' + totals.total_gross_amount.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   // ── Helper Presentation Methods ─────────────────────────────────────
   getDisplayFields(entry: ProjectStep): EntryDisplayField[] {
     const def = this.formDefinition();
-    if (!def || !entry.data || typeof entry.data !== 'object') return [];
+    const entryData = this.getNormalizedEntryData(entry);
+    if (!def || !entryData) return [];
 
     const rawFields: (EntryDisplayField & { _order: number })[] = [];
+    const entryCurrencySymbol = this.getEntryCurrencySymbol(entry);
+    const entryCurrencyUnit = this.getEntryCurrencyUnit(entry);
+
     for (const f of def.fields) {
-      const val = entry.data[f.key];
+      const val = entryData[f.key];
       if (val !== undefined && val !== null && val !== '') {
         let formattedVal = String(val);
         const strVal = typeof val === 'string' ? val.trim() : '';
+        let fieldCurrencySymbol: string | undefined;
 
         if (Array.isArray(val)) {
           formattedVal = val.join(', ');
@@ -846,10 +953,33 @@ export class ProjectFormEntries implements OnInit {
           if (match && typeof match === 'object') {
             formattedVal = match.label;
           }
-        } else if (f.type === 'currency' && (typeof val === 'number' || !isNaN(Number(val)))) {
-          const prefix = f.prefix || (f.key.toLowerCase().includes('eur') ? '€' : '₹');
-          const locale = prefix === '€' ? 'en-US' : 'en-IN';
-          formattedVal = prefix + '\u00A0' + Number(val).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        } else if (f.type === 'currency' || f.hasCurrencySelect || f.key === 'quotation_value') {
+          const currencyUnit = ((entryData['currency_unit'] || entryData['currency'] || '') as string).trim().toUpperCase();
+          let sym = currencyUnit ? getCurrencySymbol(currencyUnit) : ((entryData['currency_symbol'] as string) || f.prefix || (f.key.toLowerCase().includes('eur') ? '€' : ''));
+
+          let numVal: number = NaN;
+          if (typeof val === 'number') {
+            numVal = val;
+          } else if (typeof val === 'string') {
+            const parsed = parseCurrencyAmount(val, currencyUnit || entryCurrencyUnit);
+            if (parsed.currency && !currencyUnit) {
+              sym = getCurrencySymbol(parsed.currency);
+            }
+            numVal = Number(parsed.amount.replace(/,/g, ''));
+            if (isNaN(numVal)) {
+              numVal = Number(val.replace(/[^0-9.-]/g, ''));
+            }
+          }
+          if (!sym) {
+            sym = getQuotationCurrencySymbol(val as string | number, entryCurrencySymbol);
+          }
+          fieldCurrencySymbol = sym;
+          if (!isNaN(numVal)) {
+            const locale = sym === '₹' || currencyUnit === 'INR' ? 'en-IN' : 'en-US';
+            formattedVal = sym + '\u00A0' + numVal.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          } else {
+            formattedVal = String(val);
+          }
         } else if (f.type === 'datetime') {
           const dateInput = typeof val === 'string' || typeof val === 'number' || val instanceof Date ? val : String(val);
           formattedVal = formatDisplayDate(dateInput, 'dd-MM-yyyy, hh:mm a');
@@ -940,7 +1070,8 @@ export class ProjectFormEntries implements OnInit {
           value: formattedVal,
           type: f.type || 'text',
           colSpan,
-          icon: this.getFieldIcon(f.key, f.type),
+          icon: this.getFieldIcon(f.key, f.type, entryData),
+          currencySymbol: fieldCurrencySymbol,
           isLongText: colSpan === 4,
           isHighlight: !!isHighlight,
           isPill: !!isPill,
@@ -958,7 +1089,7 @@ export class ProjectFormEntries implements OnInit {
       .map(({ _order, ...rest }) => rest);
   }
 
-  getFieldIcon(fieldKey: string, fieldType?: string): string {
+  getFieldIcon(fieldKey: string, fieldType?: string, entryData?: Record<string, unknown> | null): string {
     const k = fieldKey.toLowerCase();
     const t = (fieldType || '').toLowerCase();
 
@@ -969,8 +1100,31 @@ export class ProjectFormEntries implements OnInit {
     if (k.includes('warranty') || k.includes('guarantee') || k.includes('security')) return 'pi pi-shield';
     if (k.includes('valid') || k.includes('period') || k.includes('duration')) return 'pi pi-hourglass';
     if (t === 'currency' || k.includes('fee') || k.includes('amount') || k.includes('price') || k.includes('cost')) {
-      if (k.includes('eur')) return 'pi pi-euro';
-      return 'pi pi-indian-rupee';
+      let sym = '';
+      if (entryData) {
+        const unit = (entryData['currency_unit'] || entryData['currency']) as string;
+        if (typeof unit === 'string' && unit.trim()) {
+          sym = getCurrencySymbol(unit.trim());
+        } else if (entryData['currency_symbol']) {
+          sym = String(entryData['currency_symbol']).trim();
+        } else if (entryData[fieldKey]) {
+          sym = getQuotationCurrencySymbol(entryData[fieldKey] as string | number);
+        } else if (entryData['quotation_value']) {
+          sym = getQuotationCurrencySymbol(entryData['quotation_value'] as string | number);
+        }
+      }
+      if (!sym) {
+        if (k.includes('eur')) sym = '€';
+        else if (k.includes('usd') || k.includes('dollar')) sym = '$';
+        else if (k.includes('gbp') || k.includes('pound')) sym = '£';
+        else sym = '₹';
+      }
+
+      if (sym === '$') return 'pi pi-dollar';
+      if (sym === '€') return 'pi pi-euro';
+      if (sym === '£') return 'pi pi-pound';
+      if (sym === '₹') return 'pi pi-indian-rupee';
+      return 'pi pi-money-bill';
     }
     if (k.includes('customer') || k.includes('client') || k.includes('org')) return 'pi pi-building';
     if (k.includes('supplier') || k.includes('vendor') || k.includes('delivery') || k.includes('transport') || k.includes('incoterm')) {
@@ -997,28 +1151,14 @@ export class ProjectFormEntries implements OnInit {
 
   getTableItems(entry: ProjectStep): Array<Record<string, unknown>> {
     let raw: Array<Record<string, unknown>> = [];
-    if (entry.data && typeof entry.data === 'object') {
-      if (Array.isArray(entry.data['items'])) {
-        raw = entry.data['items'] as Array<Record<string, unknown>>;
-      } else if (Array.isArray(entry.data['table_items'])) {
-        raw = entry.data['table_items'] as Array<Record<string, unknown>>;
-      } else if (Array.isArray(entry.data['materials'])) {
-        raw = entry.data['materials'] as Array<Record<string, unknown>>;
-      }
-    } else if (typeof entry.data === 'string') {
-      try {
-        const parsed = JSON.parse(entry.data);
-        if (parsed && typeof parsed === 'object') {
-          if (Array.isArray(parsed['items'])) {
-            raw = parsed['items'];
-          } else if (Array.isArray(parsed['table_items'])) {
-            raw = parsed['table_items'];
-          } else if (Array.isArray(parsed['materials'])) {
-            raw = parsed['materials'];
-          }
-        }
-      } catch {
-        // ignore JSON parse error
+    const data = this.getNormalizedEntryData(entry);
+    if (data) {
+      if (Array.isArray(data['items'])) {
+        raw = data['items'] as Array<Record<string, unknown>>;
+      } else if (Array.isArray(data['table_items'])) {
+        raw = data['table_items'] as Array<Record<string, unknown>>;
+      } else if (Array.isArray(data['materials'])) {
+        raw = data['materials'] as Array<Record<string, unknown>>;
       }
     }
 

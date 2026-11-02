@@ -40,10 +40,17 @@ import {
   FORM_CATALOG,
   FormDefinition,
   FormFieldDefinition,
+  FormTableColumn,
   getFormDefinition,
   LEGACY_STEP_TO_FORM_CODE,
 } from '../../../core/constants/form-catalog';
-import { SelectOption } from '../../../core/constants/dropdown-options.constant';
+import {
+  CURRENCY_OPTIONS,
+  CURRENCY_SYMBOLS,
+  getCurrencySymbol,
+  parseCurrencyAmount,
+  SelectOption,
+} from '../../../core/constants/dropdown-options.constant';
 import { StepRemarksComponent } from '../../../shared/components/step-remarks/step-remarks';
 import {
   formatLocalDate,
@@ -208,6 +215,44 @@ export class DynamicStepForm implements OnInit {
     const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
     return hasGstConfigured(def?.fields, formVals) || this.tableGstRate() > 0 || this.tableGstAmount() > 0;
   });
+
+  // ── Currency Selection & Dynamic Table Currency ─────────────────────
+  protected readonly currencyOptions = CURRENCY_OPTIONS;
+  protected readonly selectedCurrency = signal<string>('INR');
+  protected readonly selectedCurrencySymbol = computed(() => getCurrencySymbol(this.selectedCurrency()));
+
+  protected readonly tableCurrencySymbol = computed(() => {
+    this.formVersion();
+    const def = this.formDefinition();
+    const hasCurrencySelect = def?.fields.some((f) => this.isCurrencyWithSelect(f));
+    if (hasCurrencySelect) {
+      return this.selectedCurrencySymbol();
+    }
+    return '₹';
+  });
+
+  protected isCurrencyWithSelect(field: FormFieldDefinition): boolean {
+    return Boolean(field.hasCurrencySelect || field.key === 'quotation_value');
+  }
+
+  protected onCurrencyChange(newCurrency: string): void {
+    if (!newCurrency) return;
+    const clean = newCurrency.trim().toUpperCase();
+    this.selectedCurrency.set(clean);
+    const fg = this.formGroup();
+    if (fg) {
+      fg.get('currency_unit')?.setValue(clean, { emitEvent: false });
+      fg.get('currency_symbol')?.setValue(getCurrencySymbol(clean), { emitEvent: false });
+    }
+    this.formVersion.update((v) => v + 1);
+  }
+
+  protected getColumnLabel(col: FormTableColumn): string {
+    if (col.type === 'currency' && !col.label.includes('(')) {
+      return `${col.label} (${this.tableCurrencySymbol()})`;
+    }
+    return col.label;
+  }
 
   constructor() {
     effect(() => {
@@ -385,6 +430,24 @@ export class DynamicStepForm implements OnInit {
 
   private buildDynamicForm(def: FormDefinition, savedData: Record<string, unknown>): void {
     const controls: Record<string, FormControl> = {};
+    const hasCurrencySelectField = def.fields.some((f) => this.isCurrencyWithSelect(f));
+    let detectedCurrency = 'INR';
+
+    if (hasCurrencySelectField) {
+      const rawUnit = savedData['currency_unit'] || savedData['currency'];
+      const rawVal = savedData['quotation_value'];
+      if (typeof rawUnit === 'string' && rawUnit.trim()) {
+        detectedCurrency = rawUnit.trim().toUpperCase();
+      } else if (typeof rawVal === 'string' && rawVal.trim()) {
+        const parsed = parseCurrencyAmount(rawVal, 'INR');
+        if (parsed.currency) detectedCurrency = parsed.currency;
+      } else if (savedData['currency_symbol']) {
+        const sym = String(savedData['currency_symbol']).trim();
+        const found = Object.keys(CURRENCY_SYMBOLS).find((k) => CURRENCY_SYMBOLS[k] === sym);
+        if (found) detectedCurrency = found;
+      }
+      this.selectedCurrency.set(detectedCurrency);
+    }
 
     for (const field of def.fields) {
       let initialValue = savedData[field.key];
@@ -394,6 +457,10 @@ export class DynamicStepForm implements OnInit {
         (typeof initialValue === 'string' && !initialValue.trim())
       ) {
         initialValue = this.getDefaultFieldValue(field);
+      }
+      if (this.isCurrencyWithSelect(field) && typeof initialValue === 'string' && initialValue.trim()) {
+        const parsed = parseCurrencyAmount(initialValue, detectedCurrency);
+        initialValue = parsed.amount !== '' && !isNaN(Number(parsed.amount)) ? Number(parsed.amount) : parsed.amount;
       }
       if (field.type === 'multilocation') {
         if (Array.isArray(initialValue)) {
@@ -420,6 +487,11 @@ export class DynamicStepForm implements OnInit {
       controls[field.key] = new FormControl(initialValue, validators);
     }
 
+    if (hasCurrencySelectField) {
+      controls['currency_unit'] = new FormControl(detectedCurrency);
+      controls['currency_symbol'] = new FormControl(getCurrencySymbol(detectedCurrency));
+    }
+
     const group = new FormGroup(controls);
     this.formGroup.set(group);
     this.isFormInvalid?.set?.(group.invalid);
@@ -428,6 +500,17 @@ export class DynamicStepForm implements OnInit {
       this.isFormInvalid?.set?.(group.invalid);
       this.formVersion.update((v) => v + 1);
     });
+
+    if (hasCurrencySelectField) {
+      group.get('currency_unit')?.valueChanges?.subscribe((val) => {
+        if (val && typeof val === 'string' && val.trim().toUpperCase() !== this.selectedCurrency()) {
+          const code = val.trim().toUpperCase();
+          this.selectedCurrency.set(code);
+          group.get('currency_symbol')?.setValue(getCurrencySymbol(code), { emitEvent: false });
+          this.formVersion.update((v) => v + 1);
+        }
+      });
+    }
 
     // Build Table FormArray if configured
     if (def.tableConfig) {
@@ -591,6 +674,14 @@ export class DynamicStepForm implements OnInit {
 
     if (this.hasTableGst() && this.formGroup()?.get('gst_amount')) {
       this.formGroup().patchValue({ gst_amount: this.tableGstAmount() }, { emitEvent: false });
+    }
+
+    const qvCtrl = this.formGroup()?.get('quotation_value');
+    if (qvCtrl && (!qvCtrl.value || qvCtrl.pristine)) {
+      const totalAmt = this.hasTableGst() ? this.tableGrossTotalSum() : this.tableNetAmount();
+      if (totalAmt > 0) {
+        qvCtrl.setValue(totalAmt, { emitEvent: false });
+      }
     }
   }
 
@@ -756,6 +847,13 @@ export class DynamicStepForm implements OnInit {
       attachments_count: this.uploadedFiles().length,
       form_code: cur.form_code,
     };
+
+    if (def?.fields.some((f) => this.isCurrencyWithSelect(f))) {
+      const curVal = this.selectedCurrency();
+      combinedData['currency_unit'] = curVal;
+      combinedData['currency_symbol'] = getCurrencySymbol(curVal);
+      combinedData['currency'] = curVal;
+    }
 
     if (def?.tableConfig?.autoCalculateTotal) {
       const net =
