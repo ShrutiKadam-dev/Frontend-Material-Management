@@ -54,9 +54,18 @@ import {
   extractGstRate,
   getTableRowCellValue,
   hasGstConfigured,
+  isCustomerField,
+  isProjectTitleField,
+  isSupplierField,
   isTableRowEmpty,
   normalizeTableRow,
 } from '../../../../../core/utils/form.utils';
+import { Project } from '../../../../../core/models/project.model';
+import { Customer } from '../../../../../core/models/customer.model';
+import { Supplier } from '../../../../../core/models/supplier.model';
+import { ProjectService } from '../../../../../core/services/project';
+import { CustomerService } from '../../../../../core/services/customer';
+import { SupplierService } from '../../../../../core/services/supplier';
 
 @Component({
   selector: 'app-step-form-dialog',
@@ -80,6 +89,9 @@ import {
 export class StepFormDialog {
   private readonly formApiService = inject(FormApiService);
   private readonly messageService = inject(MessageService);
+  private readonly projectService = inject(ProjectService, { optional: true });
+  private readonly customerService = inject(CustomerService, { optional: true });
+  private readonly supplierService = inject(SupplierService, { optional: true });
 
   // ── Inputs & Two-Way Model ──────────────────────────────────────────
   readonly visible = model<boolean>(false);
@@ -90,6 +102,29 @@ export class StepFormDialog {
   readonly projectTitle = input<string>('');
   readonly customerName = input<string>('');
   readonly supplierName = input<string>('');
+
+  // ── Fallback Metadata State (when inputs are not provided) ──────────
+  readonly fallbackProject = signal<Project | null>(null);
+  readonly fallbackCustomer = signal<Customer | null>(null);
+  readonly fallbackSupplier = signal<Supplier | null>(null);
+
+  readonly effectiveProjectTitle = computed(
+    () => this.projectTitle() || this.fallbackProject()?.project_title || '',
+  );
+  readonly effectiveCustomerName = computed(
+    () =>
+      this.customerName() ||
+      this.fallbackCustomer()?.name ||
+      this.fallbackProject()?.customer_name ||
+      '',
+  );
+  readonly effectiveSupplierName = computed(
+    () =>
+      this.supplierName() ||
+      this.fallbackSupplier()?.name ||
+      this.fallbackProject()?.supplier_name ||
+      '',
+  );
 
   // ── Outputs ─────────────────────────────────────────────────────────
   readonly stepSaved = output<ProjectStep>();
@@ -206,11 +241,47 @@ export class StepFormDialog {
         this.deleteConfirmVisible.set(false);
       }
     });
+
+    // Reactive auto-prefill for Customer, Supplier, and Project Title
+    effect(() => {
+      const pTitle = this.effectiveProjectTitle ? this.effectiveProjectTitle() : '';
+      const cName = this.effectiveCustomerName ? this.effectiveCustomerName() : '';
+      const sName = this.effectiveSupplierName ? this.effectiveSupplierName() : '';
+      const fg = this.formGroup ? this.formGroup() : null;
+      if (!fg) return;
+
+      if (pTitle) {
+        for (const [key, ctrl] of Object.entries(fg.controls)) {
+          if (isProjectTitleField(key) && (!ctrl.value || !String(ctrl.value).trim())) {
+            ctrl.setValue(pTitle);
+          }
+        }
+      }
+
+      if (cName) {
+        for (const [key, ctrl] of Object.entries(fg.controls)) {
+          if (isCustomerField(key) && (!ctrl.value || !String(ctrl.value).trim())) {
+            ctrl.setValue(cName);
+          }
+        }
+      }
+
+      if (sName) {
+        for (const [key, ctrl] of Object.entries(fg.controls)) {
+          if (isSupplierField(key) && (!ctrl.value || !String(ctrl.value).trim())) {
+            ctrl.setValue(sName);
+          }
+        }
+      }
+    });
   }
 
   private initializeModal(step: ProjectStep | null, defInput: FormDefinition | null): void {
     this.activeTab.set('fields');
     this.newRemarkInput.set('');
+
+    const pId = this.projectId();
+    this.ensureProjectMetadata(pId);
 
     if (step) {
       // ── EDIT MODE (GET latest step data & prefill) ─────────────────
@@ -282,6 +353,55 @@ export class StepFormDialog {
     }
   }
 
+  private ensureProjectMetadata(pId: number): void {
+    if (!pId || !this.projectService) return;
+    const hasProjTitle = Boolean(this.projectTitle && this.projectTitle());
+    const hasCustName = Boolean(this.customerName && this.customerName());
+    const hasSuppName = Boolean(this.supplierName && this.supplierName());
+    if (hasProjTitle && hasCustName && hasSuppName) return;
+
+    this.projectService.getProjectById(pId).subscribe({
+      next: (p) => {
+        this.fallbackProject.set(p);
+        if (p.customer_id && !hasCustName && this.customerService) {
+          this.customerService.getCustomerById(p.customer_id).subscribe({
+            next: (c) => this.fallbackCustomer.set(c),
+            error: () => {},
+          });
+        }
+        if (p.supplier_id && !hasSuppName && this.supplierService) {
+          this.supplierService.getSupplierById(p.supplier_id).subscribe({
+            next: (s) => this.fallbackSupplier.set(s),
+            error: () => {},
+          });
+        }
+      },
+      error: () => {
+        this.projectService?.getProjects().subscribe({
+          next: (all) => {
+            const match = all.find((item) => item.id === pId);
+            if (match) {
+              this.fallbackProject.set(match);
+              if (match.customer_id && !hasCustName && this.customerService) {
+                this.customerService.getCustomerById(match.customer_id).subscribe({
+                  next: (c) => this.fallbackCustomer.set(c),
+                  error: () => {},
+                });
+              }
+              if (match.supplier_id && !hasSuppName && this.supplierService) {
+                this.supplierService.getSupplierById(match.supplier_id).subscribe({
+                  next: (s) => this.fallbackSupplier.set(s),
+                  error: () => {},
+                });
+              }
+            }
+          },
+          error: () => {},
+        });
+      },
+    });
+  }
+
   private populateForm(
     def: FormDefinition,
     savedData: Record<string, unknown>,
@@ -291,7 +411,11 @@ export class StepFormDialog {
     const controls: Record<string, FormControl> = {};
     for (const field of def.fields) {
       let initialVal = savedData[field.key];
-      if (initialVal === undefined || initialVal === null) {
+      if (
+        initialVal === undefined ||
+        initialVal === null ||
+        (typeof initialVal === 'string' && !initialVal.trim())
+      ) {
         initialVal = this.getDefaultFieldValue(field);
       }
       if (field.type === 'multilocation') {
@@ -398,6 +522,30 @@ export class StepFormDialog {
   }
 
   private getDefaultFieldValue(field: FormFieldDefinition): unknown {
+    if (isCustomerField(field.key)) {
+      const cust = this.effectiveCustomerName
+        ? this.effectiveCustomerName()
+        : this.customerName
+          ? this.customerName()
+          : '';
+      if (cust) return cust;
+    }
+    if (isSupplierField(field.key)) {
+      const supp = this.effectiveSupplierName
+        ? this.effectiveSupplierName()
+        : this.supplierName
+          ? this.supplierName()
+          : '';
+      if (supp) return supp;
+    }
+    if (isProjectTitleField(field.key)) {
+      const proj = this.effectiveProjectTitle
+        ? this.effectiveProjectTitle()
+        : this.projectTitle
+          ? this.projectTitle()
+          : '';
+      if (proj) return proj;
+    }
     if (field.type === 'number' || field.type === 'currency') return null;
     if (field.type === 'date' || field.type === 'datetime') return null;
     if (field.type === 'multilocation') return [];

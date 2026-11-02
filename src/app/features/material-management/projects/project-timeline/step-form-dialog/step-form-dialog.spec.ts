@@ -611,6 +611,89 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(firstRow.get('quantity')?.value).toBe(20);
       expect(firstRow.get('id')?.value).toBe(42);
     });
+
+    it('should prefill customer_name, supplier_name, and project_title when filling a new form entry', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.formGroup = { set: vi.fn() };
+      comp.tableFormArray = Object.assign(() => new FormArray([]), { set: vi.fn() });
+      comp.uploadedFiles = { set: vi.fn(), length: 0 };
+      comp.stepRemarks = { set: vi.fn() };
+      comp.effectiveCustomerName = () => 'Acme Infrastructure';
+      comp.effectiveSupplierName = () => 'Steel Authority Global';
+      comp.effectiveProjectTitle = () => 'Substation Expansion Project';
+      comp.getDefaultFieldValue = StepFormDialog.prototype['getDefaultFieldValue'];
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+
+      const testFormDef: FormDefinition = {
+        id: 99,
+        formCode: 'FORM_TEST_PREFILL',
+        name: 'Test Form with Prefilled Parties',
+        category: 'Customer & Supplier Settlement',
+        phaseId: 'phase-2',
+        icon: 'pi pi-file',
+        description: 'Test prefill fields',
+        fields: [
+          { key: 'customer_name', label: 'Customer Name', type: 'text', required: true },
+          { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true },
+          { key: 'project_title', label: 'Project Title', type: 'text', required: true },
+        ],
+        uploads: [],
+      };
+
+      // Empty savedData as in ADD MODE
+      (comp as any).populateForm(testFormDef, {}, []);
+
+      expect(comp.formGroup.set).toHaveBeenCalled();
+      const fg: FormGroup = comp.formGroup.set.mock.calls[0][0];
+      expect(fg.get('customer_name')?.value).toBe('Acme Infrastructure');
+      expect(fg.get('supplier_name')?.value).toBe('Steel Authority Global');
+      expect(fg.get('project_title')?.value).toBe('Substation Expansion Project');
+    });
+
+    it('should retain existing savedData when editing and only prefill blank fields', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.formGroup = { set: vi.fn() };
+      comp.tableFormArray = Object.assign(() => new FormArray([]), { set: vi.fn() });
+      comp.uploadedFiles = { set: vi.fn(), length: 0 };
+      comp.stepRemarks = { set: vi.fn() };
+      comp.effectiveCustomerName = () => 'Acme Infrastructure';
+      comp.effectiveSupplierName = () => 'Steel Authority Global';
+      comp.effectiveProjectTitle = () => 'Substation Expansion Project';
+      comp.getDefaultFieldValue = StepFormDialog.prototype['getDefaultFieldValue'];
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+
+      const testFormDef: FormDefinition = {
+        id: 99,
+        formCode: 'FORM_TEST_PREFILL',
+        name: 'Test Form with Prefilled Parties',
+        category: 'Customer & Supplier Settlement',
+        phaseId: 'phase-2',
+        icon: 'pi pi-file',
+        description: 'Test prefill fields',
+        fields: [
+          { key: 'customer_name', label: 'Customer Name', type: 'text', required: true },
+          { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true },
+          { key: 'project_title', label: 'Project Title', type: 'text', required: true },
+        ],
+        uploads: [],
+      };
+
+      // Existing savedData has a custom supplier, but empty customer_name and missing project_title
+      const savedData = {
+        supplier_name: 'Custom Fabricator Ltd',
+        customer_name: '',
+      };
+
+      (comp as any).populateForm(testFormDef, savedData, []);
+
+      expect(comp.formGroup.set).toHaveBeenCalled();
+      const fg: FormGroup = comp.formGroup.set.mock.calls[0][0];
+      // Should retain custom supplier
+      expect(fg.get('supplier_name')?.value).toBe('Custom Fabricator Ltd');
+      // Should prefill empty customer_name and missing project_title
+      expect(fg.get('customer_name')?.value).toBe('Acme Infrastructure');
+      expect(fg.get('project_title')?.value).toBe('Substation Expansion Project');
+    });
   });
 
   describe('Form Dialog Button Disabled Validation', () => {

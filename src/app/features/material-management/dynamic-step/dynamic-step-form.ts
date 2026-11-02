@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   inject,
   OnInit,
   signal,
@@ -57,6 +58,9 @@ import {
   extractGstRate,
   getTableRowCellValue,
   hasGstConfigured,
+  isCustomerField,
+  isProjectTitleField,
+  isSupplierField,
   isTableRowEmpty,
   normalizeTableRow,
 } from '../../../core/utils/form.utils';
@@ -205,6 +209,44 @@ export class DynamicStepForm implements OnInit {
     return hasGstConfigured(def?.fields, formVals) || this.tableGstRate() > 0 || this.tableGstAmount() > 0;
   });
 
+  constructor() {
+    effect(() => {
+      const p = this.project();
+      const c = this.customer();
+      const s = this.supplier();
+      const fg = this.formGroup();
+      if (!fg) return;
+
+      const pTitle = p?.project_title || '';
+      const cName = c?.name || p?.customer_name || '';
+      const sName = s?.name || p?.supplier_name || '';
+
+      if (pTitle) {
+        for (const [key, ctrl] of Object.entries(fg.controls)) {
+          if (isProjectTitleField(key) && (!ctrl.value || !String(ctrl.value).trim())) {
+            ctrl.setValue(pTitle);
+          }
+        }
+      }
+
+      if (cName) {
+        for (const [key, ctrl] of Object.entries(fg.controls)) {
+          if (isCustomerField(key) && (!ctrl.value || !String(ctrl.value).trim())) {
+            ctrl.setValue(cName);
+          }
+        }
+      }
+
+      if (sName) {
+        for (const [key, ctrl] of Object.entries(fg.controls)) {
+          if (isSupplierField(key) && (!ctrl.value || !String(ctrl.value).trim())) {
+            ctrl.setValue(sName);
+          }
+        }
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.destroyRef?.onDestroy(() => {
       this.formStatusSub?.unsubscribe();
@@ -235,11 +277,40 @@ export class DynamicStepForm implements OnInit {
       next: (p) => {
         this.project.set(p);
         if (p.customer_id) {
-          this.customerService.getCustomerById(p.customer_id).subscribe((c) => this.customer.set(c));
+          this.customerService.getCustomerById(p.customer_id).subscribe({
+            next: (c) => this.customer.set(c),
+            error: () => {},
+          });
         }
         if (p.supplier_id) {
-          this.supplierService.getSupplierById(p.supplier_id).subscribe((s) => this.supplier.set(s));
+          this.supplierService.getSupplierById(p.supplier_id).subscribe({
+            next: (s) => this.supplier.set(s),
+            error: () => {},
+          });
         }
+      },
+      error: () => {
+        this.projectService.getProjects().subscribe({
+          next: (all) => {
+            const match = all.find((item) => item.id === pId);
+            if (match) {
+              this.project.set(match);
+              if (match.customer_id) {
+                this.customerService.getCustomerById(match.customer_id).subscribe({
+                  next: (c) => this.customer.set(c),
+                  error: () => {},
+                });
+              }
+              if (match.supplier_id) {
+                this.supplierService.getSupplierById(match.supplier_id).subscribe({
+                  next: (s) => this.supplier.set(s),
+                  error: () => {},
+                });
+              }
+            }
+          },
+          error: () => {},
+        });
       },
     });
 
@@ -317,7 +388,11 @@ export class DynamicStepForm implements OnInit {
 
     for (const field of def.fields) {
       let initialValue = savedData[field.key];
-      if (initialValue === undefined || initialValue === null) {
+      if (
+        initialValue === undefined ||
+        initialValue === null ||
+        (typeof initialValue === 'string' && !initialValue.trim())
+      ) {
         initialValue = this.getDefaultFieldValue(field);
       }
       if (field.type === 'multilocation') {
@@ -381,6 +456,18 @@ export class DynamicStepForm implements OnInit {
   }
 
   private getDefaultFieldValue(field: FormFieldDefinition): unknown {
+    if (isCustomerField(field.key)) {
+      const c = this.customer()?.name || this.project()?.customer_name || '';
+      if (c) return c;
+    }
+    if (isSupplierField(field.key)) {
+      const s = this.supplier()?.name || this.project()?.supplier_name || '';
+      if (s) return s;
+    }
+    if (isProjectTitleField(field.key)) {
+      const p = this.project()?.project_title || '';
+      if (p) return p;
+    }
     if (field.type === 'number' || field.type === 'currency') return null;
     if (field.type === 'date' || field.type === 'datetime') return null;
     if (field.type === 'multilocation') return [];

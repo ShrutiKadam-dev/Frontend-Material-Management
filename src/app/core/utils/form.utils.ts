@@ -289,3 +289,31 @@ export function calculateTableTotalsWithGst(
   };
 }
 
+/**
+ * Checks whether a given field key represents a customer field.
+ */
+export function isCustomerField(key?: string | null): boolean {
+  if (!key) return false;
+  const k = key.toLowerCase();
+  return k === 'customer_name';
+}
+
+/**
+ * Checks whether a given field key represents a supplier field.
+ */
+export function isSupplierField(key?: string | null): boolean {
+  if (!key) return false;
+  const k = key.toLowerCase();
+  return k === 'supplier_name';
+}
+
+/**
+ * Checks whether a given field key represents a project title field.
+ */
+export function isProjectTitleField(key?: string | null): boolean {
+  if (!key) return false;
+  const k = key.toLowerCase();
+  return k === 'project_title';
+}
+
+

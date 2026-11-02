@@ -4,6 +4,9 @@ import {
   calculateTableTotalsWithGst,
   extractGstRate,
   getTableRowCellValue,
+  isCustomerField,
+  isProjectTitleField,
+  isSupplierField,
   isTableRowEmpty,
   normalizeTableRow,
 } from './form.utils';
@@ -173,6 +176,39 @@ describe('form.utils', () => {
       expect(result.gst_amount).toBe(0);
       expect(result.total_gross_amount).toBe(1000);
       expect(result.has_gst).toBe(false);
+    });
+  });
+
+  describe('Field Key Matchers', () => {
+    it('isCustomerField should match customer-related keys', () => {
+      expect(isCustomerField('customer_name')).toBe(true);
+      expect(isCustomerField('customer')).toBe(true);
+      expect(isCustomerField('client_name')).toBe(true);
+      expect(isCustomerField('CUSTOMER_NAME')).toBe(true);
+      expect(isCustomerField('supplier_name')).toBe(false);
+      expect(isCustomerField('project_title')).toBe(false);
+      expect(isCustomerField('')).toBe(false);
+      expect(isCustomerField(null)).toBe(false);
+    });
+
+    it('isSupplierField should match supplier-related keys', () => {
+      expect(isSupplierField('supplier_name')).toBe(true);
+      expect(isSupplierField('supplier')).toBe(true);
+      expect(isSupplierField('vendor_name')).toBe(true);
+      expect(isSupplierField('SUPPLIER_NAME')).toBe(true);
+      expect(isSupplierField('customer_name')).toBe(false);
+      expect(isSupplierField('')).toBe(false);
+      expect(isSupplierField(null)).toBe(false);
+    });
+
+    it('isProjectTitleField should match project title keys', () => {
+      expect(isProjectTitleField('project_title')).toBe(true);
+      expect(isProjectTitleField('project_name')).toBe(true);
+      expect(isProjectTitleField('PROJECT_TITLE')).toBe(true);
+      expect(isProjectTitleField('tender_title')).toBe(false);
+      expect(isProjectTitleField('pqb_title')).toBe(false);
+      expect(isProjectTitleField('')).toBe(false);
+      expect(isProjectTitleField(null)).toBe(false);
     });
   });
 });
