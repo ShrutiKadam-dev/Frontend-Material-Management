@@ -421,27 +421,7 @@ export class StepFormDialog {
         }
       },
       error: () => {
-        this.projectService?.getProjects().subscribe({
-          next: (all) => {
-            const match = all.find((item) => item.id === pId);
-            if (match) {
-              this.fallbackProject.set(match);
-              if (match.customer_id && !hasCustName && this.customerService) {
-                this.customerService.getCustomerById(match.customer_id).subscribe({
-                  next: (c) => this.fallbackCustomer.set(c),
-                  error: () => {},
-                });
-              }
-              if (match.supplier_id && !hasSuppName && this.supplierService) {
-                this.supplierService.getSupplierById(match.supplier_id).subscribe({
-                  next: (s) => this.fallbackSupplier.set(s),
-                  error: () => {},
-                });
-              }
-            }
-          },
-          error: () => {},
-        });
+        // Fallback gracefully without loading entire project list
       },
     });
   }

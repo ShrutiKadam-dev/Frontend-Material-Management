@@ -180,5 +180,45 @@ describe('ProjectTimeline getStepDate', () => {
     expect(phase5.id).toBe('phase-5');
     expect(phase5.shortTitle).toBe('Phase 5: Settlement');
   });
-});
 
+  it('should extract customer query badge from step data without extra api calls', () => {
+    const step: ProjectStep = {
+      id: 1,
+      project_id: 22,
+      step_number: 1,
+      form_code: 'FORM_08_CUSTOMER_QUERY',
+      step_name: 'Customer Query',
+      description: 'Customer inquiry',
+      status: 'completed',
+      progress_percentage: 100,
+      completed_at: '2026-10-31T00:00:00',
+      data: {
+        query_count: 1,
+      },
+    };
+
+    const badges = (component as any).getStepDataBadges(step);
+    expect(badges).toHaveLength(1);
+    expect(badges[0]).toEqual({ icon: 'pi pi-file-edit', label: '1 Query' });
+  });
+
+  it('should extract customer query date from step data qo_date if not completed', () => {
+    const step: ProjectStep = {
+      id: 1,
+      project_id: 22,
+      step_number: 1,
+      form_code: 'FORM_08_CUSTOMER_QUERY',
+      step_name: 'Customer Query',
+      description: 'Customer inquiry',
+      status: 'in_progress',
+      progress_percentage: 50,
+      completed_at: null,
+      data: {
+        qo_date: '2026-10-31',
+      },
+    };
+
+    const res = (component as any).getStepDate(step);
+    expect(res).toEqual({ label: 'Date', date: '31-10-2026' });
+  });
+});

@@ -38,6 +38,8 @@ import {
 import { CustomerService } from '../../../core/services/customer';
 import { SupplierService } from '../../../core/services/supplier';
 import { ProjectService } from '../../../core/services/project';
+import { ProjectStepService } from '../../../core/services/project-step';
+import { ProjectStep } from '../../../core/models/project-step.model';
 
 import { AppDatePipe } from '../../../core/pipes/app-date.pipe';
 
@@ -69,6 +71,7 @@ export class Projects implements OnInit {
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly messageService = inject(MessageService);
+  private readonly projectStepService = inject(ProjectStepService);
 
   // ── State Signals ──────────────────────────────────────────────
   protected readonly masterProjects = signal<Project[]>([]);
@@ -247,18 +250,152 @@ export class Projects implements OnInit {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (data) => {
+          for (const p of data) {
+            if (!p.current_step_date && !p.step_date && p.target_delivery_date) {
+              p.current_step_date = p.target_delivery_date;
+              p.current_step_date_label = 'Delivery Date';
+            }
+          }
           this.masterProjects.set(data);
           if (this.searchQuery().trim()) {
             this.searchSubject.next(this.searchQuery());
           } else {
             this.projects.set(data);
           }
+          this.enrichProjectStepDates(data);
         },
         error: (err: unknown) => {
           console.error('Failed to load projects', err);
           this.error.set('Failed to load projects. Please verify backend connection and try again.');
         },
       });
+  }
+
+  private enrichProjectStepDates(projectsList: Project[]): void {
+    for (const p of projectsList) {
+      if (p.current_step_date || p.step_date) continue;
+      if (!p.total_steps || p.total_steps === 0) continue;
+
+      this.projectStepService.getSteps(p.id).subscribe({
+        next: (steps) => {
+          if (!steps || !steps.length) return;
+          const resolved = this.extractStepDateFromSteps(steps);
+          if (resolved) {
+            p.current_step_date = resolved.date;
+            p.current_step_date_label = resolved.label;
+            p.step_date = resolved.date;
+            p.step_date_label = resolved.label;
+            this.projects.update((list) => [...list]);
+            this.masterProjects.update((list) => [...list]);
+          }
+        },
+        error: () => {},
+      });
+    }
+  }
+
+  private extractStepDateFromSteps(steps: ProjectStep[]): { date: string; label: string } | null {
+    const sorted = [...steps].sort((a, b) => {
+      const getRank = (s: ProjectStep) => (s.status === 'in_progress' ? 0 : s.status === 'completed' ? 1 : 2);
+      const rankDiff = getRank(a) - getRank(b);
+      if (rankDiff !== 0) return rankDiff;
+      return (b.id ?? 0) - (a.id ?? 0);
+    });
+
+    const priorityPairs: [string, string][] = [
+      ['delivery_date', 'Delivery Date'],
+      ['expected_delivery_date', 'Delivery Date'],
+      ['target_delivery_date', 'Delivery Date'],
+      ['po_date', 'PO Date'],
+      ['order_confirmation_date', 'Confirmation Date'],
+      ['invoice_date', 'Invoice Date'],
+      ['due_date', 'Due Date'],
+      ['delivery_challan_date', 'Challan Date'],
+      ['challan_date', 'Challan Date'],
+      ['packing_list_date', 'Packing List Date'],
+      ['payment_date', 'Payment Date'],
+      ['certificate_date', 'Warranty Date'],
+      ['boe_date', 'BOE Date'],
+      ['bill_of_entry_date', 'BOE Date'],
+      ['duty_paid_date', 'Duty Paid Date'],
+      ['dispatch_date', 'Dispatch Date'],
+      ['eway_bill_date', 'E-Way Date'],
+      ['bid_submission_date', 'Submission Date'],
+      ['submission_date', 'Submission Date'],
+      ['closing_date_time', 'Closing Date'],
+      ['closing_date', 'Closing Date'],
+      ['submission_deadline', 'Due Date'],
+      ['pqb_closing_date_time', 'PQB Closed'],
+      ['pqb_closing_date', 'PQB Closed'],
+      ['tender_date', 'Tender Date'],
+      ['tender_issue_date', 'Tender Date'],
+      ['pqb_issuing_date', 'PQB Issue Date'],
+      ['quotation_date', 'Quotation Date'],
+      ['quote_date', 'Quotation Date'],
+      ['cost_sheet_date', 'Cost Sheet Date'],
+      ['effective_date', 'Cost Sheet Date'],
+      ['quotation_requested_date', 'RFQ Date'],
+      ['rfq_date', 'RFQ Date'],
+      ['qo_date', 'Query Date'],
+      ['query_date', 'Query Date'],
+      ['date', 'Step Date'],
+    ];
+
+    for (const step of sorted) {
+      let d: Record<string, unknown> | null = null;
+      if (step.data) {
+        if (typeof step.data === 'object' && !Array.isArray(step.data)) {
+          d = step.data as Record<string, unknown>;
+        } else if (typeof step.data === 'string') {
+          try {
+            const parsed = JSON.parse(step.data);
+            if (parsed && typeof parsed === 'object') d = parsed as Record<string, unknown>;
+          } catch {
+            d = null;
+          }
+        }
+      }
+
+      if (d) {
+        for (const [key, fallbackLabel] of priorityPairs) {
+          const val = d[key];
+          if (val && typeof val === 'string' && val.trim() && val !== 'null' && val !== 'undefined') {
+            const label = this.resolveStepLabelFromStep(step, fallbackLabel);
+            return { date: val.trim(), label };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  private resolveStepLabelFromStep(step: ProjectStep, fallbackLabel: string): string {
+    const code = (step.form_code || '').toUpperCase();
+    const name = (step.step_name || '').toLowerCase();
+
+    if (code.includes('CORRIGENDUM') || name.includes('corrigendum')) return 'Issue Date';
+    if (code.includes('PQB') || name.includes('pqb') || name.includes('pre-qualification')) return 'PQB Closed';
+    if (code.includes('QUERY') || name.includes('query')) return 'Query Date';
+    if (code.includes('RFQ') || name.includes('rfq')) return 'RFQ Date';
+    if (code.includes('QUOTATION') || name.includes('quotation')) return 'Quotation Date';
+    if (code.includes('COST_SHEET') || name.includes('cost sheet')) return 'Cost Sheet Date';
+    if (code.includes('TENDER') || name.includes('tender')) return 'Closing Date';
+    if (code.includes('BID') || name.includes('bid')) return 'Submission Date';
+    if (code.includes('PURCHASE_ORDER') || name.includes('po') || name.includes('purchase order')) {
+      return fallbackLabel === 'Delivery Date' ? 'Delivery Date' : 'PO Date';
+    }
+    if (code.includes('ORDER_CONFIRMATION') || name.includes('order confirmation')) return 'Confirmation Date';
+    if (code.includes('INVOICE') || name.includes('invoice')) {
+      return fallbackLabel === 'Due Date' ? 'Due Date' : 'Invoice Date';
+    }
+    if (code.includes('CHALLAN') || name.includes('challan')) return 'Challan Date';
+    if (code.includes('PACKING') || name.includes('packing')) return 'Packing List Date';
+    if (code.includes('PAYMENT') || name.includes('payment')) return 'Payment Date';
+    if (code.includes('WARRANTY') || name.includes('warranty')) return 'Warranty Date';
+    if (code.includes('EWAY') || name.includes('eway') || name.includes('e-way')) return 'E-Way Date';
+    if (code.includes('FREIGHT') || code.includes('CHA') || name.includes('cha') || name.includes('freight')) return 'Duty Paid Date';
+    if (code.includes('SHIPPING') || code.includes('CLEARANCE') || name.includes('clearance') || name.includes('boe')) return 'BOE Date';
+    return fallbackLabel;
   }
 
   protected setFilter(filter: HealthFilter): void {
@@ -308,10 +445,51 @@ export class Projects implements OnInit {
   protected getFormsCountLabel(p: Project): string {
     const total = p.total_steps ?? 0;
     if (total === 0) {
-      return '0 forms attached';
+      return 'No forms attached';
     }
-    const completed = p.completed_steps_count ?? (this.getProgressPercent(p) >= 100 ? total : 0);
-    return `${completed} of ${total} ${total === 1 ? 'form' : 'forms'} done`;
+    const completed = p.completed_steps_count ?? ((p.progress_percentage ?? 0) >= 100 ? total : 0);
+    return `${completed} of ${total} completed`;
+  }
+
+  protected getStepDate(p: Project): string | null {
+    return p.current_step_date || p.step_date || p.target_delivery_date || null;
+  }
+
+  protected getStepDateLabel(p: Project): string {
+    if (p.current_step_date_label) {
+      return p.current_step_date_label;
+    }
+    if (p.step_date_label) {
+      return p.step_date_label;
+    }
+    if (!p.current_step_date && !p.step_date && p.target_delivery_date) {
+      return 'Delivery Date';
+    }
+    const code = (p.current_form_code || '').toUpperCase();
+    const name = (p.current_step_name || '').toLowerCase();
+
+    if (code.includes('CORRIGENDUM') || name.includes('corrigendum')) return 'Issue Date';
+    if (code.includes('PQB') || name.includes('pqb') || name.includes('pre-qualification')) return 'PQB Closed';
+    if (code.includes('QUERY') || name.includes('query')) return 'Query Date';
+    if (code.includes('RFQ') || name.includes('rfq')) return 'RFQ Date';
+    if (code.includes('QUOTATION') || name.includes('quotation')) return 'Quotation Date';
+    if (code.includes('COST_SHEET') || name.includes('cost sheet')) return 'Cost Sheet Date';
+    if (code.includes('TENDER') || name.includes('tender')) return 'Closing Date';
+    if (code.includes('BID') || name.includes('bid')) return 'Submission Date';
+    if (code.includes('PURCHASE_ORDER') || name.includes('po') || name.includes('purchase order')) return 'PO Date';
+    if (code.includes('ORDER_CONFIRMATION') || name.includes('order confirmation')) return 'Confirmation Date';
+    if (code.includes('INVOICE') || name.includes('invoice')) return 'Invoice Date';
+    if (code.includes('CHALLAN') || name.includes('challan')) return 'Challan Date';
+    if (code.includes('PACKING') || name.includes('packing')) return 'Packing List Date';
+    if (code.includes('PAYMENT') || name.includes('payment')) return 'Payment Date';
+    if (code.includes('WARRANTY') || name.includes('warranty')) return 'Warranty Date';
+    if (code.includes('EWAY') || name.includes('eway') || name.includes('e-way')) return 'E-Way Date';
+    if (code.includes('FREIGHT') || code.includes('CHA') || name.includes('cha') || name.includes('freight')) return 'Duty Paid Date';
+    if (code.includes('SHIPPING') || code.includes('CLEARANCE') || name.includes('clearance') || name.includes('boe')) return 'BOE Date';
+    if (code.includes('TRANSPORT') || name.includes('transport') || name.includes('dispatch')) return 'Dispatch Date';
+    if (code.includes('NAC') || name.includes('award') || name.includes('nac')) return 'Award Date';
+    if (code.includes('LTE') || code.includes('EOI') || name.includes('lte') || name.includes('eoi')) return 'Closing Date';
+    return 'Step Date';
   }
 
   protected openAddDialog(): void {

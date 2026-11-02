@@ -14,12 +14,12 @@ import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
 
+import { catchError, finalize, forkJoin, of } from 'rxjs';
+
 import { ProjectStepService } from '../../../../core/services/project-step';
 import { ProjectService } from '../../../../core/services/project';
 import { CustomerService } from '../../../../core/services/customer';
 import { SupplierService } from '../../../../core/services/supplier';
-import { CustomerQueryService } from '../../../../core/services/customer-query';
-import { CustomerQuery } from '../../../../core/models/customer-query.model';
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../../../../core/models/project-step.model';
 import { Project } from '../../../../core/models/project.model';
 import { Customer } from '../../../../core/models/customer.model';
@@ -119,13 +119,14 @@ export class ProjectTimeline implements OnInit {
   private readonly projectService = inject(ProjectService);
   private readonly customerService = inject(CustomerService);
   private readonly supplierService = inject(SupplierService);
-  private readonly customerQueryService = inject(CustomerQueryService);
   private readonly messageService = inject(MessageService, { optional: true });
+
+  // Guard flag to prevent duplicate in-flight requests
+  private isFetchingData = false;
 
   // ── Core Data Signals ──────────────────────────────────────────────
   protected readonly project = signal<Project | null>(null);
   protected readonly steps = signal<ProjectStep[]>([]);
-  protected readonly customerQueries = signal<CustomerQuery[]>([]);
   protected readonly customer = signal<Customer | null>(null);
   protected readonly supplier = signal<Supplier | null>(null);
   protected readonly loading = signal(true);
@@ -333,6 +334,10 @@ export class ProjectTimeline implements OnInit {
   }
 
   protected loadProjectAndSteps(): void {
+    if (this.isFetchingData) {
+      return;
+    }
+
     const id = Number(this.route.snapshot.paramMap.get('projectId'));
     if (!id) {
       this.error.set('Invalid project ID.');
@@ -340,81 +345,54 @@ export class ProjectTimeline implements OnInit {
       return;
     }
 
+    this.isFetchingData = true;
     this.loading.set(true);
     this.error.set(null);
 
-    this.projectService.getProjectById(id).subscribe({
-      next: (p) => {
-        this.project.set(p);
-        this.loadCustomerAndSupplier(p);
-
-        // Enrich total_value and metadata from /api/v1/projects
-        this.projectService.getProjects().subscribe({
-          next: (allProjects) => {
-            const match = allProjects.find((item) => item.id === id);
-            if (match) {
-              this.project.update((cur) => {
-                if (!cur) return match;
-                return {
-                  ...cur,
-                  total_value: match.total_value !== undefined && match.total_value !== null ? Number(match.total_value) : cur.total_value,
-                  total_margin: match.total_margin !== undefined && match.total_margin !== null ? Number(match.total_margin) : cur.total_margin,
-                  currency: match.currency || cur.currency || 'INR',
-                  created_at: cur.created_at || match.created_at,
-                  updated_at: match.updated_at || cur.updated_at,
-                  customer_name: match.customer_name || cur.customer_name,
-                  supplier_name: match.supplier_name || cur.supplier_name,
-                };
-              });
-            }
-          },
-          error: () => { },
-        });
-      },
-      error: () => {
-        // Fallback to fetch from list if direct by-id endpoint fails
-        this.projectService.getProjects().subscribe({
-          next: (allProjects) => {
-            const match = allProjects.find((item) => item.id === id);
-            if (match) {
-              this.project.set(match);
-              this.loadCustomerAndSupplier(match);
-            }
-          },
-          error: () => { },
-        });
-      },
-    });
-
-    this.projectStepService.getSteps(id).subscribe({
-      next: (data) => {
-        this.steps.set(data);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set('Failed to load project steps. Please verify backend connection.');
-        this.loading.set(false);
-      },
-    });
-
-    this.customerQueryService.getByProject(id).subscribe({
-      next: (data) => {
-        this.customerQueries.set(data || []);
-      },
-      error: () => {
-        // Fallback gracefully
-      },
-    });
+    // Clean, production-ready architecture:
+    // 1. Fetch only this specific project: GET /api/v1/projects/:id
+    // 2. Fetch the project pipeline steps: GET /api/v1/projects/:id/steps
+    // No redundant calls to GET /api/v1/projects (loading all projects)
+    // No separate ad-hoc calls to GET /api/v1/customer-queries (all step info lives on step.data)
+    forkJoin({
+      project: this.projectService.getProjectById(id).pipe(
+        catchError(() => of(null)),
+      ),
+      steps: this.projectStepService.getSteps(id).pipe(
+        catchError(() => of([] as ProjectStep[])),
+      ),
+    })
+      .pipe(
+        finalize(() => {
+          this.loading.set(false);
+          this.isFetchingData = false;
+        }),
+      )
+      .subscribe({
+        next: ({ project, steps }) => {
+          if (!project) {
+            this.error.set('Failed to load project details.');
+            return;
+          }
+          this.project.set(project);
+          this.steps.set(steps || []);
+          this.loadCustomerAndSupplier(project);
+        },
+        error: () => {
+          this.error.set('Failed to load project pipeline. Please verify backend connection.');
+        },
+      });
   }
 
   private loadCustomerAndSupplier(p: Project): void {
-    if (p.customer_id) {
+    // If project already contains customer_name & supplier_name, don't make redundant API calls
+    if (p.customer_id && !p.customer_name) {
       this.customerService.getCustomerById(p.customer_id).subscribe({
         next: (cust) => this.customer.set(cust),
         error: () => {/* fallback gracefully */ },
       });
     }
-    if (p.supplier_id) {
+    if (p.supplier_id && !p.supplier_name) {
       this.supplierService.getSupplierById(p.supplier_id).subscribe({
         next: (supp) => this.supplier.set(supp),
         error: () => {/* fallback gracefully */ },
@@ -673,21 +651,35 @@ export class ProjectTimeline implements OnInit {
   protected getStepDataBadges(step: ProjectStep): { icon?: string; label: string }[] {
     const badges: { icon?: string; label: string }[] = [];
 
-    if (
-      this.customerQueries &&
-      typeof this.customerQueries === 'function' &&
-      this.isCustomerQueryStep(step) &&
-      this.customerQueries().length > 0
-    ) {
-      const qCount = this.customerQueries().length;
-      badges.push({
-        icon: 'pi pi-file-edit',
-        label: `${qCount} ${qCount === 1 ? 'Query' : 'Queries'}`,
-      });
+    let d: Record<string, unknown> = {};
+    if (step.data && typeof step.data === 'object' && !Array.isArray(step.data)) {
+      d = step.data as Record<string, unknown>;
+    } else if (typeof step.data === 'string') {
+      try {
+        const parsed = JSON.parse(step.data);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          d = parsed as Record<string, unknown>;
+        }
+      } catch {
+        d = {};
+      }
     }
 
-    if (!step.data || typeof step.data !== 'object') return badges;
-    const d = step.data as Record<string, unknown>;
+    // Step 01 / Customer Query badge - extracted directly from step data without extra API calls
+    if (this.isCustomerQueryStep(step)) {
+      const qCount =
+        Number(d['query_count']) ||
+        (Array.isArray(d['queries']) ? d['queries'].length : 0) ||
+        (Array.isArray(d['items']) ? d['items'].length : 0) ||
+        (step.status === 'completed' || step.progress_percentage ? 1 : 0);
+
+      if (qCount > 0) {
+        badges.push({
+          icon: 'pi pi-file-edit',
+          label: `${qCount} ${qCount === 1 ? 'Query' : 'Queries'}`,
+        });
+      }
+    }
 
     if (d['supplier_contacted'] === true) {
       badges.push({ icon: 'pi pi-check-circle', label: 'Supplier Contacted' });
@@ -753,36 +745,8 @@ export class ProjectTimeline implements OnInit {
     return map[status] ?? 'pi-clock';
   }
 
-  // ── Existing Date Extraction Helper (Preserved for full unit-test compatibility) ──
+  // ── Date Extraction Helper (Prefers business item dates, e.g. query date, quote date, pqb closed, due date) ──
   protected getStepDate(step: ProjectStep): { label: string; date: string } | null {
-    if (step.completed_at) {
-      const formatted = formatDisplayDate(step.completed_at);
-      if (formatted && formatted !== '—') {
-        return {
-          label: 'Completed',
-          date: formatted,
-        };
-      }
-    }
-
-    if (
-      this.customerQueries &&
-      typeof this.customerQueries === 'function' &&
-      this.isCustomerQueryStep(step) &&
-      this.customerQueries().length > 0
-    ) {
-      const first = this.customerQueries()[0];
-      if (first?.qo_date) {
-        const formatted = formatDisplayDate(first.qo_date);
-        if (formatted && formatted !== '—') {
-          return {
-            label: step.status === 'completed' ? 'Completed' : 'Query Date',
-            date: formatted,
-          };
-        }
-      }
-    }
-
     let d: Record<string, unknown> | null = null;
     if (step.data) {
       if (typeof step.data === 'object' && !Array.isArray(step.data)) {
@@ -801,51 +765,73 @@ export class ProjectTimeline implements OnInit {
 
     if (d) {
       const dateVal =
+        d['pqb_closing_date_time'] ||
+        d['pqb_closing_date'] ||
+        d['closing_date_time'] ||
+        d['closing_date'] ||
+        d['submission_deadline'] ||
         d['pqb_issuing_date'] ||
         d['pqb_issue_date'] ||
-        d['tender_issue_date'] ||
-        d['query_date'] ||
-        d['request_date'] ||
-        d['eoi_date'] ||
-        d['nac_date'] ||
-        d['quotation_date'] ||
+        d['due_date'] ||
         d['qo_date'] ||
+        d['query_date'] ||
         d['quotation_requested_date'] ||
+        d['rfq_date'] ||
+        d['request_date'] ||
+        d['quotation_date'] ||
+        d['quote_date'] ||
+        d['valid_till'] ||
+        d['tender_date'] ||
+        d['tender_issue_date'] ||
+        d['bid_submission_date'] ||
+        d['submission_date'] ||
         d['po_date'] ||
         d['order_confirmation_date'] ||
         d['confirmation_date'] ||
         d['order_date'] ||
-        d['invoice_date'] ||
         d['proforma_invoice_date'] ||
+        d['invoice_date'] ||
         d['delivery_date'] ||
+        d['expected_delivery_date'] ||
         d['delivery_challan_date'] ||
+        d['challan_date'] ||
         d['packing_list_date'] ||
-        d['shipment_date'] ||
-        d['boe_filing_date'] ||
-        d['duty_paid_date'] ||
-        d['lr_rr_awb_date'] ||
         d['payment_date'] ||
         d['payment_received_date'] ||
-        d['boe_date'] ||
-        d['clearance_date'] ||
-        d['bid_submission_date'] ||
-        d['tender_date'] ||
-        d['submission_date'] ||
-        d['submitted_date'] ||
-        d['prepared_date'] ||
         d['certificate_date'] ||
-        d['date'] ||
-        d['created_at'] ||
-        d['updated_at'];
+        d['boe_date'] ||
+        d['boe_filing_date'] ||
+        d['duty_paid_date'] ||
+        d['eway_bill_date'] ||
+        d['dispatch_date'] ||
+        d['lr_date'] ||
+        d['lr_rr_awb_date'] ||
+        d['shipment_date'] ||
+        d['clearance_date'] ||
+        d['eoi_date'] ||
+        d['nac_date'] ||
+        d['cost_sheet_date'] ||
+        d['effective_date'] ||
+        d['date'];
 
       if (dateVal && (typeof dateVal === 'string' || typeof dateVal === 'number' || dateVal instanceof Date)) {
         const formatted = formatDisplayDate(dateVal);
         if (formatted && formatted !== '—') {
           return {
-            label: step.status === 'completed' ? 'Completed' : 'Date',
+            label: step.status === 'completed' ? 'Completed' : 'Item Date',
             date: formatted,
           };
         }
+      }
+    }
+
+    if (step.completed_at) {
+      const formatted = formatDisplayDate(step.completed_at);
+      if (formatted && formatted !== '—') {
+        return {
+          label: 'Completed',
+          date: formatted,
+        };
       }
     }
 

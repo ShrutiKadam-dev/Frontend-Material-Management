@@ -754,6 +754,10 @@
   white-space: nowrap;
 
   &--date {
+    .meta-date-label {
+      font-weight: 600;
+    }
+
     &.meta-tag--completed {
       background: #f3faf5;
       border-color: #d1eedc;

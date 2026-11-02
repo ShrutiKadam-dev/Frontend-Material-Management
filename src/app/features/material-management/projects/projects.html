@@ -135,7 +135,7 @@
           <th scope="col" style="min-width: 280px;">Project Title</th>
           <th scope="col" style="min-width: 165px;">Customer</th>
           <th scope="col" style="min-width: 165px;">Supplier</th>
-          <th scope="col" style="min-width: 220px;">Forms & Progress</th>
+          <th scope="col" style="min-width: 250px;">Forms & Progress</th>
           <th scope="col" style="min-width: 130px; text-align: right;">Total Value</th>
           <th scope="col" style="min-width: 130px; text-align: right;">Total Margin</th>
           <th scope="col" style="min-width: 110px; text-align: center;">Status</th>
@@ -188,14 +188,18 @@
               <div class="tbl-step-title" (click)="openStepFromProject(p, $event)" [title]="'Open ' + (p.current_step_name || 'Workflow Forms')" style="cursor: pointer;">
                 <span class="step-label">
                   <i class="pi pi-file-edit tbl-step-icon" aria-hidden="true"></i>
-                  {{ p.current_step_name || 'No forms attached' }}
+                  <span class="step-label-text">{{ p.current_step_name || 'No forms attached' }}</span>
                 </span>
-                <span class="step-pct" [class.step-pct--done]="getProgressPercent(p) >= 100">{{ getProgressPercent(p) }}%</span>
               </div>
-              <div class="progress-track" [class.progress-track--done]="getProgressPercent(p) >= 100">
-                <div class="progress-fill" [class.progress-fill--done]="getProgressPercent(p) >= 100" [style.width.%]="getProgressPercent(p)"></div>
-              </div>
-              <div class="tbl-forms-submeta">
+              <div class="tbl-step-meta">
+                @if (getStepDate(p); as stepDate) {
+                <span class="tbl-step-date-pill" [title]="getStepDateLabel(p) + ': ' + (stepDate | appDate)">
+                  <i class="pi pi-calendar tbl-step-date-icon" aria-hidden="true"></i>
+                  <span class="tbl-step-date-label">{{ getStepDateLabel(p) }}:</span>
+                  <span class="tbl-step-date-val">{{ stepDate | appDate }}</span>
+                </span>
+                <span class="tbl-step-meta-dot" aria-hidden="true">·</span>
+                }
                 <span class="forms-count-text">{{ getFormsCountLabel(p) }}</span>
               </div>
             </div>

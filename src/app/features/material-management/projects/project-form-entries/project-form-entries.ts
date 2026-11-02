@@ -401,27 +401,7 @@ export class ProjectFormEntries implements OnInit {
             this.project.set(project);
             this.loadCustomerAndSupplier(project);
 
-            if (!project.customer_name || !project.supplier_name) {
-              this.projectService
-                .getProjects()
-                .pipe(
-                  this.safeUntilDestroyed(),
-                  catchError(() => of([])),
-                )
-                .subscribe((all) => {
-                  const match = all.find((item) => item.id === projectId);
-                  if (match) {
-                    this.project.update((cur) => {
-                      if (!cur) return match;
-                      return {
-                        ...cur,
-                        customer_name: cur.customer_name || match.customer_name,
-                        supplier_name: cur.supplier_name || match.supplier_name,
-                      };
-                    });
-                  }
-                });
-            }
+
           } else {
             this.error.set('Could not load project context.');
           }

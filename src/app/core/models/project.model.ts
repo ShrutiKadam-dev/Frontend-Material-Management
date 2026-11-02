@@ -19,6 +19,10 @@ export interface Project {
   current_step_number?: number;
   current_step_name?: string;
   current_form_code?: string;
+  current_step_date?: string | null;
+  current_step_date_label?: string | null;
+  step_date?: string | null;
+  step_date_label?: string | null;
   total_steps?: number;
   completed_steps_count?: number;
   progress_percentage?: number;

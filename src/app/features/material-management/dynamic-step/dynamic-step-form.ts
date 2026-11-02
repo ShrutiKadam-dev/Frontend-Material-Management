@@ -335,27 +335,7 @@ export class DynamicStepForm implements OnInit {
         }
       },
       error: () => {
-        this.projectService.getProjects().subscribe({
-          next: (all) => {
-            const match = all.find((item) => item.id === pId);
-            if (match) {
-              this.project.set(match);
-              if (match.customer_id) {
-                this.customerService.getCustomerById(match.customer_id).subscribe({
-                  next: (c) => this.customer.set(c),
-                  error: () => {},
-                });
-              }
-              if (match.supplier_id) {
-                this.supplierService.getSupplierById(match.supplier_id).subscribe({
-                  next: (s) => this.supplier.set(s),
-                  error: () => {},
-                });
-              }
-            }
-          },
-          error: () => {},
-        });
+        // Handle error gracefully without loading all projects
       },
     });
 
