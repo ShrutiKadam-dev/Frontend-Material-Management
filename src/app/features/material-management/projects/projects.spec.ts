@@ -117,4 +117,40 @@ describe('Projects', () => {
     expect(capturedPayload!.nickname).toBe('COOL-SYS');
     expect(capturedPayload!.total_margin).toBe(25000);
   });
+
+  describe('Forms & Progress helpers', () => {
+    it('should calculate completed steps and completion state correctly', () => {
+      const comp = createComponent();
+      const p1: Project = { id: 1, project_title: 'P1', customer_id: 1, supplier_id: 2, total_steps: 4, completed_steps_count: 4, created_at: '2026-01-01', updated_at: '2026-01-01' };
+      const p2: Project = { id: 2, project_title: 'P2', customer_id: 1, supplier_id: 2, total_steps: 5, completed_steps_count: 2, created_at: '2026-01-01', updated_at: '2026-01-01' };
+      const p3: Project = { id: 3, project_title: 'P3', customer_id: 1, supplier_id: 2, total_steps: 0, created_at: '2026-01-01', updated_at: '2026-01-01' };
+      const p4: Project = { id: 4, project_title: 'P4', customer_id: 1, supplier_id: 2, total_steps: 3, progress_percentage: 100, created_at: '2026-01-01', updated_at: '2026-01-01' };
+
+      expect((comp as any).getCompletedStepsCount(p1)).toBe(4);
+      expect((comp as any).isAllStepsCompleted(p1)).toBe(true);
+      expect((comp as any).getFormsCountLabel(p1)).toBe('4 of 4 completed');
+
+      expect((comp as any).getCompletedStepsCount(p2)).toBe(2);
+      expect((comp as any).isAllStepsCompleted(p2)).toBe(false);
+      expect((comp as any).getFormsCountLabel(p2)).toBe('2 of 5 completed');
+
+      expect((comp as any).getCompletedStepsCount(p3)).toBe(0);
+      expect((comp as any).isAllStepsCompleted(p3)).toBe(false);
+      expect((comp as any).getFormsCountLabel(p3)).toBe('No forms attached');
+
+      expect((comp as any).getCompletedStepsCount(p4)).toBe(3);
+      expect((comp as any).isAllStepsCompleted(p4)).toBe(true);
+    });
+
+    it('should return appropriate icon based on form code or step name', () => {
+      const comp = createComponent();
+      expect((comp as any).getStepIcon({ current_step_name: 'Corrigendum' } as Project)).toBe('pi pi-file-edit');
+      expect((comp as any).getStepIcon({ current_step_name: 'Cost Sheet' } as Project)).toBe('pi pi-calculator');
+      expect((comp as any).getStepIcon({ current_step_name: 'Purchase Order (PO)' } as Project)).toBe('pi pi-shopping-bag');
+      expect((comp as any).getStepIcon({ current_step_name: 'Bid Submission' } as Project)).toBe('pi pi-send');
+      expect((comp as any).getStepIcon({ current_step_name: 'Freight Forwarder / CHA Details' } as Project)).toBe('pi pi-truck');
+      expect((comp as any).getStepIcon({ current_step_name: 'Customer Query' } as Project)).toBe('pi pi-question-circle');
+      expect((comp as any).getStepIcon({ current_form_code: 'FORM_01_PQB' } as Project)).toBe('pi pi-file-edit');
+    });
+  });
 });

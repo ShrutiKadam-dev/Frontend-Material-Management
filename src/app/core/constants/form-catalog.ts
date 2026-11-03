@@ -83,7 +83,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     category: 'Pre-Bidding & Tenders',
     phaseId: 'phase-1',
     icon: 'pi pi-file-edit',
-    description: 'Pre-qualification bid terms, submission schedule, supply locations, and requirements',
+    description: 'Pre-qualification bid terms, submission schedule, Material supply locations, and requirements',
     apiEndpoint: '/api/v1/pre-qualification-bids',
     fields: [
       { key: 'pqb_title', label: 'PQB Title', type: 'text', required: true, colSpan: 2 },
@@ -98,7 +98,7 @@ export const FORM_CATALOG: FormDefinition[] = [
         options: ['Online (e-Procurement)', 'Physical Hardcopy', 'Hybrid (Online + Physical)'],
         colSpan: 1,
       },
-      { key: 'supply_location', label: 'Supply Location', type: 'multilocation', colSpan: 4 },
+      { key: 'supply_location', label: 'Material Supply Location', type: 'multilocation', colSpan: 4 },
     ],
     tableConfig: {
       title: 'Requirements',
@@ -274,7 +274,7 @@ export const FORM_CATALOG: FormDefinition[] = [
         options: ['Online Portal', 'Physical Tender Box', 'Email Submission'],
         colSpan: 1,
       },
-      { key: 'supply_location', label: 'Supply Location', type: 'multilocation', colSpan: 4 },
+      { key: 'supply_location', label: 'Material Supply Location', type: 'multilocation', colSpan: 4 },
     ],
     tableConfig: {
       title: 'Requirements',
@@ -1133,21 +1133,118 @@ export const FORM_CATALOG: FormDefinition[] = [
     ],
     uploads: [{ key: 'upload_eway_bill', label: 'Upload E-Way Bill', multiple: true }],
   },
+
+  // ── 33. SINGLE TENDER ENQUIRY (STE) ──────────────────────────────────────
+  {
+    id: 33,
+    formCode: 'FORM_33_STE',
+    name: 'Single Tender Enquiry (STE)',
+    category: 'Pre-Bidding & Tenders',
+    phaseId: 'phase-1',
+    icon: 'pi pi-file-edit',
+    description: 'Single tender enquiry (STE) terms, submission deadlines, EMD, fee, and requirements',
+    apiEndpoint: '/api/v1/single-tender-enquiries',
+    fields: [
+      { key: 'pqb_no', label: 'PQB No.', type: 'text', colSpan: 2 },
+      { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
+      { key: 'tender_no', label: 'Tender No.', type: 'text', required: true, colSpan: 2 },
+      { key: 'tender_issue_date', label: 'Tender Issue Date', type: 'date', colSpan: 2 },
+      { key: 'bid_submission_due_date_time', label: 'Bid Submission Due Date & Time', type: 'datetime', colSpan: 2 },
+      { key: 'bid_opening_date_time', label: 'Bid Opening Date & Time', type: 'datetime', colSpan: 2 },
+      { key: 'tender_fee', label: 'Tender Fee', type: 'currency', prefix: '₹', colSpan: 1 },
+      { key: 'emd', label: 'EMD', type: 'currency', prefix: '₹', colSpan: 1 },
+      { key: 'tender_validity', label: 'Tender Validity', type: 'text', colSpan: 2 },
+    ],
+    tableConfig: {
+      title: 'Requirements',
+      columns: [
+        { key: 'sr_no', label: 'Sr. No.', type: 'number', width: '80px' },
+        { key: 'description', label: 'Description', type: 'text' },
+        { key: 'unit', label: 'Unit', type: 'text', width: '120px' },
+        { key: 'quantity', label: 'Quantity', type: 'number', width: '120px' },
+      ],
+    },
+    uploads: [{ key: 'upload_ste', label: 'Upload STE', multiple: true }],
+  },
+
+  // ── 34. BID DOCUMENT - SINGLE TENDER ENQUIRY (STE) ───────────────────────
+  {
+    id: 34,
+    formCode: 'FORM_34_BID_DOC_STE',
+    name: 'Bid Document - Single Tender Enquiry (STE)',
+    category: 'Pre-Bidding & Tenders',
+    phaseId: 'phase-1',
+    icon: 'pi pi-book',
+    description: 'Single tender enquiry (STE) bid submission data, delivery terms, corrigendum, and material pricing',
+    apiEndpoint: '/api/v1/bid-document-ste',
+    fields: [
+      { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
+      { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
+      { key: 'tender_no', label: 'Tender No.', type: 'text', required: true, colSpan: 1 },
+      { key: 'tender_issue_date', label: 'Tender Issue Date', type: 'date', colSpan: 1 },
+      { key: 'total_no_corrigendum_issued', label: 'Total No. Corrigendum Issued', type: 'number', colSpan: 1 },
+      { key: 'bid_submission_date', label: 'Bid Submission Date', type: 'date', colSpan: 1 },
+      { key: 'delivery_terms', label: 'Delivery Terms', type: 'select', options: INCOTERMS_OPTIONS, colSpan: 1 },
+      { key: 'delivery_period', label: 'Delivery Period', type: 'text', colSpan: 1 },
+      { key: 'bid_validity', label: 'Bid Validity', type: 'text', colSpan: 1 },
+      { key: 'payment_terms', label: 'Payment Terms', type: 'text', colSpan: 1 },
+      { key: 'warranty_period', label: 'Warranty Period', type: 'select', options: WARRANTY_PERIOD_OPTIONS, colSpan: 2 },
+      { key: 'gst_pct', label: 'GST (%)', type: 'number', suffix: '%', colSpan: 2 },
+    ],
+    tableConfig: {
+      title: 'Bid Materials/Services & Pricing',
+      autoCalculateTotal: true,
+      quantityKey: 'quantity',
+      unitPriceKey: 'unit_price',
+      totalKey: 'total_amount',
+      columns: [
+        { key: 'sr_no', label: 'Sr. No.', type: 'number', width: '80px' },
+        { key: 'description', label: 'Description', type: 'text' },
+        { key: 'hsn_sac', label: 'HSN / SAC', type: 'text', width: '130px' },
+        { key: 'quantity', label: 'Quantity', type: 'number', width: '110px' },
+        { key: 'unit_price', label: 'Unit Price', type: 'currency', width: '130px' },
+        { key: 'total_amount', label: 'Total Amount', type: 'currency', width: '150px' },
+      ],
+    },
+    uploads: [{ key: 'upload_bid_document', label: 'Upload Bid Document', multiple: true }],
+  },
 ];
+
+/** Aliases for form codes that may have been renamed or referenced alternatively */
+export const FORM_CODE_ALIASES: Record<string, string> = {
+  FORM_30_STE: 'FORM_33_STE',
+  FORM_STE: 'FORM_33_STE',
+  FORM_31_BID_DOC_STE: 'FORM_34_BID_DOC_STE',
+  FORM_BID_DOC_STE: 'FORM_34_BID_DOC_STE',
+  FORM_33_SINGLE_TENDER_ENQUIRY: 'FORM_33_STE',
+  FORM_34_BID_DOCUMENT_STE: 'FORM_34_BID_DOC_STE',
+};
 
 /** Lookup map by form code */
 export const FORM_CATALOG_MAP = new Map<string, FormDefinition>(
   FORM_CATALOG.map((f) => [f.formCode, f]),
 );
 
+// Register aliases in lookup map for backwards compatibility
+for (const [alias, canonical] of Object.entries(FORM_CODE_ALIASES)) {
+  const def = FORM_CATALOG.find((f) => f.formCode === canonical);
+  if (def) {
+    FORM_CATALOG_MAP.set(alias, def);
+    FORM_CATALOG_MAP.set(alias.toLowerCase(), def);
+  }
+}
+
 /** Helper to get form definition by code or number */
 export function getFormDefinition(codeOrId: string | number): FormDefinition | undefined {
   if (typeof codeOrId === 'number') {
     return FORM_CATALOG.find((f) => f.id === codeOrId);
   }
+  const resolvedCode = FORM_CODE_ALIASES[codeOrId] || FORM_CODE_ALIASES[codeOrId.toUpperCase()] || codeOrId;
   return (
     FORM_CATALOG_MAP.get(codeOrId) ||
-    FORM_CATALOG.find((f) => f.formCode.toLowerCase() === codeOrId.toLowerCase())
+    FORM_CATALOG_MAP.get(resolvedCode) ||
+    FORM_CATALOG.find((f) => f.formCode.toLowerCase() === codeOrId.toLowerCase()) ||
+    FORM_CATALOG.find((f) => f.formCode.toLowerCase() === resolvedCode.toLowerCase())
   );
 }
 

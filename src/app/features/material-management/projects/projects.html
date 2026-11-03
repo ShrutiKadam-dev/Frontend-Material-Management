@@ -135,9 +135,9 @@
           <th scope="col" style="min-width: 280px;">Project Title</th>
           <th scope="col" style="min-width: 165px;">Customer</th>
           <th scope="col" style="min-width: 165px;">Supplier</th>
-          <th scope="col" style="min-width: 250px;">Forms & Progress</th>
+          <th scope="col" style="min-width: 280px;">Forms & Progress</th>
           <th scope="col" style="min-width: 130px; text-align: right;">Total Value</th>
-          <th scope="col" style="min-width: 130px; text-align: right;">Total Margin</th>
+          <!-- <th scope="col" style="min-width: 130px; text-align: right;">Total Margin</th> -->
           <th scope="col" style="min-width: 110px; text-align: center;">Status</th>
           <th scope="col" style="width: 105px; text-align: center;">Actions</th>
         </tr>
@@ -152,8 +152,7 @@
           </td>
           <td>
             <div class="tbl-title-cluster">
-              <span class="tbl-project-title" (click)="openDetailsDialog(p)"
-                [title]="p.project_title"
+              <span class="tbl-project-title" (click)="openDetailsDialog(p)" [title]="p.project_title"
                 [innerHTML]="highlightText(p.project_title, searchQuery())">
               </span>
             </div>
@@ -168,8 +167,7 @@
               <span class="party-icon-wrap customer" aria-hidden="true">
                 <i class="pi pi-building"></i>
               </span>
-              <span class="party-name"
-                [class.is-unknown]="!(p.customer_name || getCustomerName(p.customer_id))"
+              <span class="party-name" [class.is-unknown]="!(p.customer_name || getCustomerName(p.customer_id))"
                 [innerHTML]="highlightText(p.customer_name || getCustomerName(p.customer_id) || 'Unknown Customer', searchQuery())"></span>
             </div>
           </td>
@@ -178,42 +176,66 @@
               <span class="party-icon-wrap supplier" aria-hidden="true">
                 <i class="pi pi-truck"></i>
               </span>
-              <span class="party-name"
-                [class.is-unknown]="!(p.supplier_name || getSupplierName(p.supplier_id))"
+              <span class="party-name" [class.is-unknown]="!(p.supplier_name || getSupplierName(p.supplier_id))"
                 [innerHTML]="highlightText(p.supplier_name || getSupplierName(p.supplier_id) || 'Unknown Supplier', searchQuery())"></span>
             </div>
           </td>
           <td>
             <div class="tbl-progress-cell">
-              <div class="tbl-step-title" (click)="openStepFromProject(p, $event)" [title]="'Open ' + (p.current_step_name || 'Workflow Forms')" style="cursor: pointer;">
-                <span class="step-label">
-                  <i class="pi pi-file-edit tbl-step-icon" aria-hidden="true"></i>
-                  <span class="step-label-text">{{ p.current_step_name || 'No forms attached' }}</span>
+              <!-- Top Row: Active Step Name -->
+              <div class="tbl-step-header" (click)="openStepFromProject(p, $event)"
+                (keydown.enter)="openStepFromProject(p, $event)" tabindex="0" role="button"
+                [attr.aria-label]="'Open ' + (p.current_step_name || 'Workflow Forms')"
+                [title]="'Open ' + (p.current_step_name || 'Workflow Forms')">
+                <i [class]="getStepIcon(p) + ' tbl-step-icon'" aria-hidden="true"></i>
+                <span class="tbl-step-name" [class.is-empty]="!p.current_step_name">
+                  {{ p.current_step_name || 'No forms attached' }}
                 </span>
-              </div>
-              <div class="tbl-step-meta">
-                @if (getStepDate(p); as stepDate) {
-                <span class="tbl-step-date-pill" [title]="getStepDateLabel(p) + ': ' + (stepDate | appDate)">
-                  <i class="pi pi-calendar tbl-step-date-icon" aria-hidden="true"></i>
-                  <span class="tbl-step-date-label">{{ getStepDateLabel(p) }}:</span>
-                  <span class="tbl-step-date-val">{{ stepDate | appDate }}</span>
-                </span>
-                <span class="tbl-step-meta-dot" aria-hidden="true">·</span>
+                @if (p.current_step_name) {
+                <i class="pi pi-arrow-up-right tbl-step-hint" aria-hidden="true"></i>
                 }
-                <span class="forms-count-text">{{ getFormsCountLabel(p) }}</span>
+              </div>
+
+              <!-- Bottom Row: Date on Left, Progress Badge on Right (Clean & Aligned) -->
+              <div class="tbl-step-meta-row">
+                @if (getStepDate(p); as stepDate) {
+                <div class="tbl-step-date" [title]="getStepDateLabel(p) + ': ' + (stepDate | appDate)">
+                  <i class="pi pi-calendar tbl-date-icon" aria-hidden="true"></i>
+                  <span class="tbl-date-label">{{ getStepDateLabel(p) }}:</span>
+                  <span class="tbl-date-val">{{ stepDate | appDate }}</span>
+                </div>
+                } @else {
+                <span class="tbl-date-placeholder"></span>
+                }
+
+                @if (p.total_steps && p.total_steps > 0) {
+                <div class="tbl-progress-badge" [class.is-complete]="isAllStepsCompleted(p)"
+                  [title]="getFormsCountLabel(p)">
+                  @if (isAllStepsCompleted(p)) {
+                  <i class="pi pi-check tbl-progress-icon" aria-hidden="true"></i>
+                  <span class="tbl-progress-text">{{ getCompletedStepsCount(p) }}/{{ p.total_steps }} completed</span>
+                  } @else {
+                  <span class="tbl-progress-bar-track" aria-hidden="true">
+                    <span class="tbl-progress-bar-fill" [style.width.%]="getProgressPercent(p)"></span>
+                  </span>
+                  <span class="tbl-progress-text">{{ getCompletedStepsCount(p) }}/{{ p.total_steps }} completed</span>
+                  }
+                </div>
+                }
               </div>
             </div>
           </td>
           <td class="tbl-amount-cell">
-            <span class="tbl-currency">₹</span>&nbsp;<span class="tbl-val-num">{{ (p.total_value || 0) | number:'1.2-2' }}</span>
+            <span class="tbl-currency">₹</span>&nbsp;<span class="tbl-val-num">{{ (p.total_value || 0) | number:'1.2-2'
+              }}</span>
           </td>
-          <td class="tbl-amount-cell tbl-margin-cell">
+          <!-- <td class="tbl-amount-cell tbl-margin-cell">
             @if (p.total_margin !== undefined && p.total_margin !== null) {
             <span class="tbl-currency">₹</span>&nbsp;<span class="tbl-val-num">{{ p.total_margin | number:'1.2-2' }}</span>
             } @else {
             <span class="tbl-empty-dash">—</span>
             }
-          </td>
+          </td> -->
           <td style="text-align: center;">
             <span class="mpc-chip mpc-chip--phase"
               [class]="'mpc-chip mpc-chip--phase ' + getStatusBadgeClass(getProjectStatus(p))">
@@ -222,12 +244,12 @@
           </td>
           <td style="text-align: center;">
             <div class="actions-cell">
-              <button pButton type="button" icon="pi pi-arrow-right" class="p-button-text p-button-sm tbl-action-btn view-btn"
-                pTooltip="Open Pipeline Steps" tooltipPosition="top" (click)="openDetailsDialog(p)"
-                aria-label="Open pipeline steps"></button>
-              <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm tbl-action-btn edit-btn"
-                pTooltip="Edit Project" tooltipPosition="top" (click)="openEditDialog(p)"
-                aria-label="Edit project"></button>
+              <button pButton type="button" icon="pi pi-arrow-right"
+                class="p-button-text p-button-sm tbl-action-btn view-btn" pTooltip="Open Pipeline Steps"
+                tooltipPosition="top" (click)="openDetailsDialog(p)" aria-label="Open pipeline steps"></button>
+              <button pButton type="button" icon="pi pi-pencil"
+                class="p-button-text p-button-sm tbl-action-btn edit-btn" pTooltip="Edit Project" tooltipPosition="top"
+                (click)="openEditDialog(p)" aria-label="Edit project"></button>
               <button pButton type="button" icon="pi pi-trash"
                 class="p-button-text p-button-sm p-button-danger tbl-action-btn delete-btn" pTooltip="Remove Project"
                 tooltipPosition="top" (click)="deleteProject(p)" aria-label="Remove project"></button>
@@ -291,8 +313,8 @@
 ══════════════════════════════════════════════════════════════════════ -->
 <p-dialog [header]="isEditMode() ? 'Edit Project Details' : 'Initiate New Project'" [visible]="dialogVisible()"
   (visibleChange)="dialogVisible.set($event)" [modal]="true" [blockScroll]="true" [draggable]="false"
-  [resizable]="false" [dismissableMask]="false" [style]="{ width: '92vw', maxWidth: '640px' }" styleClass="cq-dialog cost-sheet-dialog"
-  appendTo="body">
+  [resizable]="false" [dismissableMask]="false" [style]="{ width: '92vw', maxWidth: '640px' }"
+  styleClass="cq-dialog cost-sheet-dialog" appendTo="body">
 
   <form [formGroup]="projectForm" (ngSubmit)="onSubmit()" novalidate id="project-form">
     <div class="dlg-body">

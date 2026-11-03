@@ -881,8 +881,9 @@ describe('ProjectFormEntries Component', () => {
       const unitPriceCol = cols.find((c: FormTableColumn) => c.key === 'unit_price')!;
       const totalCol = cols.find((c: FormTableColumn) => c.key === 'total_amount')!;
 
-      const formattedUnitPrice = comp.formatCellValue(eurStep.data.items[0], unitPriceCol, 0, eurStep);
-      const formattedTotal = comp.formatCellValue(eurStep.data.items[0], totalCol, 0, eurStep);
+      const items = (eurStep.data as Record<string, any>)?.['items'] as any[];
+      const formattedUnitPrice = comp.formatCellValue(items[0], unitPriceCol, 0, eurStep);
+      const formattedTotal = comp.formatCellValue(items[0], totalCol, 0, eurStep);
 
       expect(formattedUnitPrice).toContain('€');
       expect(formattedUnitPrice).toContain('5,000.00');

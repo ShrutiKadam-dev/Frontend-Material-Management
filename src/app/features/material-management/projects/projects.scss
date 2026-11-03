@@ -728,102 +728,171 @@
 .tbl-progress-cell {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  min-width: 210px;
+  gap: 5px;
+  min-width: 250px;
+  max-width: 330px;
 }
 
-.tbl-step-title {
+.tbl-step-header {
   display: inline-flex;
   align-items: center;
-  font-size: 0.82rem;
-  color: #1e293b;
+  gap: 7px;
   cursor: pointer;
-  transition: color 120ms ease;
+  transition: all 140ms ease;
+  user-select: none;
+  max-width: 100%;
+  outline: none;
+  border-radius: 4px;
 
-  &:hover {
-    color: var(--color-primary, #c0522f);
-
-    .step-label-text {
-      text-decoration: underline;
-    }
+  &:focus-visible {
+    box-shadow: 0 0 0 2px rgba(192, 82, 47, 0.35);
   }
 
-  .step-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-weight: 600;
+  .tbl-step-icon {
+    font-size: 0.86rem;
+    color: #c0522f;
+    flex-shrink: 0;
+    transition: transform 140ms ease;
+  }
+
+  .tbl-step-name {
+    font-size: 0.85rem;
+    font-weight: 650;
+    color: #0f172a;
+    letter-spacing: -0.01em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 260px;
+    transition: color 140ms ease;
 
+    &.is-empty {
+      color: #94a3b8;
+      font-style: italic;
+      font-weight: 400;
+    }
+  }
+
+  .tbl-step-hint {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    opacity: 0;
+    transform: translateX(-3px);
+    transition: all 140ms ease;
+    flex-shrink: 0;
+  }
+
+  &:hover {
     .tbl-step-icon {
-      font-size: 0.76rem;
-      color: #c0522f;
-      flex-shrink: 0;
+      transform: scale(1.08);
     }
 
-    .step-label-text {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+    .tbl-step-name:not(.is-empty) {
+      color: #c0522f;
+      text-decoration: underline;
+    }
+
+    .tbl-step-hint {
+      opacity: 1;
+      transform: translateX(0);
+      color: #c0522f;
     }
   }
 }
 
-.tbl-step-meta {
+.tbl-step-meta-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.72rem;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  line-height: 1;
+}
+
+.tbl-step-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.73rem;
   color: #64748b;
-  line-height: 1.3;
-  flex-wrap: wrap;
+  white-space: nowrap;
+  flex-shrink: 0;
 
-  .tbl-step-date-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.69rem;
+  .tbl-date-icon {
+    font-size: 0.68rem;
+    color: #94a3b8;
+  }
+
+  .tbl-date-label {
     font-weight: 500;
-    color: #0369a1;
-    background: #f0f9ff;
-    border: 1px solid #bae6fd;
-    padding: 1px 6px;
-    border-radius: 4px;
-    white-space: nowrap;
-    flex-shrink: 0;
-    line-height: 1.3;
-
-    .tbl-step-date-icon {
-      font-size: 0.64rem;
-      color: #0284c7;
-    }
-
-    .tbl-step-date-label {
-      font-weight: 600;
-      color: #0369a1;
-    }
-
-    .tbl-step-date-val {
-      font-weight: 600;
-      color: #0c4a6e;
-      font-variant-numeric: tabular-nums;
-    }
-  }
-
-  .tbl-step-meta-dot {
-    color: #cbd5e1;
-    font-weight: 700;
-    font-size: 0.72rem;
-  }
-
-  .forms-count-text {
-    font-size: 0.72rem;
     color: #64748b;
-    font-weight: 500;
-    white-space: nowrap;
+  }
+
+  .tbl-date-val {
+    font-weight: 650;
+    color: #1e293b;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.tbl-date-placeholder {
+  flex: 1;
+}
+
+.tbl-progress-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 5px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  margin-left: auto;
+
+  .tbl-progress-icon {
+    font-size: 0.64rem;
+  }
+
+  .tbl-progress-text {
+    font-variant-numeric: tabular-nums;
+  }
+
+  &.is-complete {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #15803d;
+
+    .tbl-progress-icon {
+      color: #16a34a;
+      font-weight: 700;
+    }
+  }
+
+  &:not(.is-complete) {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #c2410c;
+
+    .tbl-progress-bar-track {
+      display: inline-block;
+      width: 22px;
+      height: 3.5px;
+      border-radius: 2px;
+      background: #fed7aa;
+      overflow: hidden;
+      vertical-align: middle;
+
+      .tbl-progress-bar-fill {
+        display: block;
+        height: 100%;
+        background: #c0522f;
+        border-radius: 2px;
+        transition: width 200ms ease;
+      }
+    }
   }
 }
 

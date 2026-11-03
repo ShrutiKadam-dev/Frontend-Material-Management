@@ -299,7 +299,14 @@ export class ProjectTimeline implements OnInit {
           if (def?.phaseId) return def.phaseId === phase.id;
         }
         if (phase.id === 'phase-1') {
-          return (s.step_number >= 1 && s.step_number <= 7) || s.step_number === 13 || s.step_number === 15 || (s.step_number >= 29 && s.step_number <= 31);
+          return (
+            (s.step_number >= 1 && s.step_number <= 7) ||
+            s.step_number === 13 ||
+            s.step_number === 15 ||
+            (s.step_number >= 29 && s.step_number <= 31) ||
+            s.step_number === 33 ||
+            s.step_number === 34
+          );
         } else if (phase.id === 'phase-2') {
           return s.step_number >= 8 && s.step_number <= 12;
         } else if (phase.id === 'phase-3') {
@@ -718,7 +725,16 @@ export class ProjectTimeline implements OnInit {
       return this.getPhaseForStep(stepNumberOrStep.step_number);
     }
     const stepNumber = stepNumberOrStep;
-    if (stepNumber <= 7 || stepNumber === 13 || stepNumber === 15 || (stepNumber >= 29 && stepNumber <= 31)) return PIPELINE_PHASES[0];
+    if (
+      stepNumber <= 7 ||
+      stepNumber === 13 ||
+      stepNumber === 15 ||
+      (stepNumber >= 29 && stepNumber <= 31) ||
+      stepNumber === 33 ||
+      stepNumber === 34
+    ) {
+      return PIPELINE_PHASES[0];
+    }
     if (stepNumber <= 12) return PIPELINE_PHASES[1];
     if (stepNumber === 14 || (stepNumber >= 16 && stepNumber <= 20)) return PIPELINE_PHASES[2];
     if (stepNumber === 21 || stepNumber === 27 || stepNumber === 28 || stepNumber === 32) return PIPELINE_PHASES[3];
@@ -745,7 +761,42 @@ export class ProjectTimeline implements OnInit {
     return map[status] ?? 'pi-clock';
   }
 
-  // ── Date Extraction Helper (Prefers business item dates, e.g. query date, quote date, pqb closed, due date) ──
+  // ── Step Date Label Resolution ──
+  protected resolveStepDateLabel(step: ProjectStep, fallbackLabel = 'Date'): string {
+    const code = (step.form_code || (step.step_number ? LEGACY_STEP_TO_FORM_CODE[step.step_number] : '') || '').toUpperCase();
+    const name = (step.step_name || '').toLowerCase();
+
+    if (code.includes('CORRIGENDUM') || name.includes('corrigendum')) return 'Issue Date';
+    if (code.includes('PQB') || name.includes('pqb') || name.includes('pre-qualification')) return 'PQB Closed';
+    if (code.includes('QUERY') || name.includes('query') || name.includes('requirement')) return 'Query Date';
+    if (code.includes('RFQ') || name.includes('rfq') || name.includes('request supplier quotation') || name.includes('quotation request')) return 'RFQ Date';
+    if (code.includes('CUSTOMER_QUOTATION') || name.includes('quotation to customer')) return 'Quotation Date';
+    if (code.includes('QUOTATION') || name.includes('quotation') || name.includes('quote')) return 'Quotation Date';
+    if (code.includes('COST_SHEET') || name.includes('cost sheet')) return 'Cost Sheet Date';
+    if (code.includes('TENDER') || name.includes('tender')) return 'Closing Date';
+    if (code.includes('BID') || name.includes('bid')) return 'Submission Date';
+    if (code.includes('PURCHASE_ORDER') || name.includes('po') || name.includes('purchase order')) {
+      return fallbackLabel === 'Delivery Date' ? 'Delivery Date' : 'PO Date';
+    }
+    if (code.includes('ORDER_CONFIRMATION') || name.includes('order confirmation') || name.includes('confirmation')) return 'Confirmation Date';
+    if (code.includes('PROFORMA') || name.includes('proforma')) return 'PI Date';
+    if (code.includes('INVOICE') || name.includes('invoice')) {
+      return fallbackLabel === 'Due Date' ? 'Due Date' : 'Invoice Date';
+    }
+    if (code.includes('CHALLAN') || name.includes('challan')) return 'Challan Date';
+    if (code.includes('PACKING') || name.includes('packing')) return 'Packing List Date';
+    if (code.includes('PAYMENT') || name.includes('payment')) return 'Payment Date';
+    if (code.includes('WARRANTY') || name.includes('warranty')) return 'Warranty Date';
+    if (code.includes('EWAY') || name.includes('eway') || name.includes('e-way')) return 'E-Way Date';
+    if (code.includes('FREIGHT') || code.includes('CHA') || name.includes('cha') || name.includes('freight')) return 'Duty Paid Date';
+    if (code.includes('SHIPPING') || code.includes('CLEARANCE') || name.includes('clearance') || name.includes('boe')) return 'BOE Date';
+    if (code.includes('TRANSPORT') || name.includes('transport') || name.includes('dispatch')) return 'Dispatch Date';
+    if (code.includes('NAC') || name.includes('award') || name.includes('nac')) return 'Award Date';
+    if (code.includes('LTE') || code.includes('EOI') || code.includes('STE') || name.includes('lte') || name.includes('eoi') || name.includes('ste')) return 'Closing Date';
+    return fallbackLabel;
+  }
+
+  // ── Date Extraction Helper (Displays contextual business date label e.g. Query Date, RFQ Date, Cost Sheet Date) ──
   protected getStepDate(step: ProjectStep): { label: string; date: string } | null {
     let d: Record<string, unknown> | null = null;
     if (step.data) {
@@ -764,63 +815,72 @@ export class ProjectTimeline implements OnInit {
     }
 
     if (d) {
-      const dateVal =
-        d['pqb_closing_date_time'] ||
-        d['pqb_closing_date'] ||
-        d['closing_date_time'] ||
-        d['closing_date'] ||
-        d['submission_deadline'] ||
-        d['pqb_issuing_date'] ||
-        d['pqb_issue_date'] ||
-        d['due_date'] ||
-        d['qo_date'] ||
-        d['query_date'] ||
-        d['quotation_requested_date'] ||
-        d['rfq_date'] ||
-        d['request_date'] ||
-        d['quotation_date'] ||
-        d['quote_date'] ||
-        d['valid_till'] ||
-        d['tender_date'] ||
-        d['tender_issue_date'] ||
-        d['bid_submission_date'] ||
-        d['submission_date'] ||
-        d['po_date'] ||
-        d['order_confirmation_date'] ||
-        d['confirmation_date'] ||
-        d['order_date'] ||
-        d['proforma_invoice_date'] ||
-        d['invoice_date'] ||
-        d['delivery_date'] ||
-        d['expected_delivery_date'] ||
-        d['delivery_challan_date'] ||
-        d['challan_date'] ||
-        d['packing_list_date'] ||
-        d['payment_date'] ||
-        d['payment_received_date'] ||
-        d['certificate_date'] ||
-        d['boe_date'] ||
-        d['boe_filing_date'] ||
-        d['duty_paid_date'] ||
-        d['eway_bill_date'] ||
-        d['dispatch_date'] ||
-        d['lr_date'] ||
-        d['lr_rr_awb_date'] ||
-        d['shipment_date'] ||
-        d['clearance_date'] ||
-        d['eoi_date'] ||
-        d['nac_date'] ||
-        d['cost_sheet_date'] ||
-        d['effective_date'] ||
-        d['date'];
+      const priorityDatePairs: [string, string][] = [
+        ['bid_submission_due_date_time', 'Due Date'],
+        ['bid_opening_date_time', 'Opening Date'],
+        ['pqb_closing_date_time', 'PQB Closed'],
+        ['pqb_closing_date', 'PQB Closed'],
+        ['closing_date_time', 'Closing Date'],
+        ['closing_date', 'Closing Date'],
+        ['submission_deadline', 'Due Date'],
+        ['pqb_issuing_date', 'PQB Issue Date'],
+        ['pqb_issue_date', 'PQB Issue Date'],
+        ['due_date', 'Due Date'],
+        ['qo_date', 'Query Date'],
+        ['query_date', 'Query Date'],
+        ['quotation_requested_date', 'RFQ Date'],
+        ['rfq_date', 'RFQ Date'],
+        ['request_date', 'RFQ Date'],
+        ['quotation_date', 'Quotation Date'],
+        ['quote_date', 'Quotation Date'],
+        ['valid_till', 'Valid Till'],
+        ['tender_date', 'Tender Date'],
+        ['tender_issue_date', 'Tender Date'],
+        ['bid_submission_date', 'Submission Date'],
+        ['submission_date', 'Submission Date'],
+        ['po_date', 'PO Date'],
+        ['order_confirmation_date', 'Confirmation Date'],
+        ['confirmation_date', 'Confirmation Date'],
+        ['order_date', 'Order Date'],
+        ['proforma_invoice_date', 'PI Date'],
+        ['invoice_date', 'Invoice Date'],
+        ['delivery_date', 'Delivery Date'],
+        ['expected_delivery_date', 'Delivery Date'],
+        ['target_delivery_date', 'Delivery Date'],
+        ['delivery_challan_date', 'Challan Date'],
+        ['challan_date', 'Challan Date'],
+        ['packing_list_date', 'Packing List Date'],
+        ['payment_date', 'Payment Date'],
+        ['payment_received_date', 'Payment Date'],
+        ['certificate_date', 'Warranty Date'],
+        ['boe_date', 'BOE Date'],
+        ['boe_filing_date', 'BOE Date'],
+        ['bill_of_entry_date', 'BOE Date'],
+        ['duty_paid_date', 'Duty Paid Date'],
+        ['eway_bill_date', 'E-Way Date'],
+        ['dispatch_date', 'Dispatch Date'],
+        ['lr_date', 'LR Date'],
+        ['lr_rr_awb_date', 'LR Date'],
+        ['shipment_date', 'Shipment Date'],
+        ['clearance_date', 'Clearance Date'],
+        ['eoi_date', 'EOI Date'],
+        ['nac_date', 'Award Date'],
+        ['cost_sheet_date', 'Cost Sheet Date'],
+        ['effective_date', 'Cost Sheet Date'],
+        ['date', 'Date'],
+      ];
 
-      if (dateVal && (typeof dateVal === 'string' || typeof dateVal === 'number' || dateVal instanceof Date)) {
-        const formatted = formatDisplayDate(dateVal);
-        if (formatted && formatted !== '—') {
-          return {
-            label: step.status === 'completed' ? 'Completed' : 'Item Date',
-            date: formatted,
-          };
+      for (const [key, fallbackLabel] of priorityDatePairs) {
+        const dateVal = d[key];
+        if (dateVal && (typeof dateVal === 'string' || typeof dateVal === 'number' || dateVal instanceof Date)) {
+          const formatted = formatDisplayDate(dateVal);
+          if (formatted && formatted !== '—') {
+            const label = this.resolveStepDateLabel(step, fallbackLabel);
+            return {
+              label,
+              date: formatted,
+            };
+          }
         }
       }
     }
@@ -828,8 +888,9 @@ export class ProjectTimeline implements OnInit {
     if (step.completed_at) {
       const formatted = formatDisplayDate(step.completed_at);
       if (formatted && formatted !== '—') {
+        const label = this.resolveStepDateLabel(step, 'Date');
         return {
-          label: 'Completed',
+          label,
           date: formatted,
         };
       }

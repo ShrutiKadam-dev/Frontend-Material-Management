@@ -881,6 +881,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       icon: 'pi pi-tags',
       description: 'Detailed quotation received from vendor',
       apiEndpoint: '/api/v1/supplier-quotations',
+      uploads: [],
       fields: [
         { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true },
         { key: 'quotation_no', label: 'Quotation No.', type: 'text', required: true },

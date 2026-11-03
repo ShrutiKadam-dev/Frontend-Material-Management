@@ -40,6 +40,7 @@ import { SupplierService } from '../../../core/services/supplier';
 import { ProjectService } from '../../../core/services/project';
 import { ProjectStepService } from '../../../core/services/project-step';
 import { ProjectStep } from '../../../core/models/project-step.model';
+import { FORM_CATALOG } from '../../../core/constants/form-catalog';
 
 import { AppDatePipe } from '../../../core/pipes/app-date.pipe';
 
@@ -447,8 +448,41 @@ export class Projects implements OnInit {
     if (total === 0) {
       return 'No forms attached';
     }
-    const completed = p.completed_steps_count ?? ((p.progress_percentage ?? 0) >= 100 ? total : 0);
+    const completed = this.getCompletedStepsCount(p);
     return `${completed} of ${total} completed`;
+  }
+
+  protected getCompletedStepsCount(p: Project): number {
+    const total = p.total_steps ?? 0;
+    if (total === 0) return 0;
+    return p.completed_steps_count ?? ((p.progress_percentage ?? 0) >= 100 ? total : 0);
+  }
+
+  protected isAllStepsCompleted(p: Project): boolean {
+    const total = p.total_steps ?? 0;
+    if (total === 0) return false;
+    return this.getCompletedStepsCount(p) >= total;
+  }
+
+  protected getStepIcon(p: Project): string {
+    const name = (p.current_step_name || '').toLowerCase();
+    if (name.includes('corrigendum')) return 'pi pi-file-edit';
+    if (name.includes('cost')) return 'pi pi-calculator';
+    if (name.includes('order') || name.includes('po')) return 'pi pi-shopping-bag';
+    if (name.includes('bid') || name.includes('submission')) return 'pi pi-send';
+    if (name.includes('freight') || name.includes('cha') || name.includes('transport') || name.includes('shipping')) return 'pi pi-truck';
+    if (name.includes('query')) return 'pi pi-question-circle';
+    if (name.includes('quotation') || name.includes('rfq')) return 'pi pi-receipt';
+    if (name.includes('invoice')) return 'pi pi-receipt';
+    if (name.includes('clearance') || name.includes('boe')) return 'pi pi-compass';
+    if (name.includes('payment')) return 'pi pi-wallet';
+    if (name.includes('warranty')) return 'pi pi-shield';
+    if (name.includes('packing')) return 'pi pi-box';
+    if (p.current_form_code) {
+      const found = FORM_CATALOG.find((f) => f.formCode === p.current_form_code);
+      if (found?.icon) return found.icon;
+    }
+    return 'pi pi-file-edit';
   }
 
   protected getStepDate(p: Project): string | null {

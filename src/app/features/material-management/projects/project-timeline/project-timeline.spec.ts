@@ -7,7 +7,7 @@ describe('ProjectTimeline getStepDate', () => {
   // Test helper using component prototype
   const component = Object.create(ProjectTimeline.prototype);
 
-  it('should extract completed date from completed_at ISO string', () => {
+  it('should extract date from completed_at ISO string using step date label', () => {
     const step: ProjectStep = {
       id: 1,
       project_id: 4,
@@ -20,10 +20,10 @@ describe('ProjectTimeline getStepDate', () => {
       data: null,
     };
     const res = (component as any).getStepDate(step);
-    expect(res).toEqual({ label: 'Completed', date: '22-09-2026' });
+    expect(res).toEqual({ label: 'Query Date', date: '22-09-2026' });
   });
 
-  it('should extract completed date from DD-MM-YYYY completed_at string', () => {
+  it('should extract date from DD-MM-YYYY completed_at string using step date label', () => {
     const step: ProjectStep = {
       id: 1,
       project_id: 4,
@@ -36,7 +36,7 @@ describe('ProjectTimeline getStepDate', () => {
       data: null,
     };
     const res = (component as any).getStepDate(step);
-    expect(res).toEqual({ label: 'Completed', date: '16-05-2025' });
+    expect(res).toEqual({ label: 'Quotation Date', date: '16-05-2025' });
   });
 
   it('should extract date from step.data when completed_at is null for in_progress step', () => {
@@ -55,7 +55,7 @@ describe('ProjectTimeline getStepDate', () => {
       },
     };
     const res = (component as any).getStepDate(step);
-    expect(res).toEqual({ label: 'Date', date: '10-09-2026' });
+    expect(res).toEqual({ label: 'Payment Date', date: '10-09-2026' });
   });
 
   it('should extract date from step.data quotation_date when formatted as YYYY-MM-DD', () => {
@@ -73,7 +73,7 @@ describe('ProjectTimeline getStepDate', () => {
       },
     };
     const res = (component as any).getStepDate(step);
-    expect(res).toEqual({ label: 'Date', date: '16-05-2025' });
+    expect(res).toEqual({ label: 'Quotation Date', date: '16-05-2025' });
   });
 
   it('should return null when step has no date', () => {
@@ -219,6 +219,26 @@ describe('ProjectTimeline getStepDate', () => {
     };
 
     const res = (component as any).getStepDate(step);
-    expect(res).toEqual({ label: 'Date', date: '31-10-2026' });
+    expect(res).toEqual({ label: 'Query Date', date: '31-10-2026' });
+  });
+
+  it('should show the date label instead of Completed for completed steps', () => {
+    const step: ProjectStep = {
+      id: 4,
+      project_id: 22,
+      step_number: 4,
+      form_code: 'FORM_10_COST_SHEET',
+      step_name: 'Cost Sheet',
+      description: 'Cost estimation',
+      status: 'completed',
+      progress_percentage: 100,
+      completed_at: '2026-10-31T00:00:00',
+      data: {
+        cost_sheet_date: '2026-10-31',
+      },
+    };
+
+    const res = (component as any).getStepDate(step);
+    expect(res).toEqual({ label: 'Cost Sheet Date', date: '31-10-2026' });
   });
 });
