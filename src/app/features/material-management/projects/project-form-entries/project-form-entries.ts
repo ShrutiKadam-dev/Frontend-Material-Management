@@ -742,7 +742,8 @@ export class ProjectFormEntries implements OnInit {
   }
 
   getEntryTableColumns(entry: ProjectStep): FormTableColumn[] {
-    if (this.isCostSheet() || entry.form_code === 'FORM_10_COST_SHEET') {
+    const isCostSheet = typeof this.isCostSheet === 'function' ? this.isCostSheet() : this.formDefinition?.()?.formCode === 'FORM_10_COST_SHEET';
+    if (isCostSheet || entry.form_code === 'FORM_10_COST_SHEET') {
       return COST_SHEET_CARD_COLUMNS;
     }
     const def = this.formDefinition();
@@ -1190,7 +1191,8 @@ export class ProjectFormEntries implements OnInit {
     const entryRec = entry as unknown as Record<string, unknown>;
 
     // For Cost Sheet, prioritize output.items if present as it contains all calculated columns
-    if (this.isCostSheet() || entry.form_code === 'FORM_10_COST_SHEET') {
+    const isCostSheet = typeof this.isCostSheet === 'function' ? this.isCostSheet() : this.formDefinition?.()?.formCode === 'FORM_10_COST_SHEET';
+    if (isCostSheet || entry.form_code === 'FORM_10_COST_SHEET') {
       const outRaw = ((data && data['output']) || entryRec['output'] || {}) as Record<string, unknown>;
       if (Array.isArray(outRaw['items']) && outRaw['items'].length > 0) {
         raw = outRaw['items'] as Array<Record<string, unknown>>;

@@ -842,7 +842,7 @@ export class StepFormDialog {
       });
       this.tableVersion?.update?.((v) => v + 1);
 
-      if (this.resolvedDef()?.formCode === 'FORM_10_COST_SHEET') {
+      if (this.resolvedDef?.()?.formCode === 'FORM_10_COST_SHEET') {
         const totalEurCtrl = this.formGroup()?.get('total_amount_eur');
         if (totalEurCtrl) {
           const totalEur = (this.tableFormArray()?.value || []).reduce(

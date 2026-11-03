@@ -5,10 +5,10 @@ import {
   getFormDefinition,
 } from './form-catalog';
 
-describe('FORM_CATALOG Extended Forms (26, 29, 30, 31, 32, 33, 34)', () => {
-  it('should contain 34 total forms in catalog', () => {
-    expect(FORM_CATALOG.length).toBe(34);
-    expect(FORM_CATALOG_MAP.size).toBeGreaterThanOrEqual(34);
+describe('FORM_CATALOG Extended Forms (26, 29, 30, 31, 32, 33, 34, 35, 36)', () => {
+  it('should contain 36 total forms in catalog', () => {
+    expect(FORM_CATALOG.length).toBe(36);
+    expect(FORM_CATALOG_MAP.size).toBeGreaterThanOrEqual(36);
   });
 
   describe('Form 2: BID DOCUMENT FOR PQB', () => {
@@ -398,6 +398,128 @@ describe('FORM_CATALOG Extended Forms (26, 29, 30, 31, 32, 33, 34)', () => {
       expect(def.uploads.length).toBeGreaterThan(0);
       expect(def.uploads[0].key).toBe('upload_eway_bill');
       expect(def.uploads[0].label).toBe('Upload E-Way Bill');
+    });
+  });
+
+  describe('Form 35: INTERNATIONAL COMPETITIVE BIDDING (ICB)', () => {
+    it('should be registered with code FORM_35_ICB and id 35', () => {
+      const def = getFormDefinition('FORM_35_ICB');
+      expect(def).toBeDefined();
+      expect(def?.id).toBe(35);
+      expect(def?.name).toBe('International Competitive Bidding (ICB)');
+      expect(def?.category).toBe('Pre-Bidding & Tenders');
+      expect(def?.phaseId).toBe('phase-1');
+      expect(getFormDefinition(35)).toEqual(def);
+    });
+
+    it('should resolve via alias FORM_ICB and FORM_35_INTERNATIONAL_COMPETITIVE_BIDDING', () => {
+      expect(getFormDefinition('FORM_ICB')?.id).toBe(35);
+      expect(getFormDefinition('FORM_35_INTERNATIONAL_COMPETITIVE_BIDDING')?.id).toBe(35);
+      expect(getFormDefinition('FORM_INTERNATIONAL_COMPETITIVE_BIDDING')?.id).toBe(35);
+    });
+
+    it('should have all 9 fields matching specification', () => {
+      const def = getFormDefinition(35)!;
+      const fieldKeys = def.fields.map((f) => f.key);
+      expect(fieldKeys).toEqual([
+        'pqb_no',
+        'tender_title',
+        'tender_no',
+        'tender_issue_date',
+        'bid_submission_due_date_time',
+        'bid_opening_date_time',
+        'tender_fee',
+        'emd',
+        'tender_validity',
+      ]);
+
+      const tenderFee = def.fields.find((f) => f.key === 'tender_fee');
+      expect(tenderFee?.type).toBe('currency');
+      expect(tenderFee?.prefix).toBe('₹');
+
+      const emd = def.fields.find((f) => f.key === 'emd');
+      expect(emd?.type).toBe('currency');
+      expect(emd?.prefix).toBe('₹');
+    });
+
+    it('should have table configuration for Requirements', () => {
+      const def = getFormDefinition(35)!;
+      expect(def.tableConfig).toBeDefined();
+      expect(def.tableConfig?.title).toBe('Requirements');
+
+      const colKeys = def.tableConfig?.columns.map((c) => c.key);
+      expect(colKeys).toEqual(['sr_no', 'description', 'unit', 'quantity']);
+    });
+
+    it('should configure upload for ICB document', () => {
+      const def = getFormDefinition(35)!;
+      expect(def.uploads.length).toBeGreaterThan(0);
+      expect(def.uploads[0].key).toBe('upload_icb');
+      expect(def.uploads[0].label).toBe('Upload ICB Document');
+    });
+  });
+
+  describe('Form 36: BID DOCUMENT - INTERNATIONAL COMPETITIVE BIDDING (ICB)', () => {
+    it('should be registered with code FORM_36_BID_DOC_ICB and id 36', () => {
+      const def = getFormDefinition('FORM_36_BID_DOC_ICB');
+      expect(def).toBeDefined();
+      expect(def?.id).toBe(36);
+      expect(def?.name).toBe('Bid Document - International Competitive Bidding (ICB)');
+      expect(def?.category).toBe('Pre-Bidding & Tenders');
+      expect(def?.phaseId).toBe('phase-1');
+      expect(getFormDefinition(36)).toEqual(def);
+    });
+
+    it('should resolve via alias FORM_BID_DOC_ICB and FORM_36_BID_DOCUMENT_ICB', () => {
+      expect(getFormDefinition('FORM_BID_DOC_ICB')?.id).toBe(36);
+      expect(getFormDefinition('FORM_36_BID_DOCUMENT_ICB')?.id).toBe(36);
+      expect(getFormDefinition('FORM_BID_DOCUMENT_ICB')?.id).toBe(36);
+    });
+
+    it('should have all 12 fields matching specification', () => {
+      const def = getFormDefinition(36)!;
+      const fieldKeys = def.fields.map((f) => f.key);
+      expect(fieldKeys).toEqual([
+        'customer_name',
+        'tender_title',
+        'tender_no',
+        'tender_issue_date',
+        'total_no_corrigendum_issued',
+        'bid_submission_date',
+        'delivery_terms',
+        'delivery_period',
+        'bid_validity',
+        'payment_terms',
+        'warranty_period',
+        'gst_pct',
+      ]);
+    });
+
+    it('should have table configuration for Bid Materials/Services & Pricing', () => {
+      const def = getFormDefinition(36)!;
+      expect(def.tableConfig).toBeDefined();
+      expect(def.tableConfig?.title).toBe('Bid Materials/Services & Pricing');
+      expect(def.tableConfig?.autoCalculateTotal).toBe(true);
+      expect(def.tableConfig?.quantityKey).toBe('quantity');
+      expect(def.tableConfig?.unitPriceKey).toBe('unit_price');
+      expect(def.tableConfig?.totalKey).toBe('total_amount');
+
+      const colKeys = def.tableConfig?.columns.map((c) => c.key);
+      expect(colKeys).toEqual([
+        'sr_no',
+        'description',
+        'hsn_sac',
+        'quantity',
+        'unit_price',
+        'total_amount',
+      ]);
+    });
+
+    it('should configure upload for ICB bid document', () => {
+      const def = getFormDefinition(36)!;
+      expect(def.uploads.length).toBeGreaterThan(0);
+      expect(def.uploads[0].key).toBe('upload_bid_document');
+      expect(def.uploads[0].label).toBe('Upload Bid Document');
     });
   });
 });

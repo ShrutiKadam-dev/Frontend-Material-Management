@@ -136,7 +136,9 @@ INSERT INTO form_definitions (id, form_code, name, category, phase_id, icon, des
 (31, 'FORM_31_BID_DOC_LTE', 'Bid Document - Limited Tender Enquiry (LTE)', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-book', 'Limited tender enquiry bid submission data, delivery terms, corrigendum, and material pricing', TRUE),
 (32, 'FORM_32_EWAY_BILL', 'E-Way Bill', 'Logistics & Customs', 'phase-4', 'pi pi-truck', 'Electronic waybill tracking for movement of goods, transport details, and consignment validity', FALSE),
 (33, 'FORM_33_STE', 'Single Tender Enquiry (STE)', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-file-edit', 'Single tender enquiry (STE) terms, submission deadlines, EMD, fee, and requirements', TRUE),
-(34, 'FORM_34_BID_DOC_STE', 'Bid Document - Single Tender Enquiry (STE)', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-book', 'Single tender enquiry (STE) bid submission data, delivery terms, corrigendum, and material pricing', TRUE);
+(34, 'FORM_34_BID_DOC_STE', 'Bid Document - Single Tender Enquiry (STE)', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-book', 'Single tender enquiry (STE) bid submission data, delivery terms, corrigendum, and material pricing', TRUE),
+(35, 'FORM_35_ICB', 'International Competitive Bidding (ICB)', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-file-edit', 'International competitive bidding (ICB) terms, submission deadlines, EMD, fee, and requirements', TRUE),
+(36, 'FORM_36_BID_DOC_ICB', 'Bid Document - International Competitive Bidding (ICB)', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-book', 'International competitive bidding (ICB) bid submission data, delivery terms, corrigendum, and material pricing', TRUE);
 ```
 
 ---
@@ -355,6 +357,8 @@ Returns all active steps attached to this project, ordered by `step_order ASC`.
 | **32. FORM_32_EWAY_BILL** | E-Way Bill | `eway_bill_no`, `eway_bill_date`, `valid_from`, `valid_until`, `document_no`, `document_date`, `value`, `place_of_dispatch`, `place_of_delivery`, `transporter`, `mode`, `vehicle_trans_doc_no` | *None* | `upload_eway_bill` |
 | **33. FORM_33_STE** | Single Tender Enquiry (STE) | `pqb_no`, `tender_title`, `tender_no`, `tender_issue_date`, `bid_submission_due_date_time`, `bid_opening_date_time`, `tender_fee`, `emd`, `tender_validity` | `sr_no`, `description`, `unit`, `quantity` | `upload_ste` |
 | **34. FORM_34_BID_DOC_STE** | Bid Document - Single Tender Enquiry (STE) | `customer_name`, `tender_title`, `tender_no`, `tender_issue_date`, `total_no_corrigendum_issued`, `bid_submission_date`, `delivery_terms`, `delivery_period`, `bid_validity`, `payment_terms`, `warranty_period`, `gst_pct` | `sr_no`, `description`, `hsn_sac`, `quantity`, `unit_price`, `total_amount` | `upload_bid_document` |
+| **35. FORM_35_ICB** | International Competitive Bidding (ICB) | `pqb_no`, `tender_title`, `tender_no`, `tender_issue_date`, `bid_submission_due_date_time`, `bid_opening_date_time`, `tender_fee`, `emd`, `tender_validity` | `sr_no`, `description`, `unit`, `quantity` | `upload_icb` |
+| **36. FORM_36_BID_DOC_ICB** | Bid Document - International Competitive Bidding (ICB) | `customer_name`, `tender_title`, `tender_no`, `tender_issue_date`, `total_no_corrigendum_issued`, `bid_submission_date`, `delivery_terms`, `delivery_period`, `bid_validity`, `payment_terms`, `warranty_period`, `gst_pct` | `sr_no`, `description`, `hsn_sac`, `quantity`, `unit_price`, `total_amount` | `upload_bid_document` |
 
 ---
 

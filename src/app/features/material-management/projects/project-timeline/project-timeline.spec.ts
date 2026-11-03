@@ -164,6 +164,12 @@ describe('ProjectTimeline getStepDate', () => {
     expect(phase1.id).toBe('phase-1');
     expect(phase1.shortTitle).toBe('Phase 1: Pre-Bidding');
 
+    const phase1_icb = (component as any).getPhaseForStep(35);
+    expect(phase1_icb.id).toBe('phase-1');
+
+    const phase1_bid_icb = (component as any).getPhaseForStep(36);
+    expect(phase1_bid_icb.id).toBe('phase-1');
+
     const phase2 = (component as any).getPhaseForStep(9);
     expect(phase2.id).toBe('phase-2');
     expect(phase2.shortTitle).toBe('Phase 2: Sourcing');

@@ -305,7 +305,9 @@ export class ProjectTimeline implements OnInit {
             s.step_number === 15 ||
             (s.step_number >= 29 && s.step_number <= 31) ||
             s.step_number === 33 ||
-            s.step_number === 34
+            s.step_number === 34 ||
+            s.step_number === 35 ||
+            s.step_number === 36
           );
         } else if (phase.id === 'phase-2') {
           return s.step_number >= 8 && s.step_number <= 12;
@@ -731,7 +733,9 @@ export class ProjectTimeline implements OnInit {
       stepNumber === 15 ||
       (stepNumber >= 29 && stepNumber <= 31) ||
       stepNumber === 33 ||
-      stepNumber === 34
+      stepNumber === 34 ||
+      stepNumber === 35 ||
+      stepNumber === 36
     ) {
       return PIPELINE_PHASES[0];
     }

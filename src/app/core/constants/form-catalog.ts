@@ -1205,6 +1205,81 @@ export const FORM_CATALOG: FormDefinition[] = [
     },
     uploads: [{ key: 'upload_bid_document', label: 'Upload Bid Document', multiple: true }],
   },
+
+  // ── 35. INTERNATIONAL COMPETITIVE BIDDING (ICB) ──────────────────────────
+  {
+    id: 35,
+    formCode: 'FORM_35_ICB',
+    name: 'International Competitive Bidding (ICB)',
+    category: 'Pre-Bidding & Tenders',
+    phaseId: 'phase-1',
+    icon: 'pi pi-file-edit',
+    description: 'International competitive bidding (ICB) terms, submission deadlines, EMD, fee, and requirements',
+    apiEndpoint: '/api/v1/international-competitive-biddings',
+    fields: [
+      { key: 'pqb_no', label: 'PQB No.', type: 'text', colSpan: 2 },
+      { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
+      { key: 'tender_no', label: 'Tender No.', type: 'text', required: true, colSpan: 2 },
+      { key: 'tender_issue_date', label: 'Tender Issue Date', type: 'date', colSpan: 2 },
+      { key: 'bid_submission_due_date_time', label: 'Bid Submission Due Date & Time', type: 'datetime', colSpan: 2 },
+      { key: 'bid_opening_date_time', label: 'Bid Opening Date & Time', type: 'datetime', colSpan: 2 },
+      { key: 'tender_fee', label: 'Tender Fee', type: 'currency', prefix: '₹', colSpan: 1 },
+      { key: 'emd', label: 'EMD', type: 'currency', prefix: '₹', colSpan: 1 },
+      { key: 'tender_validity', label: 'Tender Validity', type: 'text', colSpan: 2 },
+    ],
+    tableConfig: {
+      title: 'Requirements',
+      columns: [
+        { key: 'sr_no', label: 'Sr. No.', type: 'number', width: '80px' },
+        { key: 'description', label: 'Description', type: 'text' },
+        { key: 'unit', label: 'Unit', type: 'text', width: '120px' },
+        { key: 'quantity', label: 'Quantity', type: 'number', width: '120px' },
+      ],
+    },
+    uploads: [{ key: 'upload_icb', label: 'Upload ICB Document', multiple: true }],
+  },
+
+  // ── 36. BID DOCUMENT - INTERNATIONAL COMPETITIVE BIDDING (ICB) ───────────
+  {
+    id: 36,
+    formCode: 'FORM_36_BID_DOC_ICB',
+    name: 'Bid Document - International Competitive Bidding (ICB)',
+    category: 'Pre-Bidding & Tenders',
+    phaseId: 'phase-1',
+    icon: 'pi pi-book',
+    description: 'International competitive bidding (ICB) bid submission data, delivery terms, corrigendum, and material pricing',
+    apiEndpoint: '/api/v1/bid-document-icb',
+    fields: [
+      { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
+      { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
+      { key: 'tender_no', label: 'Tender No.', type: 'text', required: true, colSpan: 1 },
+      { key: 'tender_issue_date', label: 'Tender Issue Date', type: 'date', colSpan: 1 },
+      { key: 'total_no_corrigendum_issued', label: 'Total No. Corrigendum Issued', type: 'number', colSpan: 1 },
+      { key: 'bid_submission_date', label: 'Bid Submission Date', type: 'date', colSpan: 1 },
+      { key: 'delivery_terms', label: 'Delivery Terms', type: 'select', options: INCOTERMS_OPTIONS, colSpan: 1 },
+      { key: 'delivery_period', label: 'Delivery Period', type: 'text', colSpan: 1 },
+      { key: 'bid_validity', label: 'Bid Validity', type: 'text', colSpan: 1 },
+      { key: 'payment_terms', label: 'Payment Terms', type: 'text', colSpan: 1 },
+      { key: 'warranty_period', label: 'Warranty Period', type: 'select', options: WARRANTY_PERIOD_OPTIONS, colSpan: 2 },
+      { key: 'gst_pct', label: 'GST (%)', type: 'number', suffix: '%', colSpan: 2 },
+    ],
+    tableConfig: {
+      title: 'Bid Materials/Services & Pricing',
+      autoCalculateTotal: true,
+      quantityKey: 'quantity',
+      unitPriceKey: 'unit_price',
+      totalKey: 'total_amount',
+      columns: [
+        { key: 'sr_no', label: 'Sr. No.', type: 'number', width: '80px' },
+        { key: 'description', label: 'Description', type: 'text' },
+        { key: 'hsn_sac', label: 'HSN / SAC', type: 'text', width: '130px' },
+        { key: 'quantity', label: 'Quantity', type: 'number', width: '110px' },
+        { key: 'unit_price', label: 'Unit Price', type: 'currency', width: '130px' },
+        { key: 'total_amount', label: 'Total Amount', type: 'currency', width: '150px' },
+      ],
+    },
+    uploads: [{ key: 'upload_bid_document', label: 'Upload Bid Document', multiple: true }],
+  },
 ];
 
 /** Aliases for form codes that may have been renamed or referenced alternatively */
@@ -1215,6 +1290,14 @@ export const FORM_CODE_ALIASES: Record<string, string> = {
   FORM_BID_DOC_STE: 'FORM_34_BID_DOC_STE',
   FORM_33_SINGLE_TENDER_ENQUIRY: 'FORM_33_STE',
   FORM_34_BID_DOCUMENT_STE: 'FORM_34_BID_DOC_STE',
+  FORM_35_ICB: 'FORM_35_ICB',
+  FORM_ICB: 'FORM_35_ICB',
+  FORM_35_INTERNATIONAL_COMPETITIVE_BIDDING: 'FORM_35_ICB',
+  FORM_INTERNATIONAL_COMPETITIVE_BIDDING: 'FORM_35_ICB',
+  FORM_36_BID_DOC_ICB: 'FORM_36_BID_DOC_ICB',
+  FORM_BID_DOC_ICB: 'FORM_36_BID_DOC_ICB',
+  FORM_36_BID_DOCUMENT_ICB: 'FORM_36_BID_DOC_ICB',
+  FORM_BID_DOCUMENT_ICB: 'FORM_36_BID_DOC_ICB',
 };
 
 /** Lookup map by form code */
