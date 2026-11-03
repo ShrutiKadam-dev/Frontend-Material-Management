@@ -1221,7 +1221,8 @@
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  overflow: hidden;
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .modern-items-datatable {
@@ -1239,6 +1240,7 @@
     letter-spacing: 0.04em !important;
     padding: 10px 14px !important;
     text-transform: uppercase !important;
+    white-space: nowrap !important;
   }
 
   .modern-table-row {
@@ -1256,6 +1258,7 @@
       font-weight: 450 !important;
       color: #0f172a !important;
       vertical-align: middle !important;
+      white-space: nowrap !important;
     }
   }
 

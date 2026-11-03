@@ -29,14 +29,25 @@ export const TABLE_COLUMN_ALIASES: Record<string, string[]> = {
     'item_name',
     'name',
   ],
-  item_code: ['item_code', 'itemCode', 'code', 'part_number'],
+  item_code: ['item_code', 'itemCode', 'code', 'part_number', 'hsn_code', 'hsn_sac'],
   quantity: ['quantity', 'qty', 'count', 'units'],
   unit: ['unit', 'uom', 'unit_of_measure', 'unit_type'],
   unit_price: ['unit_price', 'unit_rate', 'rate', 'price', 'cost_per_unit', 'price_per_unit_inr', 'pricePerUnitInrExclGst'],
-  price_per_unit_eur: ['price_per_unit_eur', 'pricePerUnitEur', 'price_eur', 'unit_price_eur'],
+  price_per_unit_eur: ['price_per_unit_eur', 'pricePerUnitEur', 'price_eur', 'unit_price_eur', 'price_per_unit', 'pricePerUnit'],
+  total_price_eur: ['total_price_eur', 'totalPriceEur', 'total_eur', 'totalPrice'],
+  insurance_freight_eur: ['insurance_freight_eur', 'insuranceFreightEur', 'insurance_freight'],
+  landed_cost_eur: ['landed_cost_eur', 'landedCostEur'],
+  landed_cost_inr: ['landed_cost_inr', 'landedCostInr', 'landed_cost'],
+  customs_duty_inr: ['customs_duty_inr', 'customsDutyInr', 'custom_duty_amount', 'custom_duty_inr', 'customs_duty'],
+  igst_inr: ['igst_inr', 'igstInr', 'igst_amount', 'igst'],
+  transportation_inr: ['transportation_inr', 'transportationInr', 'transportation_amount', 'transportation'],
+  financing_charges_inr: ['financing_charges_inr', 'financingChargesInr', 'finance_charges_amount', 'finance_charges_inr', 'financing_charges'],
+  total_cost_inr: ['total_cost_inr', 'totalCostInr', 'total_cost'],
+  less_igst_inr: ['less_igst_inr', 'lessIgstInr', 'cost_without_igst', 'costWithoutIgst'],
+  margin_inr: ['margin_inr', 'marginInr', 'margin_amount', 'margin'],
+  selling_price_excl_gst: ['selling_price_excl_gst', 'sellingPriceExclGst', 'selling_price', 'total_selling_price', 'selling_price_without_gst'],
+  selling_price_incl_gst: ['selling_price_incl_gst', 'sellingPriceInclGst', 'grand_total_incl_gst', 'grandTotalInclGst', 'selling_price_with_gst'],
   customs_duty_rate: ['customs_duty_rate', 'customsDutyRate', 'custom_duty_pct', 'duty_pct', 'customsDutyPct'],
-  landed_cost_inr: ['landed_cost_inr', 'landedCostInr', 'landed_cost', 'landedCostEur'],
-  selling_price_excl_gst: ['selling_price_excl_gst', 'sellingPriceExclGst', 'selling_price', 'total_selling_price'],
   total_amount: ['total_amount', 'total_price', 'total', 'amount', 'line_total', 'selling_price_excl_gst', 'sellingPriceExclGst'],
   total_price: ['total_price', 'total_amount', 'total', 'amount', 'line_total', 'selling_price_excl_gst'],
   hsn_sac: ['hsn_sac', 'hsn_code', 'hsn', 'sac', 'sac_code'],
@@ -87,10 +98,47 @@ export function normalizeTableRow(
     if (!result['material_name']) result['material_name'] = desc;
   }
 
+  const icode = getTableRowCellValue(row, 'item_code');
+  if (icode !== undefined && icode !== null && icode !== '') {
+    if (!result['item_code']) result['item_code'] = icode;
+  }
+
   const qty = getTableRowCellValue(row, 'quantity');
   if (qty !== undefined && qty !== null && qty !== '') {
     if (result['quantity'] === undefined || result['quantity'] === null || result['quantity'] === '') {
       result['quantity'] = qty;
+    }
+  }
+
+  const pEur = getTableRowCellValue(row, 'price_per_unit_eur');
+  if (pEur !== undefined && pEur !== null && pEur !== '') {
+    if (result['price_per_unit_eur'] === undefined || result['price_per_unit_eur'] === null || result['price_per_unit_eur'] === '') {
+      result['price_per_unit_eur'] = pEur;
+    }
+  }
+
+  // Cost sheet calculated fields normalization
+  const csKeys = [
+    'total_price_eur',
+    'insurance_freight_eur',
+    'landed_cost_eur',
+    'landed_cost_inr',
+    'customs_duty_inr',
+    'igst_inr',
+    'transportation_inr',
+    'financing_charges_inr',
+    'total_cost_inr',
+    'less_igst_inr',
+    'margin_inr',
+    'selling_price_excl_gst',
+    'selling_price_incl_gst',
+  ];
+  for (const k of csKeys) {
+    const v = getTableRowCellValue(row, k);
+    if (v !== undefined && v !== null && v !== '') {
+      if (result[k] === undefined || result[k] === null || result[k] === '') {
+        result[k] = v;
+      }
     }
   }
 

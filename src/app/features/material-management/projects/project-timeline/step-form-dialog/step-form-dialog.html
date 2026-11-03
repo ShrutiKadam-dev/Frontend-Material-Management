@@ -232,6 +232,15 @@
             </div>
             }
           }
+          @if (def.formCode === 'FORM_10_COST_SHEET') {
+          <button pButton type="button" icon="pi pi-sync" label="Fetch from Supplier Quotation"
+            class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
+            [loading]="fetchingSupplierQuotation()"
+            (click)="loadFromSupplierQuotation(true)"
+            pTooltip="Import line items and prices from latest Quotation from Supplier"
+            tooltipPosition="top">
+          </button>
+          }
           <button pButton type="button" icon="pi pi-plus" label="Add Item Row"
             class="p-button-outlined p-button-sm add-row-btn" (click)="addTableRow()">
           </button>
@@ -298,6 +307,14 @@
                   </div>
                   <p class="empty-title">No items added yet</p>
                   <p class="empty-desc">Line items are optional. Click below to add requirement rows.</p>
+                  @if (def.formCode === 'FORM_10_COST_SHEET') {
+                  <button pButton type="button" icon="pi pi-sync" label="Fetch from Supplier Quotation"
+                    class="empty-add-row-btn p-button-outlined p-button-secondary"
+                    style="margin-right: 8px;"
+                    [loading]="fetchingSupplierQuotation()"
+                    (click)="loadFromSupplierQuotation(true)">
+                  </button>
+                  }
                   <button pButton type="button" icon="pi pi-plus" label="Add Item Row" class="empty-add-row-btn"
                     (click)="addTableRow()">
                   </button>

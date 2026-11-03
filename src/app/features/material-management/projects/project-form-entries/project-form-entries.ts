@@ -110,6 +110,27 @@ export interface CostSheetParamRow {
   isHighlight?: boolean;
 }
 
+export const COST_SHEET_CARD_COLUMNS: FormTableColumn[] = [
+  { key: 'sr_no', label: 'SR. NO.', type: 'number', width: '70px' },
+  { key: 'description', label: 'DESCRIPTION', type: 'text', width: '240px' },
+  { key: 'item_code', label: 'ITEM CODE', type: 'text', width: '130px' },
+  { key: 'price_per_unit_eur', label: 'PRICE PER UNIT [EUR]', type: 'currency', width: '160px' },
+  { key: 'quantity', label: 'QUANTITY', type: 'number', width: '95px' },
+  { key: 'total_price_eur', label: 'TOTAL PRICE [EUR]', type: 'currency', width: '150px' },
+  { key: 'insurance_freight_eur', label: 'INSURANCE & FREIGHT [EUR]', type: 'currency', width: '175px' },
+  { key: 'landed_cost_eur', label: 'LANDED COST [EUR]', type: 'currency', width: '160px' },
+  { key: 'landed_cost_inr', label: 'LANDED COST [INR]', type: 'currency', width: '160px' },
+  { key: 'customs_duty_inr', label: 'CUSTOMS & DUTY', type: 'currency', width: '150px' },
+  { key: 'igst_inr', label: 'IGST', type: 'currency', width: '130px' },
+  { key: 'transportation_inr', label: 'TRANSPORTATION', type: 'currency', width: '150px' },
+  { key: 'financing_charges_inr', label: 'FINANCING CHARGES', type: 'currency', width: '165px' },
+  { key: 'total_cost_inr', label: 'TOTAL COST', type: 'currency', width: '150px' },
+  { key: 'less_igst_inr', label: 'COST WITHOUT IGST', type: 'currency', width: '165px' },
+  { key: 'margin_inr', label: 'MARGIN', type: 'currency', width: '140px' },
+  { key: 'selling_price_excl_gst', label: 'SELLING PRICE (WITHOUT GST)', type: 'currency', width: '190px' },
+  { key: 'selling_price_incl_gst', label: 'SELLING PRICE (WITH GST)', type: 'currency', width: '190px' },
+];
+
 export interface CostSheetMatrixRow {
   label: string;
   description: string;
@@ -721,6 +742,9 @@ export class ProjectFormEntries implements OnInit {
   }
 
   getEntryTableColumns(entry: ProjectStep): FormTableColumn[] {
+    if (this.isCostSheet() || entry.form_code === 'FORM_10_COST_SHEET') {
+      return COST_SHEET_CARD_COLUMNS;
+    }
     const def = this.formDefinition();
     const baseCols =
       def?.tableConfig?.columns && def.tableConfig.columns.length > 0
@@ -733,7 +757,7 @@ export class ProjectFormEntries implements OnInit {
       let label = col.label;
       if (label.includes('₹') || label.includes('$') || label.includes('€') || label.includes('£')) {
         label = label.replace(/\([₹$€£]\)/g, `(${sym})`).replace(/[₹$€£]/g, sym);
-      } else if (col.type === 'currency' && !label.includes('(')) {
+      } else if (col.type === 'currency' && !label.includes('(') && !label.includes('[')) {
         label = `${label} (${sym})`;
       }
       return { ...col, label };
@@ -760,23 +784,54 @@ export class ProjectFormEntries implements OnInit {
 
     if (val === undefined || val === null || val === '') return '—';
 
+    const isCurrencyCol =
+      col.type === 'currency' ||
+      col.key.includes('price') ||
+      col.key.includes('amount') ||
+      col.key.includes('cost') ||
+      col.key.includes('duty') ||
+      col.key.includes('igst') ||
+      col.key.includes('transportation') ||
+      col.key.includes('margin') ||
+      col.key.includes('charges');
+
     if (
-      (col.type === 'currency' || col.key.includes('price') || col.key.includes('amount')) &&
-      (typeof val === 'number' || !isNaN(Number(val)))
+      isCurrencyCol &&
+      (typeof val === 'number' || (!isNaN(Number(val)) && val !== ''))
     ) {
-      const isEur = col.key.toLowerCase().includes('eur') || col.label.toLowerCase().includes('€') || col.label.toLowerCase().includes('eur');
-      let currencyUnit = (row['currency_unit'] || row['currency'] || '') as string;
-      let sym = '';
-      if (currencyUnit) {
-        sym = getCurrencySymbol(currencyUnit);
-      } else if (entry) {
-        sym = this.getEntryCurrencySymbol(entry);
-        currencyUnit = this.getEntryCurrencyUnit(entry);
+      const isEur =
+        col.key.toLowerCase().includes('eur') ||
+        col.label.toLowerCase().includes('€') ||
+        col.label.toLowerCase().includes('[eur]');
+
+      let sym = '₹';
+      let locale = 'en-IN';
+
+      if (isEur) {
+        sym = '€';
+        locale = 'en-US';
       } else {
-        sym = isEur ? '€' : '₹';
+        let currencyUnit = (row['currency_unit'] || row['currency'] || '') as string;
+        if (currencyUnit && currencyUnit !== 'EUR') {
+          sym = getCurrencySymbol(currencyUnit);
+          locale = currencyUnit === 'INR' ? 'en-IN' : 'en-US';
+        } else if (entry && this.getEntryCurrencyUnit(entry) !== 'EUR') {
+          sym = this.getEntryCurrencySymbol(entry);
+          locale = this.getEntryCurrencyUnit(entry) === 'INR' ? 'en-IN' : 'en-US';
+        } else {
+          sym = '₹';
+          locale = 'en-IN';
+        }
       }
-      const locale = currencyUnit === 'INR' || sym === '₹' ? 'en-IN' : 'en-US';
-      return sym + '\u00A0' + Number(val).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      return (
+        sym +
+        '\u00A0' +
+        Number(val).toLocaleString(locale, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      );
     }
     if (col.type === 'number' && (typeof val === 'number' || !isNaN(Number(val)))) {
       return Number(val).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
@@ -1132,7 +1187,17 @@ export class ProjectFormEntries implements OnInit {
   getTableItems(entry: ProjectStep): Array<Record<string, unknown>> {
     let raw: Array<Record<string, unknown>> = [];
     const data = this.getNormalizedEntryData(entry);
-    if (data) {
+    const entryRec = entry as unknown as Record<string, unknown>;
+
+    // For Cost Sheet, prioritize output.items if present as it contains all calculated columns
+    if (this.isCostSheet() || entry.form_code === 'FORM_10_COST_SHEET') {
+      const outRaw = ((data && data['output']) || entryRec['output'] || {}) as Record<string, unknown>;
+      if (Array.isArray(outRaw['items']) && outRaw['items'].length > 0) {
+        raw = outRaw['items'] as Array<Record<string, unknown>>;
+      }
+    }
+
+    if (!raw.length && data) {
       if (Array.isArray(data['items'])) {
         raw = data['items'] as Array<Record<string, unknown>>;
       } else if (Array.isArray(data['table_items'])) {
@@ -1142,7 +1207,6 @@ export class ProjectFormEntries implements OnInit {
       }
     }
 
-    const entryRec = entry as unknown as Record<string, unknown>;
     if (!raw.length && Array.isArray(entryRec['items'])) {
       raw = entryRec['items'] as Array<Record<string, unknown>>;
     }

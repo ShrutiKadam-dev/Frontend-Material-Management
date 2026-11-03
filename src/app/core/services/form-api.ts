@@ -29,7 +29,45 @@ export function normalizeBackendEntityToStep(
         : 'completed';
 
   let rawTableItems: unknown[] = [];
-  if (Array.isArray(item['items']) && (item['items'] as unknown[]).length > 0) {
+  if (
+    formDef.formCode === 'FORM_10_COST_SHEET' &&
+    item['output'] &&
+    typeof item['output'] === 'object' &&
+    Array.isArray((item['output'] as Record<string, unknown>)['items']) &&
+    ((item['output'] as Record<string, unknown>)['items'] as unknown[]).length > 0
+  ) {
+    const outputItems = (item['output'] as Record<string, unknown>)['items'] as Array<Record<string, unknown>>;
+    const modelItems = Array.isArray(item['items']) ? (item['items'] as Array<Record<string, unknown>>) : [];
+    rawTableItems = outputItems.map((outIt, idx) => {
+      const match = modelItems.find(
+        (m) =>
+          (m['itemCode'] && (m['itemCode'] === outIt['itemCode'] || m['itemCode'] === outIt['item_code'])) ||
+          (m['item_code'] && (m['item_code'] === outIt['itemCode'] || m['item_code'] === outIt['item_code'])),
+      ) || modelItems[idx] || {};
+      return {
+        ...match,
+        ...outIt,
+        sr_no: idx + 1,
+        description: outIt['itemDescription'] || outIt['description'] || match['itemDescription'] || match['description'] || match['material_name'] || '',
+        item_code: outIt['itemCode'] || outIt['item_code'] || match['itemCode'] || match['item_code'] || '',
+        price_per_unit_eur: outIt['pricePerUnitEur'] ?? outIt['price_per_unit_eur'] ?? match['pricePerUnitEur'] ?? match['price_per_unit_eur'],
+        quantity: outIt['quantity'] ?? match['quantity'],
+        total_price_eur: outIt['totalPriceEur'] ?? outIt['total_price_eur'],
+        insurance_freight_eur: outIt['insuranceFreightEur'] ?? outIt['insurance_freight_eur'],
+        landed_cost_eur: outIt['landedCostEur'] ?? outIt['landed_cost_eur'],
+        landed_cost_inr: outIt['landedCostInr'] ?? outIt['landed_cost_inr'],
+        customs_duty_inr: outIt['customsDutyInr'] ?? outIt['customs_duty_inr'],
+        igst_inr: outIt['igstInr'] ?? outIt['igst_inr'],
+        transportation_inr: outIt['transportationInr'] ?? outIt['transportation_inr'],
+        financing_charges_inr: outIt['financingChargesInr'] ?? outIt['financing_charges_inr'],
+        total_cost_inr: outIt['totalCostInr'] ?? outIt['total_cost_inr'],
+        less_igst_inr: outIt['lessIgstInr'] ?? outIt['less_igst_inr'],
+        margin_inr: outIt['marginInr'] ?? outIt['margin_inr'],
+        selling_price_excl_gst: outIt['sellingPriceExclGst'] ?? outIt['selling_price_excl_gst'],
+        selling_price_incl_gst: outIt['sellingPriceInclGst'] ?? outIt['selling_price_incl_gst'],
+      };
+    });
+  } else if (Array.isArray(item['items']) && (item['items'] as unknown[]).length > 0) {
     rawTableItems = item['items'] as unknown[];
   } else if (
     item['output'] &&

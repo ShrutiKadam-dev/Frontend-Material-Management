@@ -72,6 +72,7 @@ import { Supplier } from '../../../../../core/models/supplier.model';
 import { ProjectService } from '../../../../../core/services/project';
 import { CustomerService } from '../../../../../core/services/customer';
 import { SupplierService } from '../../../../../core/services/supplier';
+import { SupplierQuotationService } from '../../../../../core/services/supplier-quotation';
 
 @Component({
   selector: 'app-step-form-dialog',
@@ -98,6 +99,9 @@ export class StepFormDialog {
   private readonly projectService = inject(ProjectService, { optional: true });
   private readonly customerService = inject(CustomerService, { optional: true });
   private readonly supplierService = inject(SupplierService, { optional: true });
+  private readonly supplierQuotationService = inject(SupplierQuotationService, { optional: true });
+
+  readonly fetchingSupplierQuotation = signal<boolean>(false);
 
   // ── Inputs & Two-Way Model ──────────────────────────────────────────
   readonly visible = model<boolean>(false);
@@ -238,6 +242,9 @@ export class StepFormDialog {
   readonly tableCurrencySymbol = computed(() => {
     this.formVersion();
     const def = this.resolvedDef();
+    if (def?.formCode === 'FORM_10_COST_SHEET') {
+      return '€';
+    }
     const hasCurrencySelect = def?.fields.some((f) => this.isCurrencyWithSelect(f));
     if (hasCurrencySelect) {
       return this.selectedCurrencySymbol();
@@ -262,10 +269,91 @@ export class StepFormDialog {
   }
 
   getColumnLabel(col: FormTableColumn): string {
-    if (col.type === 'currency' && !col.label.includes('(')) {
+    if (col.label.includes('[EUR]') || col.label.includes('(€)')) {
+      return col.label;
+    }
+    if (col.type === 'currency' && !col.label.includes('(') && !col.label.includes('[')) {
       return `${col.label} (${this.tableCurrencySymbol()})`;
     }
     return col.label;
+  }
+
+  loadFromSupplierQuotation(showNotification = true): void {
+    const pId = this.projectId();
+    if (!pId || !this.supplierQuotationService) return;
+
+    this.fetchingSupplierQuotation.set(true);
+    this.supplierQuotationService.getLatest(pId).subscribe({
+      next: (res: unknown) => {
+        this.fetchingSupplierQuotation.set(false);
+        const data = (res || {}) as Record<string, unknown>;
+        const rawItems = Array.isArray(data['items']) ? (data['items'] as Array<Record<string, unknown>>) : [];
+
+        if (rawItems.length === 0) {
+          if (showNotification) {
+            this.messageService.add({
+              severity: 'warn',
+              summary: 'No Supplier Quotation Items',
+              detail: 'No items found in latest Quotation from Supplier for this project.',
+            });
+          }
+          return;
+        }
+
+        const def = this.resolvedDef();
+        if (!def || !def.tableConfig) return;
+
+        const rowsArray = new FormArray<FormGroup>([]);
+        let totalEur = 0;
+
+        for (let i = 0; i < rawItems.length; i++) {
+          const item = rawItems[i];
+          const desc = String(item['description'] || item['material_name'] || `Item ${i + 1}`).trim();
+          const icode = String(item['item_code'] || item['hsn_code'] || item['hsn_sac'] || `ITEM-${i + 1}`).trim();
+          const pEur = Number(item['price_per_unit_eur'] ?? item['unit_price'] ?? 0);
+          const qty = Number(item['quantity'] ?? 1);
+
+          totalEur += pEur * qty;
+
+          const rowData: Record<string, unknown> = {
+            sr_no: i + 1,
+            description: desc,
+            item_code: icode,
+            price_per_unit_eur: pEur,
+            quantity: qty,
+            total_price_eur: pEur * qty,
+          };
+
+          rowsArray.push(this.createTableRowGroup(def, rowData));
+        }
+
+        this.tableFormArray.set(rowsArray);
+        this.tableVersion.update((v) => v + 1);
+
+        const totalEurCtrl = this.formGroup()?.get('total_amount_eur');
+        if (totalEurCtrl && totalEur > 0) {
+          totalEurCtrl.setValue(Number(totalEur.toFixed(2)), { emitEvent: false });
+        }
+
+        if (showNotification) {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Quotation Data Loaded',
+            detail: `Imported ${rawItems.length} line items from latest Quotation from Supplier.`,
+          });
+        }
+      },
+      error: () => {
+        this.fetchingSupplierQuotation.set(false);
+        if (showNotification) {
+          this.messageService.add({
+            severity: 'info',
+            summary: 'Supplier Quotation Unavailable',
+            detail: 'Could not fetch latest supplier quotation items for this project.',
+          });
+        }
+      },
+    });
   }
 
   constructor() {
@@ -366,6 +454,13 @@ export class StepFormDialog {
             savedData['items'] = activeRec['items'];
           }
           this.populateForm(def!, savedData, activeStep.remarks || []);
+
+          if (
+            def!.formCode === 'FORM_10_COST_SHEET' &&
+            (!savedData['items'] || (Array.isArray(savedData['items']) && savedData['items'].length === 0))
+          ) {
+            this.loadFromSupplierQuotation(false);
+          }
         },
         error: () => {
           this.loading.set(false);
@@ -384,12 +479,22 @@ export class StepFormDialog {
             savedData['items'] = stepRec['items'];
           }
           this.populateForm(def!, savedData, step.remarks || []);
+
+          if (
+            def!.formCode === 'FORM_10_COST_SHEET' &&
+            (!savedData['items'] || (Array.isArray(savedData['items']) && savedData['items'].length === 0))
+          ) {
+            this.loadFromSupplierQuotation(false);
+          }
         },
       });
     } else if (defInput) {
       // ── ADD MODE (POST new step from catalog) ──────────────────────
       this.resolvedDef.set(defInput);
       this.populateForm(defInput, {}, []);
+      if (defInput.formCode === 'FORM_10_COST_SHEET') {
+        this.loadFromSupplierQuotation(false);
+      }
     } else {
       const fallback = FORM_CATALOG[0];
       this.resolvedDef.set(fallback);
@@ -736,6 +841,18 @@ export class StepFormDialog {
         group.get('sr_no')?.setValue(idx + 1);
       });
       this.tableVersion?.update?.((v) => v + 1);
+
+      if (this.resolvedDef()?.formCode === 'FORM_10_COST_SHEET') {
+        const totalEurCtrl = this.formGroup()?.get('total_amount_eur');
+        if (totalEurCtrl) {
+          const totalEur = (this.tableFormArray()?.value || []).reduce(
+            (sum: number, r: Record<string, unknown>) =>
+              sum + (Number(r['price_per_unit_eur']) * Number(r['quantity']) || 0),
+            0,
+          );
+          totalEurCtrl.setValue(Number(totalEur.toFixed(2)), { emitEvent: false });
+        }
+      }
     }
   }
 
@@ -756,6 +873,20 @@ export class StepFormDialog {
       row.patchValue({ [tKey]: total }, { emitEvent: false });
     }
     this.tableVersion.update((v) => v + 1);
+
+    if (def.formCode === 'FORM_10_COST_SHEET') {
+      const totalEurCtrl = this.formGroup()?.get('total_amount_eur');
+      if (totalEurCtrl) {
+        const totalEur = (this.tableFormArray()?.value || []).reduce(
+          (sum: number, r: Record<string, unknown>) =>
+            sum + (Number(r['price_per_unit_eur']) * Number(r['quantity']) || 0),
+          0,
+        );
+        if (totalEur > 0) {
+          totalEurCtrl.setValue(Number(totalEur.toFixed(2)), { emitEvent: false });
+        }
+      }
+    }
 
     if (this.hasTableGst() && this.formGroup()?.get('gst_amount')) {
       this.formGroup().patchValue({ gst_amount: this.tableGstAmount() }, { emitEvent: false });
