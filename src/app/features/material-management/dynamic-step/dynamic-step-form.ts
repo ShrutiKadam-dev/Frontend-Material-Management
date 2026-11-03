@@ -175,12 +175,25 @@ export class DynamicStepForm implements OnInit {
   protected readonly tableVersion = signal<number>(0);
   protected readonly formVersion = signal<number>(0);
 
+  protected readonly isCostSheet = computed(() => this.formDefinition()?.formCode === 'FORM_10_COST_SHEET');
+
   protected readonly tableTotalSum = computed(() => {
     this.tableVersion();
     const arr = (this.tableFormArray()?.value || []) as Array<Record<string, unknown>>;
     const cfg = this.formDefinition()?.tableConfig;
     if (!cfg || !cfg.totalKey) return 0;
-    return arr.reduce((sum, row) => sum + (Number(row[cfg.totalKey!]) || 0), 0);
+    return arr.reduce((sum, row) => {
+      const val = Number(row[cfg.totalKey!]);
+      if (!isNaN(val) && val !== 0) {
+        return sum + val;
+      }
+      if (cfg.quantityKey && cfg.unitPriceKey) {
+        const q = Number(row[cfg.quantityKey]) || 0;
+        const p = Number(row[cfg.unitPriceKey]) || 0;
+        return sum + q * p;
+      }
+      return sum + (isNaN(val) ? 0 : val);
+    }, 0);
   });
 
   protected readonly tableNetAmount = computed(() => this.tableTotalSum());
@@ -188,12 +201,15 @@ export class DynamicStepForm implements OnInit {
   protected readonly tableGstRate = computed(() => {
     this.formVersion();
     const def = this.formDefinition();
+    if (def?.formCode === 'FORM_10_COST_SHEET') return 0;
     const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
     return extractGstRate(formVals, def?.fields) ?? 0;
   });
 
   protected readonly tableGstAmount = computed(() => {
     this.formVersion();
+    const def = this.formDefinition();
+    if (def?.formCode === 'FORM_10_COST_SHEET') return 0;
     const net = this.tableNetAmount();
     const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
     const explicitGst =
@@ -205,6 +221,8 @@ export class DynamicStepForm implements OnInit {
 
   protected readonly tableGrossTotalSum = computed(() => {
     this.formVersion();
+    const def = this.formDefinition();
+    if (def?.formCode === 'FORM_10_COST_SHEET') return this.tableNetAmount();
     const net = this.tableNetAmount();
     const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
     const explicitGst =
@@ -217,6 +235,9 @@ export class DynamicStepForm implements OnInit {
   protected readonly hasTableGst = computed(() => {
     this.formVersion();
     const def = this.formDefinition();
+    if (def?.formCode === 'FORM_10_COST_SHEET') {
+      return false;
+    }
     const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
     return hasGstConfigured(def?.fields, formVals) || this.tableGstRate() > 0 || this.tableGstAmount() > 0;
   });
@@ -229,6 +250,9 @@ export class DynamicStepForm implements OnInit {
   protected readonly tableCurrencySymbol = computed(() => {
     this.formVersion();
     const def = this.formDefinition();
+    if (def?.formCode === 'FORM_10_COST_SHEET') {
+      return '€';
+    }
     const hasCurrencySelect = def?.fields.some((f) => this.isCurrencyWithSelect(f));
     if (hasCurrencySelect) {
       return this.selectedCurrencySymbol();
@@ -896,8 +920,12 @@ export class DynamicStepForm implements OnInit {
         combinedData['gst_amount'] = gstAmt;
         combinedData['total_amount'] = gross;
       } else {
-        combinedData['total_gross_amount'] = net;
-        combinedData['total_amount'] = net;
+        if (def.formCode === 'FORM_10_COST_SHEET') {
+          combinedData['total_amount_eur'] = net;
+        } else {
+          combinedData['total_gross_amount'] = net;
+          combinedData['total_amount'] = net;
+        }
       }
     }
 

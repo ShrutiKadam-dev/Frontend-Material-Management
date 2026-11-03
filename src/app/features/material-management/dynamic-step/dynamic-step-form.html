@@ -345,7 +345,7 @@
             } @else {
             <tr class="table-summary-row">
               <td [attr.colspan]="tableCfg.columns.length - 1" class="text-right">
-                <strong>Cumulative Total:</strong>
+                <strong>{{ isCostSheet() ? 'Total Net Amount:' : 'Cumulative Total:' }}</strong>
               </td>
               <td class="total-value-cell">
                 <strong>{{ tableCurrencySymbol() }} {{ tableTotalSum() | number:'1.2-2' }}</strong>

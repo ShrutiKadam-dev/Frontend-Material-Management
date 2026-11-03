@@ -240,8 +240,8 @@
               <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableGrossTotalSum() | number:'1.2-2' }}</strong>
             </div>
             } @else {
-            <div class="table-total-pill">
-              <span class="total-lbl">Net Total:</span>
+            <div class="table-total-pill" [title]="isCostSheet() ? 'Total Net Amount' : 'Net Total'">
+              <span class="total-lbl">{{ isCostSheet() ? 'Total Net Amount:' : 'Net Total:' }}</span>
               <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableTotalSum() | number:'1.2-2' }}</strong>
             </div>
             }
@@ -370,7 +370,7 @@
             } @else {
             <tr class="table-summary-row">
               <td [attr.colspan]="tbl.columns.length - 1" class="text-right">
-                <strong>Cumulative Total:</strong>
+                <strong>{{ isCostSheet() ? 'Total Net Amount:' : 'Cumulative Total:' }}</strong>
               </td>
               <td class="text-right total-cell-val">
                 <strong>{{ tableCurrencySymbol() }} {{ tableTotalSum() | number:'1.2-2' }}</strong>

@@ -158,29 +158,35 @@ export function normalizeBackendEntityToStep(
     const netTotal = existingNet !== undefined && !isNaN(existingNet) ? existingNet : computedNet;
     combinedData['total_net_amount'] = netTotal;
 
-    const rate = extractGstRate(combinedData, formDef.fields);
-    const explicitGst =
-      combinedData['gst_amount'] !== undefined && combinedData['gst_amount'] !== null && combinedData['gst_amount'] !== ''
-        ? Number(combinedData['gst_amount'])
-        : null;
-    const totals = calculateTableTotalsWithGst(netTotal, rate, explicitGst);
+    if (formDef.formCode !== 'FORM_10_COST_SHEET') {
+      const rate = extractGstRate(combinedData, formDef.fields);
+      const explicitGst =
+        combinedData['gst_amount'] !== undefined && combinedData['gst_amount'] !== null && combinedData['gst_amount'] !== ''
+          ? Number(combinedData['gst_amount'])
+          : null;
+      const totals = calculateTableTotalsWithGst(netTotal, rate, explicitGst);
 
-    if (
-      combinedData['total_gross_amount'] === undefined ||
-      combinedData['total_gross_amount'] === null ||
-      combinedData['total_gross_amount'] === '' ||
-      isNaN(Number(combinedData['total_gross_amount']))
-    ) {
-      combinedData['total_gross_amount'] = totals.total_gross_amount;
-    }
-    if (
-      totals.has_gst &&
-      (combinedData['gst_amount'] === undefined ||
-        combinedData['gst_amount'] === null ||
-        combinedData['gst_amount'] === '' ||
-        isNaN(Number(combinedData['gst_amount'])))
-    ) {
-      combinedData['gst_amount'] = totals.gst_amount;
+      if (
+        combinedData['total_gross_amount'] === undefined ||
+        combinedData['total_gross_amount'] === null ||
+        combinedData['total_gross_amount'] === '' ||
+        isNaN(Number(combinedData['total_gross_amount']))
+      ) {
+        combinedData['total_gross_amount'] = totals.total_gross_amount;
+      }
+      if (
+        totals.has_gst &&
+        (combinedData['gst_amount'] === undefined ||
+          combinedData['gst_amount'] === null ||
+          combinedData['gst_amount'] === '' ||
+          isNaN(Number(combinedData['gst_amount'])))
+      ) {
+        combinedData['gst_amount'] = totals.gst_amount;
+      }
+    } else {
+      if (combinedData['total_amount_eur'] === undefined || combinedData['total_amount_eur'] === null || combinedData['total_amount_eur'] === 0) {
+        combinedData['total_amount_eur'] = netTotal;
+      }
     }
   }
 
@@ -320,21 +326,25 @@ export class FormApiService {
       const netTotal = existingNet !== undefined && !isNaN(existingNet) ? existingNet : computedNet;
       bodyPayload['total_net_amount'] = netTotal;
 
-      const rate = extractGstRate(bodyPayload, formDef.fields);
-      const explicitGst =
-        bodyPayload['gst_amount'] !== undefined && bodyPayload['gst_amount'] !== null && bodyPayload['gst_amount'] !== ''
-          ? Number(bodyPayload['gst_amount'])
-          : null;
-      const totals = calculateTableTotalsWithGst(netTotal, rate, explicitGst);
+      if (formDef.formCode !== 'FORM_10_COST_SHEET') {
+        const rate = extractGstRate(bodyPayload, formDef.fields);
+        const explicitGst =
+          bodyPayload['gst_amount'] !== undefined && bodyPayload['gst_amount'] !== null && bodyPayload['gst_amount'] !== ''
+            ? Number(bodyPayload['gst_amount'])
+            : null;
+        const totals = calculateTableTotalsWithGst(netTotal, rate, explicitGst);
 
-      if (bodyPayload['total_gross_amount'] === undefined || bodyPayload['total_gross_amount'] === null || bodyPayload['total_gross_amount'] === '') {
-        bodyPayload['total_gross_amount'] = totals.total_gross_amount;
-      }
-      if (totals.has_gst && (bodyPayload['gst_amount'] === undefined || bodyPayload['gst_amount'] === null || bodyPayload['gst_amount'] === '')) {
-        bodyPayload['gst_amount'] = totals.gst_amount;
-      }
-      if (bodyPayload['total_amount'] === undefined) {
-        bodyPayload['total_amount'] = totals.has_gst ? totals.total_gross_amount : netTotal;
+        if (bodyPayload['total_gross_amount'] === undefined || bodyPayload['total_gross_amount'] === null || bodyPayload['total_gross_amount'] === '') {
+          bodyPayload['total_gross_amount'] = totals.total_gross_amount;
+        }
+        if (totals.has_gst && (bodyPayload['gst_amount'] === undefined || bodyPayload['gst_amount'] === null || bodyPayload['gst_amount'] === '')) {
+          bodyPayload['gst_amount'] = totals.gst_amount;
+        }
+        if (bodyPayload['total_amount'] === undefined) {
+          bodyPayload['total_amount'] = totals.has_gst ? totals.total_gross_amount : netTotal;
+        }
+      } else {
+        bodyPayload['total_amount_eur'] = netTotal;
       }
     }
 
@@ -410,21 +420,25 @@ export class FormApiService {
       const netTotal = existingNet !== undefined && !isNaN(existingNet) ? existingNet : computedNet;
       bodyPayload['total_net_amount'] = netTotal;
 
-      const rate = extractGstRate(bodyPayload, formDef.fields);
-      const explicitGst =
-        bodyPayload['gst_amount'] !== undefined && bodyPayload['gst_amount'] !== null && bodyPayload['gst_amount'] !== ''
-          ? Number(bodyPayload['gst_amount'])
-          : null;
-      const totals = calculateTableTotalsWithGst(netTotal, rate, explicitGst);
+      if (formDef.formCode !== 'FORM_10_COST_SHEET') {
+        const rate = extractGstRate(bodyPayload, formDef.fields);
+        const explicitGst =
+          bodyPayload['gst_amount'] !== undefined && bodyPayload['gst_amount'] !== null && bodyPayload['gst_amount'] !== ''
+            ? Number(bodyPayload['gst_amount'])
+            : null;
+        const totals = calculateTableTotalsWithGst(netTotal, rate, explicitGst);
 
-      if (bodyPayload['total_gross_amount'] === undefined || bodyPayload['total_gross_amount'] === null || bodyPayload['total_gross_amount'] === '') {
-        bodyPayload['total_gross_amount'] = totals.total_gross_amount;
-      }
-      if (totals.has_gst && (bodyPayload['gst_amount'] === undefined || bodyPayload['gst_amount'] === null || bodyPayload['gst_amount'] === '')) {
-        bodyPayload['gst_amount'] = totals.gst_amount;
-      }
-      if (bodyPayload['total_amount'] === undefined) {
-        bodyPayload['total_amount'] = totals.has_gst ? totals.total_gross_amount : netTotal;
+        if (bodyPayload['total_gross_amount'] === undefined || bodyPayload['total_gross_amount'] === null || bodyPayload['total_gross_amount'] === '') {
+          bodyPayload['total_gross_amount'] = totals.total_gross_amount;
+        }
+        if (totals.has_gst && (bodyPayload['gst_amount'] === undefined || bodyPayload['gst_amount'] === null || bodyPayload['gst_amount'] === '')) {
+          bodyPayload['gst_amount'] = totals.gst_amount;
+        }
+        if (bodyPayload['total_amount'] === undefined) {
+          bodyPayload['total_amount'] = totals.has_gst ? totals.total_gross_amount : netTotal;
+        }
+      } else {
+        bodyPayload['total_amount_eur'] = netTotal;
       }
     }
 

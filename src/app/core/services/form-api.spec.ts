@@ -304,4 +304,57 @@ describe('FormApiService', () => {
     expect(sentData.gst_amount).toBe(900);
     expect(sentData.total_gross_amount).toBe(5900);
   });
+
+  it('normalizeBackendEntityToStep should preserve total_net_amount and not calculate EUR table GST for FORM_10_COST_SHEET', () => {
+    const costSheetDef: FormDefinition = {
+      id: 10,
+      formCode: 'FORM_10_COST_SHEET',
+      name: 'Cost Sheet',
+      category: 'Sourcing & Quotations',
+      phaseId: 'phase-2',
+      icon: 'pi pi-calculator',
+      description: 'Cost Sheet',
+      fields: [
+        { key: 'project_title', label: 'Project Title', type: 'text' },
+        { key: 'gst_pct', label: 'GST %', type: 'number' },
+        { key: 'gst_amount', label: 'GST Amount', type: 'currency' },
+      ],
+      tableConfig: {
+        title: 'Cost Sheet Line Items & Landed Cost Breakdown',
+        autoCalculateTotal: true,
+        quantityKey: 'quantity',
+        unitPriceKey: 'price_per_unit_eur',
+        totalKey: 'total_price_eur',
+        columns: [
+          { key: 'sr_no', label: 'Sr. No.', type: 'number' },
+          { key: 'description', label: 'Item Description', type: 'text' },
+          { key: 'item_code', label: 'Item Code', type: 'text' },
+          { key: 'price_per_unit_eur', label: 'Price Per Unit [EUR]', type: 'currency' },
+          { key: 'quantity', label: 'Quantity', type: 'number' },
+        ],
+      },
+      uploads: [],
+    };
+
+    const rawEntity = {
+      id: 10,
+      project_id: 5,
+      project_title: 'Turbine Project',
+      gst_pct: 18,
+      gst_amount: 45000,
+      grand_total_incl_gst: 295000,
+      items: [
+        { sr_no: 1, description: 'Motor', item_code: 'M-1', price_per_unit_eur: 1000, quantity: 2, total_price_eur: 2000 },
+        { sr_no: 2, description: 'Sensor', item_code: 'S-1', price_per_unit_eur: 500, quantity: 4, total_price_eur: 2000 },
+      ],
+    };
+
+    const step = normalizeBackendEntityToStep(rawEntity, costSheetDef, 5);
+    expect(step.data?.['total_net_amount']).toBe(4000);
+    expect(step.data?.['total_amount_eur']).toBe(4000);
+    // GST amount should remain the user/entity level GST (45000 INR), NOT overwritten with 4000 * 18%
+    expect(step.data?.['gst_amount']).toBe(45000);
+    // total_gross_amount should NOT be calculated as 4000 + (4000 * 18%)
+    expect(step.data?.['total_gross_amount']).not.toBe(4720);
+  });
 });

@@ -193,12 +193,25 @@ export class StepFormDialog {
   readonly tableVersion = signal<number>(0);
   readonly formVersion = signal<number>(0);
 
+  readonly isCostSheet = computed(() => this.resolvedDef()?.formCode === 'FORM_10_COST_SHEET');
+
   readonly tableTotalSum = computed(() => {
     this.tableVersion();
     const arr = (this.tableFormArray()?.value || []) as Array<Record<string, unknown>>;
     const cfg = this.resolvedDef()?.tableConfig;
     if (!cfg || !cfg.totalKey) return 0;
-    return arr.reduce((sum, row) => sum + (Number(row[cfg.totalKey!]) || 0), 0);
+    return arr.reduce((sum, row) => {
+      const val = Number(row[cfg.totalKey!]);
+      if (!isNaN(val) && val !== 0) {
+        return sum + val;
+      }
+      if (cfg.quantityKey && cfg.unitPriceKey) {
+        const q = Number(row[cfg.quantityKey]) || 0;
+        const p = Number(row[cfg.unitPriceKey]) || 0;
+        return sum + q * p;
+      }
+      return sum + (isNaN(val) ? 0 : val);
+    }, 0);
   });
 
   readonly tableNetAmount = computed(() => this.tableTotalSum());
@@ -206,12 +219,15 @@ export class StepFormDialog {
   readonly tableGstRate = computed(() => {
     this.formVersion();
     const def = this.resolvedDef();
+    if (def?.formCode === 'FORM_10_COST_SHEET') return 0;
     const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
     return extractGstRate(formVals, def?.fields) ?? 0;
   });
 
   readonly tableGstAmount = computed(() => {
     this.formVersion();
+    const def = this.resolvedDef();
+    if (def?.formCode === 'FORM_10_COST_SHEET') return 0;
     const net = this.tableNetAmount();
     const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
     const explicitGst =
@@ -223,6 +239,8 @@ export class StepFormDialog {
 
   readonly tableGrossTotalSum = computed(() => {
     this.formVersion();
+    const def = this.resolvedDef();
+    if (def?.formCode === 'FORM_10_COST_SHEET') return this.tableNetAmount();
     const net = this.tableNetAmount();
     const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
     const explicitGst =
@@ -235,6 +253,9 @@ export class StepFormDialog {
   readonly hasTableGst = computed(() => {
     this.formVersion();
     const def = this.resolvedDef();
+    if (def?.formCode === 'FORM_10_COST_SHEET') {
+      return false;
+    }
     const formVals = (this.formGroup()?.value || {}) as Record<string, unknown>;
     return hasGstConfigured(def?.fields, formVals) || this.tableGstRate() > 0 || this.tableGstAmount() > 0;
   });
@@ -842,6 +863,14 @@ export class StepFormDialog {
       rowControls['id'] = new FormControl(initialData['id']);
     }
 
+    if (def.tableConfig.totalKey && !rowControls[def.tableConfig.totalKey]) {
+      const qVal = Number(initialData[def.tableConfig.quantityKey || 'quantity']) || 0;
+      const pVal = Number(initialData[def.tableConfig.unitPriceKey || 'unit_price']) || 0;
+      const initTot =
+        initialData[def.tableConfig.totalKey] !== undefined ? initialData[def.tableConfig.totalKey] : qVal * pVal;
+      rowControls[def.tableConfig.totalKey] = new FormControl(initTot);
+    }
+
     return new FormGroup(rowControls);
   }
 
@@ -916,7 +945,11 @@ export class StepFormDialog {
 
     if (qty >= 0 && price >= 0) {
       const total = qty * price;
-      row.patchValue({ [tKey]: total }, { emitEvent: false });
+      if (!row.contains(tKey)) {
+        row.addControl(tKey, new FormControl(total));
+      } else {
+        row.patchValue({ [tKey]: total }, { emitEvent: false });
+      }
     }
     this.tableVersion.update((v) => v + 1);
 
@@ -1186,8 +1219,12 @@ export class StepFormDialog {
         combinedData['gst_amount'] = gstAmt;
         combinedData['total_amount'] = gross;
       } else {
-        combinedData['total_gross_amount'] = net;
-        combinedData['total_amount'] = net;
+        if (def.formCode === 'FORM_10_COST_SHEET') {
+          combinedData['total_amount_eur'] = net;
+        } else {
+          combinedData['total_gross_amount'] = net;
+          combinedData['total_amount'] = net;
+        }
       }
     }
 

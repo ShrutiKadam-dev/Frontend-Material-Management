@@ -868,6 +868,88 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
         [],
       );
     });
+
+    it('should keep total_net_amount and exclude table GST for FORM_10_COST_SHEET dialog', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const mockFormApiService = {
+        createEntry: vi.fn().mockReturnValue(of({ id: 110 })),
+        updateEntry: vi.fn(),
+      };
+      const mockMessageService = { add: vi.fn() };
+
+      const costSheetDef: FormDefinition = {
+        id: 10,
+        formCode: 'FORM_10_COST_SHEET',
+        name: 'Cost Sheet',
+        category: 'Sourcing & Quotations',
+        phaseId: 'phase-2',
+        icon: 'pi pi-calculator',
+        description: 'Cost Sheet',
+        fields: [
+          { key: 'project_title', label: 'Project Title', type: 'text' },
+          { key: 'total_amount_eur', label: 'Total Amount in EUR', type: 'currency' },
+          { key: 'gst_pct', label: 'GST %', type: 'number' },
+          { key: 'gst_amount', label: 'GST Amount', type: 'currency' },
+        ],
+        tableConfig: {
+          title: 'Cost Sheet Line Items & Landed Cost Breakdown',
+          autoCalculateTotal: true,
+          quantityKey: 'quantity',
+          unitPriceKey: 'price_per_unit_eur',
+          totalKey: 'total_price_eur',
+          columns: [
+            { key: 'sr_no', label: 'Sr. No.', type: 'number' },
+            { key: 'description', label: 'Item Description', type: 'text' },
+            { key: 'item_code', label: 'Item Code', type: 'text' },
+            { key: 'price_per_unit_eur', label: 'Price Per Unit [EUR]', type: 'currency' },
+            { key: 'quantity', label: 'Quantity', type: 'number' },
+          ],
+        },
+        uploads: [],
+      };
+
+      comp.formApiService = mockFormApiService;
+      comp.messageService = mockMessageService;
+      comp.projectId = () => 15;
+      comp.resolvedDef = () => costSheetDef;
+      comp.step = () => null;
+      comp.saving = { set: vi.fn() };
+      comp.formGroup = () => ({
+        invalid: false,
+        value: {
+          project_title: 'Turbine Project',
+          gst_pct: 18,
+          gst_amount: 45000,
+        },
+      });
+      comp.tableFormArray = () => ({
+        value: [
+          { sr_no: 1, description: 'Motor', item_code: 'M-1', price_per_unit_eur: 1500, quantity: 2, total_price_eur: 3000 },
+          { sr_no: 2, description: 'Sensor', item_code: 'S-1', price_per_unit_eur: 500, quantity: 4, total_price_eur: 2000 },
+        ],
+      });
+      comp.uploadedFiles = () => [];
+      comp.stepRemarks = () => [];
+      comp.stepSaved = { emit: vi.fn() };
+      comp.close = vi.fn();
+      comp.tableNetAmount = () => 5000;
+      comp.tableTotalSum = () => 5000;
+      comp.hasTableGst = () => false;
+
+      comp.saveStep();
+
+      expect(mockFormApiService.createEntry).toHaveBeenCalledWith(
+        costSheetDef,
+        15,
+        expect.objectContaining({
+          total_net_amount: 5000,
+          total_amount_eur: 5000,
+          gst_pct: 18,
+          gst_amount: 45000,
+        }),
+        [],
+      );
+    });
   });
 
   describe('Quotation from Supplier Dynamic Currency Selection & Table Updating', () => {
