@@ -356,6 +356,20 @@
   font-weight: 600;
 }
 
+.date-error-hint {
+  align-items: center;
+  color: #e11d48;
+  display: flex;
+  font-size: 11.5px;
+  font-weight: 500;
+  gap: 4px;
+  margin-top: 3px;
+
+  i {
+    font-size: 12px;
+  }
+}
+
 .req-star {
   color: #dc2626;
   margin-left: 2px;

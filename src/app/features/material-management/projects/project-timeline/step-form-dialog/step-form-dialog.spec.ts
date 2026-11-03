@@ -1,4 +1,3 @@
-import '@angular/compiler';
 import { describe, expect, it, vi } from 'vitest';
 import { of } from 'rxjs';
 import { FormArray, FormControl, FormGroup } from '@angular/forms';

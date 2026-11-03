@@ -3,12 +3,17 @@ import {
   cleanTableItems,
   calculateTableTotalsWithGst,
   extractGstRate,
+  getClosingDateKeyForField,
+  getOpeningDateKeyForField,
   getTableRowCellValue,
   isCustomerField,
+  isDateBefore,
   isProjectTitleField,
   isSupplierField,
   isTableRowEmpty,
   normalizeTableRow,
+  toValidDate,
+  validateDateSequence,
 } from './form.utils';
 
 describe('form.utils', () => {
@@ -209,6 +214,177 @@ describe('form.utils', () => {
       expect(isProjectTitleField('pqb_title')).toBe(false);
       expect(isProjectTitleField('')).toBe(false);
       expect(isProjectTitleField(null)).toBe(false);
+    });
+  });
+
+  describe('Closing & Opening Date sequence utilities', () => {
+    it('getClosingDateKeyForField should map known opening fields to closing fields', () => {
+      expect(getClosingDateKeyForField('opening_date_time')).toBe('closing_date_time');
+      expect(getClosingDateKeyForField('pqb_opening_date_time')).toBe('pqb_closing_date_time');
+      expect(getClosingDateKeyForField('eoi_opening_date_time')).toBe('eoi_closing_date_time');
+      expect(getClosingDateKeyForField('bid_opening_date_time')).toBe('bid_submission_due_date_time');
+      expect(getClosingDateKeyForField('valid_until')).toBe('valid_from');
+      expect(getClosingDateKeyForField('tender_title')).toBeNull();
+    });
+
+    it('getClosingDateKeyForField should match based on availableKeys heuristics', () => {
+      const keys = ['tender_issue_date', 'custom_closing_date', 'custom_opening_date'];
+      expect(getClosingDateKeyForField('custom_opening_date', keys)).toBe('custom_closing_date');
+    });
+
+    it('getOpeningDateKeyForField should map known closing fields to opening fields', () => {
+      expect(getOpeningDateKeyForField('closing_date_time')).toBe('opening_date_time');
+      expect(getOpeningDateKeyForField('pqb_closing_date_time')).toBe('pqb_opening_date_time');
+      expect(getOpeningDateKeyForField('eoi_closing_date_time')).toBe('eoi_opening_date_time');
+      expect(getOpeningDateKeyForField('bid_submission_due_date_time')).toBe('bid_opening_date_time');
+      expect(getOpeningDateKeyForField('valid_from')).toBe('valid_until');
+      expect(getOpeningDateKeyForField('tender_no')).toBeNull();
+    });
+
+    it('toValidDate should parse string, Date, or return null', () => {
+      expect(toValidDate(null)).toBeNull();
+      expect(toValidDate('')).toBeNull();
+      const d = new Date(2026, 10, 15);
+      expect(toValidDate(d)).toBe(d);
+      const parsedIso = toValidDate('2026-11-15T14:30:00');
+      expect(parsedIso).toBeInstanceOf(Date);
+      expect(parsedIso?.getFullYear()).toBe(2026);
+      expect(parsedIso?.getMonth()).toBe(10);
+      expect(parsedIso?.getDate()).toBe(15);
+      expect(parsedIso?.getHours()).toBe(14);
+      expect(parsedIso?.getMinutes()).toBe(30);
+    });
+
+    it('isDateBefore should accurately compare dates and datetimes', () => {
+      const dateEarlier = new Date(2026, 10, 14, 15, 0);
+      const dateLater = new Date(2026, 10, 15, 14, 0);
+      const dateSameDayEarlierTime = new Date(2026, 10, 15, 12, 0);
+      const dateSameDayLaterTime = new Date(2026, 10, 15, 16, 0);
+
+      // Comparing full datetime
+      expect(isDateBefore(dateEarlier, dateLater, true, true)).toBe(true);
+      expect(isDateBefore(dateLater, dateEarlier, true, true)).toBe(false);
+      expect(isDateBefore(dateSameDayEarlierTime, dateSameDayLaterTime, true, true)).toBe(true);
+      expect(isDateBefore(dateSameDayLaterTime, dateSameDayEarlierTime, true, true)).toBe(false);
+
+      // Comparing date only (same day is not before)
+      expect(isDateBefore(dateSameDayEarlierTime, dateSameDayLaterTime, false, false)).toBe(false);
+      expect(isDateBefore(dateEarlier, dateLater, false, false)).toBe(true);
+    });
+
+    function createMockControl(initialVal: unknown) {
+      return {
+        value: initialVal,
+        errors: null as Record<string, unknown> | null,
+        setValue(v: unknown) {
+          this.value = v;
+        },
+        setErrors(errs: Record<string, unknown> | null) {
+          this.errors = errs;
+        },
+        hasError(code: string) {
+          return !!(this.errors && this.errors[code]);
+        },
+      };
+    }
+
+    it('validateDateSequence should flag opening date before closing date with dateBeforeClosing error', () => {
+      const closingCtrl = createMockControl(new Date(2026, 10, 15, 14, 0));
+      const openingCtrl = createMockControl(new Date(2026, 10, 14, 10, 0));
+      const controls: Record<string, any> = {
+        closing_date_time: closingCtrl,
+        opening_date_time: openingCtrl,
+      };
+
+      const fg = {
+        get: (k: string) => controls[k] ?? null,
+        updateValueAndValidity: () => {},
+        controls,
+      };
+
+      const fieldDefs = [
+        { key: 'closing_date_time', type: 'datetime', label: 'Closing Date & Time' },
+        { key: 'opening_date_time', type: 'datetime', label: 'Opening Date & Time' },
+      ];
+
+      validateDateSequence(fg, fieldDefs);
+      expect(openingCtrl.hasError('dateBeforeClosing')).toBe(true);
+
+      // Update opening date to after closing date
+      openingCtrl.setValue(new Date(2026, 10, 15, 16, 0));
+      validateDateSequence(fg, fieldDefs);
+      expect(openingCtrl.hasError('dateBeforeClosing')).toBe(false);
+    });
+
+    it('validateDateSequence should clear error when closing date is cleared or changed to earlier', () => {
+      const closingCtrl = createMockControl(new Date(2026, 10, 20, 14, 0));
+      const openingCtrl = createMockControl(new Date(2026, 10, 15, 10, 0));
+      const controls: Record<string, any> = {
+        pqb_closing_date_time: closingCtrl,
+        pqb_opening_date_time: openingCtrl,
+      };
+
+      const fg = {
+        get: (k: string) => controls[k] ?? null,
+        updateValueAndValidity: () => {},
+        controls,
+      };
+
+      const fieldDefs = [
+        { key: 'pqb_closing_date_time', type: 'datetime', label: 'PQB Closing Date & Time' },
+        { key: 'pqb_opening_date_time', type: 'datetime', label: 'PQB Opening Date & Time' },
+      ];
+
+      validateDateSequence(fg, fieldDefs);
+      expect(openingCtrl.hasError('dateBeforeClosing')).toBe(true);
+
+      // User updates closing date to before opening date
+      closingCtrl.setValue(new Date(2026, 10, 10, 14, 0));
+      validateDateSequence(fg, fieldDefs);
+      expect(openingCtrl.hasError('dateBeforeClosing')).toBe(false);
+
+      // User clears closing date
+      closingCtrl.setValue(null);
+      validateDateSequence(fg, fieldDefs);
+      expect(openingCtrl.hasError('dateBeforeClosing')).toBe(false);
+    });
+
+    it('validateDateSequence should work across all catalog tender form pairs (LTE, STE, ICB, EOI)', () => {
+      // 1. LTE / STE / ICB / Techno Commercial: bid_submission_due_date_time -> bid_opening_date_time
+      const lteDueCtrl = createMockControl(new Date(2026, 11, 20, 15, 0));
+      const lteOpenCtrl = createMockControl(new Date(2026, 11, 19, 11, 0));
+      const lteFg = {
+        get: (k: string) => (k === 'bid_submission_due_date_time' ? lteDueCtrl : lteOpenCtrl),
+        updateValueAndValidity: () => {},
+      };
+      const lteDefs = [
+        { key: 'bid_submission_due_date_time', type: 'datetime' },
+        { key: 'bid_opening_date_time', type: 'datetime' },
+      ];
+      validateDateSequence(lteFg, lteDefs);
+      expect(lteOpenCtrl.hasError('dateBeforeClosing')).toBe(true);
+
+      lteOpenCtrl.setValue(new Date(2026, 11, 20, 16, 0));
+      validateDateSequence(lteFg, lteDefs);
+      expect(lteOpenCtrl.hasError('dateBeforeClosing')).toBe(false);
+
+      // 2. EOI: eoi_closing_date_time -> eoi_opening_date_time
+      const eoiClosingCtrl = createMockControl('2026-11-25T17:00:00');
+      const eoiOpeningCtrl = createMockControl('2026-11-25T14:00:00');
+      const eoiFg = {
+        get: (k: string) => (k === 'eoi_closing_date_time' ? eoiClosingCtrl : eoiOpeningCtrl),
+        updateValueAndValidity: () => {},
+      };
+      const eoiDefs = [
+        { key: 'eoi_closing_date_time', type: 'datetime' },
+        { key: 'eoi_opening_date_time', type: 'datetime' },
+      ];
+      validateDateSequence(eoiFg, eoiDefs);
+      expect(eoiOpeningCtrl.hasError('dateBeforeClosing')).toBe(true);
+
+      eoiOpeningCtrl.setValue('2026-11-26T10:00:00');
+      validateDateSequence(eoiFg, eoiDefs);
+      expect(eoiOpeningCtrl.hasError('dateBeforeClosing')).toBe(false);
     });
   });
 });

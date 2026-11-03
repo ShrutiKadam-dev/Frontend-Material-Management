@@ -1,5 +1,6 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   computed,
   DestroyRef,
@@ -58,6 +59,7 @@ import {
   calculateTableTotalsWithGst,
   cleanTableItems,
   extractGstRate,
+  getClosingDateKeyForField,
   getTableRowCellValue,
   hasGstConfigured,
   isCustomerField,
@@ -65,6 +67,8 @@ import {
   isSupplierField,
   isTableRowEmpty,
   normalizeTableRow,
+  toValidDate,
+  validateDateSequence,
 } from '../../../../../core/utils/form.utils';
 import { Project } from '../../../../../core/models/project.model';
 import { Customer } from '../../../../../core/models/customer.model';
@@ -100,6 +104,7 @@ export class StepFormDialog {
   private readonly customerService = inject(CustomerService, { optional: true });
   private readonly supplierService = inject(SupplierService, { optional: true });
   private readonly supplierQuotationService = inject(SupplierQuotationService, { optional: true });
+  private readonly cdr = inject(ChangeDetectorRef);
 
   readonly fetchingSupplierQuotation = signal<boolean>(false);
 
@@ -276,6 +281,44 @@ export class StepFormDialog {
       return `${col.label} (${this.tableCurrencySymbol()})`;
     }
     return col.label;
+  }
+
+  /**
+   * Returns the minimum selectable Date for a given date/datetime field.
+   * If the field is an opening date and its closing date is filled,
+   * all dates prior to the closing date will be disabled in the datepicker.
+   */
+  getMinDate(fieldKey: string): Date | null {
+    this.formVersion();
+    const def = this.resolvedDef();
+    if (!def) return null;
+    const availableKeys = def.fields.map((f) => f.key);
+    const closingKey = getClosingDateKeyForField(fieldKey, availableKeys);
+    if (!closingKey) return null;
+
+    const closingVal = this.formGroup()?.get(closingKey)?.value;
+    const closingDate = toValidDate(closingVal);
+    if (!closingDate) return null;
+
+    const currentField = def.fields.find((f) => f.key === fieldKey);
+    if (currentField?.type === 'date') {
+      return new Date(closingDate.getFullYear(), closingDate.getMonth(), closingDate.getDate());
+    }
+
+    return closingDate;
+  }
+
+  /**
+   * Returns human-readable label of the closing date field associated with an opening date field.
+   */
+  getClosingDateLabel(fieldKey: string): string {
+    const def = this.resolvedDef();
+    if (!def) return 'Closing Date & Time';
+    const availableKeys = def.fields.map((f) => f.key);
+    const closingKey = getClosingDateKeyForField(fieldKey, availableKeys);
+    if (!closingKey) return 'Closing Date & Time';
+    const field = def.fields.find((f) => f.key === closingKey);
+    return field?.label || 'Closing Date & Time';
   }
 
   loadFromSupplierQuotation(showNotification = true): void {
@@ -602,11 +645,14 @@ export class StepFormDialog {
 
     const fg = new FormGroup(controls);
     this.formGroup.set(fg);
+    validateDateSequence(fg, def.fields);
     this.isFormInvalid?.set?.(fg.invalid);
     this.formStatusSub?.unsubscribe();
     this.formStatusSub = fg.valueChanges?.subscribe?.(() => {
+      validateDateSequence(fg, def.fields);
       this.isFormInvalid?.set?.(fg.invalid);
       this.formVersion.update((v) => v + 1);
+      this.cdr.markForCheck();
     });
 
     if (hasCurrencySelectField) {
@@ -1063,6 +1109,17 @@ export class StepFormDialog {
     if (this.formGroup()?.invalid) {
       this.formGroup()?.markAllAsTouched?.();
       this.isFormInvalid.set(true);
+
+      const hasDateError = def.fields.some((f) => this.formGroup()?.get(f.key)?.hasError('dateBeforeClosing'));
+      if (hasDateError) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Invalid Date Sequence',
+          detail: 'Opening Date & Time must be after Closing Date & Time.',
+        });
+        return;
+      }
+
       this.messageService.add({
         severity: 'warn',
         summary: 'Required Fields Missing',

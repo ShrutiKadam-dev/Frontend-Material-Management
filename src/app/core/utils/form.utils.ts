@@ -1,6 +1,7 @@
 /**
  * Form and line-item table utility functions.
  */
+import { parseLocalDate, parseLocalDateTime } from './date.utils';
 
 /**
  * Known aliases for common line-item table columns across different backend entities.
@@ -363,5 +364,180 @@ export function isProjectTitleField(key?: string | null): boolean {
   const k = key.toLowerCase();
   return k === 'project_title' || k === 'project_name';
 }
+
+/**
+ * Map of opening/subsequent date field keys to their corresponding closing/preceding date field keys.
+ */
+export const CLOSING_OPENING_DATE_PAIRS: Record<string, string> = {
+  opening_date_time: 'closing_date_time',
+  opening_date: 'closing_date',
+  pqb_opening_date_time: 'pqb_closing_date_time',
+  pqb_opening_date: 'pqb_closing_date',
+  eoi_opening_date_time: 'eoi_closing_date_time',
+  eoi_opening_date: 'eoi_closing_date',
+  bid_opening_date_time: 'bid_submission_due_date_time',
+  bid_opening_date: 'bid_submission_due_date_time',
+  valid_until: 'valid_from',
+};
+
+/**
+ * Finds the corresponding closing/preceding date field key for a given opening/following field key.
+ */
+export function getClosingDateKeyForField(
+  openingKey: string,
+  availableKeys?: string[],
+): string | null {
+  if (!openingKey) return null;
+  const direct = CLOSING_OPENING_DATE_PAIRS[openingKey];
+  if (direct) {
+    if (!availableKeys || availableKeys.includes(direct)) {
+      return direct;
+    }
+  }
+
+  if (!availableKeys || availableKeys.length === 0) return direct ?? null;
+
+  const lower = openingKey.toLowerCase();
+  if (lower.includes('opening')) {
+    const prefix = lower.split('opening')[0];
+    const match = availableKeys.find((k) => {
+      const kl = k.toLowerCase();
+      if (kl === openingKey) return false;
+      if (prefix && kl.startsWith(prefix) && kl.includes('closing')) return true;
+      if (kl.includes('closing')) return true;
+      if (kl.includes('submission_due') || (kl.includes('bid_submission') && kl.includes('due'))) return true;
+      return false;
+    });
+    if (match) return match;
+  }
+
+  return null;
+}
+
+/**
+ * Finds the corresponding opening/following date field key for a given closing/preceding field key.
+ */
+export function getOpeningDateKeyForField(
+  closingKey: string,
+  availableKeys?: string[],
+): string | null {
+  if (!closingKey) return null;
+  for (const [openKey, closeKey] of Object.entries(CLOSING_OPENING_DATE_PAIRS)) {
+    if (closeKey === closingKey) {
+      if (!availableKeys || availableKeys.includes(openKey)) {
+        return openKey;
+      }
+    }
+  }
+
+  if (!availableKeys || availableKeys.length === 0) return null;
+
+  const lower = closingKey.toLowerCase();
+  if (lower.includes('closing') || lower.includes('submission_due') || lower.includes('submission')) {
+    const prefix = lower.split(/closing|submission/)[0];
+    const match = availableKeys.find((k) => {
+      const kl = k.toLowerCase();
+      if (kl === closingKey) return false;
+      if (prefix && kl.startsWith(prefix) && kl.includes('opening')) return true;
+      if (kl.includes('opening')) return true;
+      return false;
+    });
+    if (match) return match;
+  }
+
+  return null;
+}
+
+/**
+ * Converts a string, Date, or unknown value into a valid Date object.
+ */
+export function toValidDate(val: unknown): Date | null {
+  if (!val) return null;
+  if (val instanceof Date) {
+    return isNaN(val.getTime()) ? null : val;
+  }
+  if (typeof val === 'string' && val.trim()) {
+    return parseLocalDateTime(val) || parseLocalDate(val);
+  }
+  return null;
+}
+
+/**
+ * Returns true if dateA is strictly before dateB.
+ * If either field is date-only (not datetime), compares calendar days (ignoring hours/minutes).
+ * If both are datetime, compares full millisecond timestamps.
+ */
+export function isDateBefore(
+  dateA: Date,
+  dateB: Date,
+  isDateTimeA = false,
+  isDateTimeB = false,
+): boolean {
+  if (!dateA || !dateB || isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+    return false;
+  }
+  if (isDateTimeA && isDateTimeB) {
+    return dateA.getTime() < dateB.getTime();
+  }
+  const dayA = new Date(dateA.getFullYear(), dateA.getMonth(), dateA.getDate()).getTime();
+  const dayB = new Date(dateB.getFullYear(), dateB.getMonth(), dateB.getDate()).getTime();
+  return dayA < dayB;
+}
+
+export interface FormLikeGroup {
+  get(key: string): {
+    value: unknown;
+    errors?: Record<string, unknown> | null;
+    setErrors?(errors: Record<string, unknown> | null, opts?: { emitEvent?: boolean }): void;
+    hasError?(errorCode: string): boolean;
+  } | null;
+  updateValueAndValidity?(opts?: { emitEvent?: boolean; onlySelf?: boolean }): void;
+  controls?: Record<string, unknown>;
+}
+
+/**
+ * Validates date sequence between closing and opening dates across the form controls.
+ * Sets `{ dateBeforeClosing: true }` error on the opening control if it is before the closing date.
+ */
+export function validateDateSequence(
+  fg: FormLikeGroup,
+  fieldDefs?: Array<{ key: string; type?: string; label?: string }>,
+): void {
+  if (!fg) return;
+  const availableKeys = fieldDefs
+    ? fieldDefs.map((f) => f.key)
+    : (fg.controls ? Object.keys(fg.controls) : []);
+
+  for (const openingKey of availableKeys) {
+    const closingKey = getClosingDateKeyForField(openingKey, availableKeys);
+    if (!closingKey) continue;
+
+    const openingCtrl = fg.get(openingKey);
+    const closingCtrl = fg.get(closingKey);
+    if (!openingCtrl || !closingCtrl) continue;
+
+    const openingVal = toValidDate(openingCtrl.value);
+    const closingVal = toValidDate(closingCtrl.value);
+
+    const openingDef = fieldDefs?.find((f) => f.key === openingKey);
+    const closingDef = fieldDefs?.find((f) => f.key === closingKey);
+    const isOpeningDateTime = openingDef?.type === 'datetime';
+    const isClosingDateTime = closingDef?.type === 'datetime';
+
+    if (openingVal && closingVal && isDateBefore(openingVal, closingVal, isOpeningDateTime, isClosingDateTime)) {
+      const existingErrors = openingCtrl.errors || {};
+      if (!existingErrors['dateBeforeClosing']) {
+        openingCtrl.setErrors?.({ ...existingErrors, dateBeforeClosing: true }, { emitEvent: false });
+        fg.updateValueAndValidity?.({ emitEvent: false, onlySelf: true });
+      }
+    } else if (openingCtrl.hasError?.('dateBeforeClosing')) {
+      const errors = { ...(openingCtrl.errors || {}) };
+      delete errors['dateBeforeClosing'];
+      openingCtrl.setErrors?.(Object.keys(errors).length ? errors : null, { emitEvent: false });
+      fg.updateValueAndValidity?.({ emitEvent: false, onlySelf: true });
+    }
+  }
+}
+
 
 

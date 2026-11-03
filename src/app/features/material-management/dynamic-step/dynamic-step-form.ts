@@ -1,5 +1,6 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   computed,
   DestroyRef,
@@ -63,6 +64,7 @@ import {
   calculateTableTotalsWithGst,
   cleanTableItems,
   extractGstRate,
+  getClosingDateKeyForField,
   getTableRowCellValue,
   hasGstConfigured,
   isCustomerField,
@@ -70,6 +72,8 @@ import {
   isSupplierField,
   isTableRowEmpty,
   normalizeTableRow,
+  toValidDate,
+  validateDateSequence,
 } from '../../../core/utils/form.utils';
 
 @Component({
@@ -99,6 +103,7 @@ export class DynamicStepForm implements OnInit {
   private readonly customerService = inject(CustomerService);
   private readonly supplierService = inject(SupplierService);
   private readonly messageService = inject(MessageService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   // ── Route & State Signals ─────────────────────────────────────────
   protected readonly projectId = signal<number>(0);
@@ -252,6 +257,44 @@ export class DynamicStepForm implements OnInit {
       return `${col.label} (${this.tableCurrencySymbol()})`;
     }
     return col.label;
+  }
+
+  /**
+   * Returns the minimum selectable Date for a given date/datetime field.
+   * If the field is an opening date and its closing date is filled,
+   * all dates prior to the closing date will be disabled in the datepicker.
+   */
+  protected getMinDate(fieldKey: string): Date | null {
+    this.formVersion();
+    const def = this.formDefinition();
+    if (!def) return null;
+    const availableKeys = def.fields.map((f) => f.key);
+    const closingKey = getClosingDateKeyForField(fieldKey, availableKeys);
+    if (!closingKey) return null;
+
+    const closingVal = this.formGroup()?.get(closingKey)?.value;
+    const closingDate = toValidDate(closingVal);
+    if (!closingDate) return null;
+
+    const currentField = def.fields.find((f) => f.key === fieldKey);
+    if (currentField?.type === 'date') {
+      return new Date(closingDate.getFullYear(), closingDate.getMonth(), closingDate.getDate());
+    }
+
+    return closingDate;
+  }
+
+  /**
+   * Returns human-readable label of the closing date field associated with an opening date field.
+   */
+  protected getClosingDateLabel(fieldKey: string): string {
+    const def = this.formDefinition();
+    if (!def) return 'Closing Date & Time';
+    const availableKeys = def.fields.map((f) => f.key);
+    const closingKey = getClosingDateKeyForField(fieldKey, availableKeys);
+    if (!closingKey) return 'Closing Date & Time';
+    const field = def.fields.find((f) => f.key === closingKey);
+    return field?.label || 'Closing Date & Time';
   }
 
   constructor() {
@@ -474,11 +517,14 @@ export class DynamicStepForm implements OnInit {
 
     const group = new FormGroup(controls);
     this.formGroup.set(group);
+    validateDateSequence(group, def.fields);
     this.isFormInvalid?.set?.(group.invalid);
     this.formStatusSub?.unsubscribe();
     this.formStatusSub = group.valueChanges?.subscribe?.(() => {
+      validateDateSequence(group, def.fields);
       this.isFormInvalid?.set?.(group.invalid);
       this.formVersion.update((v) => v + 1);
+      this.cdr.markForCheck();
     });
 
     if (hasCurrencySelectField) {

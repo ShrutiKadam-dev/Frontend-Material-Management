@@ -590,7 +590,7 @@ button.p-button:not(.p-button-secondary):not(.p-button-text):not(.p-button-outli
         transition: all 140ms ease !important;
         width: 32px !important;
 
-        &:hover {
+        &:not(.p-disabled):not([data-p-disabled="true"]):hover {
           background: var(--color-primary-soft, #fdf1ec) !important;
           border-color: var(--color-primary-muted, #e9c9be) !important;
           color: var(--color-primary, #c0522f) !important;
@@ -672,7 +672,7 @@ button.p-button:not(.p-button-secondary):not(.p-button-text):not(.p-button-outli
       border-radius: 6px !important;
       color: var(--color-muted, #6b6864) !important;
 
-      &:hover {
+      &:not(.p-disabled):not([data-p-disabled="true"]):hover {
         background: var(--color-primary-soft, #fdf1ec) !important;
         color: var(--color-primary, #c0522f) !important;
       }
@@ -693,10 +693,21 @@ button.p-button:not(.p-button-secondary):not(.p-button-text):not(.p-button-outli
       font-weight: 600 !important;
       transition: all 120ms ease !important;
 
-      &:hover {
+      &:not(.p-disabled):not([data-p-disabled="true"]):hover {
         background: var(--color-primary-soft, #fdf1ec) !important;
         color: var(--color-primary, #c0522f) !important;
       }
+    }
+
+    .p-datepicker-day-disabled,
+    tbody td > span.p-disabled,
+    tbody td > span[data-p-disabled="true"],
+    tbody td > button:disabled {
+      background: transparent !important;
+      color: #94a3b8 !important;
+      cursor: not-allowed !important;
+      opacity: 0.38 !important;
+      pointer-events: none !important;
     }
 
     .p-datepicker-day-selected {
@@ -778,7 +789,7 @@ body:has(.p-component-overlay) .content-shell {
       border-radius: 8px !important;
       transition: all 120ms ease !important;
 
-      &:hover {
+      &:not(.p-disabled):not([data-p-disabled="true"]):hover {
         background: var(--color-primary-soft, #fdf1ec) !important;
         color: var(--color-primary, #c0522f) !important;
       }
