@@ -17,6 +17,7 @@ export interface ProjectStep {
   id: number | null;
   project_id: number;
   step_number: number;
+  step_order?: number;
   step_name: string;
   description: string;
   status: StepStatus;

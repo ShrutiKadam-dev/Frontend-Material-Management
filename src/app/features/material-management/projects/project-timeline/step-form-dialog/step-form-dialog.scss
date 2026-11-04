@@ -265,6 +265,10 @@
   padding: 10px 16px;
   flex-shrink: 0;
 
+  &.table-banner-bar {
+    margin-bottom: 14px;
+  }
+
   .pqb-banner-info {
     display: flex;
     align-items: center;
@@ -554,6 +558,13 @@
     &.date-field {
       color: #334155;
       padding: 5px 8px;
+    }
+
+    &.table-flat-textarea {
+      min-height: 44px;
+      line-height: 1.45;
+      resize: vertical;
+      white-space: pre-wrap;
     }
   }
 

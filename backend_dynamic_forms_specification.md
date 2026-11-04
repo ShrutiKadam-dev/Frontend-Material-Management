@@ -105,7 +105,7 @@ Run this seed migration to populate the 28 form definitions:
 INSERT INTO form_definitions (id, form_code, name, category, phase_id, icon, description, has_table) VALUES
 (1, 'FORM_01_PQB', 'National Pre-Qualification Bid (PQB)', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-file-edit', 'Pre-qualification bid terms, submission schedule, supply locations, and requirements', TRUE),
 (2, 'FORM_02_PQB_BID_DOCUMENT', 'Bid Document for PQB', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-book', 'Documentation for PQB submission, dates, and recorded corrigendum count', TRUE),
-(3, 'FORM_03_CORRIGENDUM', 'Corrigendum', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-sync', 'Corrigendum amendment notices issued against EOI, PQB, or Tender notices', FALSE),
+(3, 'FORM_03_CORRIGENDUM', 'Corrigendum', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-sync', 'Corrigendum amendment notices issued against EOI, PQB, or Tender notices', TRUE),
 (4, 'FORM_04_LTE', 'Limited Tender Enquiry (LTE)', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-briefcase', 'LTE invitation terms, tender fee, EMD amounts, deadlines, and item specifications', TRUE),
 (5, 'FORM_05_NAC', 'Notification of Award of Contract (NAC)', 'Pre-Bidding & Tenders', 'phase-2', 'pi pi-verified', 'Formal contract award notice and itemized awarded material price breakdown', TRUE),
 (6, 'FORM_06_CONSULTANCY_INVOICE', 'Consultancy Invoice', 'Pre-Bidding & Tenders', 'phase-1', 'pi pi-receipt', 'Advisory and specialist consultancy invoices associated with the project', FALSE),
@@ -325,7 +325,7 @@ Returns all active steps attached to this project, ordered by `step_order ASC`.
 |---|---|---|---|---|
 | **1. FORM_01_PQB** | National Pre-Qualification Bid (PQB) | `pqb_title`, `pqb_no`, `pqb_issuing_date`, `pqb_closing_date_time`, `pqb_opening_date_time`, `mode_of_bid_submission`, `supply_location` | `sr_no`, `description`, `unit`, `quantity` | `upload_pqb` |
 | **2. FORM_02_PQB_BID_DOCUMENT** | Bid Document for PQB | `pqb_title`, `pqb_no`, `pqb_issue_date`, `pqb_closing_date_time`, `pqb_opening_date_time`, `total_no_corrigendum_issued` | `sr_no`, `description`, `hsn_sac`, `quantity`, `unit_price`, `total_amount` | `upload_bid_document_pqb` |
-| **3. FORM_03_CORRIGENDUM** | Corrigendum | `corrigendum_no`, `against_ref_no`, `ref_title` | *None* | `upload_corrigendum` |
+| **3. FORM_03_CORRIGENDUM** | Corrigendum | `corrigendum_no`, `against_ref_no`, `ref_title`, `issue_date` | `sr_no`, `as_per_tender_doc`, `as_per_corrigendum` | `upload_corrigendum` |
 | **4. FORM_04_LTE** | Limited Tender Enquiry (LTE) | `pqb_no`, `tender_title`, `tender_enquiry_no`, `tender_issue_date`, `bid_submission_due_date_time`, `bid_opening_date_time`, `tender_fee`, `emd`, `tender_validity` | `sr_no`, `description`, `unit`, `quantity` | `upload_lte` |
 | **5. FORM_05_NAC** | Notification of Award of Contract (NAC) | `nac_no`, `nac_date`, `nac_title` | `sr_no`, `description`, `quantity`, `per_unit_price`, `total_amount` | `upload_nac` |
 | **6. FORM_06_CONSULTANCY_INVOICE** | Consultancy Invoice | `invoice_no`, `invoice_date`, `party_name`, `invoice_reference`, `total_value_eur` | *None* | `upload_consultancy_invoice` |

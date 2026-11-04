@@ -55,6 +55,20 @@ export const TABLE_COLUMN_ALIASES: Record<string, string[]> = {
   delivery_date: ['delivery_date', 'expected_delivery_date', 'delivery_time'],
   unit_weight: ['unit_weight', 'weight_per_unit', 'unit_wt'],
   total_weight: ['total_weight', 'gross_weight', 'total_wt', 'weight'],
+  as_per_tender_doc: [
+    'as_per_tender_doc',
+    'as_per_tender_document',
+    'as_per_eoi_pqb_tender_document',
+    'eoi_pqb_tender_document',
+    'tender_doc',
+    'as_per_document',
+  ],
+  as_per_corrigendum: [
+    'as_per_corrigendum',
+    'as_per_corrigendum_document',
+    'corrigendum_details',
+    'corrigendum_val',
+  ],
 };
 
 /**

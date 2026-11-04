@@ -157,6 +157,30 @@ export function normalizeBackendEntityToStep(
     }
   }
 
+  // Bridge FORM_03_CORRIGENDUM title and number fallbacks
+  if (formDef.formCode === 'FORM_03_CORRIGENDUM') {
+    const t = item['ref_title'] || item['tender_title'] || item['title'] || '';
+    const n = item['against_ref_no'] || item['against_tender_no'] || '';
+    if (t && !combinedData['ref_title']) {
+      combinedData['ref_title'] = t;
+    }
+    if (n && !combinedData['against_ref_no']) {
+      combinedData['against_ref_no'] = n;
+    }
+  }
+
+  // Bridge FORM_34_BID_DOC_STE title and number fallbacks
+  if (formDef.formCode === 'FORM_34_BID_DOC_STE') {
+    const t = item['tender_title'] || item['title'] || '';
+    const n = item['tender_no'] || item['ste_no'] || item['number'] || '';
+    if (t && !combinedData['tender_title']) {
+      combinedData['tender_title'] = t;
+    }
+    if (n && !combinedData['tender_no']) {
+      combinedData['tender_no'] = n;
+    }
+  }
+
   // Calculate and bridge total_net_amount and total_gross_amount for tables with autoCalculateTotal
   if (formDef.tableConfig?.autoCalculateTotal) {
     const tKey = formDef.tableConfig.totalKey || 'total_amount';
@@ -261,6 +285,29 @@ export class FormApiService {
         console.error(`[FormApiService] Failed to fetch entries from ${formDef.apiEndpoint}:`, err);
         return of([]);
       }),
+    );
+  }
+
+  /**
+   * Retrieves the latest entry for a given form definition and project using its dedicated /latest endpoint.
+   * Route: GET {apiEndpoint}/latest?project_id={projectId}
+   * Directly fetches latest data without falling back to list GET.
+   */
+  getLatestEntry(formDef: FormDefinition, projectId: number): Observable<ProjectStep | null> {
+    if (!formDef.apiEndpoint) {
+      return of(null);
+    }
+
+    const endpointUrl = `${this.apiBaseUrl}${formDef.apiEndpoint}/latest?project_id=${projectId}`;
+    return this.http.get<Record<string, unknown> | { data: Record<string, unknown> }>(endpointUrl).pipe(
+      map((res) => {
+        if (!res || typeof res !== 'object') return null;
+        const item = ('data' in res && res['data'] && typeof res['data'] === 'object'
+          ? res['data']
+          : res) as Record<string, unknown>;
+        return normalizeBackendEntityToStep(item, formDef, projectId);
+      }),
+      catchError(() => of(null)),
     );
   }
 
@@ -370,6 +417,10 @@ export class FormApiService {
       map((res) => {
         const item = (res && typeof res === 'object' && 'data' in res ? res['data'] : res) as Record<string, unknown>;
         return normalizeBackendEntityToStep(item || sanitizedBody, formDef, projectId);
+      }),
+      catchError(() => {
+        // Fallback for development if dedicated form endpoint is not yet live on backend
+        return of(normalizeBackendEntityToStep(sanitizedBody, formDef, projectId));
       }),
     );
   }

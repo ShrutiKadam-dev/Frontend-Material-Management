@@ -36,6 +36,36 @@ describe('FORM_CATALOG Extended Forms (26, 29, 30, 31, 32, 33, 34, 35, 36)', () 
     });
   });
 
+  describe('Form 3: CORRIGENDUM', () => {
+    it('should be registered with code FORM_03_CORRIGENDUM and id 3', () => {
+      const def = getFormDefinition('FORM_03_CORRIGENDUM');
+      expect(def).toBeDefined();
+      expect(def?.id).toBe(3);
+      expect(def?.name).toBe('Corrigendum');
+      expect(def?.category).toBe('Pre-Bidding & Tenders');
+      expect(def?.phaseId).toBe('phase-1');
+      expect(getFormDefinition(3)).toEqual(def);
+    });
+
+    it('should have corrigendum fields including against_ref_no and ref_title', () => {
+      const def = getFormDefinition(3)!;
+      const fieldKeys = def.fields.map((f) => f.key);
+      expect(fieldKeys).toContain('corrigendum_no');
+      expect(fieldKeys).toContain('against_ref_no');
+      expect(fieldKeys).toContain('ref_title');
+    });
+
+    it('should configure table for Corrigendum with 3 comparison columns', () => {
+      const def = getFormDefinition(3)!;
+      expect(def.tableConfig).toBeDefined();
+      expect(def.tableConfig?.columns.map((c) => c.key)).toEqual([
+        'sr_no',
+        'as_per_tender_doc',
+        'as_per_corrigendum',
+      ]);
+    });
+  });
+
   describe('Form 29: BID DOCUMENT - TECHNO COMMERCIAL TENDER', () => {
     it('should be registered with code FORM_29_BID_DOC_TECHNO_COMMERCIAL and id 29', () => {
       const def = getFormDefinition('FORM_29_BID_DOC_TECHNO_COMMERCIAL');
@@ -278,6 +308,10 @@ describe('FORM_CATALOG Extended Forms (26, 29, 30, 31, 32, 33, 34, 35, 36)', () 
     it('should resolve via alias FORM_31_BID_DOC_STE and FORM_BID_DOC_STE', () => {
       expect(getFormDefinition('FORM_31_BID_DOC_STE')?.id).toBe(34);
       expect(getFormDefinition('FORM_BID_DOC_STE')?.id).toBe(34);
+      expect(getFormDefinition('FORM_34')?.id).toBe(34);
+      expect(getFormDefinition('bid-document-ste')?.id).toBe(34);
+      expect(getFormDefinition('Bid Document - Single Tender Enquiry (STE)')?.id).toBe(34);
+      expect(getFormDefinition('34')?.id).toBe(34);
     });
 
     it('should have all 12 fields matching specification', () => {

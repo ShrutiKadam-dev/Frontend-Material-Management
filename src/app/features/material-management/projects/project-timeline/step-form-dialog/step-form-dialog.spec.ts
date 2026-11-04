@@ -1199,5 +1199,242 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(comp.loadFromNationalPreQualificationBid).toHaveBeenCalledWith(false);
     });
   });
+
+  describe('Form 3: Corrigendum Auto-Patching & Comparison Table', () => {
+    const corrigendumDef: FormDefinition = {
+      id: 3,
+      formCode: 'FORM_03_CORRIGENDUM',
+      name: 'Corrigendum',
+      category: 'Pre-Bidding & Tenders',
+      phaseId: 'phase-1',
+      icon: 'pi pi-sync',
+      description: 'Corrigendum amendment notices issued against EOI, PQB, or Tender notices',
+      apiEndpoint: '/api/v1/corrigendums',
+      fields: [
+        { key: 'corrigendum_no', label: 'Corrigendum No.', type: 'text', required: true },
+        { key: 'against_ref_no', label: 'Against EOI / PQB / Tender No.', type: 'text', required: true },
+        { key: 'ref_title', label: 'EOI / PQB / Tender Title', type: 'text' },
+        { key: 'issue_date', label: 'Corrigendum Issue Date', type: 'date' },
+      ],
+      tableConfig: {
+        title: 'Corrigendum Details',
+        columns: [
+          { key: 'sr_no', label: 'SR. NO.', type: 'number' },
+          { key: 'as_per_tender_doc', label: 'AS PER EOI/PQB/TENDER DOCUMENT', type: 'textarea' },
+          { key: 'as_per_corrigendum', label: 'AS PER CORRIGENDUM', type: 'textarea' },
+        ],
+      },
+      uploads: []
+    };
+
+    it('should initialize 8 standard amendment rows when ensureCorrigendumDefaultRows is called on empty table', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const tableArray = new FormArray<any>([]);
+
+      comp.tableFormArray = () => tableArray;
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+
+      comp.ensureCorrigendumDefaultRows();
+
+      expect(tableArray.length).toBe(8);
+      expect(tableArray.at(0).get('sr_no')?.value).toBe(1);
+      expect(tableArray.at(0).get('as_per_tender_doc')?.value).toBe('CLOSING DATE & TIME:');
+      expect(tableArray.at(0).get('as_per_corrigendum')?.value).toBe('CLOSING DATE & TIME:');
+
+      expect(tableArray.at(1).get('sr_no')?.value).toBe(2);
+      expect(tableArray.at(1).get('as_per_tender_doc')?.value).toBe('OPENING DATE & TIME:');
+
+      expect(tableArray.at(2).get('sr_no')?.value).toBe(3);
+      expect(tableArray.at(2).get('as_per_tender_doc')?.value).toBe('QUANTITY: (TABLE)');
+
+      expect(tableArray.at(3).get('sr_no')?.value).toBe(4);
+      expect(tableArray.at(3).get('as_per_tender_doc')?.value).toBe('PAYMENT TERMS:');
+
+      expect(tableArray.at(4).get('sr_no')?.value).toBe(5);
+      expect(tableArray.at(4).get('as_per_tender_doc')?.value).toBe('EMD:');
+
+      expect(tableArray.at(5).get('sr_no')?.value).toBe(6);
+      expect(tableArray.at(5).get('as_per_tender_doc')?.value).toBe('DELIVERY SCHEDULE:');
+
+      expect(tableArray.at(6).get('sr_no')?.value).toBe(7);
+      expect(tableArray.at(6).get('as_per_tender_doc')?.value).toBe('TENDER FEE');
+
+      expect(tableArray.at(7).get('sr_no')?.value).toBe(8);
+      expect(tableArray.at(7).get('as_per_tender_doc')?.value).toBe('TECHNICAL SPECIFICATION:');
+    });
+
+    it('should patch title, tender no, and previous document values from a preceding LTE step', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const fg = new FormGroup({
+        corrigendum_no: new FormControl(''),
+        against_ref_no: new FormControl(''),
+        ref_title: new FormControl(''),
+        issue_date: new FormControl(null),
+      });
+
+      const tableArray = new FormArray<any>([]);
+      comp.formGroup = () => fg;
+      comp.tableFormArray = () => tableArray;
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+      comp.linkedTenderStep = { set: vi.fn() };
+
+      const lteStep: ProjectStep = {
+        id: 101,
+        project_id: 15,
+        step_number: 1,
+        step_name: 'Limited Tender Enquiry (LTE)',
+        description: 'LTE Step',
+        form_code: 'FORM_04_LTE',
+        status: 'completed',
+        progress_percentage: 100,
+        completed_at: '2026-06-15T10:00:00',
+        data: {
+          lte_title: 'Substation Transformer Procurement',
+          lte_no: 'LTE-TRANS-2026-004',
+          closing_date_time: '2026-06-15T15:00:00',
+          opening_date_time: '2026-06-16T11:00:00',
+          tender_fee: 5000,
+          emd_amount: 150000,
+          payment_terms: '100% against final inspection',
+          delivery_schedule: '60 days from PO issuance',
+          technical_specifications: 'Standard 400kV Power Transformer Specs v2',
+          items: [
+            { material_name: '400kV Step-up Transformer', quantity: 2, unit: 'Nos.' },
+            { material_name: 'Surge Arrester Set', quantity: 6, unit: 'Sets' },
+          ],
+        },
+      };
+
+      comp.applyPreviousStepToCorrigendum(lteStep, true);
+
+      expect(fg.get('ref_title')?.value).toBe('Substation Transformer Procurement');
+      expect(fg.get('against_ref_no')?.value).toBe('LTE-TRANS-2026-004');
+
+      expect(tableArray.length).toBe(8);
+      // Row 1: Closing date & time
+      expect(tableArray.at(0).get('as_per_tender_doc')?.value).toContain('CLOSING DATE & TIME:');
+
+      // Row 2: Opening date & time
+      expect(tableArray.at(1).get('as_per_tender_doc')?.value).toContain('OPENING DATE & TIME:');
+
+      // Row 3: Quantity
+      expect(tableArray.at(2).get('as_per_tender_doc')?.value).toContain('QUANTITY: (TABLE)');
+      expect(tableArray.at(2).get('as_per_tender_doc')?.value).toContain('400kV Step-up Transformer');
+      expect(tableArray.at(2).get('as_per_tender_doc')?.value).toContain('Surge Arrester Set');
+
+      // Row 4: Payment terms
+      expect(tableArray.at(3).get('as_per_tender_doc')?.value).toContain('100% against final inspection');
+
+      // Row 5: EMD
+      expect(tableArray.at(4).get('as_per_tender_doc')?.value).toContain('150');
+
+      // Row 6: Delivery schedule
+      expect(tableArray.at(5).get('as_per_tender_doc')?.value).toContain('60 days from PO issuance');
+
+      // Row 7: Tender fee
+      expect(tableArray.at(6).get('as_per_tender_doc')?.value).toContain('5000');
+
+      // Row 8: Technical specification
+      expect(tableArray.at(7).get('as_per_tender_doc')?.value).toContain('Standard 400kV Power Transformer Specs v2');
+
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: expect.stringMatching(/Linked|Patched/i),
+        }),
+      );
+      expect(comp.linkedTenderStep.set).toHaveBeenCalledWith(lteStep);
+    });
+
+    it('should only match PQB, LTE, or STE and ignore Bid Document steps (e.g. FORM_31_BID_DOC_LTE)', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const mockProjectStepService = {
+        getSteps: vi.fn().mockReturnValue(
+          of([
+            {
+              id: 1,
+              project_id: 20,
+              step_number: 1,
+              step_name: 'National Pre-Qualification Bid (PQB)',
+              form_code: 'FORM_01_PQB',
+              status: 'completed',
+              data: {
+                pqb_title: 'Thermal Plant Overhaul',
+                pqb_no: 'PQB-PIPE-2026',
+              },
+            },
+            {
+              id: 1026,
+              project_id: 20,
+              step_number: 2,
+              step_name: 'Bid Document for LTE',
+              form_code: 'FORM_31_BID_DOC_LTE',
+              status: 'completed',
+              data: {
+                customer_name: 'NTPC',
+              },
+            },
+            {
+              id: 3,
+              project_id: 20,
+              step_number: 3,
+              step_name: 'Limited Tender Enquiry (LTE)',
+              form_code: 'FORM_04_LTE',
+              status: 'completed',
+              data: {
+                tender_title: 'Turbine Overhaul Enquiry',
+                tender_enquiry_no: 'LTE-TURB-2026',
+              },
+            },
+          ]),
+        ),
+      };
+
+      const mockFormApiService = {
+        getEntries: vi.fn().mockReturnValue(of([])),
+        getLatestEntry: vi.fn().mockReturnValue(of(null)),
+      };
+
+      comp.projectId = () => 20;
+      comp.projectStepService = mockProjectStepService;
+      comp.formApiService = mockFormApiService;
+      comp.fetchingPreviousStep = { set: vi.fn() };
+      comp.applyPreviousStepToCorrigendum = vi.fn();
+      comp.messageService = { add: vi.fn() };
+      comp.step = () => null; // ADD mode
+
+      comp.loadFromPreviousTenderStep(true);
+
+      expect(mockProjectStepService.getSteps).toHaveBeenCalledWith(20);
+      // FORM_31_BID_DOC_LTE must be completely ignored; latest matching tender step is FORM_04_LTE
+      expect(comp.applyPreviousStepToCorrigendum).toHaveBeenCalledWith(
+        expect.objectContaining({ form_code: 'FORM_04_LTE' }),
+        true,
+      );
+    });
+
+    it('should auto-trigger default rows and loadFromPreviousTenderStep in ADD mode for FORM_03_CORRIGENDUM', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.activeTab = { set: vi.fn() };
+      comp.newRemarkInput = { set: vi.fn() };
+      comp.ensureProjectMetadata = vi.fn();
+      comp.projectId = () => 42;
+      comp.resolvedDef = { set: vi.fn() };
+      comp.populateForm = vi.fn();
+      comp.loadFromNationalPreQualificationBid = vi.fn();
+      comp.ensureCorrigendumDefaultRows = vi.fn();
+      comp.loadFromPreviousTenderStep = vi.fn();
+
+      comp.initializeModal(null, corrigendumDef);
+
+      expect(comp.resolvedDef.set).toHaveBeenCalledWith(corrigendumDef);
+      expect(comp.populateForm).toHaveBeenCalledWith(corrigendumDef, {}, []);
+      expect(comp.ensureCorrigendumDefaultRows).toHaveBeenCalled();
+      expect(comp.loadFromPreviousTenderStep).toHaveBeenCalledWith(false);
+    });
+  });
 });
 

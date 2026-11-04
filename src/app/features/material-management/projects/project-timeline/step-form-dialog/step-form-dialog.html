@@ -75,6 +75,38 @@
         </button>
       </div>
       }
+
+      @if (isSteBidDocument()) {
+      <div class="pqb-banner-action-bar" role="region" aria-label="Single Tender Enquiry Auto-Patch Info">
+        <div class="pqb-banner-info">
+          <i class="pi pi-link" aria-hidden="true"></i>
+          <span>Tender Title and Tender No. are automatically linked and patched from Single Tender Enquiry (STE).</span>
+        </div>
+        <button pButton type="button" icon="pi pi-sync" label="Fetch from STE"
+          class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn"
+          [loading]="fetchingSte()"
+          (click)="loadFromSingleTenderEnquiry(true)"
+          pTooltip="Refresh Tender Title and Tender No. from Single Tender Enquiry (STE)"
+          tooltipPosition="top">
+        </button>
+      </div>
+      }
+
+      @if (isCorrigendum()) {
+      <div class="pqb-banner-action-bar" role="region" aria-label="Corrigendum Auto-Patch Info">
+        <div class="pqb-banner-info">
+          <i class="pi pi-link" aria-hidden="true"></i>
+          <span>EOI / PQB / Tender Title and Against EOI / PQB / Tender No. are automatically linked and patched from {{ corrigendumSourceStepName() }}.</span>
+        </div>
+        <button pButton type="button" icon="pi pi-sync" [label]="corrigendumFetchButtonLabel()"
+          class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn"
+          [loading]="fetchingPreviousStep()"
+          (click)="loadFromPreviousTenderStep(true)"
+          [pTooltip]="'Refresh Title, Tender No., and comparison specifications from ' + corrigendumSourceStepName()"
+          tooltipPosition="top">
+        </button>
+      </div>
+      }
       <form [formGroup]="formGroup()" class="dynamic-inputs-grid">
         @for (field of def.fields; track field.key) {
         <div class="input-col" [class.col-span-1]="field.colSpan === 1"
@@ -88,6 +120,16 @@
             }
             @if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT' && (field.key === 'pqb_title' || field.key === 'pqb_no')) {
             <span class="field-sync-pill" title="Patched from latest National Pre-Qualification Bid">
+              <i class="pi pi-link" aria-hidden="true"></i> Linked
+            </span>
+            }
+            @if (isSteBidDocument() && (field.key === 'tender_title' || field.key === 'tender_no')) {
+            <span class="field-sync-pill" title="Patched from Single Tender Enquiry (STE)">
+              <i class="pi pi-link" aria-hidden="true"></i> Linked
+            </span>
+            }
+            @if (isCorrigendum() && (field.key === 'against_ref_no' || field.key === 'ref_title')) {
+            <span class="field-sync-pill" [title]="'Patched from ' + corrigendumSourceStepName()">
               <i class="pi pi-link" aria-hidden="true"></i> Linked
             </span>
             }
@@ -236,12 +278,32 @@
     <!-- ── TAB 2: LINE ITEMS TABLE ─────────────────────────────────── -->
     @if (activeTab() === 'table') {
     <div class="tab-panel tab-panel--table">
+      @if (isCorrigendum()) {
+      <div class="pqb-banner-action-bar table-banner-bar" role="region" aria-label="Corrigendum Comparison Auto-Patch Info">
+        <div class="pqb-banner-info">
+          <i class="pi pi-link" aria-hidden="true"></i>
+          <span>Amendment comparison specifications are automatically linked and patched from {{ corrigendumSourceStepName() }}.</span>
+        </div>
+        <button pButton type="button" icon="pi pi-sync" [label]="corrigendumFetchButtonLabel()"
+          class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn"
+          [loading]="fetchingPreviousStep()"
+          (click)="loadFromPreviousTenderStep(true)"
+          [pTooltip]="'Refresh comparison specifications from ' + corrigendumSourceStepName()"
+          tooltipPosition="top">
+        </button>
+      </div>
+      }
       @if (def.tableConfig; as tbl) {
       <div class="table-section-bar">
         <div class="table-title-group">
           <h3 class="table-section-title">{{ tbl.title }}</h3>
           <span class="table-item-count">({{ tableFormArray().length }} item{{ tableFormArray().length === 1 ? '' : 's'
             }})</span>
+          @if (isCorrigendum() && corrigendumLinkedInfo()) {
+          <span class="field-sync-pill" [title]="'Comparison data patched from ' + corrigendumSourceStepName()">
+            <i class="pi pi-link" aria-hidden="true"></i> Linked
+          </span>
+          }
         </div>
 
         <div class="table-actions-group">
@@ -272,6 +334,15 @@
             [loading]="fetchingSupplierQuotation()"
             (click)="loadFromSupplierQuotation(true)"
             pTooltip="Import line items and prices from latest Quotation from Supplier"
+            tooltipPosition="top">
+          </button>
+          }
+          @if (isCorrigendum()) {
+          <button pButton type="button" icon="pi pi-sync" [label]="corrigendumFetchButtonLabel()"
+            class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn"
+            [loading]="fetchingPreviousStep()"
+            (click)="loadFromPreviousTenderStep(true)"
+            [pTooltip]="'Auto-patch comparison details and Title/No. from ' + corrigendumSourceStepName()"
             tooltipPosition="top">
           </button>
           }
@@ -315,6 +386,10 @@
                 <!-- Borderless / Flat Numeric Input -->
                 <input type="number" [formControlName]="col.key" (input)="onTableCellChange(rIdx)"
                   [placeholder]="col.type === 'currency' ? '0.00' : '0'" class="table-flat-input text-right" />
+                } @else if (col.type === 'textarea') {
+                <!-- Clean Multiline Textarea Input for Corrigendum / Details -->
+                <textarea pTextarea [formControlName]="col.key" rows="2" class="table-flat-input table-flat-textarea"
+                  [placeholder]="col.key === 'as_per_corrigendum' ? 'Enter corrigendum updates...' : 'Enter details...'"></textarea>
                 } @else if (col.type === 'date') {
                 <!-- Clean Date Input -->
                 <input type="date" [formControlName]="col.key" class="table-flat-input date-field" />
@@ -347,6 +422,14 @@
                     style="margin-right: 8px;"
                     [loading]="fetchingSupplierQuotation()"
                     (click)="loadFromSupplierQuotation(true)">
+                  </button>
+                  }
+                  @if (isCorrigendum()) {
+                  <button pButton type="button" icon="pi pi-sync" label="Fetch from Previous Step"
+                    class="empty-add-row-btn p-button-outlined p-button-secondary"
+                    style="margin-right: 8px;"
+                    [loading]="fetchingPreviousStep()"
+                    (click)="loadFromPreviousTenderStep(true)">
                   </button>
                   }
                   <button pButton type="button" icon="pi pi-plus" label="Add Item Row" class="empty-add-row-btn"

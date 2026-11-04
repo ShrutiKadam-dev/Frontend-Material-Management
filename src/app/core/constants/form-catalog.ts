@@ -39,7 +39,7 @@ export interface FormFieldDefinition {
 export interface FormTableColumn {
   key: string;
   label: string;
-  type: 'text' | 'number' | 'currency' | 'date';
+  type: 'text' | 'textarea' | 'number' | 'currency' | 'date';
   width?: string;
   required?: boolean;
 }
@@ -161,8 +161,17 @@ export const FORM_CATALOG: FormDefinition[] = [
     fields: [
       { key: 'corrigendum_no', label: 'Corrigendum No.', type: 'text', required: true, colSpan: 2 },
       { key: 'against_ref_no', label: 'Against EOI / PQB / Tender No.', type: 'text', required: true, colSpan: 2 },
-      { key: 'ref_title', label: 'EOI / PQB / Tender Title', type: 'text', colSpan: 4 },
+      { key: 'ref_title', label: 'EOI / PQB / Tender Title', type: 'text', colSpan: 3 },
+      { key: 'issue_date', label: 'Corrigendum Issue Date', type: 'date', colSpan: 1 },
     ],
+    tableConfig: {
+      title: 'Corrigendum Details',
+      columns: [
+        { key: 'sr_no', label: 'SR. NO.', type: 'number', width: '70px' },
+        { key: 'as_per_tender_doc', label: 'AS PER EOI/PQB/TENDER DOCUMENT', type: 'textarea' },
+        { key: 'as_per_corrigendum', label: 'AS PER CORRIGENDUM', type: 'textarea' },
+      ],
+    },
     uploads: [{ key: 'upload_corrigendum', label: 'Upload Corrigendum Document', multiple: true }],
   },
 

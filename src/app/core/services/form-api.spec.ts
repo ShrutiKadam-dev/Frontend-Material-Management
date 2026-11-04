@@ -124,6 +124,69 @@ describe('FormApiService', () => {
     expect(entries).toHaveLength(0);
   });
 
+  it('getLatestEntry should call /latest endpoint directly and normalize without calling fallback', async () => {
+    const mockHttp = {
+      get: vi.fn().mockReturnValue(
+        of({
+          data: {
+            id: 10,
+            project_id: 7,
+            tender_title: 'Grid Overhaul Tender',
+          },
+        }),
+      ),
+    };
+
+    const service = Object.create(FormApiService.prototype);
+    service.http = mockHttp;
+    service.apiBaseUrl = 'http://localhost:5000';
+
+    const latest = await new Promise<ProjectStep | null>((resolve) => {
+      service.getLatestEntry(sampleDef, 7).subscribe(resolve);
+    });
+
+    expect(mockHttp.get).toHaveBeenCalledTimes(1);
+    expect(mockHttp.get).toHaveBeenCalledWith('http://localhost:5000/api/v1/quotation-requests/latest?project_id=7');
+    expect(latest).not.toBeNull();
+    expect(latest?.id).toBe(10);
+    expect(latest?.form_code).toBe('FORM_09_RFQ');
+  });
+
+  it('getLatestEntry should return null when /latest fails without calling any fallback endpoint', async () => {
+    const mockHttp = {
+      get: vi.fn().mockReturnValue(throwError(() => new Error('Not found'))),
+    };
+
+    const service = Object.create(FormApiService.prototype);
+    service.http = mockHttp;
+    service.apiBaseUrl = 'http://localhost:5000';
+
+    const latest = await new Promise<ProjectStep | null>((resolve) => {
+      service.getLatestEntry(sampleDef, 7).subscribe(resolve);
+    });
+
+    expect(mockHttp.get).toHaveBeenCalledTimes(1);
+    expect(mockHttp.get).toHaveBeenCalledWith('http://localhost:5000/api/v1/quotation-requests/latest?project_id=7');
+    expect(latest).toBeNull();
+  });
+
+  it('getLatestEntry should return null when no apiEndpoint is present', async () => {
+    const mockHttp = {
+      get: vi.fn(),
+    };
+
+    const service = Object.create(FormApiService.prototype);
+    service.http = mockHttp;
+    service.apiBaseUrl = 'http://localhost:5000';
+
+    const latest = await new Promise<ProjectStep | null>((resolve) => {
+      service.getLatestEntry(sampleDefWithoutEndpoint, 7).subscribe(resolve);
+    });
+
+    expect(mockHttp.get).not.toHaveBeenCalled();
+    expect(latest).toBeNull();
+  });
+
   it('getEntryById should fetch a single record from the dedicated individual endpoint', async () => {
     const mockHttp = {
       get: vi.fn().mockReturnValue(
