@@ -1,9 +1,10 @@
+import '@angular/compiler';
 import { describe, expect, it, vi } from 'vitest';
 import { of } from 'rxjs';
 import { FormArray, FormControl, FormGroup } from '@angular/forms';
 import { StepFormDialog } from './step-form-dialog';
 import { ProjectStep } from '../../../../../core/models/project-step.model';
-import { FormDefinition } from '../../../../../core/constants/form-catalog';
+import { FormDefinition, getFormDefinition } from '../../../../../core/constants/form-catalog';
 
 describe('StepFormDialog Unit & CRUD Logic', () => {
   const mockFormDef: FormDefinition = {
@@ -1231,7 +1232,13 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       const comp = Object.create(StepFormDialog.prototype);
       const tableArray = new FormArray<any>([]);
 
-      comp.tableFormArray = () => tableArray;
+      comp.resolvedDef = () => getFormDefinition('FORM_03_CORRIGENDUM');
+      comp.tableFormArray = Object.assign(() => tableArray, {
+        set: (newArr: any) => {
+          tableArray.clear();
+          newArr.controls.forEach((c: any) => tableArray.push(c));
+        },
+      });
       comp.formVersion = { update: vi.fn() };
       comp.cdr = { markForCheck: vi.fn() };
 
@@ -1274,12 +1281,19 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       });
 
       const tableArray = new FormArray<any>([]);
+      comp.resolvedDef = () => getFormDefinition('FORM_03_CORRIGENDUM');
       comp.formGroup = () => fg;
-      comp.tableFormArray = () => tableArray;
+      comp.tableFormArray = Object.assign(() => tableArray, {
+        set: (newArr: any) => {
+          tableArray.clear();
+          newArr.controls.forEach((c: any) => tableArray.push(c));
+        },
+      });
       comp.formVersion = { update: vi.fn() };
       comp.cdr = { markForCheck: vi.fn() };
       comp.messageService = { add: vi.fn() };
       comp.linkedTenderStep = { set: vi.fn() };
+      comp.effectiveProjectTitle = () => 'Substation Project';
 
       const lteStep: ProjectStep = {
         id: 101,
@@ -1329,13 +1343,13 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(tableArray.at(3).get('as_per_tender_doc')?.value).toContain('100% against final inspection');
 
       // Row 5: EMD
-      expect(tableArray.at(4).get('as_per_tender_doc')?.value).toContain('150');
+      expect(tableArray.at(4).get('as_per_tender_doc')?.value).toContain('1,50,000');
 
       // Row 6: Delivery schedule
       expect(tableArray.at(5).get('as_per_tender_doc')?.value).toContain('60 days from PO issuance');
 
       // Row 7: Tender fee
-      expect(tableArray.at(6).get('as_per_tender_doc')?.value).toContain('5000');
+      expect(tableArray.at(6).get('as_per_tender_doc')?.value).toContain('5,000');
 
       // Row 8: Technical specification
       expect(tableArray.at(7).get('as_per_tender_doc')?.value).toContain('Standard 400kV Power Transformer Specs v2');
@@ -1434,6 +1448,81 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(comp.populateForm).toHaveBeenCalledWith(corrigendumDef, {}, []);
       expect(comp.ensureCorrigendumDefaultRows).toHaveBeenCalled();
       expect(comp.loadFromPreviousTenderStep).toHaveBeenCalledWith(false);
+    });
+
+    it('should auto-trigger loadFromSingleTenderEnquiry in ADD mode for FORM_34_BID_DOC_STE', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const steBidDocDef = getFormDefinition('FORM_34_BID_DOC_STE')!;
+
+      comp.activeTab = { set: vi.fn() };
+      comp.newRemarkInput = { set: vi.fn() };
+      comp.ensureProjectMetadata = vi.fn();
+      comp.projectId = () => 42;
+      comp.resolvedDef = { set: vi.fn() };
+      comp.populateForm = vi.fn();
+      comp.loadFromNationalPreQualificationBid = vi.fn();
+      comp.loadFromSingleTenderEnquiry = vi.fn();
+
+      comp.initializeModal(null, steBidDocDef);
+
+      expect(comp.resolvedDef.set).toHaveBeenCalledWith(steBidDocDef);
+      expect(comp.populateForm).toHaveBeenCalledWith(steBidDocDef, {}, []);
+      expect(comp.loadFromSingleTenderEnquiry).toHaveBeenCalledWith(false);
+    });
+
+    it('should fetch and patch tender_title, tender_no, tender_issue_date, and bid_validity from FORM_33_STE', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const steStep: ProjectStep = {
+        id: 77,
+        project_id: 10,
+        step_number: 33,
+        step_name: 'Single Tender Enquiry (STE)',
+        form_code: 'FORM_33_STE',
+        status: 'completed',
+        progress_percentage: 100,
+        category: 'Pre-Bidding & Tenders',
+        phase: 'phase-1',
+        data: {
+          tender_title: 'Procurement of High Voltage Transformer Units',
+          tender_no: 'STE-2026-900',
+          tender_issue_date: '2026-03-15',
+          tender_validity: '90 Days',
+        },
+        remarks: [],
+      };
+
+      const mockProjectStepService = {
+        getSteps: vi.fn().mockReturnValue(of([steStep])),
+      };
+      const mockMessageService = { add: vi.fn() };
+      const fg = new FormGroup({
+        tender_title: new FormControl(''),
+        tender_no: new FormControl(''),
+        tender_issue_date: new FormControl(null),
+        bid_validity: new FormControl(''),
+      });
+
+      comp.projectId = () => 10;
+      comp.projectStepService = mockProjectStepService;
+      comp.messageService = mockMessageService;
+      comp.fetchingSte = { set: vi.fn() };
+      comp.formGroup = () => fg;
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+
+      comp.loadFromSingleTenderEnquiry(true);
+
+      expect(comp.fetchingSte.set).toHaveBeenCalledWith(true);
+      expect(comp.fetchingSte.set).toHaveBeenCalledWith(false);
+      expect(fg.get('tender_title')?.value).toBe('Procurement of High Voltage Transformer Units');
+      expect(fg.get('tender_no')?.value).toBe('STE-2026-900');
+      expect(fg.get('bid_validity')?.value).toBe('90 Days');
+      expect(mockMessageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: 'STE Details Patched',
+        }),
+      );
     });
   });
 });

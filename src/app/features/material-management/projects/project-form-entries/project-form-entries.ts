@@ -32,6 +32,7 @@ import { ProjectService } from '../../../../core/services/project';
 import { CustomerService } from '../../../../core/services/customer';
 import { SupplierService } from '../../../../core/services/supplier';
 import { FormApiService } from '../../../../core/services/form-api';
+import { ProjectStepService } from '../../../../core/services/project-step';
 import { formatDisplayDate } from '../../../../core/utils/date.utils';
 import {
   calculateTableTotalsWithGst,
@@ -185,6 +186,7 @@ export class ProjectFormEntries implements OnInit {
   private readonly customerService = inject(CustomerService);
   private readonly supplierService = inject(SupplierService);
   private readonly formApiService = inject(FormApiService);
+  private readonly projectStepService = inject(ProjectStepService, { optional: true });
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -427,6 +429,17 @@ export class ProjectFormEntries implements OnInit {
             this.error.set('Could not load project context.');
           }
           this.allSteps.set(steps || []);
+          if (steps && steps.length > 0 && this.projectStepService) {
+            for (const s of steps) {
+              this.projectStepService.addStepToLocalCache(projectId, {
+                ...s,
+                form_code: s.form_code || def.formCode,
+                step_name: s.step_name || def.name,
+                phase: s.phase || def.phaseId,
+                category: s.category || def.category,
+              });
+            }
+          }
         },
         error: () => {
           this.error.set('Could not load form entries for this project.');
@@ -486,24 +499,37 @@ export class ProjectFormEntries implements OnInit {
   }
 
   onStepSaved(savedStep: ProjectStep): void {
+    const pId = this.projectId();
+    const def = this.formDefinition();
+    const stepWithMeta: ProjectStep = {
+      ...savedStep,
+      form_code: savedStep.form_code || def?.formCode,
+      step_name: savedStep.step_name || def?.name || 'Step Details',
+      phase: savedStep.phase || def?.phaseId,
+      category: savedStep.category || def?.category,
+    };
+    if (pId && this.projectStepService) {
+      this.projectStepService.addStepToLocalCache(pId, stepWithMeta);
+    }
+
     this.allSteps.update((current) => {
       const idx = current.findIndex(
         (s) =>
-          (s.id && savedStep.id && s.id === savedStep.id) ||
-          (!savedStep.id && s.step_number === savedStep.step_number && s.form_code === savedStep.form_code),
+          (s.id && stepWithMeta.id && s.id === stepWithMeta.id) ||
+          (!stepWithMeta.id && s.step_number === stepWithMeta.step_number && s.form_code === stepWithMeta.form_code),
       );
       if (idx >= 0) {
         const copy = [...current];
-        copy[idx] = savedStep;
+        copy[idx] = stepWithMeta;
         return copy;
       }
-      return [...current, savedStep];
+      return [...current, stepWithMeta];
     });
 
     this.messageService.add({
       severity: 'success',
       summary: 'Entry Saved',
-      detail: `Successfully saved ${savedStep.step_name || 'entry'}.`,
+      detail: `Successfully saved ${stepWithMeta.step_name || 'entry'}.`,
     });
     this.dialogVisible.set(false);
   }

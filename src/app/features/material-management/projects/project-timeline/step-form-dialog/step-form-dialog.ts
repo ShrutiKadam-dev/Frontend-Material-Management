@@ -114,6 +114,7 @@ export class StepFormDialog {
   readonly fetchingSupplierQuotation = signal<boolean>(false);
   readonly fetchingNationalPqb = signal<boolean>(false);
   readonly fetchingPreviousStep = signal<boolean>(false);
+  readonly fetchingSte = signal<boolean>(false);
 
   // ── Inputs & Two-Way Model ──────────────────────────────────────────
   readonly visible = model<boolean>(false);
@@ -202,6 +203,7 @@ export class StepFormDialog {
 
   readonly isCostSheet = computed(() => this.resolvedDef()?.formCode === 'FORM_10_COST_SHEET');
   readonly isPqbBidDocument = computed(() => this.resolvedDef()?.formCode === 'FORM_02_PQB_BID_DOCUMENT');
+  readonly isSteBidDocument = computed(() => this.resolvedDef()?.formCode === 'FORM_34_BID_DOC_STE');
   readonly isCorrigendum = computed(() => this.resolvedDef()?.formCode === 'FORM_03_CORRIGENDUM');
   readonly linkedTenderStep = signal<ProjectStep | null>(null);
   readonly corrigendumLinkedInfo = computed(() => {
@@ -598,6 +600,104 @@ export class StepFormDialog {
     });
   }
 
+  loadFromSingleTenderEnquiry(showNotification = true): void {
+    const pId = this.projectId();
+    if (!pId || !this.projectStepService) return;
+
+    this.fetchingSte.set(true);
+    this.projectStepService.getSteps(pId).subscribe({
+      next: (allSteps) => {
+        this.fetchingSte.set(false);
+        const steStep = (allSteps || []).find((s) => {
+          const fcode = (s.form_code || '').toUpperCase();
+          const name = (s.step_name || '').toLowerCase();
+          return (
+            fcode === 'FORM_33_STE' ||
+            fcode === 'FORM_STE' ||
+            name.includes('single tender enquiry') ||
+            name.startsWith('ste')
+          );
+        });
+
+        if (!steStep) {
+          if (showNotification) {
+            this.messageService?.add({
+              severity: 'warn',
+              summary: 'STE Step Not Found',
+              detail: 'No Single Tender Enquiry (STE) step found for this project to link from.',
+            });
+          }
+          return;
+        }
+
+        let stepData: Record<string, unknown> = {};
+        if (typeof steStep.data === 'string') {
+          try {
+            stepData = JSON.parse(steStep.data);
+          } catch {
+            stepData = {};
+          }
+        } else if (steStep.data && typeof steStep.data === 'object') {
+          stepData = { ...(steStep.data as Record<string, unknown>) };
+        }
+        const stepRec = steStep as unknown as Record<string, unknown>;
+
+        const title = String(
+          stepData['tender_title'] || stepData['title'] || stepRec['tender_title'] || '',
+        ).trim();
+        const no = String(
+          stepData['tender_no'] || stepData['ste_no'] || stepRec['tender_no'] || '',
+        ).trim();
+
+        const rawIssueDate =
+          stepData['tender_issue_date'] || stepData['issue_date'] || stepRec['tender_issue_date'];
+        const validity = String(
+          stepData['tender_validity'] || stepData['validity'] || stepRec['tender_validity'] || '',
+        ).trim();
+
+        const fg = this.formGroup();
+        if (!fg) return;
+
+        const patchPayload: Record<string, unknown> = {};
+        if (title && fg.get('tender_title')) {
+          patchPayload['tender_title'] = title;
+        }
+        if (no && fg.get('tender_no')) {
+          patchPayload['tender_no'] = no;
+        }
+        if (rawIssueDate && fg.get('tender_issue_date') && !fg.get('tender_issue_date')?.value) {
+          patchPayload['tender_issue_date'] = parseLocalDate(rawIssueDate as string | Date);
+        }
+        if (validity && fg.get('bid_validity') && !fg.get('bid_validity')?.value) {
+          patchPayload['bid_validity'] = validity;
+        }
+
+        fg.patchValue(patchPayload);
+        fg.markAsDirty();
+        this.formVersion?.update?.((v) => v + 1);
+        this.cdr?.markForCheck?.();
+
+        if (showNotification) {
+          this.messageService?.add({
+            severity: 'success',
+            summary: 'STE Details Patched',
+            detail: `Patched Tender Title "${title}" and Tender No. "${no}" from Single Tender Enquiry (STE).`,
+          });
+        }
+      },
+      error: () => {
+        this.fetchingSte.set(false);
+        if (showNotification) {
+          this.messageService?.add({
+            severity: 'info',
+            summary: 'STE Unavailable',
+            detail: 'Could not fetch Single Tender Enquiry (STE) for this project.',
+          });
+        }
+      },
+    });
+  }
+
   loadFromPreviousTenderStep(showNotification = true): void {
     const pId = this.projectId();
     if (!pId || !this.projectStepService) return;
@@ -763,14 +863,18 @@ export class StepFormDialog {
     // 1. Extract Title: EOI / PQB / Tender Title
     const title = String(
       stepData['tender_title'] ||
+        stepData['lte_title'] ||
+        stepData['ste_title'] ||
         stepData['pqb_title'] ||
         stepData['eoi_title'] ||
         stepData['title'] ||
         stepData['bid_title'] ||
         stepRec['tender_title'] ||
+        stepRec['lte_title'] ||
+        stepRec['ste_title'] ||
         stepRec['pqb_title'] ||
         stepRec['title'] ||
-        this.effectiveProjectTitle() ||
+        (typeof this.effectiveProjectTitle === 'function' ? this.effectiveProjectTitle() : '') ||
         '',
     ).trim();
 
@@ -949,7 +1053,7 @@ export class StepFormDialog {
       },
     ];
 
-    const def = this.resolvedDef();
+    const def = typeof this.resolvedDef === 'function' ? this.resolvedDef() : null;
     if (!def || !def.tableConfig) return;
 
     const existingRows = (this.tableFormArray().value || []) as Array<Record<string, unknown>>;
@@ -986,11 +1090,13 @@ export class StepFormDialog {
       }
     }
 
-    this.linkedTenderStep.set(targetStep);
-    this.tableFormArray.set(rowsArray);
-    this.tableVersion.update((v) => v + 1);
-    this.formVersion.update((v) => v + 1);
-    this.cdr.markForCheck();
+    this.linkedTenderStep?.set?.(targetStep);
+    if (typeof this.tableFormArray?.set === 'function') {
+      this.tableFormArray.set(rowsArray);
+    }
+    this.tableVersion?.update?.((v) => v + 1);
+    this.formVersion?.update?.((v) => v + 1);
+    this.cdr?.markForCheck?.();
 
     if (showNotification) {
       const defName = targetStep.form_code ? getFormDefinition(targetStep.form_code)?.name : null;
@@ -1077,7 +1183,7 @@ export class StepFormDialog {
   }
 
   private ensureCorrigendumDefaultRows(): void {
-    const def = this.resolvedDef();
+    const def = typeof this.resolvedDef === 'function' ? this.resolvedDef() : null;
     if (!def || def.formCode !== 'FORM_03_CORRIGENDUM' || !def.tableConfig) return;
     if (this.tableFormArray().length > 0) return;
 
@@ -1102,9 +1208,11 @@ export class StepFormDialog {
         }),
       );
     }
-    this.tableFormArray.set(rowsArray);
-    this.tableVersion.update((v) => v + 1);
-    this.cdr.markForCheck();
+    if (typeof this.tableFormArray?.set === 'function') {
+      this.tableFormArray.set(rowsArray);
+    }
+    this.tableVersion?.update?.((v) => v + 1);
+    this.cdr?.markForCheck?.();
   }
 
   constructor() {
@@ -1220,6 +1328,13 @@ export class StepFormDialog {
             this.loadFromNationalPreQualificationBid(false);
           }
 
+          if (
+            def!.formCode === 'FORM_34_BID_DOC_STE' &&
+            (!savedData['tender_title'] || !savedData['tender_no'])
+          ) {
+            this.loadFromSingleTenderEnquiry(false);
+          }
+
           if (def!.formCode === 'FORM_03_CORRIGENDUM') {
             if (!savedData['items'] || (Array.isArray(savedData['items']) && savedData['items'].length === 0) || !savedData['against_ref_no'] || !savedData['ref_title']) {
               this.loadFromPreviousTenderStep(false);
@@ -1260,6 +1375,13 @@ export class StepFormDialog {
             this.loadFromNationalPreQualificationBid(false);
           }
 
+          if (
+            def!.formCode === 'FORM_34_BID_DOC_STE' &&
+            (!savedData['tender_title'] || !savedData['tender_no'])
+          ) {
+            this.loadFromSingleTenderEnquiry(false);
+          }
+
           if (def!.formCode === 'FORM_03_CORRIGENDUM') {
             if (!savedData['items'] || (Array.isArray(savedData['items']) && savedData['items'].length === 0) || !savedData['against_ref_no'] || !savedData['ref_title']) {
               this.loadFromPreviousTenderStep(false);
@@ -1279,7 +1401,11 @@ export class StepFormDialog {
       if (defInput.formCode === 'FORM_02_PQB_BID_DOCUMENT') {
         this.loadFromNationalPreQualificationBid(false);
       }
+      if (defInput.formCode === 'FORM_34_BID_DOC_STE') {
+        this.loadFromSingleTenderEnquiry(false);
+      }
       if (defInput.formCode === 'FORM_03_CORRIGENDUM') {
+        this.ensureCorrigendumDefaultRows();
         this.loadFromPreviousTenderStep(false);
       }
     } else {
@@ -1626,7 +1752,7 @@ export class StepFormDialog {
 
   // ── Table Item Operations ───────────────────────────────────────────
   addTableRow(): void {
-    const def = this.resolvedDef();
+    const def = typeof this.resolvedDef === 'function' ? this.resolvedDef() : null;
     if (!def || !def.tableConfig) return;
     const nextSr = this.tableFormArray().length + 1;
     this.tableFormArray().push(this.createTableRowGroup(def, { sr_no: nextSr }));
@@ -1868,7 +1994,7 @@ export class StepFormDialog {
       this.formGroup()?.markAllAsTouched?.();
       this.isFormInvalid.set(true);
 
-      const hasDateError = def.fields.some((f) => this.formGroup()?.get(f.key)?.hasError('dateBeforeClosing'));
+      const hasDateError = def.fields.some((f) => this.formGroup()?.get?.(f.key)?.hasError?.('dateBeforeClosing'));
       if (hasDateError) {
         this.messageService.add({
           severity: 'warn',
@@ -1966,17 +2092,33 @@ export class StepFormDialog {
         .subscribe({
           next: (updatedStep) => {
             this.saving.set(false);
-            this.messageService.add({
+            const stepToCache: ProjectStep = {
+              ...existingStep,
+              ...updatedStep,
+              id: updatedStep.id || existingStep.id,
+              project_id: pId,
+              form_code: def.formCode,
+              step_name: def.name,
+              data: {
+                ...((existingStep.data as Record<string, unknown>) || {}),
+                ...((updatedStep.data as Record<string, unknown>) || {}),
+                ...combinedData,
+              },
+            };
+            if (this.projectStepService) {
+              this.projectStepService.addStepToLocalCache(pId, stepToCache);
+            }
+            this.messageService?.add({
               severity: 'success',
               summary: 'Changes Saved',
-              detail: `${updatedStep.step_name} has been updated successfully.`,
+              detail: `${updatedStep.step_name || def.name} has been updated successfully.`,
             });
-            this.stepSaved.emit(updatedStep);
+            this.stepSaved.emit(stepToCache);
             this.close();
           },
           error: () => {
             this.saving.set(false);
-            this.messageService.add({
+            this.messageService?.add({
               severity: 'error',
               summary: 'Save Failed',
               detail: 'Could not update step data. Please try again.',
@@ -1984,27 +2126,97 @@ export class StepFormDialog {
           },
         });
     } else {
-      // ── POST OPERATION: Create new entry via FormApiService ─────────
+      // ── POST OPERATION: Create new entry via FormApiService & attach to Project Steps ──
       this.formApiService
         .createEntry(def, pId, combinedData, rawFiles)
         .subscribe({
           next: (newStep) => {
-            this.saving.set(false);
-            this.messageService.add({
-              severity: 'success',
-              summary: 'Form Attached!',
-              detail: `${def.name} has been added to the project pipeline.`,
-            });
-            this.stepSaved.emit(newStep);
-            this.close();
+            if (this.projectStepService) {
+              this.projectStepService.addStep(pId, def.formCode, def.name, combinedData, 'completed', 100).subscribe({
+                next: (addedStep) => {
+                  this.saving.set(false);
+                  const stepWithMeta: ProjectStep = {
+                    ...newStep,
+                    ...addedStep,
+                    id: addedStep.id || newStep.id,
+                    project_id: pId,
+                    form_code: def.formCode,
+                    step_name: def.name,
+                    data: {
+                      ...((newStep.data as Record<string, unknown>) || {}),
+                      ...combinedData,
+                    },
+                  };
+                  this.projectStepService?.addStepToLocalCache(pId, stepWithMeta);
+                  this.messageService?.add({
+                    severity: 'success',
+                    summary: 'Form Attached!',
+                    detail: `${def.name} has been added to the project pipeline.`,
+                  });
+                  this.stepSaved.emit(stepWithMeta);
+                  this.close();
+                },
+                error: () => {
+                  this.saving.set(false);
+                  const fallbackStep: ProjectStep = {
+                    ...newStep,
+                    id: newStep.id || Date.now(),
+                    project_id: pId,
+                    form_code: def.formCode,
+                    step_name: def.name,
+                    data: combinedData,
+                  };
+                  this.projectStepService?.addStepToLocalCache(pId, fallbackStep);
+                  this.messageService?.add({
+                    severity: 'success',
+                    summary: 'Form Attached!',
+                    detail: `${def.name} has been added to the project pipeline.`,
+                  });
+                  this.stepSaved.emit(fallbackStep);
+                  this.close();
+                },
+              });
+            } else {
+              this.saving.set(false);
+              this.messageService?.add({
+                severity: 'success',
+                summary: 'Form Attached!',
+                detail: `${def.name} has been added to the project pipeline.`,
+              });
+              this.stepSaved.emit(newStep);
+              this.close();
+            }
           },
           error: () => {
-            this.saving.set(false);
-            this.messageService.add({
-              severity: 'error',
-              summary: 'Creation Failed',
-              detail: 'Could not attach step. Please try again.',
-            });
+            if (this.projectStepService) {
+              this.projectStepService.addStep(pId, def.formCode, def.name, combinedData, 'completed', 100).subscribe({
+                next: (addedStep) => {
+                  this.saving.set(false);
+                  this.messageService?.add({
+                    severity: 'success',
+                    summary: 'Form Attached!',
+                    detail: `${def.name} has been added to the project pipeline.`,
+                  });
+                  this.stepSaved.emit(addedStep);
+                  this.close();
+                },
+                error: () => {
+                  this.saving.set(false);
+                  this.messageService?.add({
+                    severity: 'error',
+                    summary: 'Creation Failed',
+                    detail: 'Could not attach step. Please try again.',
+                  });
+                },
+              });
+            } else {
+              this.saving.set(false);
+              this.messageService?.add({
+                severity: 'error',
+                summary: 'Creation Failed',
+                detail: 'Could not attach step. Please try again.',
+              });
+            }
           },
         });
     }

@@ -26,26 +26,127 @@ export class ProjectStepService {
   // In-memory fallback cache for dynamic steps added before backend implementation
   private readonly localStepsCache = new Map<number, ProjectStep[]>();
 
+  private getCachedSteps(projectId: number): ProjectStep[] {
+    const memory = this.localStepsCache.get(projectId);
+    if (memory && memory.length > 0) return memory;
+    try {
+      const stored = localStorage.getItem(`material_management_project_steps_${projectId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored) as ProjectStep[];
+        if (Array.isArray(parsed)) {
+          this.localStepsCache.set(projectId, parsed);
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore JSON parse/localStorage errors
+    }
+    return [];
+  }
+
+  private setCachedSteps(projectId: number, steps: ProjectStep[]): void {
+    this.localStepsCache.set(projectId, steps);
+    try {
+      localStorage.setItem(`material_management_project_steps_${projectId}`, JSON.stringify(steps));
+    } catch {
+      // ignore localStorage quota errors
+    }
+  }
+
+  addStepToLocalCache(projectId: number, step: ProjectStep): void {
+    const cached = this.getCachedSteps(projectId);
+    const formCode = (step.form_code || '').trim();
+    const def = formCode
+      ? getFormDefinition(formCode)
+      : step.step_name
+        ? getFormDefinition(step.step_name)
+        : undefined;
+    const resolvedCode = formCode || def?.formCode;
+
+    const existingIdx = cached.findIndex(
+      (s) =>
+        (s.id && step.id && s.id === step.id) ||
+        (s.form_code && resolvedCode && s.form_code === resolvedCode) ||
+        (s.step_name && step.step_name && s.step_name.toLowerCase().trim() === step.step_name.toLowerCase().trim()),
+    );
+
+    const stepWithMeta: ProjectStep = {
+      ...step,
+      project_id: projectId,
+      form_code: resolvedCode || step.form_code,
+      step_name: step.step_name || def?.name || 'Step Details',
+      phase: step.phase || def?.phaseId,
+      category: step.category || def?.category,
+    };
+
+    if (existingIdx >= 0) {
+      const copy = [...cached];
+      copy[existingIdx] = {
+        ...copy[existingIdx],
+        ...stepWithMeta,
+        data: { ...copy[existingIdx].data, ...stepWithMeta.data },
+      };
+      this.setCachedSteps(projectId, copy);
+    } else {
+      const nextOrder = cached.length + 1;
+      if (!stepWithMeta.step_number) {
+        stepWithMeta.step_number = nextOrder;
+      }
+      this.setCachedSteps(projectId, [...cached, stepWithMeta]);
+    }
+  }
+
   getSteps(projectId: number): Observable<ProjectStep[]> {
     return this.http
       .get<ProjectStep[]>(`${this.apiBaseUrl}/api/v1/projects/${projectId}/steps`)
       .pipe(
         map((backendSteps) => {
-          const cached = this.localStepsCache.get(projectId) || [];
-          if (!cached.length) return backendSteps;
+          const cached = this.getCachedSteps(projectId);
+          const rawSteps = backendSteps || [];
+          const normalized = rawSteps.map((s) => {
+            const def = s.form_code
+              ? getFormDefinition(s.form_code)
+              : s.step_name
+                ? getFormDefinition(s.step_name)
+                : undefined;
+            return {
+              ...s,
+              form_code: s.form_code || def?.formCode,
+              phase: s.phase || def?.phaseId,
+              category: s.category || def?.category,
+            };
+          });
+
+          if (!cached.length) return normalized;
 
           // Merge any locally added dynamic steps
-          const merged = [...backendSteps];
+          const merged = [...normalized];
           for (const c of cached) {
-            if (!merged.some((m) => m.id === c.id || (m.form_code && m.form_code === c.form_code))) {
-              merged.push(c);
+            const exists = merged.some(
+              (m) =>
+                (m.id && c.id && m.id === c.id) ||
+                (m.form_code && c.form_code && m.form_code === c.form_code) ||
+                (m.step_name && c.step_name && m.step_name.toLowerCase().trim() === c.step_name.toLowerCase().trim()),
+            );
+            if (!exists) {
+              const def = c.form_code
+                ? getFormDefinition(c.form_code)
+                : c.step_name
+                  ? getFormDefinition(c.step_name)
+                  : undefined;
+              merged.push({
+                ...c,
+                form_code: c.form_code || def?.formCode,
+                phase: c.phase || def?.phaseId,
+                category: c.category || def?.category,
+              });
             }
           }
           return merged;
         }),
         catchError(() => {
           // If backend fails or is empty, return any cached steps
-          const cached = this.localStepsCache.get(projectId) || [];
+          const cached = this.getCachedSteps(projectId);
           return of(cached);
         }),
       );
@@ -56,7 +157,7 @@ export class ProjectStepService {
       .get<ProjectStep>(`${this.apiBaseUrl}/api/v1/projects/${projectId}/steps/${stepId}`)
       .pipe(
         catchError(() => {
-          const cached = this.localStepsCache.get(projectId) || [];
+          const cached = this.getCachedSteps(projectId);
           const match = cached.find((s) => s.id === stepId || s.step_number === stepId);
           return of(match ?? null);
         }),
@@ -94,9 +195,10 @@ export class ProjectStepService {
       .post<ProjectStep>(`${this.apiBaseUrl}/api/v1/projects/${projectId}/steps`, payload)
       .pipe(
         map((createdStep) => {
-          const cached = this.localStepsCache.get(projectId) || [];
+          const cached = this.getCachedSteps(projectId);
           const stepWithData: ProjectStep = {
             ...createdStep,
+            project_id: projectId,
             data:
               createdStep.data && Object.keys(createdStep.data).length > 0
                 ? createdStep.data
@@ -105,13 +207,16 @@ export class ProjectStepService {
             progress_percentage: createdStep.progress_percentage ?? progressPercentage,
             form_code: createdStep.form_code || formCode,
             step_name: createdStep.step_name || resolvedName,
+            phase: createdStep.phase || formDef?.phaseId,
+            category: createdStep.category || formDef?.category,
           };
-          this.localStepsCache.set(projectId, [...cached, stepWithData]);
+          const filtered = cached.filter((s) => s.form_code !== formCode && s.id !== stepWithData.id);
+          this.setCachedSteps(projectId, [...filtered, stepWithData]);
           return stepWithData;
         }),
         catchError(() => {
           // Graceful fallback for local development before backend endpoint is live
-          const cached = this.localStepsCache.get(projectId) || [];
+          const cached = this.getCachedSteps(projectId);
           const nextOrder = cached.length + 1;
           const mockStep: ProjectStep = {
             id: Date.now(),
@@ -129,7 +234,8 @@ export class ProjectStepService {
             remarks: [],
             created_at: new Date().toISOString(),
           };
-          this.localStepsCache.set(projectId, [...cached, mockStep]);
+          const filtered = cached.filter((s) => s.form_code !== formCode && s.id !== mockStep.id);
+          this.setCachedSteps(projectId, [...filtered, mockStep]);
           return of(mockStep);
         }),
       );
@@ -163,9 +269,24 @@ export class ProjectStepService {
         payload,
       )
       .pipe(
+        map((updated) => {
+          const cached = this.getCachedSteps(projectId);
+          const idx = cached.findIndex((s) => s.id === stepId || s.step_number === stepId);
+          if (idx >= 0) {
+            cached[idx] = {
+              ...cached[idx],
+              ...updated,
+              data: { ...cached[idx].data, ...data },
+              status,
+              progress_percentage: progressPercentage,
+            };
+            this.setCachedSteps(projectId, [...cached]);
+          }
+          return updated;
+        }),
         catchError(() => {
           // Local fallback
-          const cached = this.localStepsCache.get(projectId) || [];
+          const cached = this.getCachedSteps(projectId);
           const idx = cached.findIndex((s) => s.id === stepId || s.step_number === stepId);
           if (idx >= 0) {
             cached[idx] = {
@@ -175,7 +296,7 @@ export class ProjectStepService {
               progress_percentage: progressPercentage,
               completed_at: payload.completed_at,
             };
-            this.localStepsCache.set(projectId, [...cached]);
+            this.setCachedSteps(projectId, [...cached]);
             return of(cached[idx]);
           }
           const fallback: ProjectStep = {
@@ -199,16 +320,16 @@ export class ProjectStepService {
       .delete<void>(`${this.apiBaseUrl}/api/v1/projects/${projectId}/steps/${stepId}`)
       .pipe(
         map(() => {
-          const cached = this.localStepsCache.get(projectId) || [];
-          this.localStepsCache.set(
+          const cached = this.getCachedSteps(projectId);
+          this.setCachedSteps(
             projectId,
             cached.filter((s) => s.id !== stepId && s.step_number !== stepId),
           );
           return true;
         }),
         catchError(() => {
-          const cached = this.localStepsCache.get(projectId) || [];
-          this.localStepsCache.set(
+          const cached = this.getCachedSteps(projectId);
+          this.setCachedSteps(
             projectId,
             cached.filter((s) => s.id !== stepId && s.step_number !== stepId),
           );
@@ -217,4 +338,3 @@ export class ProjectStepService {
       );
   }
 }
-

@@ -1295,18 +1295,42 @@ export const FORM_CATALOG: FormDefinition[] = [
 export const FORM_CODE_ALIASES: Record<string, string> = {
   FORM_30_STE: 'FORM_33_STE',
   FORM_STE: 'FORM_33_STE',
+  FORM_33: 'FORM_33_STE',
+  FORM_33_SINGLE_TENDER_ENQUIRY: 'FORM_33_STE',
+  'single-tender-enquiry': 'FORM_33_STE',
+  'single_tender_enquiry': 'FORM_33_STE',
+  FORM_34: 'FORM_34_BID_DOC_STE',
   FORM_31_BID_DOC_STE: 'FORM_34_BID_DOC_STE',
   FORM_BID_DOC_STE: 'FORM_34_BID_DOC_STE',
-  FORM_33_SINGLE_TENDER_ENQUIRY: 'FORM_33_STE',
   FORM_34_BID_DOCUMENT_STE: 'FORM_34_BID_DOC_STE',
+  FORM_BID_DOCUMENT_STE: 'FORM_34_BID_DOC_STE',
+  BID_DOCUMENT_STE: 'FORM_34_BID_DOC_STE',
+  BID_DOC_STE: 'FORM_34_BID_DOC_STE',
+  'bid-document-ste': 'FORM_34_BID_DOC_STE',
+  'bid_document_ste': 'FORM_34_BID_DOC_STE',
+  FORM_31: 'FORM_31_BID_DOC_LTE',
+  FORM_BID_DOC_LTE: 'FORM_31_BID_DOC_LTE',
+  FORM_BID_DOCUMENT_LTE: 'FORM_31_BID_DOC_LTE',
+  BID_DOCUMENT_LTE: 'FORM_31_BID_DOC_LTE',
+  BID_DOC_LTE: 'FORM_31_BID_DOC_LTE',
+  'bid-document-lte': 'FORM_31_BID_DOC_LTE',
+  'bid_document_lte': 'FORM_31_BID_DOC_LTE',
   FORM_35_ICB: 'FORM_35_ICB',
   FORM_ICB: 'FORM_35_ICB',
+  FORM_35: 'FORM_35_ICB',
   FORM_35_INTERNATIONAL_COMPETITIVE_BIDDING: 'FORM_35_ICB',
   FORM_INTERNATIONAL_COMPETITIVE_BIDDING: 'FORM_35_ICB',
+  'international-competitive-bidding': 'FORM_35_ICB',
+  'international_competitive_bidding': 'FORM_35_ICB',
   FORM_36_BID_DOC_ICB: 'FORM_36_BID_DOC_ICB',
   FORM_BID_DOC_ICB: 'FORM_36_BID_DOC_ICB',
+  FORM_36: 'FORM_36_BID_DOC_ICB',
   FORM_36_BID_DOCUMENT_ICB: 'FORM_36_BID_DOC_ICB',
   FORM_BID_DOCUMENT_ICB: 'FORM_36_BID_DOC_ICB',
+  BID_DOCUMENT_ICB: 'FORM_36_BID_DOC_ICB',
+  BID_DOC_ICB: 'FORM_36_BID_DOC_ICB',
+  'bid-document-icb': 'FORM_36_BID_DOC_ICB',
+  'bid_document_icb': 'FORM_36_BID_DOC_ICB',
 };
 
 /** Lookup map by form code */
@@ -1328,12 +1352,28 @@ export function getFormDefinition(codeOrId: string | number): FormDefinition | u
   if (typeof codeOrId === 'number') {
     return FORM_CATALOG.find((f) => f.id === codeOrId);
   }
-  const resolvedCode = FORM_CODE_ALIASES[codeOrId] || FORM_CODE_ALIASES[codeOrId.toUpperCase()] || codeOrId;
+  if (!codeOrId || typeof codeOrId !== 'string') return undefined;
+
+  const trimmed = codeOrId.trim();
+  const num = Number(trimmed);
+  if (!isNaN(num) && num > 0) {
+    const byNum = FORM_CATALOG.find((f) => f.id === num);
+    if (byNum) return byNum;
+  }
+
+  const upper = trimmed.toUpperCase();
+  const lower = trimmed.toLowerCase();
+  const resolvedCode = FORM_CODE_ALIASES[trimmed] || FORM_CODE_ALIASES[upper] || FORM_CODE_ALIASES[lower] || trimmed;
+
   return (
-    FORM_CATALOG_MAP.get(codeOrId) ||
+    FORM_CATALOG_MAP.get(trimmed) ||
+    FORM_CATALOG_MAP.get(upper) ||
+    FORM_CATALOG_MAP.get(lower) ||
     FORM_CATALOG_MAP.get(resolvedCode) ||
-    FORM_CATALOG.find((f) => f.formCode.toLowerCase() === codeOrId.toLowerCase()) ||
-    FORM_CATALOG.find((f) => f.formCode.toLowerCase() === resolvedCode.toLowerCase())
+    FORM_CATALOG.find((f) => f.formCode.toLowerCase() === lower) ||
+    FORM_CATALOG.find((f) => f.formCode.toLowerCase() === resolvedCode.toLowerCase()) ||
+    FORM_CATALOG.find((f) => f.name.toLowerCase() === lower) ||
+    FORM_CATALOG.find((f) => f.apiEndpoint && f.apiEndpoint.toLowerCase() === lower)
   );
 }
 

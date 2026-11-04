@@ -258,10 +258,12 @@ export class ProjectTimeline implements OnInit {
     if (phase !== 'all') {
       list = list.filter((s) => {
         if (s.phase) return s.phase === phase;
-        if (s.form_code) {
-          const def = getFormDefinition(s.form_code);
-          if (def?.phaseId) return def.phaseId === phase;
-        }
+        const def = s.form_code
+          ? getFormDefinition(s.form_code)
+          : s.step_name
+            ? getFormDefinition(s.step_name)
+            : undefined;
+        if (def?.phaseId) return def.phaseId === phase;
         return false;
       });
     }
@@ -294,10 +296,12 @@ export class ProjectTimeline implements OnInit {
     return PIPELINE_PHASES.map((phase) => {
       const phaseSteps = this.steps().filter((s) => {
         if (s.phase) return s.phase === phase.id;
-        if (s.form_code) {
-          const def = getFormDefinition(s.form_code);
-          if (def?.phaseId) return def.phaseId === phase.id;
-        }
+        const def = s.form_code
+          ? getFormDefinition(s.form_code)
+          : s.step_name
+            ? getFormDefinition(s.step_name)
+            : undefined;
+        if (def?.phaseId) return def.phaseId === phase.id;
         if (phase.id === 'phase-1') {
           return (
             (s.step_number >= 1 && s.step_number <= 7) ||
@@ -483,7 +487,10 @@ export class ProjectTimeline implements OnInit {
     const pId = this.projectIdNumber();
     if (!pId) return;
 
-    this.router.navigate(['/projects', pId, 'forms', form.formCode]);
+    // Open Step Form Inputs Dialog directly to attach form to this project
+    this.selectedStepForForm.set(null);
+    this.selectedDefForForm.set(form);
+    this.stepFormModalVisible.set(true);
   }
 
   protected onStepSaved(savedStep: ProjectStep): void {
@@ -717,12 +724,14 @@ export class ProjectTimeline implements OnInit {
         const found = PIPELINE_PHASES.find((p) => p.id === stepNumberOrStep.phase);
         if (found) return found;
       }
-      if (stepNumberOrStep.form_code) {
-        const def = getFormDefinition(stepNumberOrStep.form_code);
-        if (def?.phaseId) {
-          const found = PIPELINE_PHASES.find((p) => p.id === def.phaseId);
-          if (found) return found;
-        }
+      const def = stepNumberOrStep.form_code
+        ? getFormDefinition(stepNumberOrStep.form_code)
+        : stepNumberOrStep.step_name
+          ? getFormDefinition(stepNumberOrStep.step_name)
+          : undefined;
+      if (def?.phaseId) {
+        const found = PIPELINE_PHASES.find((p) => p.id === def.phaseId);
+        if (found) return found;
       }
       return this.getPhaseForStep(stepNumberOrStep.step_number);
     }
