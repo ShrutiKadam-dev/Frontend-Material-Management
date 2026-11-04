@@ -1085,5 +1085,119 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       );
     });
   });
+
+  describe('Form 2: Bid Document for PQB Auto-Patching from National PQB Latest API', () => {
+    const pqbBidDocDef: FormDefinition = {
+      id: 2,
+      formCode: 'FORM_02_PQB_BID_DOCUMENT',
+      name: 'Bid Document for PQB',
+      category: 'Pre-Bidding & Tenders',
+      phaseId: 'phase-1',
+      icon: 'pi pi-book',
+      description: 'Documentation for PQB submission',
+      apiEndpoint: '/api/v1/pqb-bid-documents',
+      fields: [
+        { key: 'pqb_title', label: 'PQB Title', type: 'text', required: true },
+        { key: 'pqb_no', label: 'PQB No.', type: 'text', required: true },
+        { key: 'pqb_issue_date', label: 'PQB Issue Date', type: 'date' },
+        { key: 'pqb_closing_date_time', label: 'PQB Closing Date & Time', type: 'datetime' },
+        { key: 'pqb_opening_date_time', label: 'PQB Opening Date & Time', type: 'datetime' },
+        { key: 'total_no_corrigendum_issued', label: 'Total No. Corrigendum Issued', type: 'number' },
+      ],
+      uploads: [{ key: 'upload_bid_document_pqb', label: 'Upload' }],
+    };
+
+    it('should patch pqb_title and pqb_no when loadFromNationalPreQualificationBid succeeds', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const fg = new FormGroup({
+        pqb_title: new FormControl(''),
+        pqb_no: new FormControl(''),
+        pqb_issue_date: new FormControl(null),
+        pqb_closing_date_time: new FormControl(null),
+        pqb_opening_date_time: new FormControl(null),
+      });
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(
+          of({
+            pqb_title: 'National Grid High Voltage Substation',
+            pqb_no: 'GRID-PQB-2026-99',
+            pqb_issuing_date: '2026-04-10',
+            pqb_closing_date_time: '2026-04-25T18:00',
+            pqb_opening_date_time: '2026-04-26T10:00',
+          }),
+        ),
+      };
+
+      comp.projectId = () => 50;
+      comp.preQualificationBidService = mockPqbService;
+      comp.fetchingNationalPqb = { set: vi.fn() };
+      comp.formGroup = () => fg;
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+
+      comp.loadFromNationalPreQualificationBid(true);
+
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(50);
+      expect(fg.get('pqb_title')?.value).toBe('National Grid High Voltage Substation');
+      expect(fg.get('pqb_no')?.value).toBe('GRID-PQB-2026-99');
+      expect(fg.get('pqb_issue_date')?.value).toBeDefined();
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: 'PQB Details Patched',
+        }),
+      );
+    });
+
+    it('should show warning if no National PQB is found for the project', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const fg = new FormGroup({
+        pqb_title: new FormControl(''),
+        pqb_no: new FormControl(''),
+      });
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(of(null)),
+      };
+
+      comp.projectId = () => 50;
+      comp.preQualificationBidService = mockPqbService;
+      comp.fetchingNationalPqb = { set: vi.fn() };
+      comp.formGroup = () => fg;
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+
+      comp.loadFromNationalPreQualificationBid(true);
+
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'warn',
+          summary: 'National PQB Not Found',
+        }),
+      );
+      expect(fg.get('pqb_title')?.value).toBe('');
+      expect(fg.get('pqb_no')?.value).toBe('');
+    });
+
+    it('should auto-trigger loadFromNationalPreQualificationBid in ADD mode for FORM_02_PQB_BID_DOCUMENT', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.activeTab = { set: vi.fn() };
+      comp.newRemarkInput = { set: vi.fn() };
+      comp.ensureProjectMetadata = vi.fn();
+      comp.projectId = () => 77;
+      comp.resolvedDef = { set: vi.fn() };
+      comp.populateForm = vi.fn();
+      comp.loadFromNationalPreQualificationBid = vi.fn();
+
+      comp.initializeModal(null, pqbBidDocDef);
+
+      expect(comp.resolvedDef.set).toHaveBeenCalledWith(pqbBidDocDef);
+      expect(comp.populateForm).toHaveBeenCalledWith(pqbBidDocDef, {}, []);
+      expect(comp.loadFromNationalPreQualificationBid).toHaveBeenCalledWith(false);
+    });
+  });
 });
 

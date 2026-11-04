@@ -145,6 +145,18 @@ export function normalizeBackendEntityToStep(
     }
   }
 
+  // Bridge FORM_02_PQB_BID_DOCUMENT title and number fallbacks
+  if (formDef.formCode === 'FORM_02_PQB_BID_DOCUMENT') {
+    const t = item['pqb_title'] || item['pqbTitle'] || item['title'] || item['bid_title'] || '';
+    const n = item['pqb_no'] || item['pqbNo'] || item['pqb_number'] || item['pqbNumber'] || item['bid_no'] || item['number'] || '';
+    if (t && !combinedData['pqb_title']) {
+      combinedData['pqb_title'] = t;
+    }
+    if (n && !combinedData['pqb_no']) {
+      combinedData['pqb_no'] = n;
+    }
+  }
+
   // Calculate and bridge total_net_amount and total_gross_amount for tables with autoCalculateTotal
   if (formDef.tableConfig?.autoCalculateTotal) {
     const tKey = formDef.tableConfig.totalKey || 'total_amount';

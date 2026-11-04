@@ -77,6 +77,7 @@ import { ProjectService } from '../../../../../core/services/project';
 import { CustomerService } from '../../../../../core/services/customer';
 import { SupplierService } from '../../../../../core/services/supplier';
 import { SupplierQuotationService } from '../../../../../core/services/supplier-quotation';
+import { PreQualificationBidService } from '../../../../../core/services/pre-qualification-bid';
 
 @Component({
   selector: 'app-step-form-dialog',
@@ -104,9 +105,11 @@ export class StepFormDialog {
   private readonly customerService = inject(CustomerService, { optional: true });
   private readonly supplierService = inject(SupplierService, { optional: true });
   private readonly supplierQuotationService = inject(SupplierQuotationService, { optional: true });
+  private readonly preQualificationBidService = inject(PreQualificationBidService, { optional: true });
   private readonly cdr = inject(ChangeDetectorRef);
 
   readonly fetchingSupplierQuotation = signal<boolean>(false);
+  readonly fetchingNationalPqb = signal<boolean>(false);
 
   // ── Inputs & Two-Way Model ──────────────────────────────────────────
   readonly visible = model<boolean>(false);
@@ -194,6 +197,7 @@ export class StepFormDialog {
   readonly formVersion = signal<number>(0);
 
   readonly isCostSheet = computed(() => this.resolvedDef()?.formCode === 'FORM_10_COST_SHEET');
+  readonly isPqbBidDocument = computed(() => this.resolvedDef()?.formCode === 'FORM_02_PQB_BID_DOCUMENT');
 
   readonly tableTotalSum = computed(() => {
     this.tableVersion();
@@ -420,6 +424,108 @@ export class StepFormDialog {
     });
   }
 
+  loadFromNationalPreQualificationBid(showNotification = true): void {
+    const pId = this.projectId();
+    if (!pId || !this.preQualificationBidService) return;
+
+    this.fetchingNationalPqb.set(true);
+    this.preQualificationBidService.getLatest(pId).subscribe({
+      next: (pqb) => {
+        this.fetchingNationalPqb.set(false);
+        const data = (pqb || {}) as Record<string, unknown>;
+
+        const title = String(
+          data['pqb_title'] ||
+            data['pqbTitle'] ||
+            data['title'] ||
+            data['bid_title'] ||
+            data['name'] ||
+            '',
+        ).trim();
+
+        const no = String(
+          data['pqb_no'] ||
+            data['pqbNo'] ||
+            data['pqb_number'] ||
+            data['pqbNumber'] ||
+            data['bid_no'] ||
+            data['bid_number'] ||
+            data['number'] ||
+            '',
+        ).trim();
+
+        if (!title && !no) {
+          if (showNotification) {
+            this.messageService.add({
+              severity: 'warn',
+              summary: 'National PQB Not Found',
+              detail: 'No latest National Pre-Qualification Bid found for this project to patch.',
+            });
+          }
+          return;
+        }
+
+        const fg = this.formGroup();
+        if (!fg) return;
+
+        const patchPayload: Record<string, unknown> = {};
+        if (title && fg.get('pqb_title')) {
+          patchPayload['pqb_title'] = title;
+        }
+        if (no && fg.get('pqb_no')) {
+          patchPayload['pqb_no'] = no;
+        }
+
+        const rawIssueDate =
+          data['pqb_issuing_date'] || data['pqb_issue_date'] || data['issue_date'];
+        if (rawIssueDate && fg.get('pqb_issue_date') && !fg.get('pqb_issue_date')?.value) {
+          patchPayload['pqb_issue_date'] = parseLocalDate(rawIssueDate as string | Date);
+        }
+
+        const rawClosing = data['pqb_closing_date_time'] || data['closing_date_time'];
+        if (
+          rawClosing &&
+          fg.get('pqb_closing_date_time') &&
+          !fg.get('pqb_closing_date_time')?.value
+        ) {
+          patchPayload['pqb_closing_date_time'] = parseLocalDateTime(rawClosing as string | Date);
+        }
+
+        const rawOpening = data['pqb_opening_date_time'] || data['opening_date_time'];
+        if (
+          rawOpening &&
+          fg.get('pqb_opening_date_time') &&
+          !fg.get('pqb_opening_date_time')?.value
+        ) {
+          patchPayload['pqb_opening_date_time'] = parseLocalDateTime(rawOpening as string | Date);
+        }
+
+        fg.patchValue(patchPayload);
+        fg.markAsDirty();
+        this.formVersion.update((v) => v + 1);
+        this.cdr.markForCheck();
+
+        if (showNotification) {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'PQB Details Patched',
+            detail: `Patched PQB Title "${title}" and PQB No. "${no}" from latest National PQB.`,
+          });
+        }
+      },
+      error: () => {
+        this.fetchingNationalPqb.set(false);
+        if (showNotification) {
+          this.messageService.add({
+            severity: 'info',
+            summary: 'National PQB Unavailable',
+            detail: 'Could not fetch latest National Pre-Qualification Bid for this project.',
+          });
+        }
+      },
+    });
+  }
+
   constructor() {
     this.destroyRef?.onDestroy(() => {
       this.formStatusSub?.unsubscribe();
@@ -525,6 +631,13 @@ export class StepFormDialog {
           ) {
             this.loadFromSupplierQuotation(false);
           }
+
+          if (
+            def!.formCode === 'FORM_02_PQB_BID_DOCUMENT' &&
+            (!savedData['pqb_title'] || !savedData['pqb_no'])
+          ) {
+            this.loadFromNationalPreQualificationBid(false);
+          }
         },
         error: () => {
           this.loading.set(false);
@@ -550,6 +663,13 @@ export class StepFormDialog {
           ) {
             this.loadFromSupplierQuotation(false);
           }
+
+          if (
+            def!.formCode === 'FORM_02_PQB_BID_DOCUMENT' &&
+            (!savedData['pqb_title'] || !savedData['pqb_no'])
+          ) {
+            this.loadFromNationalPreQualificationBid(false);
+          }
         },
       });
     } else if (defInput) {
@@ -558,6 +678,9 @@ export class StepFormDialog {
       this.populateForm(defInput, {}, []);
       if (defInput.formCode === 'FORM_10_COST_SHEET') {
         this.loadFromSupplierQuotation(false);
+      }
+      if (defInput.formCode === 'FORM_02_PQB_BID_DOCUMENT') {
+        this.loadFromNationalPreQualificationBid(false);
       }
     } else {
       const fallback = FORM_CATALOG[0];
