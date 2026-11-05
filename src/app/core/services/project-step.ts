@@ -53,6 +53,33 @@ export class ProjectStepService {
     }
   }
 
+  clearCachedSteps(projectId?: number): void {
+    if (projectId) {
+      this.localStepsCache.delete(projectId);
+      try {
+        localStorage.removeItem(`material_management_project_steps_${projectId}`);
+      } catch {
+        // ignore JSON parse/localStorage errors
+      }
+    } else {
+      this.localStepsCache.clear();
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('material_management_project_steps_')) {
+            keysToRemove.push(k);
+          }
+        }
+        for (const k of keysToRemove) {
+          localStorage.removeItem(k);
+        }
+      } catch {
+        // ignore JSON parse/localStorage errors
+      }
+    }
+  }
+
   addStepToLocalCache(projectId: number, step: ProjectStep): void {
     const cached = this.getCachedSteps(projectId);
     const formCode = (step.form_code || '').trim();
@@ -101,7 +128,6 @@ export class ProjectStepService {
       .get<ProjectStep[] | { data: ProjectStep[] }>(`${this.apiBaseUrl}/api/v1/projects/${projectId}/steps`)
       .pipe(
         map((backendSteps) => {
-          const cached = this.getCachedSteps(projectId);
           const rawSteps = Array.isArray(backendSteps)
             ? backendSteps
             : backendSteps &&
@@ -124,33 +150,10 @@ export class ProjectStepService {
             };
           });
 
-          if (!cached.length) return normalized;
-
-          // Merge any locally added dynamic steps
-          const merged = [...normalized];
-          for (const c of cached) {
-            const exists = merged.some(
-              (m) =>
-                (m.id && c.id && m.id === c.id) ||
-                (m.form_code && c.form_code && m.form_code === c.form_code) ||
-                (m.step_name && c.step_name && m.step_name.toLowerCase().trim() === c.step_name.toLowerCase().trim()),
-            );
-            if (!exists) {
-              const def = c.form_code
-                ? getFormDefinition(c.form_code)
-                : c.step_name
-                  ? getFormDefinition(c.step_name)
-                  : undefined;
-              merged.push({
-                ...c,
-                form_code: c.form_code || def?.formCode,
-                phase: c.phase || def?.phaseId,
-                category: c.category || def?.category,
-              });
-            }
-          }
-          merged.sort((a, b) => (a.step_order ?? a.step_number ?? 0) - (b.step_order ?? b.step_number ?? 0));
-          return merged;
+          // Keep local cache strictly in sync with authoritative backend response.
+          // This ensures that steps deleted on the backend/database are removed from the browser.
+          this.setCachedSteps(projectId, normalized);
+          return normalized;
         }),
         catchError(() => {
           // If backend fails or is empty, return any cached steps
