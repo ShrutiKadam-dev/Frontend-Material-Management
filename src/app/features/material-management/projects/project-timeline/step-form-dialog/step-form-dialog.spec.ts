@@ -1106,6 +1106,17 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
         { key: 'pqb_opening_date_time', label: 'PQB Opening Date & Time', type: 'datetime' },
         { key: 'total_no_corrigendum_issued', label: 'Total No. Corrigendum Issued', type: 'number' },
       ],
+      tableConfig: {
+        title: 'Pricing',
+        columns: [
+          { key: 'sr_no', label: 'Sr. No.', type: 'number', width: '80px' },
+          { key: 'description', label: 'Description', type: 'text' },
+          { key: 'hsn_sac', label: 'HSN / SAC', type: 'text', width: '130px' },
+          { key: 'quantity', label: 'Quantity', type: 'number', width: '110px' },
+          { key: 'unit_price', label: 'Unit Price', type: 'currency', width: '130px' },
+          { key: 'total_amount', label: 'Total Amount', type: 'currency', width: '150px' },
+        ],
+      },
       uploads: [{ key: 'upload_bid_document_pqb', label: 'Upload' }],
     };
 
@@ -1199,6 +1210,150 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(comp.resolvedDef.set).toHaveBeenCalledWith(pqbBidDocDef);
       expect(comp.populateForm).toHaveBeenCalledWith(pqbBidDocDef, {}, []);
       expect(comp.loadFromNationalPreQualificationBid).toHaveBeenCalledWith(false);
+    });
+
+    it('should populate pricing table from latest Corrigendum when corrigendum exists with items', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.extractCorrigendumItems = StepFormDialog.prototype['extractCorrigendumItems'];
+      comp.populatePqbPricingTable = StepFormDialog.prototype['populatePqbPricingTable'];
+      comp.parseQuantityItemsFromRow = StepFormDialog.prototype['parseQuantityItemsFromRow'];
+
+      const fg = new FormGroup({
+        pqb_title: new FormControl(''),
+        pqb_no: new FormControl(''),
+        total_no_corrigendum_issued: new FormControl(null),
+      });
+
+      const tableArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      comp.tableFormArray = tableArray;
+      comp.tableVersion = { update: vi.fn() };
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+      comp.fetchingNationalPqb = { set: vi.fn() };
+      comp.projectId = () => 42;
+      comp.formGroup = () => fg;
+      comp.resolvedDef = () => pqbBidDocDef;
+
+      const mockFormApi = {
+        getLatestCorrigendum: vi.fn().mockReturnValue(
+          of({
+            id: 8,
+            project_id: 42,
+            corrigendum_no: 'CORR-01',
+            corrigendum_quantity_items: [
+              { corrigendum_description: 'Turbine Rotor Upgraded', corrigendum_quantity: 12, corrigendum_unit: 'Nos' },
+              { corrigendum_description: 'Shaft Seal', corrigendum_quantity: 24, corrigendum_unit: 'Sets' },
+            ],
+          }),
+        ),
+      };
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(
+          of({
+            pqb_title: 'Turbine Procurement PQB',
+            pqb_no: 'TP-PQB-2026',
+            items: [
+              { description: 'Old Rotor', quantity: 10, unit: 'Nos' },
+            ],
+          }),
+        ),
+      };
+
+      comp.formApiService = mockFormApi;
+      comp.preQualificationBidService = mockPqbService;
+
+      comp.loadFromNationalPreQualificationBid(true);
+
+      expect(mockFormApi.getLatestCorrigendum).toHaveBeenCalledWith(42);
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(42);
+      expect(fg.get('pqb_title')?.value).toBe('Turbine Procurement PQB');
+      expect(fg.get('pqb_no')?.value).toBe('TP-PQB-2026');
+      expect(fg.get('total_no_corrigendum_issued')?.value).toBe(1);
+
+      // Verify that the pricing table rows come from Corrigendum items (not old PQB item)
+      const rows = tableArray().controls;
+      expect(rows.length).toBe(2);
+      expect(rows[0].get('description')?.value).toBe('Turbine Rotor Upgraded');
+      expect(rows[0].get('quantity')?.value).toBe(12);
+      expect(rows[1].get('description')?.value).toBe('Shaft Seal');
+      expect(rows[1].get('quantity')?.value).toBe(24);
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: 'Pricing Loaded from Corrigendum',
+        }),
+      );
+    });
+
+    it('should populate pricing table from latest National PQB when no corrigendum items exist', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.extractCorrigendumItems = StepFormDialog.prototype['extractCorrigendumItems'];
+      comp.populatePqbPricingTable = StepFormDialog.prototype['populatePqbPricingTable'];
+      comp.parseQuantityItemsFromRow = StepFormDialog.prototype['parseQuantityItemsFromRow'];
+
+      const fg = new FormGroup({
+        pqb_title: new FormControl(''),
+        pqb_no: new FormControl(''),
+        total_no_corrigendum_issued: new FormControl(null),
+      });
+
+      const tableArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      comp.tableFormArray = tableArray;
+      comp.tableVersion = { update: vi.fn() };
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+      comp.fetchingNationalPqb = { set: vi.fn() };
+      comp.projectId = () => 42;
+      comp.formGroup = () => fg;
+      comp.resolvedDef = () => pqbBidDocDef;
+
+      // Corrigendum returns null
+      const mockFormApi = {
+        getLatestCorrigendum: vi.fn().mockReturnValue(of(null)),
+      };
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(
+          of({
+            pqb_title: 'Hydel Station PQB',
+            pqb_no: 'HYD-PQB-99',
+            items: [
+              { sr_no: 1, description: 'Hydraulic Valve', quantity: 50, unit: 'Nos' },
+              { sr_no: 2, description: 'Pressure Gauge', quantity: 15, unit: 'Nos' },
+            ],
+          }),
+        ),
+      };
+
+      comp.formApiService = mockFormApi;
+      comp.preQualificationBidService = mockPqbService;
+
+      comp.loadFromNationalPreQualificationBid(true);
+
+      expect(mockFormApi.getLatestCorrigendum).toHaveBeenCalledWith(42);
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(42);
+      expect(fg.get('pqb_title')?.value).toBe('Hydel Station PQB');
+      expect(fg.get('pqb_no')?.value).toBe('HYD-PQB-99');
+      expect(fg.get('total_no_corrigendum_issued')?.value).toBe(0);
+
+      // Verify that the pricing table rows come from National PQB items
+      const rows = tableArray().controls;
+      expect(rows.length).toBe(2);
+      expect(rows[0].get('description')?.value).toBe('Hydraulic Valve');
+      expect(rows[0].get('quantity')?.value).toBe(50);
+      expect(rows[1].get('description')?.value).toBe('Pressure Gauge');
+      expect(rows[1].get('quantity')?.value).toBe(15);
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: 'Pricing Loaded from National PQB',
+        }),
+      );
     });
   });
 
@@ -2471,6 +2626,8 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(comp.getCorrigendumParameterMeta(5).title).toBe('Delivery Schedule');
       expect(comp.getCorrigendumParameterMeta(6).title).toBe('Tender Fee');
       expect(comp.getCorrigendumParameterMeta(7).title).toBe('Technical Specification');
+      expect((comp.getCorrigendumParameterMeta(0) as { subtitle?: string }).subtitle).toBeUndefined();
+      expect((comp.getCorrigendumParameterMeta(1) as { subtitle?: string }).subtitle).toBeUndefined();
     });
 
     it('should compute corrigendumTotalAmendedCount accurately', () => {

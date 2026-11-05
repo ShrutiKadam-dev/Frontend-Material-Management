@@ -26,7 +26,7 @@ export class ProjectStepService {
   // In-memory fallback cache for dynamic steps added before backend implementation
   private readonly localStepsCache = new Map<number, ProjectStep[]>();
 
-  private getCachedSteps(projectId: number): ProjectStep[] {
+  getCachedSteps(projectId: number): ProjectStep[] {
     const memory = this.localStepsCache.get(projectId);
     if (memory && memory.length > 0) return memory;
     try {

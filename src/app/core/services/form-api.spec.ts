@@ -510,4 +510,55 @@ describe('FormApiService', () => {
       expect(step).toBeNull();
     });
   });
+
+  describe('getLatestCorrigendum', () => {
+    it('should query /api/v1/corrigendums/latest and return raw corrigendum object', async () => {
+      const mockCorr = {
+        id: 10,
+        project_id: 5,
+        corrigendum_no: 'CORR-2026-01',
+        items: [
+          { sr_no: 3, as_per_tender_doc: 'QUANTITY: (TABLE) 1. Steel - Qty: 100 MT', as_per_corrigendum: 'QUANTITY: (TABLE) 1. Steel - Qty: 120 MT [MODIFIED]' },
+        ],
+      };
+
+      const mockHttp = {
+        get: vi.fn().mockReturnValue(of({ data: mockCorr })),
+        post: vi.fn(),
+        put: vi.fn(),
+        delete: vi.fn(),
+      };
+
+      const service = Object.create(FormApiService.prototype);
+      service.http = mockHttp;
+      service.apiBaseUrl = 'http://localhost:5000';
+
+      const corr = await new Promise<Record<string, unknown> | null>((resolve) => {
+        service.getLatestCorrigendum(5).subscribe(resolve);
+      });
+
+      expect(mockHttp.get).toHaveBeenCalledWith('http://localhost:5000/api/v1/corrigendums/latest?project_id=5');
+      expect(corr).not.toBeNull();
+      expect(corr?.['corrigendum_no']).toBe('CORR-2026-01');
+    });
+
+    it('should return null when /api/v1/corrigendums/latest throws 404', async () => {
+      const mockHttp = {
+        get: vi.fn().mockReturnValue(throwError(() => ({ status: 404 }))),
+        post: vi.fn(),
+        put: vi.fn(),
+        delete: vi.fn(),
+      };
+
+      const service = Object.create(FormApiService.prototype);
+      service.http = mockHttp;
+      service.apiBaseUrl = 'http://localhost:5000';
+
+      const corr = await new Promise<Record<string, unknown> | null>((resolve) => {
+        service.getLatestCorrigendum(99).subscribe(resolve);
+      });
+
+      expect(corr).toBeNull();
+    });
+  });
 });

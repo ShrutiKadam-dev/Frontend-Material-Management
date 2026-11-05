@@ -1,4 +1,4 @@
-﻿@use "../../../../../../styles/theme" as *;
+@use "../../../../../../styles/theme" as *;
 
 :host {
   display: contents;
@@ -1551,8 +1551,12 @@
 .corr-clean-shell {
   display: flex;
   flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
   gap: 12px;
   width: 100%;
+  overflow: hidden;
 
   .corr-minimal-bar {
     align-items: center;
@@ -1560,6 +1564,7 @@
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     display: flex;
+    flex-shrink: 0;
     flex-wrap: wrap;
     gap: 12px;
     justify-content: space-between;
@@ -1655,8 +1660,12 @@
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    flex: 1 1 0;
+    min-height: 0;
     overflow-x: auto;
+    overflow-y: auto;
     width: 100%;
+    @include premium-scrollbar;
 
     .corr-unified-table {
       border-collapse: collapse;
@@ -1666,13 +1675,21 @@
       thead {
         background: #f8fafc;
         border-bottom: 2px solid #e2e8f0;
+        position: sticky;
+        top: 0;
+        z-index: 10;
 
         th {
+          background: #f8fafc;
+          box-shadow: 0 1px 0 #e2e8f0;
           color: #475569;
           font-size: 11px;
           font-weight: 700;
           letter-spacing: 0.03em;
           padding: 10px 14px;
+          position: sticky;
+          top: 0;
+          z-index: 10;
           text-align: left;
           text-transform: uppercase;
 

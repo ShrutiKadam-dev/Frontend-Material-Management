@@ -49,7 +49,17 @@ export class PreQualificationBidService {
       .pipe(
         map((res: unknown) => {
           if (!res || typeof res !== 'object') return null;
-          const data = ((res as Record<string, unknown>)['data'] || res) as Record<string, unknown>;
+          const resObj = res as Record<string, unknown>;
+          let data = resObj;
+          if (typeof resObj['data'] === 'string') {
+            try {
+              data = { ...resObj, ...(JSON.parse(resObj['data']) as Record<string, unknown>) };
+            } catch {
+              data = resObj;
+            }
+          } else if (resObj['data'] && typeof resObj['data'] === 'object') {
+            data = { ...resObj, ...(resObj['data'] as Record<string, unknown>) };
+          }
           return this.normalizePqb(data);
         }),
         catchError(() => of(null)),
@@ -143,6 +153,17 @@ export class PreQualificationBidService {
       unwrapped['pqb_opening_date_time'] ?? unwrapped['opening_date_time'] ?? '',
     ).trim();
 
+    const rawItems = unwrapped['items'] || unwrapped['table_items'] || unwrapped['requirements'];
+    const items = Array.isArray(rawItems)
+      ? rawItems.map((it: Record<string, unknown>, idx: number) => ({
+          id: typeof it['id'] === 'number' ? it['id'] : undefined,
+          sr_no: Number(it['sr_no'] ?? idx + 1),
+          description: String(it['description'] || it['material_name'] || it['name'] || '').trim(),
+          unit: it['unit'] ? String(it['unit']).trim() : undefined,
+          quantity: it['quantity'] !== null && it['quantity'] !== undefined ? Number(it['quantity']) : 0,
+        }))
+      : undefined;
+
     return {
       id: Number(unwrapped['id']) || undefined,
       project_id: Number(unwrapped['project_id']) || undefined,
@@ -155,6 +176,7 @@ export class PreQualificationBidService {
       mode_of_bid_submission: unwrapped['mode_of_bid_submission']
         ? String(unwrapped['mode_of_bid_submission'])
         : undefined,
+      items,
     };
   }
 }

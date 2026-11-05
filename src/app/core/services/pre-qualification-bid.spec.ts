@@ -1,3 +1,4 @@
+import '@angular/compiler';
 import { describe, expect, it, vi } from 'vitest';
 import { of, throwError } from 'rxjs';
 import { PreQualificationBidService } from './pre-qualification-bid';
@@ -15,6 +16,9 @@ describe('PreQualificationBidService', () => {
             pqb_issuing_date: '2026-03-01',
             pqb_closing_date_time: '2026-03-20T17:00',
             pqb_opening_date_time: '2026-03-21T11:00',
+            items: [
+              { id: 1, sr_no: 1, description: 'Power Cable', unit: 'Mtr', quantity: 500 },
+            ],
           },
         }),
       ),
@@ -30,6 +34,8 @@ describe('PreQualificationBidService', () => {
       expect(pqb['pqb_title']).toBe('National Thermal Power Grid Expansion');
       expect(pqb['pqb_no']).toBe('NTPC-PQB-2026-09');
       expect(pqb['pqb_issue_date']).toBe('2026-03-01');
+      expect(pqb['items']).toBeDefined();
+      expect((pqb['items'] as Array<unknown>).length).toBe(1);
     });
 
     expect(mockHttp.get).toHaveBeenCalledWith(

@@ -61,16 +61,16 @@
     @if (activeTab() === 'fields') {
     <div class="tab-panel tab-panel--fields">
       @if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT') {
-      <div class="pqb-banner-action-bar" role="region" aria-label="National PQB Auto-Patch Info">
+      <div class="pqb-banner-action-bar" role="region" aria-label="PQB Auto-Patch Info">
         <div class="pqb-banner-info">
           <i class="pi pi-link" aria-hidden="true"></i>
-          <span>PQB Title and PQB No. are automatically linked and patched from the latest National Pre-Qualification Bid (PQB).</span>
+          <span>PQB Details & Pricing table are automatically linked and patched from {{ pqbSourceStepName() }}.</span>
         </div>
-        <button pButton type="button" icon="pi pi-sync" label="Fetch from National PQB"
+        <button pButton type="button" icon="pi pi-sync" [label]="pqbFetchButtonLabel()"
           class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn"
           [loading]="fetchingNationalPqb()"
           (click)="loadFromNationalPreQualificationBid(true)"
-          pTooltip="Refresh PQB Title and Number from latest National Pre-Qualification Bid"
+          [pTooltip]="'Refresh PQB details and Pricing table from ' + pqbSourceStepName()"
           tooltipPosition="top">
         </button>
       </div>
@@ -327,7 +327,6 @@
                           <i [class]="getCorrigendumParameterMeta(rIdx, rowGroup).icon" class="param-icon"></i>
                           <div class="param-text-block">
                             <span class="param-name">{{ (rIdx + 1) }}. {{ getCorrigendumParameterMeta(rIdx, rowGroup).title }}</span>
-                            <span class="param-sub">Item-wise baseline vs updates</span>
                             <div class="param-meta-badges">
                               <span class="meta-count-pill">{{ corrigendumQuantityItems().length }} Item{{ corrigendumQuantityItems().length === 1 ? '' : 's' }}</span>
                               @if (corrigendumModifiedItemCount() > 0) {
@@ -457,15 +456,12 @@
                   } @else {
                     <!-- ── STANDARD SPECIFICATION ROWS (1, 2, 4-8) ── -->
                     <tr [formGroup]="rowGroup" class="corr-spec-row" [class.is-modified]="isCorrigendumRowModified(rIdx)">
-                      <!-- Column 1: Parameter Name & Subtitle -->
+                      <!-- Column 1: Parameter Name -->
                       <td class="cell-param-info">
                         <div class="param-title-wrap">
                           <i [class]="getCorrigendumParameterMeta(rIdx, rowGroup).icon" class="param-icon"></i>
                           <div class="param-text-block">
                             <span class="param-name">{{ (rIdx + 1) }}. {{ getCorrigendumParameterMeta(rIdx, rowGroup).title }}</span>
-                            @if (getCorrigendumParameterMeta(rIdx, rowGroup).subtitle) {
-                              <span class="param-sub">{{ getCorrigendumParameterMeta(rIdx, rowGroup).subtitle }}</span>
-                            }
                           </div>
                         </div>
                       </td>
@@ -533,6 +529,15 @@
                 <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableTotalSum() | number:'1.2-2' }}</strong>
               </div>
               }
+            }
+            @if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT') {
+            <button pButton type="button" icon="pi pi-sync" [label]="pqbFetchButtonLabel()"
+              class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
+              [loading]="fetchingNationalPqb()"
+              (click)="loadFromNationalPreQualificationBid(true)"
+              [pTooltip]="'Import pricing items from ' + pqbSourceStepName()"
+              tooltipPosition="top">
+            </button>
             }
             @if (def.formCode === 'FORM_10_COST_SHEET') {
             <button pButton type="button" icon="pi pi-sync" label="Fetch from Supplier Quotation"

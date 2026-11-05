@@ -418,6 +418,22 @@ export class FormApiService {
   }
 
   /**
+   * Retrieves the latest Corrigendum record for a given project directly from the dedicated backend endpoint.
+   * Route: GET /api/v1/corrigendums/latest?project_id={projectId}
+   */
+  getLatestCorrigendum(projectId: number): Observable<Record<string, unknown> | null> {
+    const endpointUrl = `${this.apiBaseUrl}/api/v1/corrigendums/latest?project_id=${projectId}`;
+    return this.http.get<Record<string, unknown> | { data: Record<string, unknown> }>(endpointUrl).pipe(
+      map((res) => {
+        if (!res || typeof res !== 'object') return null;
+        const item = ('data' in res ? (res as { data: Record<string, unknown> }).data : res) as Record<string, unknown>;
+        return item && typeof item === 'object' ? item : null;
+      }),
+      catchError(() => of(null)),
+    );
+  }
+
+  /**
    * Retrieves a single entry by ID from its dedicated individual REST endpoint.
    */
   getEntryById(formDef: FormDefinition, stepId: number, projectId = 0): Observable<ProjectStep> {

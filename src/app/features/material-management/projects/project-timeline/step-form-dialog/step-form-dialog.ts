@@ -364,6 +364,30 @@ export class StepFormDialog {
 
   readonly corrigendumFetchButtonLabel = computed(() => this.getCorrigendumFetchButtonLabel(this.corrigendumLinkedInfo()));
 
+  readonly hasCorrigendumStep = computed(() => {
+    const pId = typeof this.projectId === 'function' ? this.projectId() : null;
+    const steps =
+      (typeof this.existingSteps === 'function' ? this.existingSteps() : null) ||
+      (pId && this.projectStepService ? this.projectStepService.getCachedSteps(pId) : []);
+    return (steps || []).some(
+      (s) =>
+        s.form_code === 'FORM_03_CORRIGENDUM' ||
+        (s.step_name && s.step_name.toLowerCase().includes('corrigendum')),
+    );
+  });
+
+  readonly pqbSourceStepName = computed(() => {
+    return this.hasCorrigendumStep()
+      ? 'latest Corrigendum / National PQB'
+      : 'latest National Pre-Qualification Bid (PQB)';
+  });
+
+  readonly pqbFetchButtonLabel = computed(() => {
+    return this.hasCorrigendumStep()
+      ? 'Fetch from Corrigendum / PQB'
+      : 'Fetch from National PQB';
+  });
+
   readonly tableTotalSum = computed(() => {
     this.tableVersion();
     const arr = (this.tableFormArray()?.value || []) as Array<Record<string, unknown>>;
@@ -596,104 +620,320 @@ export class StepFormDialog {
     });
   }
 
+  extractCorrigendumItems(
+    corr: Record<string, unknown> | null,
+    pId: number,
+  ): Array<{ description: string; quantity: number | null; unit?: string; hsn_sac?: string }> {
+    let corrItems: Array<{ description: string; quantity: number | null; unit?: string; hsn_sac?: string }> = [];
+
+    if (corr) {
+      const rawQItems = (corr['corrigendum_quantity_items'] || corr['quantity_items']) as
+        | Array<Record<string, unknown>>
+        | undefined;
+      if (Array.isArray(rawQItems) && rawQItems.length > 0) {
+        corrItems = rawQItems.map((q) => ({
+          description: String(
+            q['corrigendum_description'] || q['description'] || q['original_description'] || '',
+          ).trim(),
+          quantity:
+            q['corrigendum_quantity'] !== null && q['corrigendum_quantity'] !== undefined
+              ? Number(q['corrigendum_quantity'])
+              : q['quantity'] !== null && q['quantity'] !== undefined
+                ? Number(q['quantity'])
+                : q['original_quantity'] !== null && q['original_quantity'] !== undefined
+                  ? Number(q['original_quantity'])
+                  : null,
+          unit: String(q['corrigendum_unit'] || q['unit'] || q['original_unit'] || '').trim(),
+          hsn_sac: String(q['hsn_sac'] || '').trim(),
+        }));
+      } else if (Array.isArray(corr['items'])) {
+        const rawCorrItems = corr['items'] as Array<Record<string, unknown>>;
+        const row3 = rawCorrItems.find((r) => Number(r['sr_no']) === 3);
+        if (row3) {
+          const parsed = this.parseQuantityItemsFromRow(row3);
+          if (parsed.length > 0) {
+            corrItems = parsed.map((p) => ({
+              description: p.corrigendum_description || p.original_description,
+              quantity: p.corrigendum_quantity !== null ? p.corrigendum_quantity : p.original_quantity,
+              unit: p.corrigendum_unit || p.original_unit,
+              hsn_sac: '',
+            }));
+          }
+        } else if (rawCorrItems.some((it) => it['description'] && it['quantity'] !== undefined)) {
+          corrItems = rawCorrItems.map((it) => ({
+            description: String(it['description'] || '').trim(),
+            quantity:
+              it['quantity'] !== null && it['quantity'] !== undefined ? Number(it['quantity']) : null,
+            unit: String(it['unit'] || '').trim(),
+            hsn_sac: String(it['hsn_sac'] || '').trim(),
+          }));
+        }
+      }
+    }
+
+    if (corrItems.length === 0) {
+      const cachedSteps =
+        (this.projectStepService && pId ? this.projectStepService.getCachedSteps(pId) : null) ||
+        (typeof this.existingSteps === 'function' ? this.existingSteps() : null) ||
+        [];
+      const corrStep = cachedSteps.find(
+        (s) =>
+          s.form_code === 'FORM_03_CORRIGENDUM' ||
+          (s.step_name && s.step_name.toLowerCase().includes('corrigendum')),
+      );
+      if (corrStep) {
+        let stepData: Record<string, unknown> = {};
+        if (typeof corrStep.data === 'string') {
+          try {
+            stepData = JSON.parse(corrStep.data);
+          } catch {
+            stepData = {};
+          }
+        } else if (corrStep.data && typeof corrStep.data === 'object') {
+          stepData = corrStep.data as Record<string, unknown>;
+        }
+        const stepQItems = (stepData['corrigendum_quantity_items'] || stepData['quantity_items']) as
+          | Array<Record<string, unknown>>
+          | undefined;
+        if (Array.isArray(stepQItems) && stepQItems.length > 0) {
+          corrItems = stepQItems.map((q) => ({
+            description: String(
+              q['corrigendum_description'] || q['description'] || q['original_description'] || '',
+            ).trim(),
+            quantity:
+              q['corrigendum_quantity'] !== null && q['corrigendum_quantity'] !== undefined
+                ? Number(q['corrigendum_quantity'])
+                : q['quantity'] !== null && q['quantity'] !== undefined
+                  ? Number(q['quantity'])
+                  : null,
+            unit: String(q['corrigendum_unit'] || q['unit'] || '').trim(),
+            hsn_sac: String(q['hsn_sac'] || '').trim(),
+          }));
+        } else if (Array.isArray(stepData['items'])) {
+          const row3 = (stepData['items'] as Array<Record<string, unknown>>).find(
+            (r) => Number(r['sr_no']) === 3,
+          );
+          if (row3) {
+            const parsed = this.parseQuantityItemsFromRow(row3);
+            if (parsed.length > 0) {
+              corrItems = parsed.map((p) => ({
+                description: p.corrigendum_description || p.original_description,
+                quantity: p.corrigendum_quantity !== null ? p.corrigendum_quantity : p.original_quantity,
+                unit: p.corrigendum_unit || p.original_unit,
+                hsn_sac: '',
+              }));
+            }
+          }
+        }
+      }
+    }
+
+    return corrItems;
+  }
+
+  populatePqbPricingTable(items: Array<Record<string, unknown>>): void {
+    const def = typeof this.resolvedDef === 'function' ? this.resolvedDef() : null;
+    if (!def || !def.tableConfig) return;
+
+    const rowsArray = new FormArray<FormGroup>([]);
+    items.forEach((item, idx) => {
+      const desc = String(
+        item['corrigendum_description'] ||
+          item['description'] ||
+          item['original_description'] ||
+          item['material_name'] ||
+          `Item ${idx + 1}`,
+      ).trim();
+      const qty =
+        item['corrigendum_quantity'] !== null && item['corrigendum_quantity'] !== undefined
+          ? Number(item['corrigendum_quantity'])
+          : item['quantity'] !== null && item['quantity'] !== undefined
+            ? Number(item['quantity'])
+            : item['original_quantity'] !== null && item['original_quantity'] !== undefined
+              ? Number(item['original_quantity'])
+              : null;
+      const hsn = String(item['hsn_sac'] || item['hsn_code'] || '').trim();
+      const unitPrice =
+        item['unit_price'] !== null && item['unit_price'] !== undefined ? Number(item['unit_price']) : null;
+      const totalAmt = qty !== null && unitPrice !== null ? qty * unitPrice : null;
+
+      rowsArray.push(
+        this.createTableRowGroup(def, {
+          sr_no: idx + 1,
+          description: desc,
+          hsn_sac: hsn,
+          quantity: qty,
+          unit_price: unitPrice,
+          total_amount: totalAmt,
+        }),
+      );
+    });
+
+    if (rowsArray.length > 0) {
+      this.tableFormArray.set(rowsArray);
+      this.tableVersion.update((v) => v + 1);
+      this.cdr.markForCheck();
+    }
+  }
+
   loadFromNationalPreQualificationBid(showNotification = true): void {
     const pId = this.projectId();
-    if (!pId || !this.preQualificationBidService) return;
+    if (!pId) return;
 
     this.fetchingNationalPqb.set(true);
-    this.preQualificationBidService.getLatest(pId).subscribe({
-      next: (pqb) => {
-        this.fetchingNationalPqb.set(false);
-        const data = (pqb || {}) as Record<string, unknown>;
 
-        const title = String(
-          data['pqb_title'] ||
-            data['pqbTitle'] ||
-            data['title'] ||
-            data['bid_title'] ||
-            data['name'] ||
-            '',
-        ).trim();
+    // Step 1: Check for latest Corrigendum API
+    const corr$ = this.formApiService
+      ? this.formApiService.getLatestCorrigendum(pId)
+      : of(null);
 
-        const no = String(
-          data['pqb_no'] ||
-            data['pqbNo'] ||
-            data['pqb_number'] ||
-            data['pqbNumber'] ||
-            data['bid_no'] ||
-            data['bid_number'] ||
-            data['number'] ||
-            '',
-        ).trim();
+    corr$.subscribe({
+      next: (corr) => {
+        const corrItems = this.extractCorrigendumItems(corr, pId);
 
-        if (!title && !no) {
-          if (showNotification) {
-            this.messageService.add({
-              severity: 'warn',
-              summary: 'National PQB Not Found',
-              detail: 'No latest National Pre-Qualification Bid found for this project to patch.',
-            });
+        // Step 2: Fetch National Pre-Qualification Bid
+        if (!this.preQualificationBidService) {
+          this.fetchingNationalPqb.set(false);
+          if (corrItems.length > 0) {
+            this.populatePqbPricingTable(corrItems);
           }
           return;
         }
 
-        const fg = this.formGroup();
-        if (!fg) return;
+        this.preQualificationBidService.getLatest(pId).subscribe({
+          next: (pqb) => {
+            this.fetchingNationalPqb.set(false);
+            const data = (pqb || {}) as Record<string, unknown>;
 
-        const patchPayload: Record<string, unknown> = {};
-        if (title && fg.get('pqb_title')) {
-          patchPayload['pqb_title'] = title;
-        }
-        if (no && fg.get('pqb_no')) {
-          patchPayload['pqb_no'] = no;
-        }
+            const title = String(
+              data['pqb_title'] ||
+                data['pqbTitle'] ||
+                data['title'] ||
+                data['bid_title'] ||
+                data['name'] ||
+                '',
+            ).trim();
 
-        const rawIssueDate =
-          data['pqb_issuing_date'] || data['pqb_issue_date'] || data['issue_date'];
-        if (rawIssueDate && fg.get('pqb_issue_date') && !fg.get('pqb_issue_date')?.value) {
-          patchPayload['pqb_issue_date'] = parseLocalDate(rawIssueDate as string | Date);
-        }
+            const no = String(
+              data['pqb_no'] ||
+                data['pqbNo'] ||
+                data['pqb_number'] ||
+                data['pqbNumber'] ||
+                data['bid_no'] ||
+                data['bid_number'] ||
+                data['number'] ||
+                '',
+            ).trim();
 
-        const rawClosing = data['pqb_closing_date_time'] || data['closing_date_time'];
-        if (
-          rawClosing &&
-          fg.get('pqb_closing_date_time') &&
-          !fg.get('pqb_closing_date_time')?.value
-        ) {
-          patchPayload['pqb_closing_date_time'] = parseLocalDateTime(rawClosing as string | Date);
-        }
+            const fg = this.formGroup();
+            if (fg) {
+              const patchPayload: Record<string, unknown> = {};
+              if (title && fg.get('pqb_title')) {
+                patchPayload['pqb_title'] = title;
+              }
+              if (no && fg.get('pqb_no')) {
+                patchPayload['pqb_no'] = no;
+              }
 
-        const rawOpening = data['pqb_opening_date_time'] || data['opening_date_time'];
-        if (
-          rawOpening &&
-          fg.get('pqb_opening_date_time') &&
-          !fg.get('pqb_opening_date_time')?.value
-        ) {
-          patchPayload['pqb_opening_date_time'] = parseLocalDateTime(rawOpening as string | Date);
-        }
+              const rawIssueDate =
+                data['pqb_issuing_date'] || data['pqb_issue_date'] || data['issue_date'];
+              if (rawIssueDate && fg.get('pqb_issue_date') && !fg.get('pqb_issue_date')?.value) {
+                patchPayload['pqb_issue_date'] = parseLocalDate(rawIssueDate as string | Date);
+              }
 
-        fg.patchValue(patchPayload);
-        fg.markAsDirty();
-        this.formVersion.update((v) => v + 1);
-        this.cdr.markForCheck();
+              const rawClosing = data['pqb_closing_date_time'] || data['closing_date_time'];
+              if (
+                rawClosing &&
+                fg.get('pqb_closing_date_time') &&
+                !fg.get('pqb_closing_date_time')?.value
+              ) {
+                patchPayload['pqb_closing_date_time'] = parseLocalDateTime(rawClosing as string | Date);
+              }
 
-        if (showNotification) {
-          this.messageService.add({
-            severity: 'success',
-            summary: 'PQB Details Patched',
-            detail: `Patched PQB Title "${title}" and PQB No. "${no}" from latest National PQB.`,
-          });
-        }
+              const rawOpening = data['pqb_opening_date_time'] || data['opening_date_time'];
+              if (
+                rawOpening &&
+                fg.get('pqb_opening_date_time') &&
+                !fg.get('pqb_opening_date_time')?.value
+              ) {
+                patchPayload['pqb_opening_date_time'] = parseLocalDateTime(rawOpening as string | Date);
+              }
+
+              if (fg.get('total_no_corrigendum_issued')) {
+                const curVal = fg.get('total_no_corrigendum_issued')?.value;
+                if (curVal === null || curVal === undefined || curVal === '' || curVal === 0) {
+                  patchPayload['total_no_corrigendum_issued'] = corr || corrItems.length > 0 ? 1 : 0;
+                }
+              }
+
+              fg.patchValue(patchPayload);
+              fg.markAsDirty();
+              this.formVersion.update((v) => v + 1);
+              this.cdr.markForCheck();
+            }
+
+            // Step 3: Pricing table data from latest APIs: from if corrigendum else take from national pre qualification bid
+            if (corrItems.length > 0) {
+              this.populatePqbPricingTable(corrItems);
+              if (showNotification) {
+                this.messageService.add({
+                  severity: 'success',
+                  summary: 'Pricing Loaded from Corrigendum',
+                  detail: `Loaded ${corrItems.length} line items from latest Corrigendum, with PQB details linked.`,
+                });
+              }
+            } else {
+              const pqbItems =
+                ((data['items'] || data['table_items'] || data['requirements'] || []) as Array<
+                  Record<string, unknown>
+                >) || [];
+              if (pqbItems.length > 0) {
+                this.populatePqbPricingTable(pqbItems);
+                if (showNotification) {
+                  this.messageService.add({
+                    severity: 'success',
+                    summary: 'Pricing Loaded from National PQB',
+                    detail: `Loaded ${pqbItems.length} items from latest National Pre-Qualification Bid.`,
+                  });
+                }
+              } else if (showNotification && (title || no)) {
+                this.messageService.add({
+                  severity: 'success',
+                  summary: 'PQB Details Patched',
+                  detail: `Patched PQB Title "${title}" and PQB No. "${no}" from latest National PQB.`,
+                });
+              } else if (showNotification) {
+                this.messageService.add({
+                  severity: 'warn',
+                  summary: 'National PQB Not Found',
+                  detail: 'No latest National Pre-Qualification Bid found for this project to patch.',
+                });
+              }
+            }
+          },
+          error: () => {
+            this.fetchingNationalPqb.set(false);
+            if (corrItems.length > 0) {
+              this.populatePqbPricingTable(corrItems);
+              if (showNotification) {
+                this.messageService.add({
+                  severity: 'success',
+                  summary: 'Pricing Loaded from Corrigendum',
+                  detail: `Loaded ${corrItems.length} line items from latest Corrigendum.`,
+                });
+              }
+            } else if (showNotification) {
+              this.messageService.add({
+                severity: 'info',
+                summary: 'National PQB Unavailable',
+                detail: 'Could not fetch latest National Pre-Qualification Bid for this project.',
+              });
+            }
+          },
+        });
       },
       error: () => {
         this.fetchingNationalPqb.set(false);
-        if (showNotification) {
-          this.messageService.add({
-            severity: 'info',
-            summary: 'National PQB Unavailable',
-            detail: 'Could not fetch latest National Pre-Qualification Bid for this project.',
-          });
-        }
       },
     });
   }
@@ -1763,25 +2003,25 @@ export class StepFormDialog {
     });
   }
 
-  getCorrigendumParameterMeta(rIdx: number, rowGroup?: FormGroup): { title: string; icon: string; subtitle?: string } {
+  getCorrigendumParameterMeta(rIdx: number, rowGroup?: FormGroup): { title: string; icon: string } {
     const srNo = Number(rowGroup?.get('sr_no')?.value ?? (rIdx + 1));
     switch (srNo) {
       case 1:
-        return { title: 'Closing Date & Time', icon: 'pi pi-calendar-times', subtitle: 'Tender submission deadline' };
+        return { title: 'Closing Date & Time', icon: 'pi pi-calendar-times' };
       case 2:
-        return { title: 'Opening Date & Time', icon: 'pi pi-calendar-plus', subtitle: 'Technical bid opening' };
+        return { title: 'Opening Date & Time', icon: 'pi pi-calendar-plus' };
       case 3:
-        return { title: 'Quantity / Material Items', icon: 'pi pi-box', subtitle: 'Line items & quantity specifications' };
+        return { title: 'Quantity / Material Items', icon: 'pi pi-box' };
       case 4:
-        return { title: 'Payment Terms', icon: 'pi pi-credit-card', subtitle: 'Payment milestones & terms' };
+        return { title: 'Payment Terms', icon: 'pi pi-credit-card' };
       case 5:
-        return { title: 'Earnest Money Deposit (EMD)', icon: 'pi pi-shield', subtitle: 'EMD amount & exemption terms' };
+        return { title: 'Earnest Money Deposit (EMD)', icon: 'pi pi-shield' };
       case 6:
-        return { title: 'Delivery Schedule', icon: 'pi pi-truck', subtitle: 'Supply timeline & milestones' };
+        return { title: 'Delivery Schedule', icon: 'pi pi-truck' };
       case 7:
-        return { title: 'Tender Fee', icon: 'pi pi-dollar', subtitle: 'Document purchase fee' };
+        return { title: 'Tender Fee', icon: 'pi pi-dollar' };
       case 8:
-        return { title: 'Technical Specification', icon: 'pi pi-file', subtitle: 'Equipment specifications & scope' };
+        return { title: 'Technical Specification', icon: 'pi pi-file' };
       default:
         return { title: `Specification Parameter #${srNo}`, icon: 'pi pi-info-circle' };
     }
@@ -2002,7 +2242,10 @@ export class StepFormDialog {
 
           if (
             def!.formCode === 'FORM_02_PQB_BID_DOCUMENT' &&
-            (!savedData['pqb_title'] || !savedData['pqb_no'])
+            (!savedData['pqb_title'] ||
+              !savedData['pqb_no'] ||
+              !savedData['items'] ||
+              (Array.isArray(savedData['items']) && savedData['items'].length === 0))
           ) {
             this.loadFromNationalPreQualificationBid(false);
           }
@@ -2042,7 +2285,10 @@ export class StepFormDialog {
 
           if (
             def!.formCode === 'FORM_02_PQB_BID_DOCUMENT' &&
-            (!savedData['pqb_title'] || !savedData['pqb_no'])
+            (!savedData['pqb_title'] ||
+              !savedData['pqb_no'] ||
+              !savedData['items'] ||
+              (Array.isArray(savedData['items']) && savedData['items'].length === 0))
           ) {
             this.loadFromNationalPreQualificationBid(false);
           }
