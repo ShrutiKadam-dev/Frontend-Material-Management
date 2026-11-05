@@ -82,6 +82,18 @@ import { SupplierQuotationService } from '../../../../../core/services/supplier-
 import { PreQualificationBidService } from '../../../../../core/services/pre-qualification-bid';
 import { ProjectStepService } from '../../../../../core/services/project-step';
 
+export interface CorrigendumQuantityItem {
+  id?: number | string;
+  sr_no: number;
+  original_description: string;
+  original_quantity: number | null;
+  original_unit: string;
+  corrigendum_description: string;
+  corrigendum_quantity: number | null;
+  corrigendum_unit: string;
+  is_new?: boolean;
+}
+
 @Component({
   selector: 'app-step-form-dialog',
   imports: [
@@ -208,6 +220,11 @@ export class StepFormDialog {
   readonly isPqbBidDocument = computed(() => this.resolvedDef()?.formCode === 'FORM_02_PQB_BID_DOCUMENT');
   readonly isCorrigendum = computed(() => this.resolvedDef()?.formCode === 'FORM_03_CORRIGENDUM');
   readonly linkedTenderStep = signal<ProjectStep | null>(null);
+  readonly corrigendumQuantityItems = signal<CorrigendumQuantityItem[]>([]);
+  readonly corrigendumModifiedItemCount = computed(() =>
+    this.corrigendumQuantityItems().filter((it) => this.isCorrigendumItemModified(it)).length,
+  );
+  readonly corrigendumTotalAmendedCount = computed(() => this.computeCorrigendumTotalAmendedCount());
   readonly corrigendumLinkedInfo = computed(() => {
     if (!this.isCorrigendum()) return null;
     this.formVersion();
@@ -304,6 +321,7 @@ export class StepFormDialog {
   }
 
   readonly corrigendumSourceStepName = computed(() => this.getCorrigendumSourceStepName(this.corrigendumLinkedInfo()));
+  readonly linkedTenderRefNo = computed(() => this.corrigendumLinkedInfo()?.refNo || '');
 
   getCorrigendumFetchButtonLabel(info: { formCode?: string; stepName?: string } | null): string {
     const fcode = info?.formCode || '';
@@ -446,6 +464,13 @@ export class StepFormDialog {
   }
 
   getColumnLabel(col: FormTableColumn): string {
+    const isCorr = typeof this.isCorrigendum === 'function'
+      ? this.isCorrigendum()
+      : (typeof this.resolvedDef === 'function' ? this.resolvedDef()?.formCode === 'FORM_03_CORRIGENDUM' : false);
+    if (isCorr) {
+      if (col.key === 'as_per_tender_doc') return 'AS PER TENDER DOCUMENT (BASELINE)';
+      if (col.key === 'as_per_corrigendum') return 'AS PER CORRIGENDUM (UPDATES)';
+    }
     if (col.label.includes('[EUR]') || col.label.includes('(€)')) {
       return col.label;
     }
@@ -688,7 +713,7 @@ export class StepFormDialog {
 
     const canonicalCode = (resolvedDef?.formCode || fcode).toUpperCase();
 
-    // Whitelist allowed Bid Documents for Corrigendum (ICB, Techno Commercial, LTE, STE)
+    // Whitelist allowed Bid Documents for Corrigendum (ICB, Techno Commercial, LTE, and STE)
     const isAllowedBidDoc =
       canonicalCode === 'FORM_36_BID_DOC_ICB' ||
       canonicalCode === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL' ||
@@ -957,7 +982,12 @@ export class StepFormDialog {
 
     this.fetchingPreviousStep?.set?.(true);
     const fetchTarget$: Observable<ProjectStep> = (targetDef?.apiEndpoint && this.formApiService)
-      ? this.formApiService.getLatestEntry(targetDef, pId).pipe(
+      ? (targetStep.id && typeof this.formApiService.getEntryById === 'function'
+          ? this.formApiService.getEntryById(targetDef, targetStep.id, pId).pipe(
+              catchError(() => this.formApiService.getLatestEntry(targetDef, pId)),
+            )
+          : this.formApiService.getLatestEntry(targetDef, pId)
+        ).pipe(
           map((latestStep: ProjectStep | null): ProjectStep => {
             if (latestStep) {
               return {
@@ -1037,20 +1067,6 @@ export class StepFormDialog {
   private fetchLatestTenderFromBackend(pId: number, showNotification: boolean): void {
     this.fetchingPreviousStep?.set?.(true);
 
-    const icbBidDocDef = getFormDefinition('FORM_36_BID_DOC_ICB');
-    const icbDef = getFormDefinition('FORM_35_ICB');
-    const technoBidDocDef = getFormDefinition('FORM_29_BID_DOC_TECHNO_COMMERCIAL');
-    const technoDef = getFormDefinition('FORM_30_TECHNO_COMMERCIAL_TENDER');
-    const pacDef = getFormDefinition('FORM_13_PAC_TENDER');
-    const eoiDef = getFormDefinition('FORM_07_EOI');
-    const pqbBidDocDef = getFormDefinition('FORM_02_PQB_BID_DOCUMENT');
-    const pqbDef = getFormDefinition('FORM_01_PQB');
-    const lteBidDocDef = getFormDefinition('FORM_31_BID_DOC_LTE');
-    const lteDef = getFormDefinition('FORM_04_LTE');
-    const steBidDocDef = getFormDefinition('FORM_34_BID_DOC_STE');
-    const steDef = getFormDefinition('FORM_33_STE');
-    const corrDef = getFormDefinition('FORM_03_CORRIGENDUM');
-
     if (!this.formApiService) {
       this.fetchingPreviousStep?.set?.(false);
       this.ensureCorrigendumDefaultRows();
@@ -1064,6 +1080,44 @@ export class StepFormDialog {
       }
       return;
     }
+
+    // Try dedicated /api/v1/corrigendums/latest-tender endpoint first
+    if (typeof this.formApiService.getLatestTenderForCorrigendum === 'function') {
+      this.formApiService.getLatestTenderForCorrigendum(pId).pipe(
+        catchError(() => of(null)),
+      ).subscribe({
+        next: (directTender) => {
+          if (directTender && this.hasTenderData(directTender)) {
+            this.fetchingPreviousStep?.set?.(false);
+            this.applyPreviousStepToCorrigendum(directTender, showNotification);
+            return;
+          }
+          this.fetchLatestTenderViaForkJoin(pId, showNotification);
+        },
+        error: () => {
+          this.fetchLatestTenderViaForkJoin(pId, showNotification);
+        },
+      });
+      return;
+    }
+
+    this.fetchLatestTenderViaForkJoin(pId, showNotification);
+  }
+
+  private fetchLatestTenderViaForkJoin(pId: number, showNotification: boolean): void {
+    const icbBidDocDef = getFormDefinition('FORM_36_BID_DOC_ICB');
+    const icbDef = getFormDefinition('FORM_35_ICB');
+    const technoBidDocDef = getFormDefinition('FORM_29_BID_DOC_TECHNO_COMMERCIAL');
+    const technoDef = getFormDefinition('FORM_30_TECHNO_COMMERCIAL_TENDER');
+    const pacDef = getFormDefinition('FORM_13_PAC_TENDER');
+    const eoiDef = getFormDefinition('FORM_07_EOI');
+    const pqbBidDocDef = getFormDefinition('FORM_02_PQB_BID_DOCUMENT');
+    const pqbDef = getFormDefinition('FORM_01_PQB');
+    const lteBidDocDef = getFormDefinition('FORM_31_BID_DOC_LTE');
+    const lteDef = getFormDefinition('FORM_04_LTE');
+    const steBidDocDef = getFormDefinition('FORM_34_BID_DOC_STE');
+    const steDef = getFormDefinition('FORM_33_STE');
+    const corrDef = getFormDefinition('FORM_03_CORRIGENDUM');
 
     forkJoin({
       icbBidDoc: icbBidDocDef ? this.formApiService.getLatestEntry(icbBidDocDef, pId).pipe(catchError(() => of(null))) : of(null),
@@ -1125,9 +1179,8 @@ export class StepFormDialog {
           if (showNotification) {
             this.messageService?.add({
               severity: 'info',
-              summary: 'Preceding Tender Step Not Found',
-              detail:
-                'No preceding ICB, Techno Commercial Tender, PAC Tender, EOI, National Pre-Qualification Bid (PQB), LTE, or STE step found. Initialized default comparison rows.',
+              summary: 'No Preceding Tender Data',
+              detail: 'No preceding tender step found to import for this project.',
             });
           }
         }
@@ -1137,9 +1190,8 @@ export class StepFormDialog {
         if (showNotification) {
           this.messageService?.add({
             severity: 'info',
-            summary: 'Preceding Tender Step Not Found',
-            detail:
-              'No preceding ICB, Techno Commercial Tender, PAC Tender, EOI, National Pre-Qualification Bid (PQB), LTE, or STE step found. Initialized default comparison rows.',
+            summary: 'No Preceding Tender Data',
+            detail: 'No preceding tender step found to import for this project.',
           });
         }
       },
@@ -1251,13 +1303,46 @@ export class StepFormDialog {
     }
 
     // 5. Extract Quantity / Table
-    const rawItems = (stepData['items'] || stepData['requirements'] || stepData['table_items'] || stepData['materials'] || stepRec['items'] || stepRec['requirements'] || []) as Array<Record<string, unknown>>;
+    const rawItems = (stepData['items'] ||
+      stepData['requirements'] ||
+      stepData['table_items'] ||
+      stepData['materials'] ||
+      stepRec['items'] ||
+      stepRec['requirements'] ||
+      []) as Array<Record<string, unknown>>;
+
+    const mappedQuantityItems: CorrigendumQuantityItem[] = (Array.isArray(rawItems) ? rawItems : [])
+      .filter((it) => it && typeof it === 'object' && (it['description'] || it['material_name'] || it['item_name'] || it['name'] || it['quantity'] !== undefined))
+      .map((it, idx) => {
+        const desc = String(it['description'] || it['material_name'] || it['item_name'] || it['name'] || `Item ${idx + 1}`).trim();
+        const rawQty = it['quantity'];
+        const qtyNum = rawQty !== undefined && rawQty !== null && rawQty !== '' && !isNaN(Number(rawQty)) ? Number(rawQty) : null;
+        const unit = String(it['unit'] || '').trim();
+        return {
+          id: it['id'] ? `corr-item-${it['id']}` : `corr-item-${idx + 1}`,
+          sr_no: idx + 1,
+          original_description: desc,
+          original_quantity: qtyNum,
+          original_unit: unit,
+          corrigendum_description: desc,
+          corrigendum_quantity: qtyNum,
+          corrigendum_unit: unit,
+          is_new: false,
+        };
+      });
+
+    if (!this.corrigendumQuantityItems || typeof this.corrigendumQuantityItems.set !== 'function') {
+      (this as any).corrigendumQuantityItems = signal<CorrigendumQuantityItem[]>(mappedQuantityItems);
+    } else {
+      this.corrigendumQuantityItems.set(mappedQuantityItems);
+    }
+
     let qtySummary = '';
-    if (Array.isArray(rawItems) && rawItems.length > 0) {
-      const lines = rawItems.map((it, idx) => {
-        const desc = it['description'] || it['material_name'] || it['item_name'] || it['name'] || `Item ${idx + 1}`;
-        const qty = it['quantity'] !== undefined && it['quantity'] !== null ? it['quantity'] : '';
-        const unit = it['unit'] ? ` ${it['unit']}` : '';
+    if (mappedQuantityItems.length > 0) {
+      const lines = mappedQuantityItems.map((it, idx) => {
+        const desc = it.original_description;
+        const qty = it.original_quantity !== null && it.original_quantity !== undefined ? it.original_quantity : '';
+        const unit = it.original_unit ? ` ${it.original_unit}` : '';
         return qty !== '' ? `${idx + 1}. ${desc} - Qty: ${qty}${unit}` : `${idx + 1}. ${desc}`;
       });
       qtySummary = ' ' + lines.join(', ');
@@ -1419,6 +1504,7 @@ export class StepFormDialog {
     this.tableVersion?.update?.((v) => v + 1);
     this.formVersion?.update?.((v) => v + 1);
     this.cdr?.markForCheck?.();
+    this.syncCorrigendumQuantityToTableFormArray();
 
     if (showNotification) {
       const defName = targetStep.form_code ? getFormDefinition(targetStep.form_code)?.name : null;
@@ -1427,8 +1513,8 @@ export class StepFormDialog {
         : (defName || 'National Pre-Qualification Bid (PQB)');
       this.messageService.add({
         severity: 'success',
-        summary: `Linked from ${stepName}`,
-        detail: `Corrigendum linked to ${stepName}${refNo ? ' (' + refNo + ')' : ''}. Patched Title, Tender No, and comparison parameters.`,
+        summary: 'Tender Data Loaded',
+        detail: `Imported specifications and line items from latest ${stepName}.`,
       });
     }
   }
@@ -1476,6 +1562,293 @@ export class StepFormDialog {
       this.linkedTenderStep.set(targetStep);
       this.cdr.markForCheck();
     }
+  }
+
+  syncCorrigendumQuantityToTableFormArray(): void {
+    const tableArr = typeof this.tableFormArray === 'function' ? this.tableFormArray() : null;
+    if (!tableArr) return;
+    const row = tableArr.controls.find((r) => Number(r.get('sr_no')?.value) === 3) || tableArr.at(2);
+    if (!row) return;
+
+    const items = (typeof this.corrigendumQuantityItems === 'function' ? this.corrigendumQuantityItems() : []) || [];
+    if (items.length === 0 && row.get('as_per_tender_doc')?.value && row.get('as_per_tender_doc')?.value !== 'QUANTITY: (TABLE)') {
+      return;
+    }
+
+    const origLines = items
+      .filter((it) => !it.is_new)
+      .map((it, idx) => {
+        const q = it.original_quantity !== null && it.original_quantity !== undefined ? it.original_quantity : '';
+        const u = it.original_unit ? ` ${it.original_unit}` : '';
+        return q !== '' ? `${idx + 1}. ${it.original_description} - Qty: ${q}${u}` : `${idx + 1}. ${it.original_description}`;
+      });
+    const docData = origLines.length > 0 ? `QUANTITY: (TABLE) ${origLines.join(', ')}` : 'QUANTITY: (TABLE)';
+
+    const corrLines = items.map((it, idx) => {
+      const q = it.corrigendum_quantity !== null && it.corrigendum_quantity !== undefined ? it.corrigendum_quantity : '';
+      const u = it.corrigendum_unit ? ` ${it.corrigendum_unit}` : '';
+      const mod = this.isCorrigendumItemModified(it) ? ' [MODIFIED]' : '';
+      return q !== '' ? `${idx + 1}. ${it.corrigendum_description} - Qty: ${q}${u}${mod}` : `${idx + 1}. ${it.corrigendum_description}${mod}`;
+    });
+    const corrData = corrLines.length > 0 ? `QUANTITY: (TABLE) ${corrLines.join(', ')}` : 'QUANTITY: (TABLE)';
+
+    row.get('as_per_tender_doc')?.setValue(docData, { emitEvent: false });
+    row.get('as_per_corrigendum')?.setValue(corrData, { emitEvent: false });
+    this.tableVersion?.update?.((v) => v + 1);
+  }
+
+  updateCorrigendumItem(index: number, patch: Partial<CorrigendumQuantityItem>): void {
+    if (typeof this.corrigendumQuantityItems?.update !== 'function' && typeof this.corrigendumQuantityItems?.set !== 'function') return;
+    const items = [...(typeof this.corrigendumQuantityItems === 'function' ? this.corrigendumQuantityItems() : [])];
+    if (items[index]) {
+      items[index] = { ...items[index], ...patch };
+      this.corrigendumQuantityItems.set(items);
+      this.syncCorrigendumQuantityToTableFormArray();
+      this.formGroup()?.markAsDirty();
+    }
+  }
+
+  addCorrigendumItem(): void {
+    if (typeof this.corrigendumQuantityItems?.update !== 'function' && typeof this.corrigendumQuantityItems?.set !== 'function') return;
+    const items = [...(typeof this.corrigendumQuantityItems === 'function' ? this.corrigendumQuantityItems() : [])];
+    const nextSr = items.length + 1;
+    items.push({
+      id: `new-corr-${Date.now()}-${nextSr}`,
+      sr_no: nextSr,
+      original_description: '—',
+      original_quantity: null,
+      original_unit: '',
+      corrigendum_description: '',
+      corrigendum_quantity: 1,
+      corrigendum_unit: 'Nos',
+      is_new: true,
+    });
+    this.corrigendumQuantityItems.set(items);
+    this.syncCorrigendumQuantityToTableFormArray();
+    this.formGroup()?.markAsDirty();
+  }
+
+  removeCorrigendumItem(index: number): void {
+    if (typeof this.corrigendumQuantityItems?.update !== 'function' && typeof this.corrigendumQuantityItems?.set !== 'function') return;
+    const items = (typeof this.corrigendumQuantityItems === 'function' ? this.corrigendumQuantityItems() : []).filter((_, i) => i !== index);
+    const reindexed = items.map((it, idx) => ({ ...it, sr_no: idx + 1 }));
+    this.corrigendumQuantityItems.set(reindexed);
+    this.syncCorrigendumQuantityToTableFormArray();
+    this.formGroup()?.markAsDirty();
+  }
+
+  resetCorrigendumItem(index: number): void {
+    if (typeof this.corrigendumQuantityItems?.update !== 'function' && typeof this.corrigendumQuantityItems?.set !== 'function') return;
+    const items = [...(typeof this.corrigendumQuantityItems === 'function' ? this.corrigendumQuantityItems() : [])];
+    const target = items[index];
+    if (!target) return;
+    if (target.is_new) {
+      this.removeCorrigendumItem(index);
+      return;
+    }
+    items[index] = {
+      ...target,
+      corrigendum_description: target.original_description,
+      corrigendum_quantity: target.original_quantity,
+      corrigendum_unit: target.original_unit,
+    };
+    this.corrigendumQuantityItems.set(items);
+    this.syncCorrigendumQuantityToTableFormArray();
+    this.formGroup()?.markAsDirty();
+  }
+
+  resetAllCorrigendumItems(): void {
+    if (typeof this.corrigendumQuantityItems?.update !== 'function' && typeof this.corrigendumQuantityItems?.set !== 'function') return;
+    const rawList = typeof this.corrigendumQuantityItems === 'function' ? this.corrigendumQuantityItems() : [];
+    const resetList = rawList
+      .filter((it) => !it.is_new)
+      .map((it) => ({
+        ...it,
+        corrigendum_description: it.original_description,
+        corrigendum_quantity: it.original_quantity,
+        corrigendum_unit: it.original_unit,
+      }));
+    this.corrigendumQuantityItems.set(resetList);
+    this.syncCorrigendumQuantityToTableFormArray();
+    this.formGroup()?.markAsDirty();
+  }
+
+  isCorrigendumItemModified(item: CorrigendumQuantityItem): boolean {
+    if (item.is_new) return true;
+    const origDesc = (item.original_description || '').trim();
+    const corrDesc = (item.corrigendum_description || '').trim();
+    const origQty = item.original_quantity !== null && item.original_quantity !== undefined ? Number(item.original_quantity) : null;
+    const corrQty = item.corrigendum_quantity !== null && item.corrigendum_quantity !== undefined ? Number(item.corrigendum_quantity) : null;
+    const origUnit = (item.original_unit || '').trim().toLowerCase();
+    const corrUnit = (item.corrigendum_unit || '').trim().toLowerCase();
+    return origDesc !== corrDesc || origQty !== corrQty || origUnit !== corrUnit;
+  }
+
+  getCorrigendumItemChangeLabel(item: CorrigendumQuantityItem): string {
+    if (item.is_new) return 'New Item';
+    const descChanged = (item.original_description || '').trim() !== (item.corrigendum_description || '').trim();
+    const origQty = item.original_quantity !== null && item.original_quantity !== undefined ? Number(item.original_quantity) : null;
+    const corrQty = item.corrigendum_quantity !== null && item.corrigendum_quantity !== undefined ? Number(item.corrigendum_quantity) : null;
+    const qtyChanged = origQty !== corrQty;
+
+    if (descChanged && qtyChanged) {
+      return `Qty: ${origQty ?? 0} → ${corrQty ?? 0} & Desc Changed`;
+    }
+    if (qtyChanged) {
+      return `Qty: ${origQty ?? 0} → ${corrQty ?? 0}`;
+    }
+    if (descChanged) {
+      return 'Description Changed';
+    }
+    return 'Unchanged';
+  }
+
+  isCorrigendumRowModified(rowIdx: number): boolean {
+    const tableArr = typeof this.tableFormArray === 'function' ? this.tableFormArray() : null;
+    if (!tableArr) return false;
+    const row = tableArr.at(rowIdx);
+    if (!row) return false;
+    const srNo = Number(row.get('sr_no')?.value);
+    if (srNo === 3 || rowIdx === 2) {
+      return this.corrigendumQuantityItems().some((it) => this.isCorrigendumItemModified(it));
+    }
+    const docVal = String(row.get('as_per_tender_doc')?.value || '').trim();
+    const corrVal = String(row.get('as_per_corrigendum')?.value || '').trim();
+    if (!corrVal) return false;
+
+    const headerPrefixes = [
+      'CLOSING DATE & TIME:',
+      'OPENING DATE & TIME:',
+      'PAYMENT TERMS:',
+      'EMD:',
+      'DELIVERY SCHEDULE:',
+      'TENDER FEE',
+      'TECHNICAL SPECIFICATION:',
+    ];
+
+    const isJustHeader = headerPrefixes.some((p) => corrVal.toLowerCase() === p.toLowerCase() || corrVal.toLowerCase() === (p + ':').toLowerCase());
+    if (isJustHeader) return false;
+
+    return corrVal !== docVal;
+  }
+
+  copyOriginalToCorrigendum(rowIdx: number): void {
+    const tableArr = typeof this.tableFormArray === 'function' ? this.tableFormArray() : null;
+    if (!tableArr) return;
+    const row = tableArr.at(rowIdx);
+    if (!row) return;
+    const srNo = Number(row.get('sr_no')?.value);
+    if (srNo === 3 || rowIdx === 2) {
+      this.resetAllCorrigendumItems();
+      return;
+    }
+    const docVal = row.get('as_per_tender_doc')?.value || '';
+    row.get('as_per_corrigendum')?.setValue(docVal);
+    row.get('as_per_corrigendum')?.markAsDirty();
+    this.tableVersion?.update?.((v) => v + 1);
+  }
+
+  onCorrigendumRowChange(rowIdx: number): void {
+    this.tableVersion?.update?.((v) => v + 1);
+  }
+
+  private isSyncingScroll = false;
+
+  syncScroll(source: HTMLElement, target: HTMLElement): void {
+    if (!source || !target || this.isSyncingScroll) return;
+    this.isSyncingScroll = true;
+    target.scrollTop = source.scrollTop;
+    requestAnimationFrame(() => {
+      this.isSyncingScroll = false;
+    });
+  }
+
+  getCorrigendumParameterMeta(rIdx: number, rowGroup?: FormGroup): { title: string; icon: string; subtitle?: string } {
+    const srNo = Number(rowGroup?.get('sr_no')?.value ?? (rIdx + 1));
+    switch (srNo) {
+      case 1:
+        return { title: 'Closing Date & Time', icon: 'pi pi-calendar-times', subtitle: 'Tender submission deadline' };
+      case 2:
+        return { title: 'Opening Date & Time', icon: 'pi pi-calendar-plus', subtitle: 'Technical bid opening' };
+      case 3:
+        return { title: 'Quantity / Material Items', icon: 'pi pi-box', subtitle: 'Line items & quantity specifications' };
+      case 4:
+        return { title: 'Payment Terms', icon: 'pi pi-credit-card', subtitle: 'Payment milestones & terms' };
+      case 5:
+        return { title: 'Earnest Money Deposit (EMD)', icon: 'pi pi-shield', subtitle: 'EMD amount & exemption terms' };
+      case 6:
+        return { title: 'Delivery Schedule', icon: 'pi pi-truck', subtitle: 'Supply timeline & milestones' };
+      case 7:
+        return { title: 'Tender Fee', icon: 'pi pi-dollar', subtitle: 'Document purchase fee' };
+      case 8:
+        return { title: 'Technical Specification', icon: 'pi pi-file', subtitle: 'Equipment specifications & scope' };
+      default:
+        return { title: `Specification Parameter #${srNo}`, icon: 'pi pi-info-circle' };
+    }
+  }
+
+  computeCorrigendumTotalAmendedCount(): number {
+    const isCorr = typeof this.isCorrigendum === 'function' ? this.isCorrigendum() : false;
+    if (!isCorr) return 0;
+    if (typeof this.tableVersion === 'function') {
+      this.tableVersion();
+    }
+    const arr = typeof this.tableFormArray === 'function' ? this.tableFormArray() : null;
+    if (!arr) return 0;
+    let count = 0;
+    for (let i = 0; i < arr.length; i++) {
+      if (this.isCorrigendumRowModified(i)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  parseQuantityItemsFromRow(row: Record<string, unknown>): CorrigendumQuantityItem[] {
+    const docText = String(row['as_per_tender_doc'] || '').replace(/^QUANTITY:\s*\(TABLE\)\s*/i, '').trim();
+    const corrText = String(row['as_per_corrigendum'] || '').replace(/^QUANTITY:\s*\(TABLE\)\s*/i, '').trim();
+
+    if (!docText && !corrText) return [];
+
+    const parseTextToItems = (text: string): Array<{ desc: string; qty: number | null; unit: string }> => {
+      if (!text) return [];
+      const parts = text.includes('\n') ? text.split('\n') : text.split(/(?:,\s*(?=\d+\.))/);
+      return parts.map((part) => {
+        const clean = part.replace(/^\d+\.\s*/, '').trim();
+        const match = clean.match(/^(.*?)(?:\s*-\s*Qty:\s*(\d+(?:\.\d+)?)\s*(.*))?$/i);
+        if (match) {
+          const desc = match[1]?.trim() || clean;
+          const qty = match[2] ? Number(match[2]) : null;
+          const unit = match[3]?.replace(/\[MODIFIED\]/gi, '').trim() || '';
+          return { desc, qty, unit };
+        }
+        return { desc: clean, qty: null, unit: '' };
+      });
+    };
+
+    const docItems = parseTextToItems(docText);
+    const corrItems = parseTextToItems(corrText);
+
+    const maxLen = Math.max(docItems.length, corrItems.length);
+    const result: CorrigendumQuantityItem[] = [];
+
+    for (let i = 0; i < maxLen; i++) {
+      const d = docItems[i] || { desc: '', qty: null, unit: '' };
+      const c = corrItems[i] || d;
+      result.push({
+        id: `parsed-corr-${i + 1}`,
+        sr_no: i + 1,
+        original_description: d.desc,
+        original_quantity: d.qty,
+        original_unit: d.unit,
+        corrigendum_description: c.desc || d.desc,
+        corrigendum_quantity: c.qty !== null ? c.qty : d.qty,
+        corrigendum_unit: c.unit || d.unit,
+        is_new: !docItems[i] && Boolean(corrItems[i]),
+      });
+    }
+
+    return result;
   }
 
   private ensureCorrigendumDefaultRows(): void {
@@ -1846,6 +2219,21 @@ export class StepFormDialog {
         rowsArray.push(this.createTableRowGroup(def, row));
       }
       this.tableFormArray.set(rowsArray);
+
+      if (def.formCode === 'FORM_03_CORRIGENDUM') {
+        const savedQItems = (savedData['corrigendum_quantity_items'] || savedData['quantity_items']) as CorrigendumQuantityItem[] | undefined;
+        if (Array.isArray(savedQItems) && savedQItems.length > 0) {
+          this.corrigendumQuantityItems.set(savedQItems);
+        } else {
+          const row3 = savedRows.find((r) => Number(r['sr_no']) === 3) || savedRows[2];
+          if (row3) {
+            const parsed = this.parseQuantityItemsFromRow(row3);
+            this.corrigendumQuantityItems.set(parsed);
+          } else {
+            this.corrigendumQuantityItems.set([]);
+          }
+        }
+      }
     } else {
       this.tableFormArray.set(new FormArray<FormGroup>([]));
     }
@@ -2314,6 +2702,10 @@ export class StepFormDialog {
       }
     }
 
+    if (def.formCode === 'FORM_03_CORRIGENDUM') {
+      this.syncCorrigendumQuantityToTableFormArray();
+    }
+
     const rawTableData = (this.tableFormArray().value || []) as Array<Record<string, unknown>>;
     const cleanedTableData = cleanTableItems(rawTableData);
 
@@ -2336,6 +2728,11 @@ export class StepFormDialog {
       remarks: this.stepRemarks().map((r) => r.remark),
       status: 'completed',
     };
+
+    if (def.formCode === 'FORM_03_CORRIGENDUM') {
+      combinedData['corrigendum_quantity_items'] = this.corrigendumQuantityItems();
+      combinedData['quantity_items'] = this.corrigendumQuantityItems();
+    }
 
     if (def.fields.some((f) => this.isCurrencyWithSelect(f))) {
       const cur = this.selectedCurrency();

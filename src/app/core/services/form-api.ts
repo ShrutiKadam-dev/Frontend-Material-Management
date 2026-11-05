@@ -4,7 +4,7 @@ import { catchError, map, Observable, of, throwError } from 'rxjs';
 
 import { API_BASE_URL } from '../tokens/api-base-url.token';
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../models/project-step.model';
-import { FormDefinition } from '../constants/form-catalog';
+import { FormDefinition, getFormDefinition } from '../constants/form-catalog';
 import { sanitizePayloadDates } from '../utils/date.utils';
 import {
   calculateTableTotalsWithGst,
@@ -390,6 +390,28 @@ export class FormApiService {
         if (!hasSubstance) return null;
 
         return normalizeBackendEntityToStep(item, formDef, projectId);
+      }),
+      catchError(() => of(null)),
+    );
+  }
+
+  /**
+   * Retrieves the latest preceding tender/enquiry step directly from the dedicated backend endpoint.
+   * Route: GET /api/v1/corrigendums/latest-tender?project_id={projectId}
+   */
+  getLatestTenderForCorrigendum(projectId: number): Observable<ProjectStep | null> {
+    const endpointUrl = `${this.apiBaseUrl}/api/v1/corrigendums/latest-tender?project_id=${projectId}`;
+    return this.http.get<Record<string, unknown> | { data: Record<string, unknown> }>(endpointUrl).pipe(
+      map((res) => {
+        if (!res || typeof res !== 'object') return null;
+        const item = ('data' in res ? (res as { data: Record<string, unknown> }).data : res) as Record<string, unknown>;
+        if (!item || typeof item !== 'object') return null;
+
+        const fcode = String(item['form_code'] || 'FORM_04_LTE');
+        const targetDef = getFormDefinition(fcode) || getFormDefinition('FORM_04_LTE');
+        if (!targetDef) return null;
+
+        return normalizeBackendEntityToStep(item, targetDef, projectId);
       }),
       catchError(() => of(null)),
     );

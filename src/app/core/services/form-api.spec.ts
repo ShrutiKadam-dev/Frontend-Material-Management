@@ -450,4 +450,64 @@ describe('FormApiService', () => {
     // total_gross_amount should NOT be calculated as 4000 + (4000 * 18%)
     expect(step.data?.['total_gross_amount']).not.toBe(4720);
   });
+
+  describe('getLatestTenderForCorrigendum', () => {
+    it('should query /api/v1/corrigendums/latest-tender and return normalized ProjectStep', async () => {
+      const mockRawTender = {
+        id: 77,
+        project_id: 12,
+        form_code: 'FORM_31_BID_DOC_LTE',
+        step_name: 'Limited Tender Enquiry (LTE)',
+        tender_enquiry_no: 'LTE-2026-99',
+        tender_title: 'Turbine Overhaul',
+        closing_date: '2026-11-20',
+        items: [
+          { item_no: 1, item_description: 'Turbine Blade', quantity: 10, unit: 'Nos' },
+        ],
+      };
+
+      const mockHttp = {
+        get: vi.fn().mockReturnValue(of(mockRawTender)),
+        post: vi.fn(),
+        put: vi.fn(),
+        delete: vi.fn(),
+      };
+
+      const service = Object.create(FormApiService.prototype);
+      service.http = mockHttp;
+      service.apiBaseUrl = 'http://localhost:5000';
+
+      const step = await new Promise<ProjectStep | null>((resolve) => {
+        service.getLatestTenderForCorrigendum(12).subscribe(resolve);
+      });
+
+      expect(mockHttp.get).toHaveBeenCalledWith('http://localhost:5000/api/v1/corrigendums/latest-tender?project_id=12');
+      expect(step).not.toBeNull();
+      expect(step?.id).toBe(77);
+      expect(step?.project_id).toBe(12);
+      expect(step?.form_code).toBe('FORM_31_BID_DOC_LTE');
+      expect(step?.step_name).toBe('Limited Tender Enquiry (LTE)');
+      expect(step?.data?.['tender_enquiry_no']).toBe('LTE-2026-99');
+      expect(step?.data?.['items']).toHaveLength(1);
+    });
+
+    it('should catch 404 error and return null gracefully', async () => {
+      const mockHttp = {
+        get: vi.fn().mockReturnValue(throwError(() => ({ status: 404 }))),
+        post: vi.fn(),
+        put: vi.fn(),
+        delete: vi.fn(),
+      };
+
+      const service = Object.create(FormApiService.prototype);
+      service.http = mockHttp;
+      service.apiBaseUrl = 'http://localhost:5000';
+
+      const step = await new Promise<ProjectStep | null>((resolve) => {
+        service.getLatestTenderForCorrigendum(99).subscribe(resolve);
+      });
+
+      expect(step).toBeNull();
+    });
+  });
 });

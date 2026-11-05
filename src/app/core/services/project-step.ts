@@ -131,9 +131,9 @@ export class ProjectStepService {
           const rawSteps = Array.isArray(backendSteps)
             ? backendSteps
             : backendSteps &&
-                typeof backendSteps === 'object' &&
-                'data' in backendSteps &&
-                Array.isArray((backendSteps as { data: ProjectStep[] }).data)
+              typeof backendSteps === 'object' &&
+              'data' in backendSteps &&
+              Array.isArray((backendSteps as { data: ProjectStep[] }).data)
               ? (backendSteps as { data: ProjectStep[] }).data
               : [];
           const normalized = rawSteps.map((s) => {

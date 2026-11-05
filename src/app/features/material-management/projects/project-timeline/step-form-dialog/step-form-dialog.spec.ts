@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { of } from 'rxjs';
 import { FormArray, FormControl, FormGroup } from '@angular/forms';
 import { signal } from '@angular/core';
-import { StepFormDialog } from './step-form-dialog';
+import { StepFormDialog, CorrigendumQuantityItem } from './step-form-dialog';
 import { ProjectStep } from '../../../../../core/models/project-step.model';
 import { FormDefinition, getFormDefinition } from '../../../../../core/constants/form-catalog';
 
@@ -1358,7 +1358,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(comp.messageService.add).toHaveBeenCalledWith(
         expect.objectContaining({
           severity: 'success',
-          summary: expect.stringMatching(/Linked|Patched/i),
+          summary: expect.stringMatching(/Linked|Patched|Loaded/i),
         }),
       );
       expect(comp.linkedTenderStep.set).toHaveBeenCalledWith(lteStep);
@@ -1707,7 +1707,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       comp.formVersion = { update: vi.fn() };
       comp.cdr = { markForCheck: vi.fn() };
       comp.linkedTenderStep = { set: vi.fn() };
-      comp.createTableRowGroup = StepFormDialog.prototype.createTableRowGroup;
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
       comp.effectiveProjectTitle = () => 'Default Title';
 
       const targetStep: ProjectStep = {
@@ -1845,6 +1845,9 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
         step_name: 'International Competitive Bidding (ICB)',
         form_code: 'FORM_35_ICB',
         status: 'completed',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
         data: {
           tender_title: 'Global High-Voltage Transmission Network Package',
           tender_no: 'ICB-TRANS-GLOBAL-2026',
@@ -1907,6 +1910,9 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
         step_name: 'Techno Commercial Tender',
         form_code: 'FORM_30_TECHNO_COMMERCIAL_TENDER',
         status: 'completed',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
         data: {
           tender_title: 'Thermal Plant Control Instrumentation',
           tender_no: 'TECHNO-COMM-2026-77',
@@ -1959,6 +1965,9 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
         step_name: 'PAC Tender',
         form_code: 'FORM_13_PAC_TENDER',
         status: 'completed',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
         data: {
           tender_title: 'Proprietary Turbine Blades Supply',
           tender_no: 'PAC-GE-2026-009',
@@ -2012,6 +2021,9 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
         step_name: 'Expression of Interest (EOI)',
         form_code: 'FORM_07_EOI',
         status: 'completed',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
         data: {
           eoi_title: 'Solar Power Plant 50MW Feasibility EOI',
           eoi_no: 'EOI-SOLAR-2026-001',
@@ -2061,6 +2073,9 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
         step_name: 'National Pre-Qualification Bid (PQB)',
         form_code: 'FORM_01_PQB',
         status: 'completed',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
         data: {
           pqb_title: 'Substation Civil Construction PQB',
           pqb_no: 'PQB-CIVIL-2026-88',
@@ -2096,6 +2111,9 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
           step_name: 'Expression of Interest (EOI)',
           form_code: 'FORM_07_EOI',
           status: 'completed',
+          description: '',
+          progress_percentage: 100,
+          completed_at: null,
           data: { eoi_title: 'Early EOI Tender', eoi_no: 'EOI-001' },
         },
         {
@@ -2105,6 +2123,9 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
           step_name: 'Corrigendum',
           form_code: 'FORM_03_CORRIGENDUM',
           status: 'completed',
+          description: '',
+          progress_percentage: 100,
+          completed_at: null,
           data: { ref_title: 'Early EOI Tender', against_ref_no: 'EOI-001' },
         },
         {
@@ -2114,6 +2135,9 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
           step_name: 'Limited Tender Enquiry (LTE)',
           form_code: 'FORM_04_LTE',
           status: 'completed',
+          description: '',
+          progress_percentage: 100,
+          completed_at: null,
           data: { tender_title: 'Midstream LTE Enquiry', tender_enquiry_no: 'LTE-002' },
         },
         {
@@ -2123,6 +2147,9 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
           step_name: 'Single Tender Enquiry (STE)',
           form_code: 'FORM_33_STE',
           status: 'completed',
+          description: '',
+          progress_percentage: 100,
+          completed_at: null,
           data: { tender_title: 'Downstream STE Package', tender_no: 'STE-003' },
         },
       ];
@@ -2139,6 +2166,336 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(matchedForNew).toBeDefined();
       expect(matchedForNew?.id).toBe(104);
       expect(matchedForNew?.data?.['tender_no']).toBe('STE-003');
+    });
+  });
+
+  describe('Form 3: Corrigendum Quantity Table & Material Modification Logic', () => {
+    const corrigendumDef: FormDefinition = {
+      id: 3,
+      formCode: 'FORM_03_CORRIGENDUM',
+      name: 'Corrigendum',
+      category: 'Pre-Bidding & Tenders',
+      phaseId: 'phase-1',
+      icon: 'pi pi-file-edit',
+      description: 'Corrigendum notices',
+      apiEndpoint: '/api/v1/corrigendums',
+      fields: [
+        { key: 'corrigendum_no', label: 'Corrigendum No.', type: 'text', required: true },
+        { key: 'against_ref_no', label: 'Against Ref No.', type: 'text' },
+        { key: 'ref_title', label: 'Ref Title', type: 'text' },
+        { key: 'issue_date', label: 'Corrigendum Issue Date', type: 'date' },
+      ],
+      tableConfig: {
+        title: 'Corrigendum Details',
+        columns: [
+          { key: 'sr_no', label: 'SR. NO.', type: 'number', width: '80px' },
+          { key: 'as_per_tender_doc', label: 'AS PER TENDER DOCUMENT (ORIGINAL)', type: 'textarea' },
+          { key: 'as_per_corrigendum', label: 'AS PER CORRIGENDUM (AMENDED / NEW UPDATES)', type: 'textarea' },
+        ],
+      },
+      uploads: [],
+    };
+
+    function setupCorrigendumComp() {
+      const comp = Object.create(StepFormDialog.prototype);
+      const fg = new FormGroup({
+        corrigendum_no: new FormControl('CORR-2026-001'),
+        against_ref_no: new FormControl('LTE-TRANS-2026'),
+        ref_title: new FormControl('Substation Package'),
+        issue_date: new FormControl(new Date('2026-08-01')),
+      });
+
+      const tableArray = new FormArray<FormGroup>([]);
+      comp.resolvedDef = () => corrigendumDef;
+      comp.formGroup = () => fg;
+      comp.tableFormArray = signal<FormArray<FormGroup>>(tableArray);
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.messageService = { add: vi.fn() };
+      comp.linkedTenderStep = signal<ProjectStep | null>(null);
+      comp.tableVersion = signal<number>(0);
+      comp.formVersion = signal<number>(0);
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.corrigendumQuantityItems = signal<CorrigendumQuantityItem[]>([]);
+      comp.effectiveProjectTitle = () => 'Substation Package';
+      comp.isCorrigendum = () => true;
+      comp.corrigendumTotalAmendedCount = () => comp.computeCorrigendumTotalAmendedCount();
+
+      return { comp, fg, tableArray };
+    }
+
+    it('should parse and populate CorrigendumQuantityItem array from preceding tender step items', () => {
+      const { comp, tableArray } = setupCorrigendumComp();
+
+      const tenderStep: ProjectStep = {
+        id: 77,
+        project_id: 10,
+        step_number: 1,
+        step_name: 'Limited Tender Enquiry (LTE)',
+        form_code: 'FORM_04_LTE',
+        status: 'completed',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        data: {
+          tender_title: 'Substation Transformer Package',
+          tender_enquiry_no: 'LTE-TRANS-2026',
+          items: [
+            { description: '400kV Power Transformer', quantity: 2, unit: 'Nos.' },
+            { description: 'Surge Arrester Set', quantity: 6, unit: 'Sets' },
+          ],
+        },
+      };
+
+      comp['applyPreviousStepToCorrigendum'](tenderStep, false);
+
+      const items = comp.corrigendumQuantityItems();
+      expect(items.length).toBe(2);
+      expect(items[0].original_description).toBe('400kV Power Transformer');
+      expect(items[0].original_quantity).toBe(2);
+      expect(items[0].original_unit).toBe('Nos.');
+      expect(items[0].corrigendum_description).toBe('400kV Power Transformer');
+      expect(items[0].corrigendum_quantity).toBe(2);
+      expect(items[0].is_new).toBe(false);
+
+      expect(items[1].original_description).toBe('Surge Arrester Set');
+      expect(items[1].original_quantity).toBe(6);
+
+      // Verify row 3 was formatted with line items
+      const row3 = comp.tableFormArray().at(2);
+      expect(row3.get('as_per_tender_doc')?.value).toContain('400kV Power Transformer - Qty: 2 Nos.');
+      expect(row3.get('as_per_tender_doc')?.value).toContain('Surge Arrester Set - Qty: 6 Sets');
+    });
+
+    it('should update particular item quantity or description and reflect modified state in row 3', () => {
+      const { comp } = setupCorrigendumComp();
+
+      const tenderStep: ProjectStep = {
+        id: 77,
+        project_id: 10,
+        step_number: 1,
+        step_name: 'Techno Commercial Tender',
+        form_code: 'FORM_30_TECHNO_COMMERCIAL_TENDER',
+        status: 'completed',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        data: {
+          items: [
+            { description: 'PLC Control Panel', quantity: 1, unit: 'EA' },
+            { description: 'Signal Cable 500m', quantity: 10, unit: 'Rolls' },
+          ],
+        },
+      };
+
+      comp['applyPreviousStepToCorrigendum'](tenderStep, false);
+
+      // Initially unchanged
+      expect(comp.isCorrigendumItemModified(comp.corrigendumQuantityItems()[0])).toBe(false);
+
+      // Update quantity of item 0: from 1 to 3
+      comp.updateCorrigendumItem(0, { corrigendum_quantity: 3 });
+
+      const updatedItem0 = comp.corrigendumQuantityItems()[0];
+      expect(comp.isCorrigendumItemModified(updatedItem0)).toBe(true);
+      expect(comp.getCorrigendumItemChangeLabel(updatedItem0)).toBe('Qty: 1 → 3');
+
+      // Row 3 should show modified indicator and amended quantity
+      const row3 = comp.tableFormArray().at(2);
+      expect(row3.get('as_per_corrigendum')?.value).toContain('PLC Control Panel - Qty: 3 EA [MODIFIED]');
+
+      // Update description of item 1
+      comp.updateCorrigendumItem(1, { corrigendum_description: 'Shielded Signal Cable 1000m' });
+      const updatedItem1 = comp.corrigendumQuantityItems()[1];
+      expect(comp.isCorrigendumItemModified(updatedItem1)).toBe(true);
+      expect(comp.getCorrigendumItemChangeLabel(updatedItem1)).toBe('Description Changed');
+    });
+
+    it('should support adding a new line item, updating it, and removing it', () => {
+      const { comp } = setupCorrigendumComp();
+
+      comp.corrigendumQuantityItems.set([
+        {
+          id: 'item-1',
+          sr_no: 1,
+          original_description: 'Turbine Valve',
+          original_quantity: 4,
+          original_unit: 'Nos',
+          corrigendum_description: 'Turbine Valve',
+          corrigendum_quantity: 4,
+          corrigendum_unit: 'Nos',
+          is_new: false,
+        },
+      ]);
+      comp.ensureCorrigendumDefaultRows();
+      comp.syncCorrigendumQuantityToTableFormArray();
+
+      expect(comp.corrigendumQuantityItems().length).toBe(1);
+
+      // Add new item
+      comp.addCorrigendumItem();
+      expect(comp.corrigendumQuantityItems().length).toBe(2);
+      const newItem = comp.corrigendumQuantityItems()[1];
+      expect(newItem.is_new).toBe(true);
+      expect(newItem.sr_no).toBe(2);
+      expect(comp.getCorrigendumItemChangeLabel(newItem)).toBe('New Item');
+
+      // Update new item
+      comp.updateCorrigendumItem(1, {
+        corrigendum_description: 'Additional Bypass Gasket Set',
+        corrigendum_quantity: 8,
+        corrigendum_unit: 'Sets',
+      });
+      expect(comp.corrigendumQuantityItems()[1].corrigendum_description).toBe('Additional Bypass Gasket Set');
+      expect(comp.tableFormArray().at(2).get('as_per_corrigendum')?.value).toContain('Additional Bypass Gasket Set - Qty: 8 Sets');
+
+      // Remove the original item at index 0
+      comp.removeCorrigendumItem(0);
+      expect(comp.corrigendumQuantityItems().length).toBe(1);
+      expect(comp.corrigendumQuantityItems()[0].sr_no).toBe(1);
+      expect(comp.corrigendumQuantityItems()[0].corrigendum_description).toBe('Additional Bypass Gasket Set');
+    });
+
+    it('should reset an individual modified item back to original and reset all items', () => {
+      const { comp } = setupCorrigendumComp();
+
+      comp.corrigendumQuantityItems.set([
+        {
+          id: 'item-1',
+          sr_no: 1,
+          original_description: 'Inverter 50kW',
+          original_quantity: 5,
+          original_unit: 'Nos',
+          corrigendum_description: 'Inverter 50kW',
+          corrigendum_quantity: 5,
+          corrigendum_unit: 'Nos',
+          is_new: false,
+        },
+      ]);
+
+      // Modify item 0
+      comp.updateCorrigendumItem(0, { corrigendum_quantity: 10, corrigendum_description: 'Inverter 100kW' });
+      expect(comp.isCorrigendumItemModified(comp.corrigendumQuantityItems()[0])).toBe(true);
+
+      // Reset single item
+      comp.resetCorrigendumItem(0);
+      expect(comp.corrigendumQuantityItems()[0].corrigendum_quantity).toBe(5);
+      expect(comp.corrigendumQuantityItems()[0].corrigendum_description).toBe('Inverter 50kW');
+      expect(comp.isCorrigendumItemModified(comp.corrigendumQuantityItems()[0])).toBe(false);
+
+      // Now add a new item and modify item 0 again
+      comp.addCorrigendumItem();
+      comp.updateCorrigendumItem(0, { corrigendum_quantity: 20 });
+      expect(comp.corrigendumQuantityItems().length).toBe(2);
+
+      // Reset all items
+      comp.resetAllCorrigendumItems();
+      expect(comp.corrigendumQuantityItems().length).toBe(1); // new item dropped
+      expect(comp.corrigendumQuantityItems()[0].corrigendum_quantity).toBe(5);
+    });
+
+    it('should detect row modification status and copy original to corrigendum for standard rows', () => {
+      const { comp } = setupCorrigendumComp();
+
+      const row = new FormGroup({
+        sr_no: new FormControl(1),
+        as_per_tender_doc: new FormControl('CLOSING DATE & TIME: 20-08-2026 15:00'),
+        as_per_corrigendum: new FormControl('CLOSING DATE & TIME: 25-08-2026 15:00'),
+      });
+      const tableArr = new FormArray<FormGroup>([row]);
+      comp.tableFormArray.set(tableArr);
+
+      // Values differ -> row 0 is modified
+      expect(comp.isCorrigendumRowModified(0)).toBe(true);
+
+      // Copy original to corrigendum
+      comp.copyOriginalToCorrigendum(0);
+      expect(row.get('as_per_corrigendum')?.value).toBe('CLOSING DATE & TIME: 20-08-2026 15:00');
+
+      // Now values match -> row 0 is not modified
+      expect(comp.isCorrigendumRowModified(0)).toBe(false);
+    });
+
+    it('should persist corrigendum_quantity_items in combined payload during saveStep', () => {
+      const { comp, fg, tableArray } = setupCorrigendumComp();
+
+      const mockFormApiService = {
+        createEntry: vi.fn().mockReturnValue(of({ id: 501, step_name: 'Corrigendum' })),
+      };
+
+      comp.formApiService = mockFormApiService;
+      comp.projectId = () => 10;
+      comp.step = () => null;
+      comp.saving = signal<boolean>(false);
+      comp.uploadedFiles = signal<any[]>([]);
+      comp.stepRemarks = signal<any[]>([]);
+      comp.stepSaved = { emit: vi.fn() };
+      comp.close = vi.fn();
+
+      comp.corrigendumQuantityItems.set([
+        {
+          id: 'item-1',
+          sr_no: 1,
+          original_description: 'Step-up Transformer',
+          original_quantity: 2,
+          original_unit: 'Nos',
+          corrigendum_description: 'Step-up Transformer Heavy Duty',
+          corrigendum_quantity: 4,
+          corrigendum_unit: 'Nos',
+          is_new: false,
+        },
+      ]);
+      comp.ensureCorrigendumDefaultRows();
+      comp.syncCorrigendumQuantityToTableFormArray();
+
+      comp.saveStep();
+
+      expect(mockFormApiService.createEntry).toHaveBeenCalled();
+      const payload = mockFormApiService.createEntry.mock.calls[0][2];
+      expect(payload.corrigendum_quantity_items).toBeDefined();
+      expect(payload.corrigendum_quantity_items.length).toBe(1);
+      expect(payload.corrigendum_quantity_items[0].corrigendum_description).toBe('Step-up Transformer Heavy Duty');
+      expect(payload.corrigendum_quantity_items[0].corrigendum_quantity).toBe(4);
+
+      // Row 3 in items should have the synchronized text
+      const row3Item = payload.items.find((r: any) => Number(r.sr_no) === 3);
+      expect(row3Item.as_per_corrigendum).toContain('Step-up Transformer Heavy Duty - Qty: 4 Nos [MODIFIED]');
+    });
+
+    it('should return accurate parameter metadata from getCorrigendumParameterMeta', () => {
+      const { comp } = setupCorrigendumComp();
+      expect(comp.getCorrigendumParameterMeta(0).title).toBe('Closing Date & Time');
+      expect(comp.getCorrigendumParameterMeta(1).title).toBe('Opening Date & Time');
+      expect(comp.getCorrigendumParameterMeta(2).title).toBe('Quantity / Material Items');
+      expect(comp.getCorrigendumParameterMeta(3).title).toBe('Payment Terms');
+      expect(comp.getCorrigendumParameterMeta(4).title).toBe('Earnest Money Deposit (EMD)');
+      expect(comp.getCorrigendumParameterMeta(5).title).toBe('Delivery Schedule');
+      expect(comp.getCorrigendumParameterMeta(6).title).toBe('Tender Fee');
+      expect(comp.getCorrigendumParameterMeta(7).title).toBe('Technical Specification');
+    });
+
+    it('should compute corrigendumTotalAmendedCount accurately', () => {
+      const { comp, tableArray } = setupCorrigendumComp();
+      comp.ensureCorrigendumDefaultRows();
+      expect(comp.corrigendumTotalAmendedCount()).toBe(0);
+
+      // Modify Row 1 (Closing Date)
+      comp.tableFormArray().at(0).get('as_per_corrigendum')?.setValue('CLOSING DATE & TIME: 30-11-2026 17:00');
+      comp.onCorrigendumRowChange(0);
+      expect(comp.corrigendumTotalAmendedCount()).toBe(1);
+
+      // Modify Row 3 items
+      comp.corrigendumQuantityItems.set([
+        {
+          original_description: 'Item A',
+          original_quantity: 10,
+          original_unit: 'Nos',
+          corrigendum_description: 'Item A',
+          corrigendum_quantity: 20,
+          corrigendum_unit: 'Nos',
+        },
+      ]);
+      comp.syncCorrigendumQuantityToTableFormArray();
+      expect(comp.corrigendumTotalAmendedCount()).toBe(2);
     });
   });
 });
