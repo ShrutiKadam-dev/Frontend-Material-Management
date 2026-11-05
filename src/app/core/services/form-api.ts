@@ -159,8 +159,26 @@ export function normalizeBackendEntityToStep(
 
   // Bridge FORM_03_CORRIGENDUM title and number fallbacks
   if (formDef.formCode === 'FORM_03_CORRIGENDUM') {
-    const t = item['ref_title'] || item['tender_title'] || item['title'] || '';
-    const n = item['against_ref_no'] || item['against_tender_no'] || '';
+    const t =
+      item['ref_title'] ||
+      item['tender_title'] ||
+      item['pqb_title'] ||
+      item['eoi_title'] ||
+      item['icb_title'] ||
+      item['title'] ||
+      '';
+    const n =
+      item['against_ref_no'] ||
+      item['against_tender_no'] ||
+      item['tender_enquiry_no'] ||
+      item['tender_no'] ||
+      item['pqb_no'] ||
+      item['eoi_no'] ||
+      item['ste_no'] ||
+      item['lte_no'] ||
+      item['icb_no'] ||
+      item['pac_no'] ||
+      '';
     if (t && !combinedData['ref_title']) {
       combinedData['ref_title'] = t;
     }
@@ -169,10 +187,46 @@ export function normalizeBackendEntityToStep(
     }
   }
 
+  // Bridge FORM_29_BID_DOC_TECHNO_COMMERCIAL title and number fallbacks
+  if (formDef.formCode === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL') {
+    const t = item['tender_title'] || item['title'] || '';
+    const n = item['tender_no'] || item['number'] || '';
+    if (t && !combinedData['tender_title']) {
+      combinedData['tender_title'] = t;
+    }
+    if (n && !combinedData['tender_no']) {
+      combinedData['tender_no'] = n;
+    }
+  }
+
+  // Bridge FORM_31_BID_DOC_LTE title and number fallbacks
+  if (formDef.formCode === 'FORM_31_BID_DOC_LTE') {
+    const t = item['tender_title'] || item['title'] || '';
+    const n = item['tender_no'] || item['lte_no'] || item['number'] || '';
+    if (t && !combinedData['tender_title']) {
+      combinedData['tender_title'] = t;
+    }
+    if (n && !combinedData['tender_no']) {
+      combinedData['tender_no'] = n;
+    }
+  }
+
   // Bridge FORM_34_BID_DOC_STE title and number fallbacks
   if (formDef.formCode === 'FORM_34_BID_DOC_STE') {
     const t = item['tender_title'] || item['title'] || '';
     const n = item['tender_no'] || item['ste_no'] || item['number'] || '';
+    if (t && !combinedData['tender_title']) {
+      combinedData['tender_title'] = t;
+    }
+    if (n && !combinedData['tender_no']) {
+      combinedData['tender_no'] = n;
+    }
+  }
+
+  // Bridge FORM_36_BID_DOC_ICB title and number fallbacks
+  if (formDef.formCode === 'FORM_36_BID_DOC_ICB') {
+    const t = item['tender_title'] || item['title'] || '';
+    const n = item['tender_no'] || item['number'] || '';
     if (t && !combinedData['tender_title']) {
       combinedData['tender_title'] = t;
     }
@@ -302,9 +356,39 @@ export class FormApiService {
     return this.http.get<Record<string, unknown> | { data: Record<string, unknown> }>(endpointUrl).pipe(
       map((res) => {
         if (!res || typeof res !== 'object') return null;
-        const item = ('data' in res && res['data'] && typeof res['data'] === 'object'
-          ? res['data']
-          : res) as Record<string, unknown>;
+
+        if (Array.isArray(res)) {
+          if (res.length === 0) return null;
+          return normalizeBackendEntityToStep(res[0] as Record<string, unknown>, formDef, projectId);
+        }
+
+        let item: Record<string, unknown> | null = null;
+        if ('data' in res) {
+          const rawData = res['data'];
+          if (!rawData) return null;
+          if (Array.isArray(rawData)) {
+            if (rawData.length === 0) return null;
+            item = rawData[0] as Record<string, unknown>;
+          } else if (typeof rawData === 'object') {
+            item = rawData as Record<string, unknown>;
+          }
+        } else {
+          item = res as Record<string, unknown>;
+        }
+
+        if (!item || typeof item !== 'object') return null;
+
+        // Check if item contains actual data rather than an empty object or status envelope
+        const substantiveKeys = Object.keys(item).filter(
+          (k) => k !== 'message' && k !== 'success' && k !== 'status' && k !== 'count' && k !== 'data',
+        );
+        if (substantiveKeys.length === 0) return null;
+
+        const hasSubstance =
+          Boolean(item['id']) ||
+          substantiveKeys.some((k) => item[k] !== null && item[k] !== undefined && item[k] !== '');
+        if (!hasSubstance) return null;
+
         return normalizeBackendEntityToStep(item, formDef, projectId);
       }),
       catchError(() => of(null)),

@@ -152,6 +152,36 @@ describe('FormApiService', () => {
     expect(latest?.form_code).toBe('FORM_09_RFQ');
   });
 
+  it('getLatestEntry should return null when /latest returns empty or zero data envelope', async () => {
+    const mockHttp = {
+      get: vi.fn().mockReturnValue(of({ data: null })),
+    };
+
+    const service = Object.create(FormApiService.prototype);
+    service.http = mockHttp;
+    service.apiBaseUrl = 'http://localhost:5000';
+
+    const latest = await new Promise<ProjectStep | null>((resolve) => {
+      service.getLatestEntry(sampleDef, 7).subscribe(resolve);
+    });
+
+    expect(latest).toBeNull();
+
+    // Also test empty array envelope { data: [] }
+    mockHttp.get.mockReturnValue(of({ data: [] }));
+    const latestArray = await new Promise<ProjectStep | null>((resolve) => {
+      service.getLatestEntry(sampleDef, 7).subscribe(resolve);
+    });
+    expect(latestArray).toBeNull();
+
+    // Also test raw empty array []
+    mockHttp.get.mockReturnValue(of([]));
+    const latestRawEmpty = await new Promise<ProjectStep | null>((resolve) => {
+      service.getLatestEntry(sampleDef, 7).subscribe(resolve);
+    });
+    expect(latestRawEmpty).toBeNull();
+  });
+
   it('getLatestEntry should return null when /latest fails without calling any fallback endpoint', async () => {
     const mockHttp = {
       get: vi.fn().mockReturnValue(throwError(() => new Error('Not found'))),

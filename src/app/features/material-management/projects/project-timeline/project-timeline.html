@@ -672,6 +672,7 @@
   [projectTitle]="project()?.project_title || ''"
   [customerName]="customer()?.name || project()?.customer_name || ''"
   [supplierName]="supplier()?.name || project()?.supplier_name || ''"
+  [existingSteps]="steps()"
   (stepSaved)="onStepSaved($event)"
   (stepDeleted)="onStepDeleted($event)">
 </app-step-form-dialog>

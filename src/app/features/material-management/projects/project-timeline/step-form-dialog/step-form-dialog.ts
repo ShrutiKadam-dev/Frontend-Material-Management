@@ -10,6 +10,7 @@ import {
   model,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import {
   FormArray,
@@ -29,7 +30,7 @@ import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 
-import { Observable, catchError, map, of, Subscription } from 'rxjs';
+import { Observable, catchError, finalize, forkJoin, map, of, Subscription } from 'rxjs';
 
 import { ProjectStep, ProjectStepRemark } from '../../../../../core/models/project-step.model';
 import { FormApiService } from '../../../../../core/services/form-api';
@@ -114,7 +115,6 @@ export class StepFormDialog {
   readonly fetchingSupplierQuotation = signal<boolean>(false);
   readonly fetchingNationalPqb = signal<boolean>(false);
   readonly fetchingPreviousStep = signal<boolean>(false);
-  readonly fetchingSte = signal<boolean>(false);
 
   // ── Inputs & Two-Way Model ──────────────────────────────────────────
   readonly visible = model<boolean>(false);
@@ -125,6 +125,9 @@ export class StepFormDialog {
   readonly projectTitle = input<string>('');
   readonly customerName = input<string>('');
   readonly supplierName = input<string>('');
+  readonly existingSteps = input<ProjectStep[] | null>(null);
+
+  private isResolvingCorrigendum = false;
 
   // ── Fallback Metadata State (when inputs are not provided) ──────────
   readonly fallbackProject = signal<Project | null>(null);
@@ -203,7 +206,6 @@ export class StepFormDialog {
 
   readonly isCostSheet = computed(() => this.resolvedDef()?.formCode === 'FORM_10_COST_SHEET');
   readonly isPqbBidDocument = computed(() => this.resolvedDef()?.formCode === 'FORM_02_PQB_BID_DOCUMENT');
-  readonly isSteBidDocument = computed(() => this.resolvedDef()?.formCode === 'FORM_34_BID_DOC_STE');
   readonly isCorrigendum = computed(() => this.resolvedDef()?.formCode === 'FORM_03_CORRIGENDUM');
   readonly linkedTenderStep = signal<ProjectStep | null>(null);
   readonly corrigendumLinkedInfo = computed(() => {
@@ -216,8 +218,32 @@ export class StepFormDialog {
 
     if (step) {
       const stepData = (step.data as Record<string, unknown>) || {};
-      const fallbackRef = String(stepData['tender_enquiry_no'] || stepData['tender_no'] || stepData['pqb_no'] || '').trim();
-      const fallbackTitle = String(stepData['tender_title'] || stepData['pqb_title'] || '').trim();
+      const fallbackRef = String(
+        stepData['tender_enquiry_no'] ||
+        stepData['tender_no'] ||
+        stepData['icb_no'] ||
+        stepData['ste_no'] ||
+        stepData['lte_no'] ||
+        stepData['pac_no'] ||
+        stepData['eoi_no'] ||
+        stepData['pqb_no'] ||
+        stepData['against_ref_no'] ||
+        stepData['against_tender_no'] ||
+        '',
+      ).trim();
+      const fallbackTitle = String(
+        stepData['tender_title'] ||
+        stepData['icb_title'] ||
+        stepData['techno_title'] ||
+        stepData['pac_title'] ||
+        stepData['lte_title'] ||
+        stepData['ste_title'] ||
+        stepData['pqb_title'] ||
+        stepData['eoi_title'] ||
+        stepData['ref_title'] ||
+        stepData['title'] ||
+        '',
+      ).trim();
       const defName = step.form_code ? getFormDefinition(step.form_code)?.name : null;
       const stepName = (step.step_name && !step.step_name.toLowerCase().includes('previous tender') && !step.step_name.toLowerCase().includes('preceding tender'))
         ? step.step_name
@@ -232,12 +258,30 @@ export class StepFormDialog {
 
     if (againstRef || refTitle) {
       let probableName = 'National Pre-Qualification Bid (PQB)';
-      const upperRef = againstRef.toUpperCase();
-      if (upperRef.includes('LTE')) {
+      const upperRef = (againstRef + ' ' + refTitle).toUpperCase();
+      if ((upperRef.includes('BID') || upperRef.includes('DOC')) && upperRef.includes('ICB')) {
+        probableName = 'Bid Document - International Competitive Bidding (ICB)';
+      } else if ((upperRef.includes('BID') || upperRef.includes('DOC')) && (upperRef.includes('TECHNO') || upperRef.includes('COMMERCIAL'))) {
+        probableName = 'Bid Document - Techno Commercial Tender';
+      } else if ((upperRef.includes('BID') || upperRef.includes('DOC')) && upperRef.includes('STE')) {
+        probableName = 'Bid Document - Single Tender Enquiry (STE)';
+      } else if ((upperRef.includes('BID') || upperRef.includes('DOC')) && upperRef.includes('LTE')) {
+        probableName = 'Bid Document - Limited Tender Enquiry (LTE)';
+      } else if ((upperRef.includes('BID') || upperRef.includes('DOC')) && upperRef.includes('PQB')) {
+        probableName = 'Bid Document for PQB';
+      } else if (upperRef.includes('ICB') || upperRef.includes('INTERNATIONAL')) {
+        probableName = 'International Competitive Bidding (ICB)';
+      } else if (upperRef.includes('TECHNO') || upperRef.includes('COMMERCIAL')) {
+        probableName = 'Techno Commercial Tender';
+      } else if (upperRef.includes('PAC')) {
+        probableName = 'PAC Tender';
+      } else if (upperRef.includes('EOI') || upperRef.includes('EXPRESSION')) {
+        probableName = 'Expression of Interest (EOI)';
+      } else if (upperRef.includes('LTE') || upperRef.includes('LIMITED')) {
         probableName = 'Limited Tender Enquiry (LTE)';
-      } else if (upperRef.includes('STE')) {
+      } else if (upperRef.includes('STE') || upperRef.includes('SINGLE')) {
         probableName = 'Single Tender Enquiry (STE)';
-      } else if (upperRef.includes('PQB')) {
+      } else if (upperRef.includes('PQB') || upperRef.includes('PRE-QUALIFICATION')) {
         probableName = 'National Pre-Qualification Bid (PQB)';
       }
 
@@ -252,18 +296,45 @@ export class StepFormDialog {
     return null;
   });
 
-  readonly corrigendumSourceStepName = computed(() => {
-    const info = this.corrigendumLinkedInfo();
+  getCorrigendumSourceStepName(info: { stepName?: string } | null): string {
     if (info?.stepName && !info.stepName.toLowerCase().includes('previous tender') && !info.stepName.toLowerCase().includes('preceding tender')) {
       return info.stepName;
     }
-    return 'National Pre-Qualification Bid (PQB)';
-  });
+    return 'Preceding Tender Step (ICB / Techno Commercial / PAC / EOI / PQB / LTE / STE)';
+  }
 
-  readonly corrigendumFetchButtonLabel = computed(() => {
-    const info = this.corrigendumLinkedInfo();
+  readonly corrigendumSourceStepName = computed(() => this.getCorrigendumSourceStepName(this.corrigendumLinkedInfo()));
+
+  getCorrigendumFetchButtonLabel(info: { formCode?: string; stepName?: string } | null): string {
     const fcode = info?.formCode || '';
     const sname = (info?.stepName || '').toLowerCase();
+    if (fcode === 'FORM_36_BID_DOC_ICB' || (sname.includes('bid doc') && (sname.includes('icb') || sname.includes('international')))) {
+      return 'Fetch from Bid Doc ICB';
+    }
+    if (fcode === 'FORM_35_ICB' || sname.includes('international competitive') || sname.includes('icb')) {
+      return 'Fetch from ICB';
+    }
+    if (fcode === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL' || (sname.includes('bid doc') && (sname.includes('techno') || sname.includes('commercial')))) {
+      return 'Fetch from Bid Doc Techno Commercial';
+    }
+    if (fcode === 'FORM_30_TECHNO_COMMERCIAL_TENDER' || sname.includes('techno commercial')) {
+      return 'Fetch from Techno Commercial Tender';
+    }
+    if (fcode === 'FORM_13_PAC_TENDER' || sname.includes('pac tender') || sname.includes('pac')) {
+      return 'Fetch from PAC Tender';
+    }
+    if (fcode === 'FORM_07_EOI' || sname.includes('expression of interest') || sname.includes('eoi')) {
+      return 'Fetch from EOI';
+    }
+    if (fcode === 'FORM_34_BID_DOC_STE' || (sname.includes('bid doc') && (sname.includes('ste') || sname.includes('single tender')))) {
+      return 'Fetch from Bid Doc STE';
+    }
+    if (fcode === 'FORM_31_BID_DOC_LTE' || (sname.includes('bid doc') && (sname.includes('lte') || sname.includes('limited tender')))) {
+      return 'Fetch from Bid Doc LTE';
+    }
+    if (fcode === 'FORM_02_PQB_BID_DOCUMENT' || (sname.includes('bid doc') && sname.includes('pqb'))) {
+      return 'Fetch from Bid Doc PQB';
+    }
     if (fcode === 'FORM_04_LTE' || sname.includes('limited tender') || sname.includes('lte')) {
       return 'Fetch from LTE';
     }
@@ -271,7 +342,9 @@ export class StepFormDialog {
       return 'Fetch from STE';
     }
     return 'Fetch from National PQB';
-  });
+  }
+
+  readonly corrigendumFetchButtonLabel = computed(() => this.getCorrigendumFetchButtonLabel(this.corrigendumLinkedInfo()));
 
   readonly tableTotalSum = computed(() => {
     this.tableVersion();
@@ -600,247 +673,473 @@ export class StepFormDialog {
     });
   }
 
-  loadFromSingleTenderEnquiry(showNotification = true): void {
-    const pId = this.projectId();
-    if (!pId || !this.projectStepService) return;
+  private isTenderOrPqbStep(s: ProjectStep): boolean {
+    if (!s) return false;
+    const fcode = (s.form_code || '').toUpperCase().trim();
+    const name = (s.step_name || '').toLowerCase().trim();
 
-    this.fetchingSte.set(true);
-    this.projectStepService.getSteps(pId).subscribe({
-      next: (allSteps) => {
-        this.fetchingSte.set(false);
-        const steStep = (allSteps || []).find((s) => {
-          const fcode = (s.form_code || '').toUpperCase();
-          const name = (s.step_name || '').toLowerCase();
-          return (
-            fcode === 'FORM_33_STE' ||
-            fcode === 'FORM_STE' ||
-            name.includes('single tender enquiry') ||
-            name.startsWith('ste')
-          );
-        });
+    const resolvedDef = s.form_code
+      ? getFormDefinition(s.form_code)
+      : s.step_name
+        ? getFormDefinition(s.step_name)
+        : s.step_number
+          ? getFormDefinition(s.step_number)
+          : undefined;
 
-        if (!steStep) {
-          if (showNotification) {
-            this.messageService?.add({
-              severity: 'warn',
-              summary: 'STE Step Not Found',
-              detail: 'No Single Tender Enquiry (STE) step found for this project to link from.',
-            });
+    const canonicalCode = (resolvedDef?.formCode || fcode).toUpperCase();
+
+    // Whitelist allowed Bid Documents for Corrigendum (ICB, Techno Commercial, LTE, STE)
+    const isAllowedBidDoc =
+      canonicalCode === 'FORM_36_BID_DOC_ICB' ||
+      canonicalCode === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL' ||
+      canonicalCode === 'FORM_31_BID_DOC_LTE' ||
+      canonicalCode === 'FORM_34_BID_DOC_STE' ||
+      fcode === 'FORM_36_BID_DOC_ICB' ||
+      fcode === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL' ||
+      fcode === 'FORM_31_BID_DOC_LTE' ||
+      fcode === 'FORM_34_BID_DOC_STE' ||
+      (name.includes('bid doc') && (
+        name.includes('icb') ||
+        name.includes('international') ||
+        name.includes('techno') ||
+        name.includes('commercial') ||
+        name.includes('lte') ||
+        name.includes('limited tender') ||
+        name.includes('ste') ||
+        name.includes('single tender')
+      ));
+
+    // Strictly exclude Corrigendum, Bid Submission, and any other non-whitelisted Bid Documents
+    if (
+      fcode === 'FORM_03_CORRIGENDUM' ||
+      canonicalCode === 'FORM_03_CORRIGENDUM' ||
+      name.includes('corrigendum') ||
+      name.includes('bid submission') ||
+      (!isAllowedBidDoc && (fcode.includes('BID_DOC') || canonicalCode.includes('BID_DOC') || name.includes('bid doc')))
+    ) {
+      return false;
+    }
+
+    const allowedCodes = [
+      'FORM_35_ICB',
+      'FORM_36_BID_DOC_ICB',
+      'FORM_30_TECHNO_COMMERCIAL_TENDER',
+      'FORM_29_BID_DOC_TECHNO_COMMERCIAL',
+      'FORM_13_PAC_TENDER',
+      'FORM_07_EOI',
+      'FORM_01_PQB',
+      'FORM_04_LTE',
+      'FORM_31_BID_DOC_LTE',
+      'FORM_33_STE',
+      'FORM_30_STE',
+      'FORM_STE',
+      'FORM_33_SINGLE_TENDER_ENQUIRY',
+      'FORM_34_BID_DOC_STE',
+    ];
+
+    if (allowedCodes.includes(canonicalCode) || allowedCodes.includes(fcode)) {
+      return true;
+    }
+
+    // Check legacy step number 6 which is PAC Tender
+    if (s.step_number === 6 || (s.step_order && s.step_order === 6)) {
+      return true;
+    }
+
+    // Check category
+    if (resolvedDef?.category === 'Pre-Bidding & Tenders' && (!canonicalCode.includes('BID_DOC') || isAllowedBidDoc)) {
+      return true;
+    }
+
+    // Name matching for any of the 7 tender/enquiry steps
+    return (
+      isAllowedBidDoc ||
+      name.includes('international competitive bidding') ||
+      name.includes('icb') ||
+      name.includes('techno commercial') ||
+      name.includes('pac tender') ||
+      name.includes('pac') ||
+      name.includes('expression of interest') ||
+      name.includes('eoi') ||
+      name.includes('national pre') ||
+      name.includes('pre-qualification') ||
+      name.includes('pre qualification') ||
+      name.includes('pqb') ||
+      name.includes('limited tender') ||
+      name.startsWith('lte') ||
+      name.includes('single tender') ||
+      name.startsWith('ste') ||
+      name.includes('customer tender') ||
+      name.includes('tender enquiry') ||
+      name.includes('tender')
+    );
+  }
+
+  findPrecedingTenderStep(
+    allSteps: ProjectStep[],
+    currentStep: ProjectStep | null,
+  ): ProjectStep | undefined {
+    const getStepNum = (s: ProjectStep | null | undefined): number => {
+      if (!s) return 0;
+      return s.step_number ?? s.step_order ?? 0;
+    };
+
+    const getStepTime = (s: ProjectStep): number => {
+      const dtStr = s.updated_at || s.created_at || s.completed_at;
+      if (dtStr) {
+        const t = new Date(dtStr).getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+      return 0;
+    };
+
+    const candidates = (allSteps || []).filter((s) => {
+      if (currentStep && s.id && currentStep.id && s.id === currentStep.id) {
+        return false;
+      }
+      return this.isTenderOrPqbStep(s);
+    });
+
+    if (candidates.length === 0) return undefined;
+
+    // 1. If currentStep has an against_ref_no saved or in form, try to find an exact matching candidate
+    const currentRef = currentStep
+      ? String(
+          (currentStep.data as Record<string, unknown>)?.[ 'against_ref_no' ] ||
+          (currentStep.data as Record<string, unknown>)?.[ 'against_tender_no' ] ||
+          this.formGroup()?.get('against_ref_no')?.value ||
+          '',
+        ).trim().toLowerCase()
+      : '';
+
+    if (currentRef) {
+      const exactRefMatch = candidates.find((c) => {
+        const cd = (c.data as Record<string, unknown>) || {};
+        const cr = c as unknown as Record<string, unknown>;
+        const candRefs = [
+          cd['tender_enquiry_no'],
+          cd['tender_no'],
+          cd['icb_no'],
+          cd['ste_no'],
+          cd['lte_no'],
+          cd['pac_no'],
+          cd['eoi_no'],
+          cd['pqb_no'],
+          cd['against_ref_no'],
+          cr['tender_enquiry_no'],
+          cr['tender_no'],
+          cr['pqb_no'],
+        ].filter(Boolean).map((r) => String(r).trim().toLowerCase());
+        return candRefs.includes(currentRef);
+      });
+      if (exactRefMatch) {
+        return exactRefMatch;
+      }
+    }
+
+    // 2. Corrigendum comes after the steps in the sequence:
+    // If currentStep has a known step_number/order, prefer candidates that strictly precede it
+    let scopedCandidates = candidates;
+    const currentNum = getStepNum(currentStep);
+    const currentIndex = currentStep ? allSteps.findIndex((s) => s.id && s.id === currentStep.id) : -1;
+
+    if (currentNum > 0) {
+      const prior = candidates.filter((s) => getStepNum(s) > 0 && getStepNum(s) < currentNum);
+      if (prior.length > 0) {
+        scopedCandidates = prior;
+      }
+    } else if (currentIndex > 0) {
+      const prior = candidates.filter((s) => {
+        const idx = allSteps.indexOf(s);
+        return idx >= 0 && idx < currentIndex;
+      });
+      if (prior.length > 0) {
+        scopedCandidates = prior;
+      }
+    }
+
+    const getFormWeight = (s: ProjectStep): number => {
+      const fcode = (s.form_code || '').toUpperCase();
+      const name = (s.step_name || '').toLowerCase();
+      if (fcode === 'FORM_36_BID_DOC_ICB' || (name.includes('bid doc') && (name.includes('icb') || name.includes('international')))) return 55;
+      if (fcode === 'FORM_35_ICB' || name.includes('international competitive') || name.startsWith('icb')) return 50;
+      if (fcode === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL' || (name.includes('bid doc') && (name.includes('techno') || name.includes('commercial')))) return 45;
+      if (fcode === 'FORM_30_TECHNO_COMMERCIAL_TENDER' || name.includes('techno commercial') || name.startsWith('techno')) return 40;
+      if (fcode === 'FORM_34_BID_DOC_STE' || (name.includes('bid doc') && (name.includes('ste') || name.includes('single tender')))) return 35;
+      if (fcode === 'FORM_33_STE' || fcode === 'FORM_30_STE' || fcode === 'FORM_STE' || name.includes('single tender') || name.startsWith('ste')) return 30;
+      if (fcode === 'FORM_31_BID_DOC_LTE' || (name.includes('bid doc') && (name.includes('lte') || name.includes('limited tender')))) return 25;
+      if (fcode === 'FORM_04_LTE' || name.includes('limited tender') || name.startsWith('lte')) return 20;
+      if (fcode === 'FORM_13_PAC_TENDER' || name.includes('pac tender') || name.startsWith('pac')) return 18;
+      if (fcode === 'FORM_07_EOI' || name.includes('expression of interest') || name.startsWith('eoi')) return 15;
+      if (fcode === 'FORM_01_PQB' || name.includes('pre') || name.includes('pqb')) return 10;
+      return 1;
+    };
+
+    const sorted = [...scopedCandidates].sort((a, b) => {
+      // 1. Prefer steps with actual tender data over completely empty shells
+      const hasDataA = this.hasTenderData(a) ? 1 : 0;
+      const hasDataB = this.hasTenderData(b) ? 1 : 0;
+      if (hasDataA !== hasDataB) return hasDataB - hasDataA;
+
+      // 2. Highest step order / number among candidates (closest preceding step)
+      const numDiff = getStepNum(b) - getStepNum(a);
+      if (numDiff !== 0) return numDiff;
+
+      // 3. Newest timestamp wins
+      const timeDiff = getStepTime(b) - getStepTime(a);
+      if (timeDiff !== 0) return timeDiff;
+
+      // 4. Completed steps preferred over pending
+      if (a.status === 'completed' && b.status !== 'completed') return -1;
+      if (b.status === 'completed' && a.status !== 'completed') return 1;
+
+      // 5. Form workflow weight
+      const weightDiff = getFormWeight(b) - getFormWeight(a);
+      if (weightDiff !== 0) return weightDiff;
+
+      return (Number(b.id) || 0) - (Number(a.id) || 0);
+    });
+
+    return sorted[0];
+  }
+
+  loadFromPreviousTenderStep(showNotification = true): void {
+    if (typeof this.fetchingPreviousStep === 'function' && this.fetchingPreviousStep()) return;
+    const pId = typeof this.projectId === 'function' ? this.projectId() : (this.projectId as unknown as number);
+    if (!pId) return;
+
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    const currentStep = typeof this.step === 'function' ? this.step() : null;
+    const candidateInMemory = (inMemory && inMemory.length > 0)
+      ? this.findPrecedingTenderStep(inMemory, currentStep)
+      : undefined;
+
+    if (candidateInMemory) {
+      this.fetchAndApplyTenderStep(pId, candidateInMemory, showNotification);
+      return;
+    }
+
+    // If candidate not in memory, query project steps or fallback directly to backend /latest endpoints
+    this.fetchingPreviousStep?.set?.(true);
+
+    if (this.projectStepService) {
+      this.projectStepService.getSteps(pId).pipe(
+        catchError(() => of([] as ProjectStep[])),
+      ).subscribe({
+        next: (allSteps) => {
+          const candidateFromSteps = this.findPrecedingTenderStep(allSteps || [], currentStep);
+          if (candidateFromSteps) {
+            this.fetchAndApplyTenderStep(pId, candidateFromSteps, showNotification);
+          } else {
+            this.fetchLatestTenderFromBackend(pId, showNotification);
           }
-          return;
-        }
+        },
+        error: () => {
+          this.fetchLatestTenderFromBackend(pId, showNotification);
+        },
+      });
+    } else {
+      this.fetchLatestTenderFromBackend(pId, showNotification);
+    }
+  }
 
-        let stepData: Record<string, unknown> = {};
-        if (typeof steStep.data === 'string') {
-          try {
-            stepData = JSON.parse(steStep.data);
-          } catch {
-            stepData = {};
-          }
-        } else if (steStep.data && typeof steStep.data === 'object') {
-          stepData = { ...(steStep.data as Record<string, unknown>) };
-        }
-        const stepRec = steStep as unknown as Record<string, unknown>;
+  private fetchAndApplyTenderStep(
+    pId: number,
+    targetStep: ProjectStep,
+    showNotification: boolean,
+  ): void {
+    const targetDef = targetStep.form_code
+      ? getFormDefinition(targetStep.form_code)
+      : targetStep.step_name
+        ? getFormDefinition(targetStep.step_name)
+        : undefined;
+    const selectedStep = targetStep;
 
-        const title = String(
-          stepData['tender_title'] || stepData['title'] || stepRec['tender_title'] || '',
-        ).trim();
-        const no = String(
-          stepData['tender_no'] || stepData['ste_no'] || stepRec['tender_no'] || '',
-        ).trim();
+    this.fetchingPreviousStep?.set?.(true);
+    const fetchTarget$: Observable<ProjectStep> = (targetDef?.apiEndpoint && this.formApiService)
+      ? this.formApiService.getLatestEntry(targetDef, pId).pipe(
+          map((latestStep: ProjectStep | null): ProjectStep => {
+            if (latestStep) {
+              return {
+                ...selectedStep,
+                ...latestStep,
+                data: {
+                  ...((selectedStep.data as Record<string, unknown>) || {}),
+                  ...((latestStep.data as Record<string, unknown>) || {}),
+                },
+              };
+            }
+            return selectedStep;
+          }),
+          catchError(() => of(selectedStep)),
+        )
+      : of(selectedStep);
 
-        const rawIssueDate =
-          stepData['tender_issue_date'] || stepData['issue_date'] || stepRec['tender_issue_date'];
-        const validity = String(
-          stepData['tender_validity'] || stepData['validity'] || stepRec['tender_validity'] || '',
-        ).trim();
-
-        const fg = this.formGroup();
-        if (!fg) return;
-
-        const patchPayload: Record<string, unknown> = {};
-        if (title && fg.get('tender_title')) {
-          patchPayload['tender_title'] = title;
-        }
-        if (no && fg.get('tender_no')) {
-          patchPayload['tender_no'] = no;
-        }
-        if (rawIssueDate && fg.get('tender_issue_date') && !fg.get('tender_issue_date')?.value) {
-          patchPayload['tender_issue_date'] = parseLocalDate(rawIssueDate as string | Date);
-        }
-        if (validity && fg.get('bid_validity') && !fg.get('bid_validity')?.value) {
-          patchPayload['bid_validity'] = validity;
-        }
-
-        fg.patchValue(patchPayload);
-        fg.markAsDirty();
-        this.formVersion?.update?.((v) => v + 1);
-        this.cdr?.markForCheck?.();
-
-        if (showNotification) {
-          this.messageService?.add({
-            severity: 'success',
-            summary: 'STE Details Patched',
-            detail: `Patched Tender Title "${title}" and Tender No. "${no}" from Single Tender Enquiry (STE).`,
-          });
+    fetchTarget$.pipe(
+      finalize(() => this.fetchingPreviousStep?.set?.(false)),
+    ).subscribe({
+      next: (detailedStep: ProjectStep) => {
+        const activeStep = detailedStep || selectedStep;
+        if (this.hasTenderData(activeStep)) {
+          this.applyPreviousStepToCorrigendum(activeStep, showNotification);
+        } else {
+          // If in-memory step or its /latest endpoint returned 0 tender data, fall back to probe backend for other tender steps (LTE, PQB, STE)
+          this.fetchLatestTenderFromBackend(pId, showNotification);
         }
       },
       error: () => {
-        this.fetchingSte.set(false);
-        if (showNotification) {
-          this.messageService?.add({
-            severity: 'info',
-            summary: 'STE Unavailable',
-            detail: 'Could not fetch Single Tender Enquiry (STE) for this project.',
-          });
+        if (this.hasTenderData(selectedStep)) {
+          this.applyPreviousStepToCorrigendum(selectedStep, showNotification);
+        } else {
+          this.fetchLatestTenderFromBackend(pId, showNotification);
         }
       },
     });
   }
 
-  loadFromPreviousTenderStep(showNotification = true): void {
-    const pId = this.projectId();
-    if (!pId || !this.projectStepService) return;
+  private hasTenderData(s: ProjectStep | null | undefined): boolean {
+    if (!s) return false;
+    const d = (s.data as Record<string, unknown>) || {};
+    const rec = s as unknown as Record<string, unknown>;
+    return Boolean(
+      d['tender_title'] ||
+      d['pqb_title'] ||
+      d['lte_title'] ||
+      d['ste_title'] ||
+      d['eoi_title'] ||
+      d['icb_title'] ||
+      d['pac_title'] ||
+      d['techno_title'] ||
+      d['ref_title'] ||
+      d['title'] ||
+      d['bid_title'] ||
+      d['tender_enquiry_no'] ||
+      d['tender_no'] ||
+      d['pqb_no'] ||
+      d['eoi_no'] ||
+      d['ste_no'] ||
+      d['lte_no'] ||
+      d['icb_no'] ||
+      d['pac_no'] ||
+      d['against_ref_no'] ||
+      rec['tender_title'] ||
+      rec['tender_enquiry_no'] ||
+      rec['pqb_title'] ||
+      rec['eoi_title'] ||
+      rec['icb_title'] ||
+      rec['pac_title'] ||
+      (Array.isArray(d['items']) && d['items'].length > 0) ||
+      (Array.isArray(d['requirements']) && d['requirements'].length > 0) ||
+      (Array.isArray(d['table_items']) && d['table_items'].length > 0)
+    );
+  }
 
-    this.fetchingPreviousStep.set(true);
-    this.projectStepService.getSteps(pId).subscribe({
-      next: (allSteps) => {
-        const currentStep = this.step();
-        const allowedFormCodes = [
-          'FORM_01_PQB',
-          'FORM_04_LTE',
-          'FORM_33_STE',
-          'FORM_30_STE',
-          'FORM_STE',
-          'FORM_33_SINGLE_TENDER_ENQUIRY',
-        ];
+  private fetchLatestTenderFromBackend(pId: number, showNotification: boolean): void {
+    this.fetchingPreviousStep?.set?.(true);
 
-        const getStepNum = (s: ProjectStep | null | undefined): number => {
-          if (!s) return 0;
-          return s.step_number ?? s.step_order ?? 0;
-        };
+    const icbBidDocDef = getFormDefinition('FORM_36_BID_DOC_ICB');
+    const icbDef = getFormDefinition('FORM_35_ICB');
+    const technoBidDocDef = getFormDefinition('FORM_29_BID_DOC_TECHNO_COMMERCIAL');
+    const technoDef = getFormDefinition('FORM_30_TECHNO_COMMERCIAL_TENDER');
+    const pacDef = getFormDefinition('FORM_13_PAC_TENDER');
+    const eoiDef = getFormDefinition('FORM_07_EOI');
+    const pqbBidDocDef = getFormDefinition('FORM_02_PQB_BID_DOCUMENT');
+    const pqbDef = getFormDefinition('FORM_01_PQB');
+    const lteBidDocDef = getFormDefinition('FORM_31_BID_DOC_LTE');
+    const lteDef = getFormDefinition('FORM_04_LTE');
+    const steBidDocDef = getFormDefinition('FORM_34_BID_DOC_STE');
+    const steDef = getFormDefinition('FORM_33_STE');
+    const corrDef = getFormDefinition('FORM_03_CORRIGENDUM');
 
-        const isCandidate = (s: ProjectStep): boolean => {
-          const currentNum = getStepNum(currentStep);
-          const sNum = getStepNum(s);
-          if (currentStep && (s.id === currentStep.id || (sNum > 0 && currentNum > 0 && sNum === currentNum))) {
-            return false;
-          }
-          const fcode = (s.form_code || '').toUpperCase().trim();
-          const name = (s.step_name || '').toLowerCase().trim();
+    if (!this.formApiService) {
+      this.fetchingPreviousStep?.set?.(false);
+      this.ensureCorrigendumDefaultRows();
+      if (showNotification) {
+        this.messageService?.add({
+          severity: 'info',
+          summary: 'Preceding Tender Step Not Found',
+          detail:
+            'No preceding ICB, Techno Commercial Tender, PAC Tender, EOI, National Pre-Qualification Bid (PQB), LTE, or STE step found. Initialized default comparison rows.',
+        });
+      }
+      return;
+    }
 
-          // Strictly exclude Corrigendum and all Bid Document / Submission forms
-          if (
-            fcode === 'FORM_03_CORRIGENDUM' ||
-            fcode.includes('BID_DOC') ||
-            name.includes('bid doc') ||
-            name.includes('bid submission') ||
-            name.includes('corrigendum')
-          ) {
-            return false;
-          }
+    forkJoin({
+      icbBidDoc: icbBidDocDef ? this.formApiService.getLatestEntry(icbBidDocDef, pId).pipe(catchError(() => of(null))) : of(null),
+      icb: icbDef ? this.formApiService.getLatestEntry(icbDef, pId).pipe(catchError(() => of(null))) : of(null),
+      technoBidDoc: technoBidDocDef ? this.formApiService.getLatestEntry(technoBidDocDef, pId).pipe(catchError(() => of(null))) : of(null),
+      techno: technoDef ? this.formApiService.getLatestEntry(technoDef, pId).pipe(catchError(() => of(null))) : of(null),
+      pac: pacDef ? this.formApiService.getLatestEntry(pacDef, pId).pipe(catchError(() => of(null))) : of(null),
+      eoi: eoiDef ? this.formApiService.getLatestEntry(eoiDef, pId).pipe(catchError(() => of(null))) : of(null),
+      pqbBidDoc: pqbBidDocDef ? this.formApiService.getLatestEntry(pqbBidDocDef, pId).pipe(catchError(() => of(null))) : of(null),
+      pqb: pqbDef ? this.formApiService.getLatestEntry(pqbDef, pId).pipe(catchError(() => of(null))) : of(null),
+      lteBidDoc: lteBidDocDef ? this.formApiService.getLatestEntry(lteBidDocDef, pId).pipe(catchError(() => of(null))) : of(null),
+      lte: lteDef ? this.formApiService.getLatestEntry(lteDef, pId).pipe(catchError(() => of(null))) : of(null),
+      steBidDoc: steBidDocDef ? this.formApiService.getLatestEntry(steBidDocDef, pId).pipe(catchError(() => of(null))) : of(null),
+      ste: steDef ? this.formApiService.getLatestEntry(steDef, pId).pipe(catchError(() => of(null))) : of(null),
+      corr: corrDef ? this.formApiService.getLatestEntry(corrDef, pId).pipe(catchError(() => of(null))) : of(null),
+    }).pipe(
+      finalize(() => this.fetchingPreviousStep?.set?.(false)),
+    ).subscribe({
+      next: (results) => {
+        const candidates = [
+          results.icbBidDoc,
+          results.icb,
+          results.technoBidDoc,
+          results.techno,
+          results.pac,
+          results.eoi,
+          results.steBidDoc,
+          results.lteBidDoc,
+          results.ste,
+          results.lte,
+          results.pqbBidDoc,
+          results.pqb,
+          results.corr,
+        ].filter((s): s is ProjectStep => Boolean(s && this.hasTenderData(s)));
 
-          // Strictly allow only National Pre-Qualification Bid (PQB), Limited Tender Enquiry (LTE), and Single Tender Enquiry (STE)
-          if (allowedFormCodes.includes(fcode)) {
-            return true;
-          }
+        let activeStep: ProjectStep | null = null;
+        if (candidates.length > 0) {
+          const getStepTime = (s: ProjectStep): number => {
+            const dtStr = s.updated_at || s.created_at || s.completed_at;
+            if (dtStr) {
+              const t = new Date(dtStr).getTime();
+              if (!isNaN(t) && t > 0) return t;
+            }
+            return 0;
+          };
 
-          if (
-            name.includes('national pre') ||
-            name.includes('pre-qualification bid') ||
-            name.includes('pre qualification bid')
-          ) {
-            return true;
-          }
-          if (name.includes('limited tender enquiry') || name.startsWith('lte')) {
-            return true;
-          }
-          if (name.includes('single tender enquiry') || name.startsWith('ste')) {
-            return true;
-          }
-
-          return false;
-        };
-
-        const candidates = (allSteps || []).filter(isCandidate);
-
-        // Find candidate strictly before current step if editing, or latest prior step
-        let targetStep: ProjectStep | undefined;
-        const currentNum = getStepNum(currentStep);
-        if (currentNum > 0) {
-          const prior = candidates
-            .filter((s) => getStepNum(s) < currentNum)
-            .sort((a, b) => getStepNum(b) - getStepNum(a));
-          if (prior.length > 0) {
-            targetStep = prior[0];
-          }
-        }
-
-        if (!targetStep && candidates.length > 0) {
-          // Sort by completed first, then highest step order / number
           const sorted = [...candidates].sort((a, b) => {
-            if (a.status === 'completed' && b.status !== 'completed') return -1;
-            if (b.status === 'completed' && a.status !== 'completed') return 1;
-            return getStepNum(b) - getStepNum(a);
+            const timeDiff = getStepTime(b) - getStepTime(a);
+            if (timeDiff !== 0) return timeDiff;
+            return (Number(b.id) || 0) - (Number(a.id) || 0);
           });
-          targetStep = sorted[0];
+          activeStep = sorted[0];
         }
 
-        if (!targetStep) {
-          this.fetchingPreviousStep.set(false);
+        if (activeStep) {
+          this.applyPreviousStepToCorrigendum(activeStep, showNotification);
+        } else {
           this.ensureCorrigendumDefaultRows();
           if (showNotification) {
-            this.messageService.add({
+            this.messageService?.add({
               severity: 'info',
-              summary: 'Pre-Qualification / Tender Step Not Found',
-              detail: 'No preceding National Pre-Qualification Bid (PQB), LTE, or STE step found. Initialized default comparison rows.',
+              summary: 'Preceding Tender Step Not Found',
+              detail:
+                'No preceding ICB, Techno Commercial Tender, PAC Tender, EOI, National Pre-Qualification Bid (PQB), LTE, or STE step found. Initialized default comparison rows.',
             });
           }
-          return;
         }
-
-        // Fetch detailed step entry directly via /latest endpoint (no fallback to list GET)
-        const targetDef = targetStep.form_code ? getFormDefinition(targetStep.form_code) : undefined;
-        const selectedStep = targetStep;
-        const fetchTarget$: Observable<ProjectStep> = (targetDef?.apiEndpoint && pId)
-          ? this.formApiService.getLatestEntry(targetDef, pId).pipe(
-              map((latestStep: ProjectStep | null): ProjectStep => {
-                if (latestStep) {
-                  return {
-                    ...selectedStep,
-                    ...latestStep,
-                    data: {
-                      ...((selectedStep.data as Record<string, unknown>) || {}),
-                      ...((latestStep.data as Record<string, unknown>) || {}),
-                    },
-                  };
-                }
-                return selectedStep;
-              }),
-              catchError(() => of(selectedStep)),
-            )
-          : of(selectedStep);
-
-        fetchTarget$.subscribe({
-          next: (detailedStep: ProjectStep) => {
-            this.fetchingPreviousStep.set(false);
-            const activeStep = detailedStep || selectedStep;
-            this.applyPreviousStepToCorrigendum(activeStep, showNotification);
-          },
-          error: () => {
-            this.fetchingPreviousStep.set(false);
-            this.applyPreviousStepToCorrigendum(selectedStep, showNotification);
-          },
-        });
       },
       error: () => {
-        this.fetchingPreviousStep.set(false);
         this.ensureCorrigendumDefaultRows();
         if (showNotification) {
-          this.messageService.add({
-            severity: 'warn',
-            summary: 'Unable to Load Steps',
-            detail: 'Could not fetch project steps. Initialized default comparison rows.',
+          this.messageService?.add({
+            severity: 'info',
+            summary: 'Preceding Tender Step Not Found',
+            detail:
+              'No preceding ICB, Techno Commercial Tender, PAC Tender, EOI, National Pre-Qualification Bid (PQB), LTE, or STE step found. Initialized default comparison rows.',
           });
         }
       },
@@ -863,6 +1162,9 @@ export class StepFormDialog {
     // 1. Extract Title: EOI / PQB / Tender Title
     const title = String(
       stepData['tender_title'] ||
+        stepData['icb_title'] ||
+        stepData['techno_title'] ||
+        stepData['pac_title'] ||
         stepData['lte_title'] ||
         stepData['ste_title'] ||
         stepData['pqb_title'] ||
@@ -870,9 +1172,13 @@ export class StepFormDialog {
         stepData['title'] ||
         stepData['bid_title'] ||
         stepRec['tender_title'] ||
+        stepRec['icb_title'] ||
+        stepRec['techno_title'] ||
+        stepRec['pac_title'] ||
         stepRec['lte_title'] ||
         stepRec['ste_title'] ||
         stepRec['pqb_title'] ||
+        stepRec['eoi_title'] ||
         stepRec['title'] ||
         (typeof this.effectiveProjectTitle === 'function' ? this.effectiveProjectTitle() : '') ||
         '',
@@ -882,9 +1188,12 @@ export class StepFormDialog {
     const refNo = String(
       stepData['tender_enquiry_no'] ||
         stepData['tender_no'] ||
-        stepData['pqb_no'] ||
+        stepData['icb_no'] ||
         stepData['ste_no'] ||
         stepData['lte_no'] ||
+        stepData['pac_no'] ||
+        stepData['eoi_no'] ||
+        stepData['pqb_no'] ||
         stepData['against_tender_no'] ||
         stepData['against_ref_no'] ||
         stepData['bid_no'] ||
@@ -892,6 +1201,11 @@ export class StepFormDialog {
         stepData['number'] ||
         stepRec['tender_enquiry_no'] ||
         stepRec['tender_no'] ||
+        stepRec['icb_no'] ||
+        stepRec['ste_no'] ||
+        stepRec['lte_no'] ||
+        stepRec['pac_no'] ||
+        stepRec['eoi_no'] ||
         stepRec['pqb_no'] ||
         '',
     ).trim();
@@ -904,7 +1218,10 @@ export class StepFormDialog {
       stepData['eoi_closing_date_time'] ||
       stepData['bid_submission_date'] ||
       stepRec['closing_date_time'] ||
-      stepRec['pqb_closing_date_time'];
+      stepRec['pqb_closing_date_time'] ||
+      stepRec['bid_submission_due_date_time'] ||
+      stepRec['eoi_closing_date_time'] ||
+      stepRec['bid_submission_date'];
     let closingStr = '';
     if (rawClosing) {
       const dt = parseLocalDateTime(rawClosing as string | Date) || parseLocalDate(rawClosing as string | Date);
@@ -921,7 +1238,9 @@ export class StepFormDialog {
       stepData['bid_opening_date_time'] ||
       stepData['eoi_opening_date_time'] ||
       stepRec['opening_date_time'] ||
-      stepRec['pqb_opening_date_time'];
+      stepRec['pqb_opening_date_time'] ||
+      stepRec['bid_opening_date_time'] ||
+      stepRec['eoi_opening_date_time'];
     let openingStr = '';
     if (rawOpening) {
       const dt = parseLocalDateTime(rawOpening as string | Date) || parseLocalDate(rawOpening as string | Date);
@@ -932,11 +1251,11 @@ export class StepFormDialog {
     }
 
     // 5. Extract Quantity / Table
-    const rawItems = (stepData['items'] || stepData['requirements'] || stepData['table_items'] || stepRec['items'] || []) as Array<Record<string, unknown>>;
+    const rawItems = (stepData['items'] || stepData['requirements'] || stepData['table_items'] || stepData['materials'] || stepRec['items'] || stepRec['requirements'] || []) as Array<Record<string, unknown>>;
     let qtySummary = '';
     if (Array.isArray(rawItems) && rawItems.length > 0) {
       const lines = rawItems.map((it, idx) => {
-        const desc = it['description'] || it['material_name'] || `Item ${idx + 1}`;
+        const desc = it['description'] || it['material_name'] || it['item_name'] || it['name'] || `Item ${idx + 1}`;
         const qty = it['quantity'] !== undefined && it['quantity'] !== null ? it['quantity'] : '';
         const unit = it['unit'] ? ` ${it['unit']}` : '';
         return qty !== '' ? `${idx + 1}. ${desc} - Qty: ${qty}${unit}` : `${idx + 1}. ${desc}`;
@@ -955,11 +1274,11 @@ export class StepFormDialog {
 
     // 7. Extract EMD
     const rawEmd =
-      stepData['emd_amount'] ||
-      stepData['emd'] ||
-      stepData['earnest_money_deposit'] ||
-      stepRec['emd_amount'] ||
-      stepRec['emd'];
+      stepData['emd'] ??
+      stepData['emd_amount'] ??
+      stepData['earnest_money_deposit'] ??
+      stepRec['emd'] ??
+      stepRec['emd_amount'];
     let emdStr = '';
     if (rawEmd !== undefined && rawEmd !== null && rawEmd !== '') {
       const numEmd = Number(rawEmd);
@@ -967,14 +1286,17 @@ export class StepFormDialog {
     }
 
     // 8. Extract Delivery Schedule
-    const delSchedule = String(
-      stepData['delivery_schedule'] ||
-        stepData['delivery_period'] ||
-        stepData['delivery_terms'] ||
-        stepRec['delivery_schedule'] ||
-        stepRec['delivery_period'] ||
-        '',
-    ).trim();
+    const delScheduleRaw = String(stepData['delivery_schedule'] || stepRec['delivery_schedule'] || '').trim();
+    const delPeriod = String(stepData['delivery_period'] || stepRec['delivery_period'] || '').trim();
+    const delTerms = String(stepData['delivery_terms'] || stepRec['delivery_terms'] || '').trim();
+    let delSchedule = delScheduleRaw;
+    if (!delSchedule) {
+      if (delPeriod && delTerms) {
+        delSchedule = `${delPeriod} (${delTerms})`;
+      } else {
+        delSchedule = delPeriod || delTerms;
+      }
+    }
 
     // 9. Extract Tender Fee
     const rawFee = stepData['tender_fee'] ?? stepRec['tender_fee'];
@@ -1112,74 +1434,48 @@ export class StepFormDialog {
   }
 
   private resolveLinkedTenderStepForCorrigendum(): void {
-    const pId = this.projectId();
-    if (!pId || !this.projectStepService) return;
+    if (this.isResolvingCorrigendum) return;
+    const pId = typeof this.projectId === 'function' ? this.projectId() : (this.projectId as unknown as number);
+    if (!pId) return;
 
-    this.projectStepService.getSteps(pId).subscribe({
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    const currentStep = typeof this.step === 'function' ? this.step() : null;
+    const candidateInMemory = (inMemory && inMemory.length > 0)
+      ? this.findPrecedingTenderStep(inMemory, currentStep)
+      : undefined;
+
+    if (candidateInMemory) {
+      this.linkedTenderStep.set(candidateInMemory);
+      this.cdr.markForCheck();
+      return;
+    }
+
+    if (!this.projectStepService) return;
+
+    this.isResolvingCorrigendum = true;
+    this.projectStepService.getSteps(pId).pipe(
+      catchError(() => of([] as ProjectStep[])),
+      finalize(() => {
+        this.isResolvingCorrigendum = false;
+      }),
+    ).subscribe({
       next: (allSteps) => {
-        const allowedFormCodes = [
-          'FORM_01_PQB',
-          'FORM_04_LTE',
-          'FORM_33_STE',
-          'FORM_30_STE',
-          'FORM_STE',
-          'FORM_33_SINGLE_TENDER_ENQUIRY',
-        ];
-        const currentStep = this.step();
-        const getStepNum = (s: ProjectStep | null | undefined): number => {
-          if (!s) return 0;
-          return s.step_number ?? s.step_order ?? 0;
-        };
-
-        const candidates = (allSteps || []).filter((s) => {
-          if (currentStep && s.id === currentStep.id) return false;
-          const fcode = (s.form_code || '').toUpperCase().trim();
-          const name = (s.step_name || '').toLowerCase().trim();
-          if (
-            fcode === 'FORM_03_CORRIGENDUM' ||
-            fcode.includes('BID_DOC') ||
-            name.includes('bid doc') ||
-            name.includes('bid submission') ||
-            name.includes('corrigendum')
-          ) {
-            return false;
-          }
-          return (
-            allowedFormCodes.includes(fcode) ||
-            name.includes('national pre') ||
-            name.includes('pre-qualification bid') ||
-            name.includes('limited tender enquiry') ||
-            name.startsWith('lte') ||
-            name.includes('single tender enquiry') ||
-            name.startsWith('ste')
-          );
-        });
-
-        const currentNum = getStepNum(currentStep);
-        let targetStep: ProjectStep | undefined;
-        if (currentNum > 0) {
-          const prior = candidates
-            .filter((s) => getStepNum(s) < currentNum)
-            .sort((a, b) => getStepNum(b) - getStepNum(a));
-          if (prior.length > 0) {
-            targetStep = prior[0];
-          }
-        }
-        if (!targetStep && candidates.length > 0) {
-          const sorted = [...candidates].sort((a, b) => {
-            if (a.status === 'completed' && b.status !== 'completed') return -1;
-            if (b.status === 'completed' && a.status !== 'completed') return 1;
-            return getStepNum(b) - getStepNum(a);
-          });
-          targetStep = sorted[0];
-        }
-
-        if (targetStep) {
-          this.linkedTenderStep.set(targetStep);
+        const candidate = this.findPrecedingTenderStep(allSteps || [], currentStep);
+        if (candidate) {
+          this.linkedTenderStep.set(candidate);
           this.cdr.markForCheck();
         }
       },
     });
+  }
+
+  private matchAndSetLinkedTenderStep(allSteps: ProjectStep[]): void {
+    const currentStep = typeof this.step === 'function' ? this.step() : null;
+    const targetStep = this.findPrecedingTenderStep(allSteps || [], currentStep);
+    if (targetStep) {
+      this.linkedTenderStep.set(targetStep);
+      this.cdr.markForCheck();
+    }
   }
 
   private ensureCorrigendumDefaultRows(): void {
@@ -1227,9 +1523,13 @@ export class StepFormDialog {
       const defInput = this.formDefinition();
 
       if (isVis) {
-        this.initializeModal(currentStep, defInput);
+        untracked(() => {
+          this.initializeModal(currentStep, defInput);
+        });
       } else {
-        this.deleteConfirmVisible.set(false);
+        untracked(() => {
+          this.deleteConfirmVisible.set(false);
+        });
       }
     });
 
@@ -1241,29 +1541,31 @@ export class StepFormDialog {
       const fg = this.formGroup ? this.formGroup() : null;
       if (!fg) return;
 
-      if (pTitle) {
-        for (const [key, ctrl] of Object.entries(fg.controls)) {
-          if (isProjectTitleField(key) && (!ctrl.value || !String(ctrl.value).trim())) {
-            ctrl.setValue(pTitle);
+      untracked(() => {
+        if (pTitle) {
+          for (const [key, ctrl] of Object.entries(fg.controls)) {
+            if (isProjectTitleField(key) && (!ctrl.value || !String(ctrl.value).trim())) {
+              ctrl.setValue(pTitle, { emitEvent: false });
+            }
           }
         }
-      }
 
-      if (cName) {
-        for (const [key, ctrl] of Object.entries(fg.controls)) {
-          if (isCustomerField(key) && (!ctrl.value || !String(ctrl.value).trim())) {
-            ctrl.setValue(cName);
+        if (cName) {
+          for (const [key, ctrl] of Object.entries(fg.controls)) {
+            if (isCustomerField(key) && (!ctrl.value || !String(ctrl.value).trim())) {
+              ctrl.setValue(cName, { emitEvent: false });
+            }
           }
         }
-      }
 
-      if (sName) {
-        for (const [key, ctrl] of Object.entries(fg.controls)) {
-          if (isSupplierField(key) && (!ctrl.value || !String(ctrl.value).trim())) {
-            ctrl.setValue(sName);
+        if (sName) {
+          for (const [key, ctrl] of Object.entries(fg.controls)) {
+            if (isSupplierField(key) && (!ctrl.value || !String(ctrl.value).trim())) {
+              ctrl.setValue(sName, { emitEvent: false });
+            }
           }
         }
-      }
+      });
     });
   }
 
@@ -1288,10 +1590,14 @@ export class StepFormDialog {
       const pId = this.projectId();
       const stepId = step.id || step.step_number;
 
-      // GET operation to fetch freshest step state via individual form API
+      // GET operation to fetch freshest step state via individual form API (with /latest fallback)
       this.loading.set(true);
       const fetch$ = def?.apiEndpoint
-        ? this.formApiService.getEntryById(def, stepId, pId).pipe(catchError(() => of(step)))
+        ? this.formApiService.getEntryById(def, stepId, pId).pipe(
+            catchError(() => (pId ? this.formApiService.getLatestEntry(def, pId) : of(null))),
+            map((res) => res || step),
+            catchError(() => of(step)),
+          )
         : of(step);
 
       fetch$.subscribe({
@@ -1326,13 +1632,6 @@ export class StepFormDialog {
             (!savedData['pqb_title'] || !savedData['pqb_no'])
           ) {
             this.loadFromNationalPreQualificationBid(false);
-          }
-
-          if (
-            def!.formCode === 'FORM_34_BID_DOC_STE' &&
-            (!savedData['tender_title'] || !savedData['tender_no'])
-          ) {
-            this.loadFromSingleTenderEnquiry(false);
           }
 
           if (def!.formCode === 'FORM_03_CORRIGENDUM') {
@@ -1375,13 +1674,6 @@ export class StepFormDialog {
             this.loadFromNationalPreQualificationBid(false);
           }
 
-          if (
-            def!.formCode === 'FORM_34_BID_DOC_STE' &&
-            (!savedData['tender_title'] || !savedData['tender_no'])
-          ) {
-            this.loadFromSingleTenderEnquiry(false);
-          }
-
           if (def!.formCode === 'FORM_03_CORRIGENDUM') {
             if (!savedData['items'] || (Array.isArray(savedData['items']) && savedData['items'].length === 0) || !savedData['against_ref_no'] || !savedData['ref_title']) {
               this.loadFromPreviousTenderStep(false);
@@ -1400,9 +1692,6 @@ export class StepFormDialog {
       }
       if (defInput.formCode === 'FORM_02_PQB_BID_DOCUMENT') {
         this.loadFromNationalPreQualificationBid(false);
-      }
-      if (defInput.formCode === 'FORM_34_BID_DOC_STE') {
-        this.loadFromSingleTenderEnquiry(false);
       }
       if (defInput.formCode === 'FORM_03_CORRIGENDUM') {
         this.ensureCorrigendumDefaultRows();
@@ -2142,6 +2431,8 @@ export class StepFormDialog {
                     project_id: pId,
                     form_code: def.formCode,
                     step_name: def.name,
+                    step_number: addedStep.step_number || addedStep.step_order || newStep.step_number,
+                    step_order: addedStep.step_order || addedStep.step_number || newStep.step_order,
                     data: {
                       ...((newStep.data as Record<string, unknown>) || {}),
                       ...combinedData,
@@ -2164,6 +2455,8 @@ export class StepFormDialog {
                     project_id: pId,
                     form_code: def.formCode,
                     step_name: def.name,
+                    step_number: this.step()?.step_number || newStep.step_number,
+                    step_order: this.step()?.step_order || newStep.step_order,
                     data: combinedData,
                   };
                   this.projectStepService?.addStepToLocalCache(pId, fallbackStep);

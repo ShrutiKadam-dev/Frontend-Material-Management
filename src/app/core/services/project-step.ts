@@ -98,11 +98,18 @@ export class ProjectStepService {
 
   getSteps(projectId: number): Observable<ProjectStep[]> {
     return this.http
-      .get<ProjectStep[]>(`${this.apiBaseUrl}/api/v1/projects/${projectId}/steps`)
+      .get<ProjectStep[] | { data: ProjectStep[] }>(`${this.apiBaseUrl}/api/v1/projects/${projectId}/steps`)
       .pipe(
         map((backendSteps) => {
           const cached = this.getCachedSteps(projectId);
-          const rawSteps = backendSteps || [];
+          const rawSteps = Array.isArray(backendSteps)
+            ? backendSteps
+            : backendSteps &&
+                typeof backendSteps === 'object' &&
+                'data' in backendSteps &&
+                Array.isArray((backendSteps as { data: ProjectStep[] }).data)
+              ? (backendSteps as { data: ProjectStep[] }).data
+              : [];
           const normalized = rawSteps.map((s) => {
             const def = s.form_code
               ? getFormDefinition(s.form_code)
@@ -142,6 +149,7 @@ export class ProjectStepService {
               });
             }
           }
+          merged.sort((a, b) => (a.step_order ?? a.step_number ?? 0) - (b.step_order ?? b.step_number ?? 0));
           return merged;
         }),
         catchError(() => {

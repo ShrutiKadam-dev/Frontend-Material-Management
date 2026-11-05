@@ -431,7 +431,7 @@ export class ProjectFormEntries implements OnInit {
           this.allSteps.set(steps || []);
           if (steps && steps.length > 0 && this.projectStepService) {
             for (const s of steps) {
-              this.projectStepService.addStepToLocalCache(projectId, {
+              this.projectStepService?.addStepToLocalCache?.(projectId, {
                 ...s,
                 form_code: s.form_code || def.formCode,
                 step_name: s.step_name || def.name,
@@ -509,7 +509,7 @@ export class ProjectFormEntries implements OnInit {
       category: savedStep.category || def?.category,
     };
     if (pId && this.projectStepService) {
-      this.projectStepService.addStepToLocalCache(pId, stepWithMeta);
+      this.projectStepService?.addStepToLocalCache?.(pId, stepWithMeta);
     }
 
     this.allSteps.update((current) => {

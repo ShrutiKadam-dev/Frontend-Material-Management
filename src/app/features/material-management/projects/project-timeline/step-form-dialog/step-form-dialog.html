@@ -76,22 +76,6 @@
       </div>
       }
 
-      @if (isSteBidDocument()) {
-      <div class="pqb-banner-action-bar" role="region" aria-label="Single Tender Enquiry Auto-Patch Info">
-        <div class="pqb-banner-info">
-          <i class="pi pi-link" aria-hidden="true"></i>
-          <span>Tender Title and Tender No. are automatically linked and patched from Single Tender Enquiry (STE).</span>
-        </div>
-        <button pButton type="button" icon="pi pi-sync" label="Fetch from STE"
-          class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn"
-          [loading]="fetchingSte()"
-          (click)="loadFromSingleTenderEnquiry(true)"
-          pTooltip="Refresh Tender Title and Tender No. from Single Tender Enquiry (STE)"
-          tooltipPosition="top">
-        </button>
-      </div>
-      }
-
       @if (isCorrigendum()) {
       <div class="pqb-banner-action-bar" role="region" aria-label="Corrigendum Auto-Patch Info">
         <div class="pqb-banner-info">
@@ -120,11 +104,6 @@
             }
             @if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT' && (field.key === 'pqb_title' || field.key === 'pqb_no')) {
             <span class="field-sync-pill" title="Patched from latest National Pre-Qualification Bid">
-              <i class="pi pi-link" aria-hidden="true"></i> Linked
-            </span>
-            }
-            @if (isSteBidDocument() && (field.key === 'tender_title' || field.key === 'tender_no')) {
-            <span class="field-sync-pill" title="Patched from Single Tender Enquiry (STE)">
               <i class="pi pi-link" aria-hidden="true"></i> Linked
             </span>
             }
@@ -425,11 +404,13 @@
                   </button>
                   }
                   @if (isCorrigendum()) {
-                  <button pButton type="button" icon="pi pi-sync" label="Fetch from Previous Step"
+                  <button pButton type="button" icon="pi pi-sync" [label]="corrigendumFetchButtonLabel()"
                     class="empty-add-row-btn p-button-outlined p-button-secondary"
                     style="margin-right: 8px;"
                     [loading]="fetchingPreviousStep()"
-                    (click)="loadFromPreviousTenderStep(true)">
+                    (click)="loadFromPreviousTenderStep(true)"
+                    [pTooltip]="'Auto-patch comparison details and Title/No. from ' + corrigendumSourceStepName()"
+                    tooltipPosition="top">
                   </button>
                   }
                   <button pButton type="button" icon="pi pi-plus" label="Add Item Row" class="empty-add-row-btn"

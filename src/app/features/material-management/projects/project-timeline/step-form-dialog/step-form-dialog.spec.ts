@@ -2,6 +2,7 @@ import '@angular/compiler';
 import { describe, expect, it, vi } from 'vitest';
 import { of } from 'rxjs';
 import { FormArray, FormControl, FormGroup } from '@angular/forms';
+import { signal } from '@angular/core';
 import { StepFormDialog } from './step-form-dialog';
 import { ProjectStep } from '../../../../../core/models/project-step.model';
 import { FormDefinition, getFormDefinition } from '../../../../../core/constants/form-catalog';
@@ -1363,7 +1364,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(comp.linkedTenderStep.set).toHaveBeenCalledWith(lteStep);
     });
 
-    it('should only match PQB, LTE, or STE and ignore Bid Document steps (e.g. FORM_31_BID_DOC_LTE)', () => {
+    it('should ignore non-tender bid documents (e.g. FORM_02_PQB_BID_DOCUMENT) but link eligible tender steps', () => {
       const comp = Object.create(StepFormDialog.prototype);
       const mockProjectStepService = {
         getSteps: vi.fn().mockReturnValue(
@@ -1384,8 +1385,8 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
               id: 1026,
               project_id: 20,
               step_number: 2,
-              step_name: 'Bid Document for LTE',
-              form_code: 'FORM_31_BID_DOC_LTE',
+              step_name: 'Bid Document for PQB',
+              form_code: 'FORM_02_PQB_BID_DOCUMENT',
               status: 'completed',
               data: {
                 customer_name: 'NTPC',
@@ -1423,11 +1424,100 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       comp.loadFromPreviousTenderStep(true);
 
       expect(mockProjectStepService.getSteps).toHaveBeenCalledWith(20);
-      // FORM_31_BID_DOC_LTE must be completely ignored; latest matching tender step is FORM_04_LTE
+      // FORM_02_PQB_BID_DOCUMENT must be ignored; matching tender step is FORM_04_LTE
       expect(comp.applyPreviousStepToCorrigendum).toHaveBeenCalledWith(
         expect.objectContaining({ form_code: 'FORM_04_LTE' }),
         true,
       );
+    });
+
+    it('should link and patch Corrigendum from preceding FORM_31_BID_DOC_LTE when present', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.hasTenderData = StepFormDialog.prototype['hasTenderData'];
+      const mockProjectStepService = {
+        getSteps: vi.fn().mockReturnValue(
+          of([
+            {
+              id: 1,
+              project_id: 20,
+              step_number: 1,
+              step_name: 'Limited Tender Enquiry (LTE)',
+              form_code: 'FORM_04_LTE',
+              status: 'completed',
+              updated_at: '2026-03-01T10:00:00Z',
+              data: {
+                tender_title: 'Turbine Overhaul Enquiry',
+                tender_enquiry_no: 'LTE-TURB-2026',
+              },
+            },
+            {
+              id: 31,
+              project_id: 20,
+              step_number: 31,
+              step_name: 'Bid Document - Limited Tender Enquiry (LTE)',
+              form_code: 'FORM_31_BID_DOC_LTE',
+              status: 'completed',
+              updated_at: '2026-03-05T12:00:00Z',
+              data: {
+                tender_title: 'Turbine Overhaul Final Bid Doc',
+                tender_no: 'LTE-BID-DOC-2026',
+              },
+            },
+          ]),
+        ),
+      };
+
+      const mockFormApiService = {
+        getEntries: vi.fn().mockReturnValue(of([])),
+        getLatestEntry: vi.fn().mockReturnValue(of(null)),
+      };
+
+      comp.projectId = () => 20;
+      comp.projectStepService = mockProjectStepService;
+      comp.formApiService = mockFormApiService;
+      comp.fetchingPreviousStep = { set: vi.fn() };
+      comp.applyPreviousStepToCorrigendum = vi.fn();
+      comp.messageService = { add: vi.fn() };
+      comp.step = () => null;
+
+      comp.loadFromPreviousTenderStep(true);
+
+      expect(comp.applyPreviousStepToCorrigendum).toHaveBeenCalledWith(
+        expect.objectContaining({ form_code: 'FORM_31_BID_DOC_LTE' }),
+        true,
+      );
+    });
+
+    it('should fall back to fetchLatestTenderFromBackend when candidate in-memory step has 0 tender data and /latest returns null', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const emptyCandidate: ProjectStep = {
+        id: 31,
+        project_id: 20,
+        step_number: 31,
+        step_name: 'Bid Document - Limited Tender Enquiry (LTE)',
+        form_code: 'FORM_31_BID_DOC_LTE',
+        status: 'pending',
+        progress_percentage: 0,
+        completed_at: null,
+        description: '',
+        data: {},
+      };
+
+      const mockFormApiService = {
+        getLatestEntry: vi.fn().mockReturnValue(of(null)),
+      };
+
+      comp.formApiService = mockFormApiService;
+      comp.fetchingPreviousStep = { set: vi.fn() };
+      comp.fetchLatestTenderFromBackend = vi.fn();
+      comp.applyPreviousStepToCorrigendum = vi.fn();
+      comp.hasTenderData = StepFormDialog.prototype['hasTenderData'];
+
+      comp['fetchAndApplyTenderStep'](20, emptyCandidate, true);
+
+      expect(mockFormApiService.getLatestEntry).toHaveBeenCalled();
+      expect(comp.applyPreviousStepToCorrigendum).not.toHaveBeenCalled();
+      expect(comp.fetchLatestTenderFromBackend).toHaveBeenCalledWith(20, true);
     });
 
     it('should auto-trigger default rows and loadFromPreviousTenderStep in ADD mode for FORM_03_CORRIGENDUM', () => {
@@ -1450,7 +1540,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(comp.loadFromPreviousTenderStep).toHaveBeenCalledWith(false);
     });
 
-    it('should auto-trigger loadFromSingleTenderEnquiry in ADD mode for FORM_34_BID_DOC_STE', () => {
+    it('should initialize normally in ADD mode for FORM_34_BID_DOC_STE without STE auto-linking', () => {
       const comp = Object.create(StepFormDialog.prototype);
       const steBidDocDef = getFormDefinition('FORM_34_BID_DOC_STE')!;
 
@@ -1460,69 +1550,595 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       comp.projectId = () => 42;
       comp.resolvedDef = { set: vi.fn() };
       comp.populateForm = vi.fn();
-      comp.loadFromNationalPreQualificationBid = vi.fn();
-      comp.loadFromSingleTenderEnquiry = vi.fn();
 
       comp.initializeModal(null, steBidDocDef);
 
       expect(comp.resolvedDef.set).toHaveBeenCalledWith(steBidDocDef);
       expect(comp.populateForm).toHaveBeenCalledWith(steBidDocDef, {}, []);
-      expect(comp.loadFromSingleTenderEnquiry).toHaveBeenCalledWith(false);
     });
 
-    it('should fetch and patch tender_title, tender_no, tender_issue_date, and bid_validity from FORM_33_STE', () => {
+    it('should probe backend /latest endpoints and patch Corrigendum when no preceding step is in memory or pipeline', () => {
       const comp = Object.create(StepFormDialog.prototype);
-      const steStep: ProjectStep = {
-        id: 77,
+      const mockProjectStepService = {
+        getSteps: vi.fn().mockReturnValue(of([])),
+      };
+
+      const mockLatestLteStep = {
+        id: 99,
+        project_id: 55,
+        step_number: 4,
+        step_name: 'Limited Tender Enquiry (LTE)',
+        form_code: 'FORM_04_LTE',
+        data: {
+          tender_title: 'Substation Transformer Overhaul',
+          tender_enquiry_no: 'LTE-SUB-2026-01',
+          closing_date_time: '2026-11-20T14:00',
+        },
+      };
+
+      const mockFormApiService = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_04_LTE') {
+            return of(mockLatestLteStep);
+          }
+          return of(null);
+        }),
+      };
+
+      comp.projectId = () => 55;
+      comp.projectStepService = mockProjectStepService;
+      comp.formApiService = mockFormApiService;
+      comp.fetchingPreviousStep = { set: vi.fn() };
+      comp.applyPreviousStepToCorrigendum = vi.fn();
+      comp.messageService = { add: vi.fn() };
+      comp.step = () => null;
+
+      comp.loadFromPreviousTenderStep(true);
+
+      // Should have probed /latest endpoints via getLatestEntry
+      expect(mockFormApiService.getLatestEntry).toHaveBeenCalled();
+      expect(comp.applyPreviousStepToCorrigendum).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            tender_title: 'Substation Transformer Overhaul',
+            tender_enquiry_no: 'LTE-SUB-2026-01',
+          }),
+        }),
+        true,
+      );
+    });
+
+    it('should find preceding tender step with flexible names like National PQB or PAC Tender', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const allSteps = [
+        {
+          id: 1,
+          project_id: 10,
+          step_number: 1,
+          step_name: 'National PQB',
+          form_code: 'FORM_01',
+          status: 'completed',
+          data: {
+            pqb_title: 'National Grid Infrastructure Bid',
+            pqb_no: 'PQB-GRID-101',
+          },
+        },
+      ];
+
+      const matched = comp.findPrecedingTenderStep(allSteps, null);
+      expect(matched).toBeDefined();
+      expect(matched?.data?.['pqb_no']).toBe('PQB-GRID-101');
+    });
+
+    it('should recognize FORM_31_BID_DOC_LTE and FORM_34_BID_DOC_STE in isTenderOrPqbStep', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+
+      const lteBidDocStep = {
+        id: 31,
+        form_code: 'FORM_31_BID_DOC_LTE',
+        step_name: 'Bid Document - Limited Tender Enquiry (LTE)',
+      } as any;
+
+      const steBidDocStep = {
+        id: 34,
+        form_code: 'FORM_34_BID_DOC_STE',
+        step_name: 'Bid Document - Single Tender Enquiry (STE)',
+      } as any;
+
+      const pqbBidDocStep = {
+        id: 2,
+        form_code: 'FORM_02_PQB_BID_DOCUMENT',
+        step_name: 'Bid Document - National Pre-Qualification Bid (PQB)',
+      } as any;
+
+      expect(comp['isTenderOrPqbStep'](lteBidDocStep)).toBe(true);
+      expect(comp['isTenderOrPqbStep'](steBidDocStep)).toBe(true);
+      expect(comp['isTenderOrPqbStep'](pqbBidDocStep)).toBe(false);
+    });
+
+    it('should select latest Bid Document LTE or STE over older tender enquiry steps', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const allSteps = [
+        {
+          id: 4,
+          project_id: 10,
+          step_number: 4,
+          step_name: 'Limited Tender Enquiry (LTE)',
+          form_code: 'FORM_04_LTE',
+          status: 'completed',
+          updated_at: '2026-03-01T10:00:00Z',
+          data: {
+            tender_title: 'LTE Transformer Tender',
+            tender_enquiry_no: 'LTE-101',
+          },
+        },
+        {
+          id: 31,
+          project_id: 10,
+          step_number: 31,
+          step_name: 'Bid Document - Limited Tender Enquiry (LTE)',
+          form_code: 'FORM_31_BID_DOC_LTE',
+          status: 'completed',
+          updated_at: '2026-03-05T12:00:00Z',
+          data: {
+            tender_title: 'LTE Transformer Tender Final Bid Doc',
+            tender_no: 'BID-DOC-LTE-101',
+          },
+        },
+      ];
+
+      const matched = comp['findPrecedingTenderStep'](allSteps, null);
+      expect(matched).toBeDefined();
+      expect(matched?.form_code).toBe('FORM_31_BID_DOC_LTE');
+      expect(matched?.data?.['tender_no']).toBe('BID-DOC-LTE-101');
+    });
+
+    it('should automatically link and patch Corrigendum from Bid Document - Single Tender Enquiry (STE)', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const fg = new FormGroup({
+        corrigendum_no: new FormControl('CORR-001'),
+        against_ref_no: new FormControl(''),
+        ref_title: new FormControl(''),
+      });
+      comp.formGroup = () => fg;
+      comp.resolvedDef = () => corrigendumDef;
+      comp.tableFormArray = signal(new FormArray<FormGroup>([]));
+      comp.tableVersion = { update: vi.fn() };
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.linkedTenderStep = { set: vi.fn() };
+      comp.createTableRowGroup = StepFormDialog.prototype.createTableRowGroup;
+      comp.effectiveProjectTitle = () => 'Default Title';
+
+      const targetStep: ProjectStep = {
+        id: 34,
         project_id: 10,
-        step_number: 33,
-        step_name: 'Single Tender Enquiry (STE)',
-        form_code: 'FORM_33_STE',
+        step_number: 34,
+        step_name: 'Bid Document - Single Tender Enquiry (STE)',
+        form_code: 'FORM_34_BID_DOC_STE',
         status: 'completed',
         progress_percentage: 100,
-        category: 'Pre-Bidding & Tenders',
-        phase: 'phase-1',
+        completed_at: null,
+        description: '',
         data: {
-          tender_title: 'Procurement of High Voltage Transformer Units',
-          tender_no: 'STE-2026-900',
-          tender_issue_date: '2026-03-15',
-          tender_validity: '90 Days',
+          tender_title: 'Specialized GIS Switchgear Procurement',
+          tender_no: 'STE-GIS-2026-99',
+          bid_submission_date: '2026-04-15T15:00:00Z',
+          payment_terms: '100% against dispatch',
+          delivery_period: '8 Weeks',
+          items: [
+            { description: 'Gas Insulated Switchgear 132kV', quantity: 2, unit: 'Sets' },
+          ],
         },
-        remarks: [],
       };
 
-      const mockProjectStepService = {
-        getSteps: vi.fn().mockReturnValue(of([steStep])),
-      };
-      const mockMessageService = { add: vi.fn() };
+      comp['applyPreviousStepToCorrigendum'](targetStep, false);
+
+      expect(fg.get('ref_title')?.value).toBe('Specialized GIS Switchgear Procurement');
+      expect(fg.get('against_ref_no')?.value).toBe('STE-GIS-2026-99');
+      expect(comp.linkedTenderStep.set).toHaveBeenCalledWith(targetStep);
+
+      const tableRows = comp.tableFormArray().value;
+      expect(tableRows.length).toBe(8);
+      // Row 4: PAYMENT TERMS
+      const payRow = tableRows.find((r: any) => r.sr_no === 4);
+      expect(payRow.as_per_tender_doc).toContain('100% against dispatch');
+      // Row 3: QUANTITY (TABLE)
+      const qtyRow = tableRows.find((r: any) => r.sr_no === 3);
+      expect(qtyRow.as_per_tender_doc).toContain('Gas Insulated Switchgear 132kV');
+    });
+
+    it('should compute correct corrigendumFetchButtonLabel for all 7 tender steps and Bid Documents', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+
+      // 1. ICB & Bid Doc ICB
+      expect(comp.getCorrigendumFetchButtonLabel({
+        stepName: 'Bid Document - International Competitive Bidding (ICB)',
+        formCode: 'FORM_36_BID_DOC_ICB',
+      })).toBe('Fetch from Bid Doc ICB');
+
+      expect(comp.getCorrigendumFetchButtonLabel({
+        stepName: 'International Competitive Bidding (ICB)',
+        formCode: 'FORM_35_ICB',
+      })).toBe('Fetch from ICB');
+
+      // 2. Techno Commercial Tender & Bid Doc Techno Commercial
+      expect(comp.getCorrigendumFetchButtonLabel({
+        stepName: 'Bid Document - Techno Commercial Tender',
+        formCode: 'FORM_29_BID_DOC_TECHNO_COMMERCIAL',
+      })).toBe('Fetch from Bid Doc Techno Commercial');
+
+      expect(comp.getCorrigendumFetchButtonLabel({
+        stepName: 'Techno Commercial Tender',
+        formCode: 'FORM_30_TECHNO_COMMERCIAL_TENDER',
+      })).toBe('Fetch from Techno Commercial Tender');
+
+      // 3. PAC Tender
+      expect(comp.getCorrigendumFetchButtonLabel({
+        stepName: 'PAC Tender',
+        formCode: 'FORM_13_PAC_TENDER',
+      })).toBe('Fetch from PAC Tender');
+
+      // 4. Expression of Interest (EOI)
+      expect(comp.getCorrigendumFetchButtonLabel({
+        stepName: 'Expression of Interest (EOI)',
+        formCode: 'FORM_07_EOI',
+      })).toBe('Fetch from EOI');
+
+      // 5. Bid Doc STE & STE
+      expect(comp.getCorrigendumFetchButtonLabel({
+        stepName: 'Bid Document - Single Tender Enquiry (STE)',
+        formCode: 'FORM_34_BID_DOC_STE',
+      })).toBe('Fetch from Bid Doc STE');
+
+      expect(comp.getCorrigendumFetchButtonLabel({
+        stepName: 'Single Tender Enquiry (STE)',
+        formCode: 'FORM_33_STE',
+      })).toBe('Fetch from STE');
+
+      // 6. Bid Doc LTE & LTE
+      expect(comp.getCorrigendumFetchButtonLabel({
+        stepName: 'Bid Document - Limited Tender Enquiry (LTE)',
+        formCode: 'FORM_31_BID_DOC_LTE',
+      })).toBe('Fetch from Bid Doc LTE');
+
+      expect(comp.getCorrigendumFetchButtonLabel({
+        stepName: 'Limited Tender Enquiry (LTE)',
+        formCode: 'FORM_04_LTE',
+      })).toBe('Fetch from LTE');
+
+      // 7. National PQB & Bid Doc PQB
+      expect(comp.getCorrigendumFetchButtonLabel({
+        stepName: 'Bid Document for PQB',
+        formCode: 'FORM_02_PQB_BID_DOCUMENT',
+      })).toBe('Fetch from Bid Doc PQB');
+
+      expect(comp.getCorrigendumFetchButtonLabel({
+        stepName: 'National Pre-Qualification Bid (PQB)',
+        formCode: 'FORM_01_PQB',
+      })).toBe('Fetch from National PQB');
+    });
+
+    it('should link and patch Corrigendum dialogue and table details from International Competitive Bidding (ICB)', () => {
+      const comp = Object.create(StepFormDialog.prototype);
       const fg = new FormGroup({
-        tender_title: new FormControl(''),
-        tender_no: new FormControl(''),
-        tender_issue_date: new FormControl(null),
-        bid_validity: new FormControl(''),
+        corrigendum_no: new FormControl('CORR-ICB-01'),
+        against_ref_no: new FormControl(''),
+        ref_title: new FormControl(''),
+        issue_date: new FormControl(null),
       });
 
-      comp.projectId = () => 10;
-      comp.projectStepService = mockProjectStepService;
-      comp.messageService = mockMessageService;
-      comp.fetchingSte = { set: vi.fn() };
       comp.formGroup = () => fg;
+      comp.resolvedDef = () => corrigendumDef;
+      comp.tableFormArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.messageService = { add: vi.fn() };
+      comp.linkedTenderStep = { set: vi.fn() };
+      comp.tableVersion = { update: vi.fn() };
       comp.formVersion = { update: vi.fn() };
       comp.cdr = { markForCheck: vi.fn() };
 
-      comp.loadFromSingleTenderEnquiry(true);
+      const icbStep: ProjectStep = {
+        id: 35,
+        project_id: 10,
+        step_number: 1,
+        step_name: 'International Competitive Bidding (ICB)',
+        form_code: 'FORM_35_ICB',
+        status: 'completed',
+        data: {
+          tender_title: 'Global High-Voltage Transmission Network Package',
+          tender_no: 'ICB-TRANS-GLOBAL-2026',
+          bid_submission_due_date_time: '2026-12-15T15:30',
+          bid_opening_date_time: '2026-12-16T11:00',
+          tender_fee: 10000,
+          emd: 500000,
+          tender_validity: '180 days',
+          items: [
+            { description: 'High Voltage DC Converter Transformer', quantity: 4, unit: 'Sets' },
+            { description: 'Fiber Optic Cable Line', quantity: 120, unit: 'KM' },
+          ],
+        },
+      };
 
-      expect(comp.fetchingSte.set).toHaveBeenCalledWith(true);
-      expect(comp.fetchingSte.set).toHaveBeenCalledWith(false);
-      expect(fg.get('tender_title')?.value).toBe('Procurement of High Voltage Transformer Units');
-      expect(fg.get('tender_no')?.value).toBe('STE-2026-900');
-      expect(fg.get('bid_validity')?.value).toBe('90 Days');
-      expect(mockMessageService.add).toHaveBeenCalledWith(
-        expect.objectContaining({
-          severity: 'success',
-          summary: 'STE Details Patched',
-        }),
-      );
+      comp['applyPreviousStepToCorrigendum'](icbStep, true);
+
+      expect(fg.get('ref_title')?.value).toBe('Global High-Voltage Transmission Network Package');
+      expect(fg.get('against_ref_no')?.value).toBe('ICB-TRANS-GLOBAL-2026');
+      expect(comp.linkedTenderStep.set).toHaveBeenCalledWith(icbStep);
+
+      const tableRows = comp.tableFormArray().value;
+      expect(tableRows.length).toBe(8);
+      // Row 1: Closing date
+      expect(tableRows[0].as_per_tender_doc).toContain('CLOSING DATE & TIME: 15-12-2026 15:30');
+      // Row 2: Opening date
+      expect(tableRows[1].as_per_tender_doc).toContain('OPENING DATE & TIME: 16-12-2026 11:00');
+      // Row 3: Items
+      expect(tableRows[2].as_per_tender_doc).toContain('High Voltage DC Converter Transformer - Qty: 4 Sets');
+      expect(tableRows[2].as_per_tender_doc).toContain('Fiber Optic Cable Line - Qty: 120 KM');
+      // Row 5: EMD
+      expect(tableRows[4].as_per_tender_doc).toContain('5,00,000');
+      // Row 7: Tender Fee
+      expect(tableRows[6].as_per_tender_doc).toContain('10,000');
+    });
+
+    it('should link and patch Corrigendum dialogue and table details from Techno Commercial Tender', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const fg = new FormGroup({
+        corrigendum_no: new FormControl('CORR-TECHNO-01'),
+        against_ref_no: new FormControl(''),
+        ref_title: new FormControl(''),
+        issue_date: new FormControl(null),
+      });
+
+      comp.formGroup = () => fg;
+      comp.resolvedDef = () => corrigendumDef;
+      comp.tableFormArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.messageService = { add: vi.fn() };
+      comp.linkedTenderStep = { set: vi.fn() };
+      comp.tableVersion = { update: vi.fn() };
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+
+      const technoStep: ProjectStep = {
+        id: 30,
+        project_id: 10,
+        step_number: 1,
+        step_name: 'Techno Commercial Tender',
+        form_code: 'FORM_30_TECHNO_COMMERCIAL_TENDER',
+        status: 'completed',
+        data: {
+          tender_title: 'Thermal Plant Control Instrumentation',
+          tender_no: 'TECHNO-COMM-2026-77',
+          bid_submission_due_date_time: '2026-11-28T14:00',
+          bid_opening_date_time: '2026-11-29T10:00',
+          tender_fee: 2500,
+          emd: 75000,
+          items: [
+            { description: 'Programmable Logic Controller Rack', quantity: 3, unit: 'Units' },
+          ],
+        },
+      };
+
+      comp['applyPreviousStepToCorrigendum'](technoStep, false);
+
+      expect(fg.get('ref_title')?.value).toBe('Thermal Plant Control Instrumentation');
+      expect(fg.get('against_ref_no')?.value).toBe('TECHNO-COMM-2026-77');
+
+      const tableRows = comp.tableFormArray().value;
+      expect(tableRows.length).toBe(8);
+      expect(tableRows[0].as_per_tender_doc).toContain('28-11-2026 14:00');
+      expect(tableRows[2].as_per_tender_doc).toContain('Programmable Logic Controller Rack');
+      expect(tableRows[4].as_per_tender_doc).toContain('75,000');
+      expect(tableRows[6].as_per_tender_doc).toContain('2,500');
+    });
+
+    it('should link and patch Corrigendum dialogue and table details from PAC Tender', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const fg = new FormGroup({
+        corrigendum_no: new FormControl('CORR-PAC-01'),
+        against_ref_no: new FormControl(''),
+        ref_title: new FormControl(''),
+        issue_date: new FormControl(null),
+      });
+
+      comp.formGroup = () => fg;
+      comp.resolvedDef = () => corrigendumDef;
+      comp.tableFormArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.messageService = { add: vi.fn() };
+      comp.linkedTenderStep = { set: vi.fn() };
+      comp.tableVersion = { update: vi.fn() };
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+
+      const pacStep: ProjectStep = {
+        id: 13,
+        project_id: 10,
+        step_number: 1,
+        step_name: 'PAC Tender',
+        form_code: 'FORM_13_PAC_TENDER',
+        status: 'completed',
+        data: {
+          tender_title: 'Proprietary Turbine Blades Supply',
+          tender_no: 'PAC-GE-2026-009',
+          closing_date_time: '2026-11-25T16:00',
+          opening_date_time: '2026-11-26T11:00',
+          payment_terms: '90% against dispatch, 10% on commissioning',
+          delivery_period: '8 Weeks',
+          delivery_terms: 'DDP Site',
+          items: [
+            { description: 'High Pressure Turbine Rotor Blades', quantity: 24, unit: 'Nos.' },
+          ],
+        },
+      };
+
+      comp['applyPreviousStepToCorrigendum'](pacStep, false);
+
+      expect(fg.get('ref_title')?.value).toBe('Proprietary Turbine Blades Supply');
+      expect(fg.get('against_ref_no')?.value).toBe('PAC-GE-2026-009');
+
+      const tableRows = comp.tableFormArray().value;
+      expect(tableRows.length).toBe(8);
+      expect(tableRows[0].as_per_tender_doc).toContain('25-11-2026 16:00');
+      expect(tableRows[2].as_per_tender_doc).toContain('High Pressure Turbine Rotor Blades - Qty: 24 Nos.');
+      expect(tableRows[3].as_per_tender_doc).toContain('90% against dispatch');
+      expect(tableRows[5].as_per_tender_doc).toContain('8 Weeks (DDP Site)');
+    });
+
+    it('should link and patch Corrigendum dialogue and table details from Expression of Interest (EOI)', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const fg = new FormGroup({
+        corrigendum_no: new FormControl('CORR-EOI-01'),
+        against_ref_no: new FormControl(''),
+        ref_title: new FormControl(''),
+        issue_date: new FormControl(null),
+      });
+
+      comp.formGroup = () => fg;
+      comp.resolvedDef = () => corrigendumDef;
+      comp.tableFormArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.messageService = { add: vi.fn() };
+      comp.linkedTenderStep = { set: vi.fn() };
+      comp.tableVersion = { update: vi.fn() };
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+
+      const eoiStep: ProjectStep = {
+        id: 7,
+        project_id: 10,
+        step_number: 1,
+        step_name: 'Expression of Interest (EOI)',
+        form_code: 'FORM_07_EOI',
+        status: 'completed',
+        data: {
+          eoi_title: 'Solar Power Plant 50MW Feasibility EOI',
+          eoi_no: 'EOI-SOLAR-2026-001',
+          eoi_closing_date_time: '2026-11-30T17:00',
+          eoi_opening_date_time: '2026-12-01T10:00',
+          items: [
+            { description: 'Photovoltaic Array 50MW', quantity: 1, unit: 'Lot' },
+          ],
+        },
+      };
+
+      comp['applyPreviousStepToCorrigendum'](eoiStep, false);
+
+      expect(fg.get('ref_title')?.value).toBe('Solar Power Plant 50MW Feasibility EOI');
+      expect(fg.get('against_ref_no')?.value).toBe('EOI-SOLAR-2026-001');
+
+      const tableRows = comp.tableFormArray().value;
+      expect(tableRows.length).toBe(8);
+      expect(tableRows[0].as_per_tender_doc).toContain('30-11-2026 17:00');
+      expect(tableRows[1].as_per_tender_doc).toContain('01-12-2026 10:00');
+      expect(tableRows[2].as_per_tender_doc).toContain('Photovoltaic Array 50MW');
+    });
+
+    it('should link and patch Corrigendum dialogue and table details from National latest Pre-Qualification Bid (PQB)', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const fg = new FormGroup({
+        corrigendum_no: new FormControl('CORR-PQB-01'),
+        against_ref_no: new FormControl(''),
+        ref_title: new FormControl(''),
+        issue_date: new FormControl(null),
+      });
+
+      comp.formGroup = () => fg;
+      comp.resolvedDef = () => corrigendumDef;
+      comp.tableFormArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.messageService = { add: vi.fn() };
+      comp.linkedTenderStep = { set: vi.fn() };
+      comp.tableVersion = { update: vi.fn() };
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+
+      const pqbStep: ProjectStep = {
+        id: 1,
+        project_id: 10,
+        step_number: 1,
+        step_name: 'National Pre-Qualification Bid (PQB)',
+        form_code: 'FORM_01_PQB',
+        status: 'completed',
+        data: {
+          pqb_title: 'Substation Civil Construction PQB',
+          pqb_no: 'PQB-CIVIL-2026-88',
+          pqb_closing_date_time: '2026-11-10T15:00',
+          pqb_opening_date_time: '2026-11-11T11:00',
+          items: [
+            { description: 'Foundation Excavation & Concreting', quantity: 500, unit: 'Cum' },
+          ],
+        },
+      };
+
+      comp['applyPreviousStepToCorrigendum'](pqbStep, false);
+
+      expect(fg.get('ref_title')?.value).toBe('Substation Civil Construction PQB');
+      expect(fg.get('against_ref_no')?.value).toBe('PQB-CIVIL-2026-88');
+
+      const tableRows = comp.tableFormArray().value;
+      expect(tableRows.length).toBe(8);
+      expect(tableRows[0].as_per_tender_doc).toContain('10-11-2026 15:00');
+      expect(tableRows[1].as_per_tender_doc).toContain('11-11-2026 11:00');
+      expect(tableRows[2].as_per_tender_doc).toContain('Foundation Excavation & Concreting');
+    });
+
+    it('should respect project step order so Corrigendum links to the step immediately preceding it in the pipeline', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.hasTenderData = StepFormDialog.prototype['hasTenderData'];
+
+      const allSteps: ProjectStep[] = [
+        {
+          id: 101,
+          project_id: 50,
+          step_number: 1,
+          step_name: 'Expression of Interest (EOI)',
+          form_code: 'FORM_07_EOI',
+          status: 'completed',
+          data: { eoi_title: 'Early EOI Tender', eoi_no: 'EOI-001' },
+        },
+        {
+          id: 102,
+          project_id: 50,
+          step_number: 2,
+          step_name: 'Corrigendum',
+          form_code: 'FORM_03_CORRIGENDUM',
+          status: 'completed',
+          data: { ref_title: 'Early EOI Tender', against_ref_no: 'EOI-001' },
+        },
+        {
+          id: 103,
+          project_id: 50,
+          step_number: 3,
+          step_name: 'Limited Tender Enquiry (LTE)',
+          form_code: 'FORM_04_LTE',
+          status: 'completed',
+          data: { tender_title: 'Midstream LTE Enquiry', tender_enquiry_no: 'LTE-002' },
+        },
+        {
+          id: 104,
+          project_id: 50,
+          step_number: 4,
+          step_name: 'Single Tender Enquiry (STE)',
+          form_code: 'FORM_33_STE',
+          status: 'completed',
+          data: { tender_title: 'Downstream STE Package', tender_no: 'STE-003' },
+        },
+      ];
+
+      // Case A: Corrigendum at step_number 2 must link to EOI (step 1), NOT LTE (step 3) or STE (step 4)
+      const currentStep2 = allSteps[1];
+      const matchedForStep2 = comp.findPrecedingTenderStep(allSteps, currentStep2);
+      expect(matchedForStep2).toBeDefined();
+      expect(matchedForStep2?.id).toBe(101);
+      expect(matchedForStep2?.data?.['eoi_no']).toBe('EOI-001');
+
+      // Case B: Adding a new Corrigendum (step is null) should link to the latest preceding tender step (STE at step 4)
+      const matchedForNew = comp.findPrecedingTenderStep(allSteps, null);
+      expect(matchedForNew).toBeDefined();
+      expect(matchedForNew?.id).toBe(104);
+      expect(matchedForNew?.data?.['tender_no']).toBe('STE-003');
     });
   });
 });

@@ -156,7 +156,8 @@ export const FORM_CATALOG: FormDefinition[] = [
     category: 'Pre-Bidding & Tenders',
     phaseId: 'phase-1',
     icon: 'pi pi-sync',
-    description: 'Corrigendum amendment notices issued against EOI, PQB, or Tender notices',
+    description:
+      'Corrigendum amendment notices issued against ICB, Techno Commercial Tender, PAC Tender, EOI, PQB, LTE, or STE notices',
     apiEndpoint: '/api/v1/corrigendums',
     fields: [
       { key: 'corrigendum_no', label: 'Corrigendum No.', type: 'text', required: true, colSpan: 2 },
