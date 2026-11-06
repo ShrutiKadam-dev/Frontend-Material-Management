@@ -1,6 +1,7 @@
 <p-dialog [visible]="visible()" (visibleChange)="visible.set($event)" [modal]="true" [blockScroll]="true"
   [draggable]="false" [resizable]="false" [dismissableMask]="false"
-  [style]="{ width: '96vw', maxWidth: '1180px', height: '86vh', maxHeight: '90vh' }" styleClass="step-form-popup-dialog"
+  [style]="{ width: '96vw', maxWidth: '1440px', height: '88vh', maxHeight: '92vh' }"
+  styleClass="step-form-popup-dialog step-form-dialog--wide"
   appendTo="body">
 
   <!-- ── 1. Simple, Clean Header ──────────────────────────────────────── -->
@@ -114,6 +115,21 @@
         </button>
       </div>
       }
+
+      @if (isPurchaseOrder()) {
+      <div class="pqb-banner-action-bar" role="region" aria-label="Purchase Order Auto-Patch Info">
+        <div class="pqb-banner-info">
+          <i class="pi pi-link" aria-hidden="true"></i>
+          <span>Incoterms, GST, Payment Terms, Warranty, and Line Items are automatically linked and patched from {{ poSourceStepName() }}.</span>
+        </div>
+        <button pButton type="button" icon="pi pi-sync" [label]="poFetchButtonLabel()"
+          class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn" [loading]="fetchingPoData()"
+          (click)="loadForPurchaseOrder(true)"
+          [pTooltip]="'Refresh Incoterms, GST, Payment Terms, Warranty, and Line Items from ' + poSourceStepName()"
+          tooltipPosition="top">
+        </button>
+      </div>
+      }
       <form [formGroup]="formGroup()" class="dynamic-inputs-grid">
         @for (field of def.fields; track field.key) {
         <div class="input-col" [class.col-span-1]="field.colSpan === 1"
@@ -140,6 +156,11 @@
             }
             @if (isCorrigendum() && (field.key === 'against_ref_no' || field.key === 'ref_title')) {
             <span class="field-sync-pill" [title]="'Patched from ' + corrigendumSourceStepName()">
+              <i class="pi pi-link" aria-hidden="true"></i> Linked
+            </span>
+            }
+            @if (isPurchaseOrder() && (field.key === 'delivery_terms' || field.key === 'payment_terms' || field.key === 'warranty_period' || field.key === 'gst_rate_pct')) {
+            <span class="field-sync-pill" [title]="'Patched from ' + poSourceStepName()">
               <i class="pi pi-link" aria-hidden="true"></i> Linked
             </span>
             }
@@ -524,47 +545,60 @@
             'items' }})</span>
         </div>
 
-        <div class="table-actions-group">
+        <div class="table-toolbar-right">
           @if (tbl.autoCalculateTotal && tbl.totalKey) {
-          @if (hasTableGst()) {
-          <div class="table-total-pill table-total-pill--net" title="Total Net Amount (Excl. GST)">
-            <span class="total-lbl">Net (Excl. GST):</span>
-            <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableNetAmount() | number:'1.2-2' }}</strong>
-          </div>
-          <div class="table-total-pill table-total-pill--gst" title="GST Amount">
-            <span class="total-lbl">GST ({{ tableGstRate() }}%):</span>
-            <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableGstAmount() | number:'1.2-2' }}</strong>
-          </div>
-          <div class="table-total-pill table-total-pill--gross" title="Total Gross Amount (Incl. GST)">
-            <span class="total-lbl">Gross (Incl. GST):</span>
-            <strong class="total-amt">{{ tableGrossTotalSum() | number:'1.2-2' }}</strong>
-          </div>
-          } @else {
-          <div class="table-total-pill" [title]="isCostSheet() ? 'Total Net Amount' : 'Net Total'">
-            <span class="total-lbl">{{ isCostSheet() ? 'Total Net Amount:' : 'Net Total:' }}</span>
-            <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableTotalSum() | number:'1.2-2' }}</strong>
+          <div class="table-totals-group" role="region" aria-label="Table Financial Totals">
+            @if (hasTableGst()) {
+            <div class="table-total-pill table-total-pill--net" title="Total Net Amount (Excl. GST)">
+              <span class="total-lbl">Net (Excl. GST):</span>
+              <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableNetAmount() | number:'1.2-2' }}</strong>
+            </div>
+            <div class="table-total-pill table-total-pill--gst" title="GST Amount">
+              <span class="total-lbl">GST ({{ tableGstRate() }}%):</span>
+              <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableGstAmount() | number:'1.2-2' }}</strong>
+            </div>
+            <div class="table-total-pill table-total-pill--gross" title="Total Gross Amount (Incl. GST)">
+              <span class="total-lbl">Gross (Incl. GST):</span>
+              <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableGrossTotalSum() | number:'1.2-2' }}</strong>
+            </div>
+            } @else {
+            <div class="table-total-pill" [title]="isCostSheet() ? 'Total Net Amount' : 'Net Total'">
+              <span class="total-lbl">{{ isCostSheet() ? 'Total Net Amount:' : 'Net Total:' }}</span>
+              <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableTotalSum() | number:'1.2-2' }}</strong>
+            </div>
+            }
           </div>
           }
-          }
-          @if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT' || def.formCode === 'FORM_04_LTE' || def.formCode ===
-          'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') {
-          <button pButton type="button" icon="pi pi-sync" [label]="pqbFetchButtonLabel()"
-            class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
-            [loading]="fetchingNationalPqb()" (click)="loadFromNationalPreQualificationBid(true)"
-            [pTooltip]="(def.formCode === 'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') ? 'Import PQB No., Title, and Requirements from ' + pqbSourceStepName() : def.formCode === 'FORM_04_LTE' ? 'Import PQB No. and Requirements from ' + pqbSourceStepName() : 'Import pricing items from ' + pqbSourceStepName()"
-            tooltipPosition="top">
-          </button>
-          }
-          @if (def.formCode === 'FORM_10_COST_SHEET') {
-          <button pButton type="button" icon="pi pi-sync" label="Fetch from Supplier Quotation"
-            class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
-            [loading]="fetchingSupplierQuotation()" (click)="loadFromSupplierQuotation(true)"
-            pTooltip="Import line items and prices from latest Quotation from Supplier" tooltipPosition="top">
-          </button>
-          }
-          <button pButton type="button" icon="pi pi-plus" label="Add Item Row"
-            class="p-button-outlined p-button-sm add-row-btn" (click)="addTableRow()">
-          </button>
+
+          <div class="table-actions-group">
+            @if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT' || def.formCode === 'FORM_04_LTE' || def.formCode ===
+            'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') {
+            <button pButton type="button" icon="pi pi-sync" [label]="pqbFetchButtonLabel()"
+              class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
+              [loading]="fetchingNationalPqb()" (click)="loadFromNationalPreQualificationBid(true)"
+              [pTooltip]="(def.formCode === 'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') ? 'Import PQB No., Title, and Requirements from ' + pqbSourceStepName() : def.formCode === 'FORM_04_LTE' ? 'Import PQB No. and Requirements from ' + pqbSourceStepName() : 'Import pricing items from ' + pqbSourceStepName()"
+              tooltipPosition="top">
+            </button>
+            }
+            @if (def.formCode === 'FORM_10_COST_SHEET') {
+            <button pButton type="button" icon="pi pi-sync" label="Fetch from Supplier Quotation"
+              class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
+              [loading]="fetchingSupplierQuotation()" (click)="loadFromSupplierQuotation(true)"
+              pTooltip="Import line items and prices from latest Quotation from Supplier" tooltipPosition="top">
+            </button>
+            }
+            @if (isPurchaseOrder()) {
+            <button pButton type="button" icon="pi pi-sync" [label]="poFetchButtonLabel()"
+              class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
+              [loading]="fetchingPoData()" (click)="loadForPurchaseOrder(true)"
+              [pTooltip]="'Import incoterms, GST, payment terms, warranty, and line items from ' + poSourceStepName()"
+              tooltipPosition="top">
+            </button>
+            }
+            <button pButton type="button" icon="pi pi-plus" label="Add Item Row"
+              class="p-button-outlined p-button-sm add-row-btn" (click)="addTableRow()">
+            </button>
+          </div>
         </div>
       </div>
 
@@ -626,15 +660,30 @@
                   </div>
                   <p class="empty-title">No items added yet</p>
                   <p class="empty-desc">Line items are optional. Click below to add requirement rows.</p>
-                  @if (def.formCode === 'FORM_10_COST_SHEET') {
-                  <button pButton type="button" icon="pi pi-sync" label="Fetch from Supplier Quotation"
-                    class="empty-add-row-btn p-button-outlined p-button-secondary" style="margin-right: 8px;"
-                    [loading]="fetchingSupplierQuotation()" (click)="loadFromSupplierQuotation(true)">
-                  </button>
-                  }
-                  <button pButton type="button" icon="pi pi-plus" label="Add Item Row" class="empty-add-row-btn"
-                    (click)="addTableRow()">
-                  </button>
+                  <div class="empty-actions-row">
+                    @if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT' || def.formCode === 'FORM_04_LTE' || def.formCode ===
+                    'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') {
+                    <button pButton type="button" icon="pi pi-sync" [label]="pqbFetchButtonLabel()"
+                      class="empty-add-row-btn p-button-outlined p-button-secondary"
+                      [loading]="fetchingNationalPqb()" (click)="loadFromNationalPreQualificationBid(true)">
+                    </button>
+                    }
+                    @if (def.formCode === 'FORM_10_COST_SHEET') {
+                    <button pButton type="button" icon="pi pi-sync" label="Fetch from Supplier Quotation"
+                      class="empty-add-row-btn p-button-outlined p-button-secondary"
+                      [loading]="fetchingSupplierQuotation()" (click)="loadFromSupplierQuotation(true)">
+                    </button>
+                    }
+                    @if (isPurchaseOrder()) {
+                    <button pButton type="button" icon="pi pi-sync" [label]="poFetchButtonLabel()"
+                      class="empty-add-row-btn p-button-outlined p-button-secondary"
+                      [loading]="fetchingPoData()" (click)="loadForPurchaseOrder(true)">
+                    </button>
+                    }
+                    <button pButton type="button" icon="pi pi-plus" label="Add Item Row" class="empty-add-row-btn"
+                      (click)="addTableRow()">
+                    </button>
+                  </div>
                 </div>
               </td>
             </tr>

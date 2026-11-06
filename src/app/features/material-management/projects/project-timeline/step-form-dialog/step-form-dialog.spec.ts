@@ -3414,8 +3414,16 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
     const setupBidDocLteComp = () => {
       const comp = Object.create(StepFormDialog.prototype);
       comp.loadForBidDocumentLte = StepFormDialog.prototype['loadForBidDocumentLte'];
+      comp.fetchFromLimitedTenderEnquiry = StepFormDialog.prototype['fetchFromLimitedTenderEnquiry'];
+      comp.fetchFromSingleTenderEnquiry = StepFormDialog.prototype['fetchFromSingleTenderEnquiry'];
+      comp.applyEnquiryStepToBidDocLte = StepFormDialog.prototype['applyEnquiryStepToBidDocLte'];
       comp.resolveLinkedStepForBidDocLte = StepFormDialog.prototype['resolveLinkedStepForBidDocLte'];
+      comp.isLteStep = StepFormDialog.prototype['isLteStep'];
+      comp.isSteStep = StepFormDialog.prototype['isSteStep'];
       comp.isLteOrSteStep = StepFormDialog.prototype['isLteOrSteStep'];
+      comp.isSingleTenderEnquiryAvailable = StepFormDialog.prototype['isSingleTenderEnquiryAvailable'];
+      comp.isLimitedTenderEnquiryAvailable = StepFormDialog.prototype['isLimitedTenderEnquiryAvailable'];
+      comp.getAvailableEnquiryStep = StepFormDialog.prototype['getAvailableEnquiryStep'];
       comp.extractCandidateTenderTitle = StepFormDialog.prototype['extractCandidateTenderTitle'];
       comp.hasTenderTitle = StepFormDialog.prototype['hasTenderTitle'];
       comp.extractCandidateTenderNo = StepFormDialog.prototype['extractCandidateTenderNo'];
@@ -3444,7 +3452,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       return { comp, fg, linkedStepSignal, fetchingSignal, resolvedDefSignal };
     };
 
-    it('should patch tender_title and tender_no from latest Limited Tender Enquiry when LTE is available', () => {
+    it('should call ONLY Limited Tender Enquiry API when LTE is available, never calling Single Tender Enquiry', () => {
       const { comp, fg } = setupBidDocLteComp();
 
       const mockLteStep: ProjectStep = {
@@ -3464,6 +3472,8 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
         },
       };
 
+      comp.existingSteps = () => [mockLteStep];
+
       const mockFormApi = {
         getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
           if (def.formCode === 'FORM_04_LTE') return of(mockLteStep);
@@ -3474,7 +3484,12 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
 
       comp.loadForBidDocumentLte(true);
 
-      expect(mockFormApi.getLatestEntry).toHaveBeenCalled();
+      // Verify ONLY LTE is called
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_04_LTE' }),
+        10,
+      );
       expect(fg.get('tender_title')?.value).toBe('Solar Power Plant Equipment Tender');
       expect(fg.get('tender_no')?.value).toBe('LTE-SPP-2026-004');
       expect(comp.bidDocLteLinkedStep()).toEqual(mockLteStep);
@@ -3487,7 +3502,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       );
     });
 
-    it('should patch tender_title from latest Single Tender Enquiry when STE is available and LTE is not', () => {
+    it('should call ONLY Single Tender Enquiry API when STE is available, never calling Limited Tender Enquiry', () => {
       const { comp, fg } = setupBidDocLteComp();
 
       const mockSteStep: ProjectStep = {
@@ -3507,6 +3522,8 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
         },
       };
 
+      comp.existingSteps = () => [mockSteStep];
+
       const mockFormApi = {
         getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
           if (def.formCode === 'FORM_33_STE') return of(mockSteStep);
@@ -3517,12 +3534,18 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
 
       comp.loadForBidDocumentLte(true);
 
+      // Verify ONLY STE is called, NEVER LTE
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_33_STE' }),
+        10,
+      );
       expect(fg.get('tender_title')?.value).toBe('Proprietary OEM Turbomachinery Upgrade');
       expect(fg.get('tender_no')?.value).toBe('STE-OEM-9921');
       expect(comp.bidDocLteLinkedStep()).toEqual(mockSteStep);
     });
 
-    it('should pick the latest available when both LTE and STE are returned based on newest timestamp', () => {
+    it('should pick the latest available enquiry step from project steps when both exist and call only that one', () => {
       const { comp, fg } = setupBidDocLteComp();
 
       const olderLte: ProjectStep = {
@@ -3553,9 +3576,11 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
         data: { tender_title: 'Newer STE Title', tender_no: 'STE-NEW' },
       };
 
+      // Project has both LTE and STE; STE is newer
+      comp.existingSteps = () => [olderLte, newerSte];
+
       const mockFormApi = {
         getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
-          if (def.formCode === 'FORM_04_LTE') return of(olderLte);
           if (def.formCode === 'FORM_33_STE') return of(newerSte);
           return of(null);
         }),
@@ -3564,105 +3589,34 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
 
       comp.loadForBidDocumentLte(false);
 
+      // STE is latest -> only STE API is called
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_33_STE' }),
+        10,
+      );
       expect(fg.get('tender_title')?.value).toBe('Newer STE Title');
-      expect(comp.bidDocLteLinkedStep()?.id).toBe(20);
 
-      // Reverse: LTE is newer than STE
+      // Now reverse: LTE is newer than STE
       olderLte.updated_at = '2026-03-05T09:00:00Z';
       newerSte.updated_at = '2026-02-25T14:00:00Z';
+      mockFormApi.getLatestEntry.mockReset();
+      mockFormApi.getLatestEntry.mockImplementation((def: FormDefinition) => {
+        if (def.formCode === 'FORM_04_LTE') return of(olderLte);
+        return of(null);
+      });
 
       comp.loadForBidDocumentLte(false);
+      // LTE is latest -> only LTE API is called
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_04_LTE' }),
+        10,
+      );
       expect(fg.get('tender_title')?.value).toBe('Older LTE Title');
-      expect(comp.bidDocLteLinkedStep()?.id).toBe(10);
     });
 
-    it('should pick candidate with higher ID when timestamps are equal or missing', () => {
-      const { comp, fg } = setupBidDocLteComp();
-
-      const lteStep: ProjectStep = {
-        id: 70,
-        project_id: 10,
-        step_number: 4,
-        step_name: 'Limited Tender Enquiry (LTE)',
-        description: '',
-        progress_percentage: 100,
-        completed_at: null,
-        form_code: 'FORM_04_LTE',
-        status: 'completed',
-        data: { tender_title: 'LTE High ID Title' },
-      };
-
-      const steStep: ProjectStep = {
-        id: 40,
-        project_id: 10,
-        step_number: 33,
-        step_name: 'Single Tender Enquiry (STE)',
-        description: '',
-        progress_percentage: 100,
-        completed_at: null,
-        form_code: 'FORM_33_STE',
-        status: 'completed',
-        data: { tender_title: 'STE Low ID Title' },
-      };
-
-      const mockFormApi = {
-        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
-          if (def.formCode === 'FORM_04_LTE') return of(lteStep);
-          if (def.formCode === 'FORM_33_STE') return of(steStep);
-          return of(null);
-        }),
-      };
-      comp.formApiService = mockFormApi;
-
-      comp.loadForBidDocumentLte(false);
-      expect(fg.get('tender_title')?.value).toBe('LTE High ID Title');
-    });
-
-    it('should prioritize candidate with non-empty tender_title', () => {
-      const { comp, fg } = setupBidDocLteComp();
-
-      const emptyLte: ProjectStep = {
-        id: 100,
-        project_id: 10,
-        step_number: 4,
-        step_name: 'Limited Tender Enquiry (LTE)',
-        description: '',
-        progress_percentage: 100,
-        completed_at: null,
-        form_code: 'FORM_04_LTE',
-        status: 'completed',
-        updated_at: '2026-03-10T10:00:00Z',
-        data: { tender_title: '' },
-      };
-
-      const validSte: ProjectStep = {
-        id: 50,
-        project_id: 10,
-        step_number: 33,
-        step_name: 'Single Tender Enquiry (STE)',
-        description: '',
-        progress_percentage: 100,
-        completed_at: null,
-        form_code: 'FORM_33_STE',
-        status: 'completed',
-        updated_at: '2026-03-01T10:00:00Z',
-        data: { tender_title: 'Valid STE Title' },
-      };
-
-      const mockFormApi = {
-        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
-          if (def.formCode === 'FORM_04_LTE') return of(emptyLte);
-          if (def.formCode === 'FORM_33_STE') return of(validSte);
-          return of(null);
-        }),
-      };
-      comp.formApiService = mockFormApi;
-
-      comp.loadForBidDocumentLte(false);
-      expect(fg.get('tender_title')?.value).toBe('Valid STE Title');
-    });
-
-    it('should use in-memory candidate from existingSteps if it is the latest', () => {
+    it('should use in-memory candidate from existingSteps if backend call returns null or fails', () => {
       const { comp, fg } = setupBidDocLteComp();
 
       const inMemorySte: ProjectStep = {
@@ -3675,30 +3629,12 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
         completed_at: null,
         form_code: 'FORM_33_STE',
         status: 'completed',
-        updated_at: '2026-03-20T10:00:00Z',
         data: { tender_title: 'In-Memory STE Title', tender_no: 'STE-MEM-01' },
       };
       comp.existingSteps = () => [inMemorySte];
 
-      const olderBackendLte: ProjectStep = {
-        id: 10,
-        project_id: 10,
-        step_number: 4,
-        step_name: 'Limited Tender Enquiry (LTE)',
-        description: '',
-        progress_percentage: 100,
-        completed_at: null,
-        form_code: 'FORM_04_LTE',
-        status: 'completed',
-        updated_at: '2026-03-01T10:00:00Z',
-        data: { tender_title: 'Old Backend LTE' },
-      };
-
       comp.formApiService = {
-        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
-          if (def.formCode === 'FORM_04_LTE') return of(olderBackendLte);
-          return of(null);
-        }),
+        getLatestEntry: vi.fn().mockReturnValue(of(null)),
       };
 
       comp.loadForBidDocumentLte(false);
@@ -3706,7 +3642,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(fg.get('tender_no')?.value).toBe('STE-MEM-01');
     });
 
-    it('should show warning message when neither LTE nor STE is found', () => {
+    it('should show warning message when the available enquiry is not found in backend or memory', () => {
       const { comp, fg } = setupBidDocLteComp();
 
       comp.formApiService = {
@@ -3719,24 +3655,33 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(comp.messageService.add).toHaveBeenCalledWith(
         expect.objectContaining({
           severity: 'warn',
-          summary: 'Enquiry Not Found',
+          summary: expect.stringContaining('Not Found'),
         }),
       );
     });
 
-    it('should compute isBidDocumentLte, source step name, and fetch button label properly', () => {
+    it('should compute isBidDocumentLte, source step name, and fetch button label properly based on available enquiry', () => {
       const comp = Object.create(StepFormDialog.prototype);
       const defSignal = signal<FormDefinition | undefined>(bidDocLteDef);
       const linkedSignal = signal<ProjectStep | null>(null);
 
       comp.resolvedDef = defSignal;
       comp.bidDocLteLinkedStep = linkedSignal;
+      comp.existingSteps = () => [];
+      comp.isSingleTenderEnquiryAvailable = () => false;
 
       expect(StepFormDialog.prototype['isBidDocumentLte'].call(comp)).toBe(true);
       expect(StepFormDialog.prototype['bidDocLteSourceStepName'].call(comp)).toBe(
-        'latest Limited Tender Enquiry (LTE) / Single Tender Enquiry (STE)',
+        'latest Limited Tender Enquiry (LTE)',
       );
-      expect(StepFormDialog.prototype['bidDocLteFetchButtonLabel'].call(comp)).toBe('Fetch from Enquiry');
+      expect(StepFormDialog.prototype['bidDocLteFetchButtonLabel'].call(comp)).toBe('Fetch from LTE');
+
+      // When STE is the available enquiry in the project
+      comp.isSingleTenderEnquiryAvailable = () => true;
+      expect(StepFormDialog.prototype['bidDocLteSourceStepName'].call(comp)).toBe(
+        'latest Single Tender Enquiry (STE)',
+      );
+      expect(StepFormDialog.prototype['bidDocLteFetchButtonLabel'].call(comp)).toBe('Fetch from STE');
 
       // Linked to STE
       linkedSignal.set({
@@ -3771,15 +3716,461 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(StepFormDialog.prototype['bidDocLteFetchButtonLabel'].call(comp)).toBe('Fetch from LTE');
     });
 
-    it('should correctly filter isLteOrSteStep and exclude Bid Documents', () => {
+    it('should correctly filter isLteOrSteStep, isLteStep, isSteStep and exclude Bid Documents', () => {
       const comp = Object.create(StepFormDialog.prototype);
       comp.isLteOrSteStep = StepFormDialog.prototype['isLteOrSteStep'];
+      comp.isLteStep = StepFormDialog.prototype['isLteStep'];
+      comp.isSteStep = StepFormDialog.prototype['isSteStep'];
+
+      expect(comp.isLteStep({ form_code: 'FORM_04_LTE', step_name: 'Limited Tender Enquiry (LTE)' })).toBe(true);
+      expect(comp.isLteStep({ form_code: 'FORM_33_STE', step_name: 'Single Tender Enquiry (STE)' })).toBe(false);
+
+      expect(comp.isSteStep({ form_code: 'FORM_33_STE', step_name: 'Single Tender Enquiry (STE)' })).toBe(true);
+      expect(comp.isSteStep({ form_code: 'FORM_04_LTE', step_name: 'Limited Tender Enquiry (LTE)' })).toBe(false);
 
       expect(comp.isLteOrSteStep({ form_code: 'FORM_04_LTE', step_name: 'Limited Tender Enquiry (LTE)' })).toBe(true);
       expect(comp.isLteOrSteStep({ form_code: 'FORM_33_STE', step_name: 'Single Tender Enquiry (STE)' })).toBe(true);
       expect(comp.isLteOrSteStep({ form_code: 'FORM_31_BID_DOC_LTE', step_name: 'Bid Document - Limited Tender Enquiry (LTE)' })).toBe(false);
       expect(comp.isLteOrSteStep({ form_code: 'FORM_34_BID_DOC_STE', step_name: 'Bid Document - Single Tender Enquiry (STE)' })).toBe(false);
       expect(comp.isLteOrSteStep({ form_code: 'FORM_01_PQB', step_name: 'National Pre-Qualification Bid (PQB)' })).toBe(false);
+    });
+  });
+
+  describe('Form 14: Purchase Order Auto-Patching from Bid Document LTE / STE', () => {
+    const poDef = getFormDefinition('FORM_14_PURCHASE_ORDER')!;
+
+    const setupPoComp = () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.loadForPurchaseOrder = StepFormDialog.prototype['loadForPurchaseOrder'];
+      comp.fetchFromBidDocSte = StepFormDialog.prototype['fetchFromBidDocSte'];
+      comp.fetchFromBidDocLte = StepFormDialog.prototype['fetchFromBidDocLte'];
+      comp.applyBidDocStepToPurchaseOrder = StepFormDialog.prototype['applyBidDocStepToPurchaseOrder'];
+      comp.resolveLinkedStepForPurchaseOrder = StepFormDialog.prototype['resolveLinkedStepForPurchaseOrder'];
+      comp.isBidDocSteStep = StepFormDialog.prototype['isBidDocSteStep'];
+      comp.isBidDocLteStep = StepFormDialog.prototype['isBidDocLteStep'];
+      comp.isBidDocSteAvailable = StepFormDialog.prototype['isBidDocSteAvailable'];
+      comp.isBidDocLteAvailable = StepFormDialog.prototype['isBidDocLteAvailable'];
+      comp.getAvailableBidDocStep = StepFormDialog.prototype['getAvailableBidDocStep'];
+      comp.pickLatestBidDocCandidate = StepFormDialog.prototype['pickLatestBidDocCandidate'];
+      comp.hasBidDocData = StepFormDialog.prototype['hasBidDocData'];
+      comp.populatePoItemsTable = StepFormDialog.prototype['populatePoItemsTable'];
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.isSingleTenderEnquiryAvailable = StepFormDialog.prototype['isSingleTenderEnquiryAvailable'];
+      comp.isLimitedTenderEnquiryAvailable = StepFormDialog.prototype['isLimitedTenderEnquiryAvailable'];
+
+      const fg = new FormGroup({
+        customer_name: new FormControl(''),
+        po_title: new FormControl(''),
+        po_no: new FormControl(''),
+        po_date: new FormControl(''),
+        delivery_terms: new FormControl(''),
+        payment_terms: new FormControl(''),
+        warranty_period: new FormControl(''),
+        gst_rate_pct: new FormControl<number | null>(null),
+      });
+
+      const tableArraySignal = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      const tableVersionSignal = signal<number>(0);
+      const formVersionSignal = signal<number>(0);
+      const poLinkedStepSignal = signal<ProjectStep | null>(null);
+      const fetchingPoDataSignal = signal<boolean>(false);
+      const resolvedDefSignal = signal<FormDefinition | undefined>(poDef);
+
+      comp.formGroup = () => fg;
+      comp.tableFormArray = tableArraySignal;
+      comp.tableVersion = tableVersionSignal;
+      comp.formVersion = formVersionSignal;
+      comp.poLinkedStep = poLinkedStepSignal;
+      comp.fetchingPoData = fetchingPoDataSignal;
+      comp.resolvedDef = resolvedDefSignal;
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+      comp.projectId = () => 10;
+      comp.existingSteps = () => [];
+
+      return {
+        comp,
+        fg,
+        tableArraySignal,
+        poLinkedStepSignal,
+        fetchingPoDataSignal,
+        resolvedDefSignal,
+        poDef,
+      };
+    };
+
+    const mockBidDocLteStep: ProjectStep = {
+      id: 310,
+      project_id: 10,
+      step_number: 31,
+      step_name: 'Bid Document - Limited Tender Enquiry (LTE)',
+      description: '',
+      progress_percentage: 100,
+      completed_at: null,
+      form_code: 'FORM_31_BID_DOC_LTE',
+      status: 'completed',
+      updated_at: '2026-03-01T10:00:00Z',
+      data: {
+        delivery_terms: 'FOB',
+        gst_pct: 18,
+        payment_terms: '100% against delivery',
+        warranty_period: '12 Months',
+        tender_title: 'LTE Solar Equipment Supply',
+        customer_name: 'Solar Power Corp',
+        items: [
+          {
+            sr_no: 1,
+            description: 'Solar Photovoltaic Inverter 50kW',
+            hsn_sac: '85044090',
+            unit: 'Nos',
+            quantity: 5,
+            unit_price: 120000,
+            total_amount: 600000,
+          },
+          {
+            sr_no: 2,
+            description: 'Monocrystalline Solar Panel 540W',
+            hsn_sac: '85414011',
+            unit: 'Nos',
+            quantity: 200,
+            unit_price: 8500,
+            total_amount: 1700000,
+          },
+        ],
+      },
+    };
+
+    const mockBidDocSteStep: ProjectStep = {
+      id: 340,
+      project_id: 10,
+      step_number: 34,
+      step_name: 'Bid Document - Single Tender Enquiry (STE)',
+      description: '',
+      progress_percentage: 100,
+      completed_at: null,
+      form_code: 'FORM_34_BID_DOC_STE',
+      status: 'completed',
+      updated_at: '2026-03-02T11:00:00Z',
+      data: {
+        delivery_terms: 'CIF',
+        gst_pct: 12,
+        payment_terms: 'Net 30',
+        warranty_period: '24 Months',
+        tender_title: 'Proprietary Turbomachinery Spares',
+        customer_name: 'National Gas Utility',
+        items: [
+          {
+            sr_no: 1,
+            description: 'High Pressure Rotor Assembly',
+            hsn_sac: '84069000',
+            unit: 'Set',
+            quantity: 2,
+            unit_price: 450000,
+            total_amount: 900000,
+          },
+        ],
+      },
+    };
+
+    it('should call ONLY Bid Document LTE API when Bid Doc LTE is available, never calling Bid Document STE', () => {
+      const { comp, fg, tableArraySignal } = setupPoComp();
+
+      comp.existingSteps = () => [mockBidDocLteStep];
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_31_BID_DOC_LTE') return of(mockBidDocLteStep);
+          if (def.formCode === 'FORM_34_BID_DOC_STE') return of(mockBidDocSteStep);
+          return of(null);
+        }),
+      };
+      comp.formApiService = mockFormApi;
+
+      comp.loadForPurchaseOrder(true);
+
+      // Verify ONLY Bid Doc LTE is called, NEVER STE
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_31_BID_DOC_LTE' }),
+        10,
+      );
+
+      // Verify fields patched
+      expect(fg.get('delivery_terms')?.value).toBe('FOB');
+      expect(fg.get('gst_rate_pct')?.value).toBe(18);
+      expect(fg.get('payment_terms')?.value).toBe('100% against delivery');
+      expect(fg.get('warranty_period')?.value).toBe('12 Months');
+      expect(fg.get('po_title')?.value).toBe('LTE Solar Equipment Supply');
+      expect(fg.get('customer_name')?.value).toBe('Solar Power Corp');
+
+      // Verify table rows populated
+      expect(tableArraySignal().length).toBe(2);
+      const row1 = tableArraySignal().at(0).value;
+      expect(row1.description).toBe('Solar Photovoltaic Inverter 50kW');
+      expect(row1.hsn_sac).toBe('85044090');
+      expect(row1.quantity).toBe(5);
+      expect(row1.unit_price).toBe(120000);
+      expect(row1.total_price).toBe(600000);
+
+      const row2 = tableArraySignal().at(1).value;
+      expect(row2.description).toBe('Monocrystalline Solar Panel 540W');
+      expect(row2.quantity).toBe(200);
+
+      expect(comp.poLinkedStep()).toEqual(mockBidDocLteStep);
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: 'Purchase Order Details Patched',
+          detail: expect.stringContaining('2 line items loaded'),
+        }),
+      );
+    });
+
+    it('should call ONLY Bid Document STE API when Bid Doc STE is available, never calling Bid Document LTE', () => {
+      const { comp, fg, tableArraySignal } = setupPoComp();
+
+      comp.existingSteps = () => [mockBidDocSteStep];
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_34_BID_DOC_STE') return of(mockBidDocSteStep);
+          if (def.formCode === 'FORM_31_BID_DOC_LTE') return of(mockBidDocLteStep);
+          return of(null);
+        }),
+      };
+      comp.formApiService = mockFormApi;
+
+      comp.loadForPurchaseOrder(true);
+
+      // Verify ONLY Bid Doc STE is called, NEVER LTE
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_34_BID_DOC_STE' }),
+        10,
+      );
+
+      // Verify fields patched
+      expect(fg.get('delivery_terms')?.value).toBe('CIF');
+      expect(fg.get('gst_rate_pct')?.value).toBe(12);
+      expect(fg.get('payment_terms')?.value).toBe('Net 30');
+      expect(fg.get('warranty_period')?.value).toBe('24 Months');
+      expect(fg.get('po_title')?.value).toBe('Proprietary Turbomachinery Spares');
+      expect(fg.get('customer_name')?.value).toBe('National Gas Utility');
+
+      // Verify table rows populated
+      expect(tableArraySignal().length).toBe(1);
+      const row1 = tableArraySignal().at(0).value;
+      expect(row1.description).toBe('High Pressure Rotor Assembly');
+      expect(row1.hsn_sac).toBe('84069000');
+      expect(row1.unit).toBe('Set');
+      expect(row1.quantity).toBe(2);
+      expect(row1.unit_price).toBe(450000);
+      expect(row1.total_price).toBe(900000);
+
+      expect(comp.poLinkedStep()).toEqual(mockBidDocSteStep);
+    });
+
+    it('should pick the latest available Bid Document step when both LTE and STE exist in project steps and call only that one', () => {
+      const { comp, fg } = setupPoComp();
+
+      const olderLte = { ...mockBidDocLteStep, updated_at: '2026-02-10T08:00:00Z' };
+      const newerSte = { ...mockBidDocSteStep, updated_at: '2026-02-28T14:00:00Z' };
+
+      // STE is newer
+      comp.existingSteps = () => [olderLte, newerSte];
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_34_BID_DOC_STE') return of(newerSte);
+          return of(null);
+        }),
+      };
+      comp.formApiService = mockFormApi;
+
+      comp.loadForPurchaseOrder(false);
+
+      // STE is latest -> only STE API is called
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_34_BID_DOC_STE' }),
+        10,
+      );
+      expect(fg.get('delivery_terms')?.value).toBe('CIF');
+      expect(fg.get('gst_rate_pct')?.value).toBe(12);
+
+      // Now reverse: LTE is newer than STE
+      olderLte.updated_at = '2026-03-05T09:00:00Z';
+      newerSte.updated_at = '2026-02-28T14:00:00Z';
+      mockFormApi.getLatestEntry.mockReset();
+      mockFormApi.getLatestEntry.mockImplementation((def: FormDefinition) => {
+        if (def.formCode === 'FORM_31_BID_DOC_LTE') return of(olderLte);
+        return of(null);
+      });
+
+      comp.loadForPurchaseOrder(false);
+      // LTE is latest -> only LTE API is called
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_31_BID_DOC_LTE' }),
+        10,
+      );
+      expect(fg.get('delivery_terms')?.value).toBe('FOB');
+      expect(fg.get('gst_rate_pct')?.value).toBe(18);
+    });
+
+    it('should infer STE workflow and call ONLY Bid Doc STE when Single Tender Enquiry step is in project without Bid Doc step yet', () => {
+      const { comp, fg } = setupPoComp();
+
+      const steEnquiryStep: ProjectStep = {
+        id: 330,
+        project_id: 10,
+        step_number: 33,
+        step_name: 'Single Tender Enquiry (STE)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_33_STE',
+        status: 'completed',
+        data: { tender_title: 'STE Workflow Project' },
+      };
+
+      comp.existingSteps = () => [steEnquiryStep];
+      comp.isSingleTenderEnquiryAvailable = () => true;
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_34_BID_DOC_STE') return of(mockBidDocSteStep);
+          return of(null);
+        }),
+      };
+      comp.formApiService = mockFormApi;
+
+      comp.loadForPurchaseOrder(false);
+
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_34_BID_DOC_STE' }),
+        10,
+      );
+      expect(fg.get('delivery_terms')?.value).toBe('CIF');
+      expect(fg.get('payment_terms')?.value).toBe('Net 30');
+    });
+
+    it('should default to Bid Doc LTE and call ONLY Bid Doc LTE when no STE exists', () => {
+      const { comp, fg } = setupPoComp();
+
+      comp.existingSteps = () => [];
+      comp.isSingleTenderEnquiryAvailable = () => false;
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_31_BID_DOC_LTE') return of(mockBidDocLteStep);
+          return of(null);
+        }),
+      };
+      comp.formApiService = mockFormApi;
+
+      comp.loadForPurchaseOrder(false);
+
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_31_BID_DOC_LTE' }),
+        10,
+      );
+      expect(fg.get('delivery_terms')?.value).toBe('FOB');
+      expect(fg.get('warranty_period')?.value).toBe('12 Months');
+    });
+
+    it('should use in-memory candidate from existingSteps if backend call returns null or fails', () => {
+      const { comp, fg, tableArraySignal } = setupPoComp();
+
+      comp.existingSteps = () => [mockBidDocSteStep];
+
+      comp.formApiService = {
+        getLatestEntry: vi.fn().mockReturnValue(of(null)),
+      };
+
+      comp.loadForPurchaseOrder(false);
+
+      expect(fg.get('delivery_terms')?.value).toBe('CIF');
+      expect(fg.get('gst_rate_pct')?.value).toBe(12);
+      expect(fg.get('payment_terms')?.value).toBe('Net 30');
+      expect(fg.get('warranty_period')?.value).toBe('24 Months');
+      expect(tableArraySignal().length).toBe(1);
+    });
+
+    it('should show warning message when neither backend nor memory has Bid Document', () => {
+      const { comp, fg } = setupPoComp();
+
+      comp.formApiService = {
+        getLatestEntry: vi.fn().mockReturnValue(of(null)),
+      };
+
+      comp.loadForPurchaseOrder(true);
+
+      expect(fg.get('delivery_terms')?.value).toBe('');
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'warn',
+          summary: expect.stringContaining('Not Found'),
+        }),
+      );
+    });
+
+    it('should compute isPurchaseOrder, poSourceStepName, and poFetchButtonLabel properly based on available Bid Document', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const defSignal = signal<FormDefinition | undefined>(poDef);
+      const linkedSignal = signal<ProjectStep | null>(null);
+
+      comp.resolvedDef = defSignal;
+      comp.poLinkedStep = linkedSignal;
+      comp.existingSteps = () => [];
+      comp.isBidDocSteAvailable = () => false;
+      comp.isBidDocLteAvailable = () => false;
+      comp.isSingleTenderEnquiryAvailable = () => false;
+      comp.isBidDocSteStep = StepFormDialog.prototype['isBidDocSteStep'];
+      comp.isBidDocLteStep = StepFormDialog.prototype['isBidDocLteStep'];
+
+      expect(StepFormDialog.prototype['isPurchaseOrder'].call(comp)).toBe(true);
+      expect(StepFormDialog.prototype['poSourceStepName'].call(comp)).toBe(
+        'latest Bid Document - Limited Tender Enquiry (LTE)',
+      );
+      expect(StepFormDialog.prototype['poFetchButtonLabel'].call(comp)).toBe('Fetch from Bid Doc LTE');
+
+      // When STE is available in the project
+      comp.isSingleTenderEnquiryAvailable = () => true;
+      expect(StepFormDialog.prototype['poSourceStepName'].call(comp)).toBe(
+        'latest Bid Document - Single Tender Enquiry (STE)',
+      );
+      expect(StepFormDialog.prototype['poFetchButtonLabel'].call(comp)).toBe('Fetch from Bid Doc STE');
+
+      // Linked to STE
+      linkedSignal.set(mockBidDocSteStep);
+      expect(StepFormDialog.prototype['poSourceStepName'].call(comp)).toBe(
+        'Bid Document - Single Tender Enquiry (STE)',
+      );
+      expect(StepFormDialog.prototype['poFetchButtonLabel'].call(comp)).toBe('Fetch from Bid Doc STE');
+
+      // Linked to LTE
+      linkedSignal.set(mockBidDocLteStep);
+      expect(StepFormDialog.prototype['poSourceStepName'].call(comp)).toBe(
+        'Bid Document - Limited Tender Enquiry (LTE)',
+      );
+      expect(StepFormDialog.prototype['poFetchButtonLabel'].call(comp)).toBe('Fetch from Bid Doc LTE');
+    });
+
+    it('should correctly classify isBidDocSteStep and isBidDocLteStep', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.isBidDocSteStep = StepFormDialog.prototype['isBidDocSteStep'];
+      comp.isBidDocLteStep = StepFormDialog.prototype['isBidDocLteStep'];
+
+      expect(comp.isBidDocLteStep({ form_code: 'FORM_31_BID_DOC_LTE', step_name: 'Bid Document - Limited Tender Enquiry (LTE)' })).toBe(true);
+      expect(comp.isBidDocLteStep({ form_code: 'FORM_34_BID_DOC_STE', step_name: 'Bid Document - Single Tender Enquiry (STE)' })).toBe(false);
+      expect(comp.isBidDocLteStep({ form_code: 'FORM_04_LTE', step_name: 'Limited Tender Enquiry (LTE)' })).toBe(false);
+
+      expect(comp.isBidDocSteStep({ form_code: 'FORM_34_BID_DOC_STE', step_name: 'Bid Document - Single Tender Enquiry (STE)' })).toBe(true);
+      expect(comp.isBidDocSteStep({ form_code: 'FORM_31_BID_DOC_LTE', step_name: 'Bid Document - Limited Tender Enquiry (LTE)' })).toBe(false);
+      expect(comp.isBidDocSteStep({ form_code: 'FORM_33_STE', step_name: 'Single Tender Enquiry (STE)' })).toBe(false);
     });
   });
 });

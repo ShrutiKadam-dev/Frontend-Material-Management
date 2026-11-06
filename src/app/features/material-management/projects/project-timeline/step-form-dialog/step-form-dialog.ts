@@ -241,7 +241,10 @@ export class StepFormDialog {
         'latest Enquiry'
       );
     }
-    return 'latest Limited Tender Enquiry (LTE) / Single Tender Enquiry (STE)';
+    if (this.isSingleTenderEnquiryAvailable()) {
+      return 'latest Single Tender Enquiry (STE)';
+    }
+    return 'latest Limited Tender Enquiry (LTE)';
   });
   readonly bidDocLteFetchButtonLabel = computed(() => {
     const linked = this.bidDocLteLinkedStep();
@@ -256,11 +259,53 @@ export class StepFormDialog {
       ) {
         return 'Fetch from STE';
       }
-      if (code === 'FORM_04_LTE' || name.includes('limited') || name.includes('lte')) {
-        return 'Fetch from LTE';
-      }
+      return 'Fetch from LTE';
     }
-    return 'Fetch from Enquiry';
+    if (this.isSingleTenderEnquiryAvailable()) {
+      return 'Fetch from STE';
+    }
+    return 'Fetch from LTE';
+  });
+  readonly isPurchaseOrder = computed(() => {
+    const code = this.resolvedDef()?.formCode;
+    if (code === 'FORM_14_PURCHASE_ORDER') return true;
+    const name = (this.resolvedDef()?.name || '').toLowerCase();
+    return name.includes('purchase order') || name.startsWith('po ');
+  });
+  readonly poLinkedStep = signal<ProjectStep | null>(null);
+  readonly fetchingPoData = signal<boolean>(false);
+  readonly poSourceStepName = computed(() => {
+    const linked = this.poLinkedStep();
+    if (linked) {
+      return (
+        linked.step_name ||
+        (linked.form_code ? getFormDefinition(linked.form_code)?.name : null) ||
+        'latest Bid Document'
+      );
+    }
+    const isSte =
+      this.isBidDocSteAvailable() ||
+      (!this.isBidDocLteAvailable() && this.isSingleTenderEnquiryAvailable());
+    if (isSte) {
+      return 'latest Bid Document - Single Tender Enquiry (STE)';
+    }
+    return 'latest Bid Document - Limited Tender Enquiry (LTE)';
+  });
+  readonly poFetchButtonLabel = computed(() => {
+    const linked = this.poLinkedStep();
+    if (linked) {
+      if (this.isBidDocSteStep(linked)) {
+        return 'Fetch from Bid Doc STE';
+      }
+      return 'Fetch from Bid Doc LTE';
+    }
+    const isSte =
+      this.isBidDocSteAvailable() ||
+      (!this.isBidDocLteAvailable() && this.isSingleTenderEnquiryAvailable());
+    if (isSte) {
+      return 'Fetch from Bid Doc STE';
+    }
+    return 'Fetch from Bid Doc LTE';
   });
   readonly isCorrigendum = computed(() => this.resolvedDef()?.formCode === 'FORM_03_CORRIGENDUM');
   readonly linkedTenderStep = signal<ProjectStep | null>(null);
@@ -1187,30 +1232,101 @@ export class StepFormDialog {
   }
 
   // ── Form 31: Bid Document - Limited Tender Enquiry (LTE) ─────────────
-  isLteOrSteStep(s: ProjectStep | null | undefined): boolean {
+  isLteStep(s: ProjectStep | null | undefined): boolean {
     if (!s) return false;
     const fcode = (s.form_code || '').toUpperCase().trim();
     const name = (s.step_name || '').toLowerCase().trim();
     if (name.includes('bid doc') || name.includes('bid document') || fcode.includes('BID_DOC')) return false;
-
-    if (
-      fcode === 'FORM_04_LTE' ||
-      fcode === 'FORM_33_STE' ||
-      fcode === 'FORM_30_STE' ||
-      fcode === 'FORM_STE'
-    ) {
-      return true;
-    }
+    if (fcode === 'FORM_04_LTE') return true;
     const resolved = s.form_code ? getFormDefinition(s.form_code) : undefined;
-    if (resolved?.formCode === 'FORM_04_LTE' || resolved?.formCode === 'FORM_33_STE') {
-      return true;
+    if (resolved?.formCode === 'FORM_04_LTE') return true;
+    return name.includes('limited tender') || name.startsWith('lte');
+  }
+
+  isSteStep(s: ProjectStep | null | undefined): boolean {
+    if (!s) return false;
+    const fcode = (s.form_code || '').toUpperCase().trim();
+    const name = (s.step_name || '').toLowerCase().trim();
+    if (name.includes('bid doc') || name.includes('bid document') || fcode.includes('BID_DOC')) return false;
+    if (fcode === 'FORM_33_STE' || fcode === 'FORM_30_STE' || fcode === 'FORM_STE') return true;
+    const resolved = s.form_code ? getFormDefinition(s.form_code) : undefined;
+    if (resolved?.formCode === 'FORM_33_STE') return true;
+    return name.includes('single tender') || name.startsWith('ste');
+  }
+
+  isLteOrSteStep(s: ProjectStep | null | undefined): boolean {
+    return this.isLteStep(s) || this.isSteStep(s);
+  }
+
+  isSingleTenderEnquiryAvailable(): boolean {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    if (Array.isArray(inMemory) && inMemory.length > 0) {
+      return inMemory.some((s) => this.isSteStep(s));
     }
-    return (
-      name.includes('limited tender') ||
-      name.startsWith('lte') ||
-      name.includes('single tender') ||
-      name.startsWith('ste')
-    );
+    const pId = typeof this.projectId === 'function' ? this.projectId() : null;
+    if (pId) {
+      try {
+        const stored = localStorage.getItem(`material_management_project_steps_${pId}`);
+        if (stored) {
+          const parsed = JSON.parse(stored) as ProjectStep[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.some((s) => this.isSteStep(s));
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return false;
+  }
+
+  isLimitedTenderEnquiryAvailable(): boolean {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    if (Array.isArray(inMemory) && inMemory.length > 0) {
+      return inMemory.some((s) => this.isLteStep(s));
+    }
+    const pId = typeof this.projectId === 'function' ? this.projectId() : null;
+    if (pId) {
+      try {
+        const stored = localStorage.getItem(`material_management_project_steps_${pId}`);
+        if (stored) {
+          const parsed = JSON.parse(stored) as ProjectStep[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.some((s) => this.isLteStep(s));
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return false;
+  }
+
+  getAvailableEnquiryStep(): ProjectStep | null {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    let steps: ProjectStep[] = Array.isArray(inMemory) ? inMemory : [];
+
+    if (steps.length === 0) {
+      const pId = typeof this.projectId === 'function' ? this.projectId() : null;
+      if (pId) {
+        try {
+          const stored = localStorage.getItem(`material_management_project_steps_${pId}`);
+          if (stored) {
+            const parsed = JSON.parse(stored) as ProjectStep[];
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              steps = parsed;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    const candidates = steps.filter((s) => this.isLteOrSteStep(s));
+    if (candidates.length === 0) return null;
+
+    return this.pickLatestLteOrSteCandidate(candidates) || candidates[0];
   }
 
   extractCandidateTenderTitle(s: ProjectStep | null | undefined): string {
@@ -1251,7 +1367,7 @@ export class StepFormDialog {
     if (!candidates || candidates.length === 0) return undefined;
 
     const validCandidates = candidates.filter((s) => this.hasTenderTitle(s));
-    if (validCandidates.length === 0) return undefined;
+    const pool = validCandidates.length > 0 ? validCandidates : candidates;
 
     const getStepTimestamp = (s: ProjectStep): number => {
       const dtStr = s.updated_at || s.created_at || s.completed_at;
@@ -1266,20 +1382,20 @@ export class StepFormDialog {
       return s.step_number ?? s.step_order ?? 0;
     };
 
-    const sorted = [...validCandidates].sort((a, b) => {
-      // 1. Newest timestamp wins
+    const sorted = [...pool].sort((a, b) => {
+      const hasTitleA = this.hasTenderTitle(a) ? 1 : 0;
+      const hasTitleB = this.hasTenderTitle(b) ? 1 : 0;
+      if (hasTitleA !== hasTitleB) return hasTitleB - hasTitleA;
+
       const timeDiff = getStepTimestamp(b) - getStepTimestamp(a);
       if (timeDiff !== 0) return timeDiff;
 
-      // 2. Completed steps preferred
       if (a.status === 'completed' && b.status !== 'completed') return -1;
       if (b.status === 'completed' && a.status !== 'completed') return 1;
 
-      // 3. Highest ID wins (latest inserted record)
       const idDiff = (Number(b.id) || 0) - (Number(a.id) || 0);
       if (idDiff !== 0) return idDiff;
 
-      // 4. Highest step order/number
       return getStepOrderNum(b) - getStepOrderNum(a);
     });
 
@@ -1291,127 +1407,645 @@ export class StepFormDialog {
     const pId = typeof this.projectId === 'function' ? this.projectId() : (this.projectId as unknown as number);
     if (!pId) return;
 
+    // Determine the available enquiry step in the project.
+    // Call ONLY the available one (STE or LTE) - no need to call both!
+    const availableStep = this.getAvailableEnquiryStep();
+    const isSte = availableStep ? this.isSteStep(availableStep) : this.isSingleTenderEnquiryAvailable();
+
+    if (isSte) {
+      this.fetchFromSingleTenderEnquiry(pId, availableStep, showNotification);
+    } else {
+      this.fetchFromLimitedTenderEnquiry(pId, availableStep, showNotification);
+    }
+  }
+
+  private fetchFromSingleTenderEnquiry(
+    pId: number,
+    availableStep: ProjectStep | null,
+    showNotification: boolean,
+  ): void {
+    const steDef = getFormDefinition('FORM_33_STE');
+    if (!steDef || !this.formApiService) {
+      if (availableStep && this.hasTenderTitle(availableStep)) {
+        this.applyEnquiryStepToBidDocLte(availableStep, showNotification);
+      }
+      this.fetchingBidDocLte.set(false);
+      return;
+    }
+
     this.fetchingBidDocLte.set(true);
 
-    const lteDef = getFormDefinition('FORM_04_LTE');
-    const steDef = getFormDefinition('FORM_33_STE');
-
-    // 1. In-memory candidates
-    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
-    const memoryCandidates: ProjectStep[] = Array.isArray(inMemory)
-      ? inMemory.filter((s) => this.isLteOrSteStep(s) && this.hasTenderTitle(s))
-      : [];
-
-    // 2. Query backend /latest for both Limited Tender Enquiry and Single Tender Enquiry
-    const lteLatest$: Observable<ProjectStep | null> = lteDef && this.formApiService
-      ? this.formApiService.getLatestEntry(lteDef, pId).pipe(catchError(() => of(null)))
-      : of(null);
-    const steLatest$: Observable<ProjectStep | null> = steDef && this.formApiService
-      ? this.formApiService.getLatestEntry(steDef, pId).pipe(catchError(() => of(null)))
-      : of(null);
-
-    forkJoin({
-      lte: lteLatest$,
-      ste: steLatest$,
-    })
-      .pipe(finalize(() => this.fetchingBidDocLte.set(false)))
+    this.formApiService
+      .getLatestEntry(steDef, pId)
+      .pipe(
+        catchError(() => of(null)),
+        finalize(() => this.fetchingBidDocLte.set(false)),
+      )
       .subscribe({
-        next: (results) => {
-          const allCandidates: ProjectStep[] = [...memoryCandidates];
-          if (results.lte && this.hasTenderTitle(results.lte)) {
-            allCandidates.push(results.lte);
-          }
-          if (results.ste && this.hasTenderTitle(results.ste)) {
-            allCandidates.push(results.ste);
-          }
+        next: (latestSte) => {
+          const candidate =
+            latestSte && this.hasTenderTitle(latestSte)
+              ? latestSte
+              : availableStep && this.hasTenderTitle(availableStep)
+                ? availableStep
+                : latestSte;
 
-          const chosen = this.pickLatestLteOrSteCandidate(allCandidates);
-          if (chosen) {
-            const title = this.extractCandidateTenderTitle(chosen);
-            const tenderNo = this.extractCandidateTenderNo(chosen);
-            this.bidDocLteLinkedStep.set(chosen);
-
-            const fg = this.formGroup();
-            if (fg) {
-              const patchPayload: Record<string, unknown> = {};
-              if (title && fg.get('tender_title')) {
-                patchPayload['tender_title'] = title;
-              }
-              if (tenderNo && fg.get('tender_no') && !fg.get('tender_no')?.value) {
-                patchPayload['tender_no'] = tenderNo;
-              }
-              fg.patchValue(patchPayload);
-              if (title) fg.get('tender_title')?.markAsDirty();
-              this.formVersion.update((v) => v + 1);
-              this.cdr.markForCheck();
-            }
-
-            if (showNotification) {
-              const sourceName =
-                chosen.step_name ||
-                (chosen.form_code ? getFormDefinition(chosen.form_code)?.name : null) ||
-                'latest Enquiry';
-              this.messageService?.add({
-                severity: 'success',
-                summary: 'Tender Title Patched',
-                detail: `Tender Title "${title}" loaded from ${sourceName}.`,
-              });
-            }
-          } else {
-            if (showNotification) {
-              this.messageService?.add({
-                severity: 'warn',
-                summary: 'Enquiry Not Found',
-                detail: 'No latest Single Tender Enquiry or Limited Tender Enquiry found for this project.',
-              });
-            }
+          if (candidate && this.hasTenderTitle(candidate)) {
+            this.applyEnquiryStepToBidDocLte(candidate, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'warn',
+              summary: 'Single Tender Enquiry Not Found',
+              detail: 'No latest Single Tender Enquiry found for this project to patch Tender Title.',
+            });
           }
         },
         error: () => {
-          if (showNotification) {
+          if (availableStep && this.hasTenderTitle(availableStep)) {
+            this.applyEnquiryStepToBidDocLte(availableStep, showNotification);
+          } else if (showNotification) {
             this.messageService?.add({
               severity: 'info',
-              summary: 'Enquiry Unavailable',
-              detail: 'Could not fetch latest Single or Limited Tender Enquiry for this project.',
+              summary: 'Single Tender Enquiry Unavailable',
+              detail: 'Could not fetch latest Single Tender Enquiry for this project.',
             });
           }
         },
       });
   }
 
-  resolveLinkedStepForBidDocLte(): void {
-    if (this.bidDocLteLinkedStep()) return;
-    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
-    const candidates: ProjectStep[] = Array.isArray(inMemory)
-      ? inMemory.filter((s) => this.isLteOrSteStep(s) && this.hasTenderTitle(s))
-      : [];
-
-    const chosen = this.pickLatestLteOrSteCandidate(candidates);
-    if (chosen) {
-      this.bidDocLteLinkedStep.set(chosen);
+  private fetchFromLimitedTenderEnquiry(
+    pId: number,
+    availableStep: ProjectStep | null,
+    showNotification: boolean,
+  ): void {
+    const lteDef = getFormDefinition('FORM_04_LTE');
+    if (!lteDef || !this.formApiService) {
+      if (availableStep && this.hasTenderTitle(availableStep)) {
+        this.applyEnquiryStepToBidDocLte(availableStep, showNotification);
+      }
+      this.fetchingBidDocLte.set(false);
       return;
     }
 
-    const pId = typeof this.projectId === 'function' ? this.projectId() : (this.projectId as unknown as number);
-    if (!pId || !this.formApiService) return;
+    this.fetchingBidDocLte.set(true);
 
-    const lteDef = getFormDefinition('FORM_04_LTE');
-    const steDef = getFormDefinition('FORM_33_STE');
+    this.formApiService
+      .getLatestEntry(lteDef, pId)
+      .pipe(
+        catchError(() => of(null)),
+        finalize(() => this.fetchingBidDocLte.set(false)),
+      )
+      .subscribe({
+        next: (latestLte) => {
+          const candidate =
+            latestLte && this.hasTenderTitle(latestLte)
+              ? latestLte
+              : availableStep && this.hasTenderTitle(availableStep)
+                ? availableStep
+                : latestLte;
 
-    const lteLatest$ = lteDef ? this.formApiService.getLatestEntry(lteDef, pId).pipe(catchError(() => of(null))) : of(null);
-    const steLatest$ = steDef ? this.formApiService.getLatestEntry(steDef, pId).pipe(catchError(() => of(null))) : of(null);
+          if (candidate && this.hasTenderTitle(candidate)) {
+            this.applyEnquiryStepToBidDocLte(candidate, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'warn',
+              summary: 'Limited Tender Enquiry Not Found',
+              detail: 'No latest Limited Tender Enquiry found for this project to patch Tender Title.',
+            });
+          }
+        },
+        error: () => {
+          if (availableStep && this.hasTenderTitle(availableStep)) {
+            this.applyEnquiryStepToBidDocLte(availableStep, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'info',
+              summary: 'Limited Tender Enquiry Unavailable',
+              detail: 'Could not fetch latest Limited Tender Enquiry for this project.',
+            });
+          }
+        },
+      });
+  }
 
-    forkJoin({ lte: lteLatest$, ste: steLatest$ }).subscribe({
-      next: (results) => {
-        const pool: ProjectStep[] = [];
-        if (results.lte && this.hasTenderTitle(results.lte)) pool.push(results.lte);
-        if (results.ste && this.hasTenderTitle(results.ste)) pool.push(results.ste);
-        const best = this.pickLatestLteOrSteCandidate(pool);
-        if (best) {
-          this.bidDocLteLinkedStep.set(best);
+  private applyEnquiryStepToBidDocLte(
+    step: ProjectStep,
+    showNotification: boolean,
+  ): void {
+    const title = this.extractCandidateTenderTitle(step);
+    const tenderNo = this.extractCandidateTenderNo(step);
+    this.bidDocLteLinkedStep.set(step);
+
+    const fg = this.formGroup();
+    if (fg) {
+      const patchPayload: Record<string, unknown> = {};
+      if (title && fg.get('tender_title')) {
+        patchPayload['tender_title'] = title;
+      }
+      if (tenderNo && fg.get('tender_no') && !fg.get('tender_no')?.value) {
+        patchPayload['tender_no'] = tenderNo;
+      }
+      fg.patchValue(patchPayload);
+      if (title) fg.get('tender_title')?.markAsDirty();
+      this.formVersion.update((v) => v + 1);
+      this.cdr?.markForCheck?.();
+    }
+
+    if (showNotification) {
+      const sourceName =
+        step.step_name ||
+        (step.form_code ? getFormDefinition(step.form_code)?.name : null) ||
+        'latest Enquiry';
+      this.messageService?.add({
+        severity: 'success',
+        summary: 'Tender Title Patched',
+        detail: `Tender Title "${title}" loaded from ${sourceName}.`,
+      });
+    }
+  }
+
+  resolveLinkedStepForBidDocLte(): void {
+    if (this.bidDocLteLinkedStep()) return;
+    const step = this.getAvailableEnquiryStep();
+    if (step) {
+      this.bidDocLteLinkedStep.set(step);
+    }
+  }
+
+  // ── Purchase Order Auto-Patching (Bid Doc LTE / STE) ─────────────────
+  isBidDocSteStep(s: ProjectStep | null | undefined): boolean {
+    if (!s) return false;
+    const fcode = (s.form_code || '').toUpperCase().trim();
+    const name = (s.step_name || '').toLowerCase().trim();
+    if (
+      fcode === 'FORM_34_BID_DOC_STE' ||
+      fcode === 'FORM_34' ||
+      fcode === 'FORM_BID_DOC_STE' ||
+      fcode === 'FORM_31_BID_DOC_STE' ||
+      fcode === 'FORM_34_BID_DOCUMENT_STE' ||
+      fcode === 'FORM_BID_DOCUMENT_STE' ||
+      fcode === 'BID_DOCUMENT_STE' ||
+      fcode === 'BID_DOC_STE'
+    ) {
+      return true;
+    }
+    const resolved = s.form_code ? getFormDefinition(s.form_code) : undefined;
+    if (resolved?.formCode === 'FORM_34_BID_DOC_STE') return true;
+    return name.includes('bid doc') && (name.includes('ste') || name.includes('single tender'));
+  }
+
+  isBidDocLteStep(s: ProjectStep | null | undefined): boolean {
+    if (!s) return false;
+    const fcode = (s.form_code || '').toUpperCase().trim();
+    const name = (s.step_name || '').toLowerCase().trim();
+    if (
+      fcode === 'FORM_31_BID_DOC_LTE' ||
+      fcode === 'FORM_31' ||
+      fcode === 'FORM_BID_DOC_LTE' ||
+      fcode === 'FORM_BID_DOCUMENT_LTE' ||
+      fcode === 'BID_DOCUMENT_LTE' ||
+      fcode === 'BID_DOC_LTE'
+    ) {
+      return true;
+    }
+    const resolved = s.form_code ? getFormDefinition(s.form_code) : undefined;
+    if (resolved?.formCode === 'FORM_31_BID_DOC_LTE') return true;
+    return name.includes('bid doc') && (name.includes('lte') || name.includes('limited tender'));
+  }
+
+  isBidDocSteAvailable(): boolean {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    if (Array.isArray(inMemory) && inMemory.length > 0) {
+      return inMemory.some((s) => this.isBidDocSteStep(s));
+    }
+    const pId = typeof this.projectId === 'function' ? this.projectId() : null;
+    if (pId) {
+      try {
+        const stored = localStorage.getItem(`material_management_project_steps_${pId}`);
+        if (stored) {
+          const parsed = JSON.parse(stored) as ProjectStep[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.some((s) => this.isBidDocSteStep(s));
+          }
         }
-      },
+      } catch {
+        // ignore
+      }
+    }
+    return false;
+  }
+
+  isBidDocLteAvailable(): boolean {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    if (Array.isArray(inMemory) && inMemory.length > 0) {
+      return inMemory.some((s) => this.isBidDocLteStep(s));
+    }
+    const pId = typeof this.projectId === 'function' ? this.projectId() : null;
+    if (pId) {
+      try {
+        const stored = localStorage.getItem(`material_management_project_steps_${pId}`);
+        if (stored) {
+          const parsed = JSON.parse(stored) as ProjectStep[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.some((s) => this.isBidDocLteStep(s));
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return false;
+  }
+
+  getAvailableBidDocStep(): ProjectStep | null {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    let steps: ProjectStep[] = Array.isArray(inMemory) ? inMemory : [];
+
+    if (steps.length === 0) {
+      const pId = typeof this.projectId === 'function' ? this.projectId() : null;
+      if (pId) {
+        try {
+          const stored = localStorage.getItem(`material_management_project_steps_${pId}`);
+          if (stored) {
+            const parsed = JSON.parse(stored) as ProjectStep[];
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              steps = parsed;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    const candidates = steps.filter((s) => this.isBidDocSteStep(s) || this.isBidDocLteStep(s));
+    if (candidates.length === 0) return null;
+
+    return this.pickLatestBidDocCandidate(candidates) || candidates[0];
+  }
+
+  pickLatestBidDocCandidate(candidates: ProjectStep[]): ProjectStep | undefined {
+    if (!candidates || candidates.length === 0) return undefined;
+
+    const validCandidates = candidates.filter((s) => this.hasBidDocData(s));
+    const pool = validCandidates.length > 0 ? validCandidates : candidates;
+
+    const getStepTimestamp = (s: ProjectStep): number => {
+      const dtStr = s.updated_at || s.created_at || s.completed_at;
+      if (dtStr) {
+        const t = new Date(dtStr).getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+      return 0;
+    };
+
+    const getStepOrderNum = (s: ProjectStep): number => {
+      return s.step_number ?? s.step_order ?? 0;
+    };
+
+    const sorted = [...pool].sort((a, b) => {
+      const hasDataA = this.hasBidDocData(a) ? 1 : 0;
+      const hasDataB = this.hasBidDocData(b) ? 1 : 0;
+      if (hasDataA !== hasDataB) return hasDataB - hasDataA;
+
+      const timeDiff = getStepTimestamp(b) - getStepTimestamp(a);
+      if (timeDiff !== 0) return timeDiff;
+
+      if (a.status === 'completed' && b.status !== 'completed') return -1;
+      if (b.status === 'completed' && a.status !== 'completed') return 1;
+
+      const idDiff = (Number(b.id) || 0) - (Number(a.id) || 0);
+      if (idDiff !== 0) return idDiff;
+
+      return getStepOrderNum(b) - getStepOrderNum(a);
     });
+
+    return sorted[0];
+  }
+
+  hasBidDocData(s: ProjectStep | null | undefined): boolean {
+    if (!s) return false;
+    const d = ((s.data as Record<string, unknown>) || s || {}) as Record<string, unknown>;
+    const hasTerms = Boolean(
+      d['delivery_terms'] ||
+      d['incoterms'] ||
+      d['payment_terms'] ||
+      d['warranty_period'] ||
+      (d['gst_pct'] !== undefined && d['gst_pct'] !== null && d['gst_pct'] !== '') ||
+      (d['gst_rate_pct'] !== undefined && d['gst_rate_pct'] !== null && d['gst_rate_pct'] !== '') ||
+      d['tender_title']
+    );
+    const items = (d['items'] || d['table_items'] || d['table_data'] || (s as unknown as Record<string, unknown>)['items']) as unknown[];
+    const hasItems = Array.isArray(items) && items.length > 0;
+    return hasTerms || hasItems;
+  }
+
+  populatePoItemsTable(items: Array<Record<string, unknown>>): void {
+    const def = typeof this.resolvedDef === 'function' ? this.resolvedDef() : null;
+    if (!def || !def.tableConfig) return;
+
+    const rowsArray = new FormArray<FormGroup>([]);
+    items.forEach((item, idx) => {
+      const desc = String(
+        item['description'] ||
+        item['material_name'] ||
+        item['item_name'] ||
+        item['original_description'] ||
+        item['corrigendum_description'] ||
+        `Item ${idx + 1}`,
+      ).trim();
+
+      const hsn = String(item['hsn_sac'] || item['hsn_code'] || '').trim();
+
+      const unit = String(
+        item['unit'] ||
+        item['uom'] ||
+        item['unit_of_measurement'] ||
+        item['original_unit'] ||
+        item['corrigendum_unit'] ||
+        'Nos',
+      ).trim();
+
+      const qty =
+        item['quantity'] !== null && item['quantity'] !== undefined
+          ? Number(item['quantity'])
+          : item['corrigendum_quantity'] !== null && item['corrigendum_quantity'] !== undefined
+            ? Number(item['corrigendum_quantity'])
+            : null;
+
+      const unitPrice =
+        item['unit_price'] !== null && item['unit_price'] !== undefined
+          ? Number(item['unit_price'])
+          : item['price_per_unit'] !== null && item['price_per_unit'] !== undefined
+            ? Number(item['price_per_unit'])
+            : null;
+
+      const totalCalculated =
+        qty !== null && unitPrice !== null ? Number((qty * unitPrice).toFixed(2)) : null;
+
+      const totalPrice =
+        item['total_price'] !== null && item['total_price'] !== undefined
+          ? Number(item['total_price'])
+          : item['total_amount'] !== null && item['total_amount'] !== undefined
+            ? Number(item['total_amount'])
+            : totalCalculated;
+
+      const deliveryDate = item['delivery_date'] ? formatLocalDate(item['delivery_date'] as Date | string) : null;
+
+      rowsArray.push(
+        this.createTableRowGroup(def, {
+          sr_no: idx + 1,
+          description: desc,
+          hsn_sac: hsn,
+          unit: unit,
+          quantity: qty,
+          unit_price: unitPrice,
+          total_price: totalPrice,
+          delivery_date: deliveryDate,
+          ...item,
+        }),
+      );
+    });
+
+    if (rowsArray.length > 0) {
+      this.tableFormArray.set(rowsArray);
+      this.tableVersion.update((v) => v + 1);
+      this.cdr?.markForCheck?.();
+    }
+  }
+
+  loadForPurchaseOrder(showNotification = true): void {
+    if (typeof this.fetchingPoData === 'function' && this.fetchingPoData()) return;
+    const pId = typeof this.projectId === 'function' ? this.projectId() : (this.projectId as unknown as number);
+    if (!pId) return;
+
+    // Determine the available Bid Document step in the project.
+    // Call ONLY the available one (Bid Doc STE or Bid Doc LTE) - never call both!
+    const availableBidDoc = this.getAvailableBidDocStep();
+    const isSte = availableBidDoc
+      ? this.isBidDocSteStep(availableBidDoc)
+      : this.isBidDocSteAvailable() || (!this.isBidDocLteAvailable() && this.isSingleTenderEnquiryAvailable());
+
+    if (isSte) {
+      this.fetchFromBidDocSte(pId, availableBidDoc, showNotification);
+    } else {
+      this.fetchFromBidDocLte(pId, availableBidDoc, showNotification);
+    }
+  }
+
+  private fetchFromBidDocSte(
+    pId: number,
+    availableStep: ProjectStep | null,
+    showNotification: boolean,
+  ): void {
+    const steDef = getFormDefinition('FORM_34_BID_DOC_STE');
+    if (!steDef || !this.formApiService) {
+      if (availableStep && this.hasBidDocData(availableStep)) {
+        this.applyBidDocStepToPurchaseOrder(availableStep, showNotification);
+      }
+      this.fetchingPoData.set(false);
+      return;
+    }
+
+    this.fetchingPoData.set(true);
+
+    this.formApiService
+      .getLatestEntry(steDef, pId)
+      .pipe(
+        catchError(() => of(null)),
+        finalize(() => this.fetchingPoData.set(false)),
+      )
+      .subscribe({
+        next: (latestSte) => {
+          const candidate =
+            latestSte && this.hasBidDocData(latestSte)
+              ? latestSte
+              : availableStep && this.hasBidDocData(availableStep)
+                ? availableStep
+                : latestSte;
+
+          if (candidate && this.hasBidDocData(candidate)) {
+            this.applyBidDocStepToPurchaseOrder(candidate, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'warn',
+              summary: 'Bid Document (STE) Not Found',
+              detail: 'No latest Bid Document - Single Tender Enquiry found for this project to patch Purchase Order.',
+            });
+          }
+        },
+        error: () => {
+          if (availableStep && this.hasBidDocData(availableStep)) {
+            this.applyBidDocStepToPurchaseOrder(availableStep, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'info',
+              summary: 'Bid Document (STE) Unavailable',
+              detail: 'Could not fetch latest Bid Document - Single Tender Enquiry for this project.',
+            });
+          }
+        },
+      });
+  }
+
+  private fetchFromBidDocLte(
+    pId: number,
+    availableStep: ProjectStep | null,
+    showNotification: boolean,
+  ): void {
+    const lteDef = getFormDefinition('FORM_31_BID_DOC_LTE');
+    if (!lteDef || !this.formApiService) {
+      if (availableStep && this.hasBidDocData(availableStep)) {
+        this.applyBidDocStepToPurchaseOrder(availableStep, showNotification);
+      }
+      this.fetchingPoData.set(false);
+      return;
+    }
+
+    this.fetchingPoData.set(true);
+
+    this.formApiService
+      .getLatestEntry(lteDef, pId)
+      .pipe(
+        catchError(() => of(null)),
+        finalize(() => this.fetchingPoData.set(false)),
+      )
+      .subscribe({
+        next: (latestLte) => {
+          const candidate =
+            latestLte && this.hasBidDocData(latestLte)
+              ? latestLte
+              : availableStep && this.hasBidDocData(availableStep)
+                ? availableStep
+                : latestLte;
+
+          if (candidate && this.hasBidDocData(candidate)) {
+            this.applyBidDocStepToPurchaseOrder(candidate, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'warn',
+              summary: 'Bid Document (LTE) Not Found',
+              detail: 'No latest Bid Document - Limited Tender Enquiry found for this project to patch Purchase Order.',
+            });
+          }
+        },
+        error: () => {
+          if (availableStep && this.hasBidDocData(availableStep)) {
+            this.applyBidDocStepToPurchaseOrder(availableStep, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'info',
+              summary: 'Bid Document (LTE) Unavailable',
+              detail: 'Could not fetch latest Bid Document - Limited Tender Enquiry for this project.',
+            });
+          }
+        },
+      });
+  }
+
+  private applyBidDocStepToPurchaseOrder(
+    step: ProjectStep,
+    showNotification: boolean,
+  ): void {
+    this.poLinkedStep.set(step);
+    const data = ((step.data as Record<string, unknown>) || step || {}) as Record<string, unknown>;
+
+    const fg = this.formGroup();
+    if (fg) {
+      const patchPayload: Record<string, unknown> = {};
+
+      // 1. Incoterms -> delivery_terms
+      const deliveryTerms =
+        data['delivery_terms'] ??
+        data['incoterms'] ??
+        data['delivery_term'] ??
+        null;
+      if (deliveryTerms !== null && deliveryTerms !== undefined && fg.get('delivery_terms')) {
+        patchPayload['delivery_terms'] = deliveryTerms;
+      }
+
+      // 2. GST -> gst_rate_pct
+      const gstVal =
+        data['gst_rate_pct'] ??
+        data['gst_pct'] ??
+        data['gst'] ??
+        null;
+      if (gstVal !== null && gstVal !== undefined && fg.get('gst_rate_pct')) {
+        patchPayload['gst_rate_pct'] = Number(gstVal);
+      }
+
+      // 3. Payment Terms -> payment_terms
+      const paymentTerms =
+        data['payment_terms'] ??
+        data['payment_term'] ??
+        null;
+      if (paymentTerms && fg.get('payment_terms')) {
+        patchPayload['payment_terms'] = paymentTerms;
+      }
+
+      // 4. Warranty -> warranty_period
+      const warranty =
+        data['warranty_period'] ??
+        data['warranty'] ??
+        null;
+      if (warranty && fg.get('warranty_period')) {
+        patchPayload['warranty_period'] = warranty;
+      }
+
+      // Optional: Customer Name and PO Title if present and blank in form
+      if (data['customer_name'] && fg.get('customer_name') && !fg.get('customer_name')?.value) {
+        patchPayload['customer_name'] = String(data['customer_name']).trim();
+      }
+      const tenderTitle = data['tender_title'] || data['po_title'];
+      if (tenderTitle && fg.get('po_title') && !fg.get('po_title')?.value) {
+        patchPayload['po_title'] = String(tenderTitle).trim();
+      }
+
+      if (Object.keys(patchPayload).length > 0) {
+        fg.patchValue(patchPayload);
+        Object.keys(patchPayload).forEach((k) => fg.get(k)?.markAsDirty());
+        this.formVersion.update((v) => v + 1);
+        this.cdr?.markForCheck?.();
+      }
+    }
+
+    // 5. Ordered Materials/Services & Pricing TABLE DATA
+    const rawItems = (
+      data['items'] ||
+      data['table_items'] ||
+      data['table_data'] ||
+      (step as unknown as Record<string, unknown>)['items'] ||
+      []
+    ) as Array<Record<string, unknown>>;
+
+    if (Array.isArray(rawItems) && rawItems.length > 0) {
+      this.populatePoItemsTable(rawItems);
+    }
+
+    if (showNotification) {
+      const sourceName =
+        step.step_name ||
+        (step.form_code ? getFormDefinition(step.form_code)?.name : null) ||
+        'latest Bid Document';
+      const detail =
+        rawItems.length > 0
+          ? `Incoterms, GST, Payment Terms, Warranty, and ${rawItems.length} line items loaded from ${sourceName}.`
+          : `Incoterms, GST, Payment Terms, and Warranty loaded from ${sourceName}.`;
+      this.messageService?.add({
+        severity: 'success',
+        summary: 'Purchase Order Details Patched',
+        detail,
+      });
+    }
+  }
+
+  resolveLinkedStepForPurchaseOrder(): void {
+    if (this.poLinkedStep()) return;
+    const step = this.getAvailableBidDocStep();
+    if (step) {
+      this.poLinkedStep.set(step);
+    }
   }
 
   private isTenderOrPqbStep(s: ProjectStep): boolean {
@@ -2987,6 +3621,25 @@ export class StepFormDialog {
               this.resolveLinkedStepForBidDocLte();
             }
           }
+
+          if (
+            def!.formCode === 'FORM_14_PURCHASE_ORDER' ||
+            (def!.name.toLowerCase().includes('purchase order') || def!.name.toLowerCase().startsWith('po '))
+          ) {
+            const hasItems = Array.isArray(savedData['items']) && savedData['items'].length > 0;
+            const hasDeliveryTerms = Boolean(savedData['delivery_terms']);
+            const hasPaymentTerms = Boolean(savedData['payment_terms']);
+            const hasWarranty = Boolean(savedData['warranty_period']);
+            const hasGst =
+              savedData['gst_rate_pct'] !== undefined &&
+              savedData['gst_rate_pct'] !== null &&
+              savedData['gst_rate_pct'] !== '';
+            if (!hasItems || !hasDeliveryTerms || !hasPaymentTerms || !hasWarranty || !hasGst) {
+              this.loadForPurchaseOrder(false);
+            } else {
+              this.resolveLinkedStepForPurchaseOrder();
+            }
+          }
         },
         error: () => {
           this.loading.set(false);
@@ -3060,6 +3713,25 @@ export class StepFormDialog {
               this.resolveLinkedStepForBidDocLte();
             }
           }
+
+          if (
+            def!.formCode === 'FORM_14_PURCHASE_ORDER' ||
+            (def!.name.toLowerCase().includes('purchase order') || def!.name.toLowerCase().startsWith('po '))
+          ) {
+            const hasItems = Array.isArray(savedData['items']) && savedData['items'].length > 0;
+            const hasDeliveryTerms = Boolean(savedData['delivery_terms']);
+            const hasPaymentTerms = Boolean(savedData['payment_terms']);
+            const hasWarranty = Boolean(savedData['warranty_period']);
+            const hasGst =
+              savedData['gst_rate_pct'] !== undefined &&
+              savedData['gst_rate_pct'] !== null &&
+              savedData['gst_rate_pct'] !== '';
+            if (!hasItems || !hasDeliveryTerms || !hasPaymentTerms || !hasWarranty || !hasGst) {
+              this.loadForPurchaseOrder(false);
+            } else {
+              this.resolveLinkedStepForPurchaseOrder();
+            }
+          }
         },
       });
     } else if (defInput) {
@@ -3091,6 +3763,12 @@ export class StepFormDialog {
         (defInput.name.toLowerCase().includes('bid doc') && (defInput.name.toLowerCase().includes('lte') || defInput.name.toLowerCase().includes('limited tender')))
       ) {
         this.loadForBidDocumentLte(false);
+      }
+      if (
+        defInput.formCode === 'FORM_14_PURCHASE_ORDER' ||
+        (defInput.name.toLowerCase().includes('purchase order') || defInput.name.toLowerCase().startsWith('po '))
+      ) {
+        this.loadForPurchaseOrder(false);
       }
     } else {
       const fallback = FORM_CATALOG[0];
