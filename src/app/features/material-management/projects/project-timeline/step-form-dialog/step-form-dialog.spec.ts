@@ -1242,6 +1242,8 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
             id: 8,
             project_id: 42,
             corrigendum_no: 'CORR-01',
+            tender_title: 'Turbine Procurement PQB',
+            against_tender_no: 'TP-PQB-2026',
             corrigendum_quantity_items: [
               { corrigendum_description: 'Turbine Rotor Upgraded', corrigendum_quantity: 12, corrigendum_unit: 'Nos' },
               { corrigendum_description: 'Shaft Seal', corrigendum_quantity: 24, corrigendum_unit: 'Sets' },
@@ -1251,24 +1253,17 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       };
 
       const mockPqbService = {
-        getLatest: vi.fn().mockReturnValue(
-          of({
-            pqb_title: 'Turbine Procurement PQB',
-            pqb_no: 'TP-PQB-2026',
-            items: [
-              { description: 'Old Rotor', quantity: 10, unit: 'Nos' },
-            ],
-          }),
-        ),
+        getLatest: vi.fn(),
       };
 
       comp.formApiService = mockFormApi;
       comp.preQualificationBidService = mockPqbService;
+      comp.hasCorrigendumStep = () => true;
 
       comp.loadFromNationalPreQualificationBid(true);
 
       expect(mockFormApi.getLatestCorrigendum).toHaveBeenCalledWith(42);
-      expect(mockPqbService.getLatest).toHaveBeenCalledWith(42);
+      expect(mockPqbService.getLatest).not.toHaveBeenCalled();
       expect(fg.get('pqb_title')?.value).toBe('Turbine Procurement PQB');
       expect(fg.get('pqb_no')?.value).toBe('TP-PQB-2026');
       expect(fg.get('total_no_corrigendum_issued')?.value).toBe(1);
@@ -1288,12 +1283,14 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       );
     });
 
-    it('should populate pricing table from latest National PQB when no corrigendum items exist', () => {
+    it('should populate pricing table from latest National PQB when no corrigendum is available', () => {
       const comp = Object.create(StepFormDialog.prototype);
       comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
       comp.extractCorrigendumItems = StepFormDialog.prototype['extractCorrigendumItems'];
       comp.populatePqbPricingTable = StepFormDialog.prototype['populatePqbPricingTable'];
       comp.parseQuantityItemsFromRow = StepFormDialog.prototype['parseQuantityItemsFromRow'];
+      comp.isCorrigendumAvailable = StepFormDialog.prototype['isCorrigendumAvailable'];
+      comp.fetchFromNationalPqb = StepFormDialog.prototype['fetchFromNationalPqb'];
 
       const fg = new FormGroup({
         pqb_title: new FormControl(''),
@@ -1311,10 +1308,10 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       comp.projectId = () => 42;
       comp.formGroup = () => fg;
       comp.resolvedDef = () => pqbBidDocDef;
+      comp.hasCorrigendumStep = () => false;
 
-      // Corrigendum returns null
       const mockFormApi = {
-        getLatestCorrigendum: vi.fn().mockReturnValue(of(null)),
+        getLatestCorrigendum: vi.fn(),
       };
 
       const mockPqbService = {
@@ -1335,7 +1332,9 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
 
       comp.loadFromNationalPreQualificationBid(true);
 
-      expect(mockFormApi.getLatestCorrigendum).toHaveBeenCalledWith(42);
+      // Verify that Corrigendum API is NOT called when not available
+      expect(mockFormApi.getLatestCorrigendum).not.toHaveBeenCalled();
+      // Verify that National PQB API is called
       expect(mockPqbService.getLatest).toHaveBeenCalledWith(42);
       expect(fg.get('pqb_title')?.value).toBe('Hydel Station PQB');
       expect(fg.get('pqb_no')?.value).toBe('HYD-PQB-99');
@@ -1354,6 +1353,553 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
           summary: 'Pricing Loaded from National PQB',
         }),
       );
+    });
+
+    it('should determine source strictly from existingSteps: call only Corrigendum when available, never calling both', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.extractCorrigendumItems = StepFormDialog.prototype['extractCorrigendumItems'];
+      comp.populatePqbPricingTable = StepFormDialog.prototype['populatePqbPricingTable'];
+      comp.isCorrigendumAvailable = StepFormDialog.prototype['isCorrigendumAvailable'];
+      comp.fetchFromCorrigendum = StepFormDialog.prototype['fetchFromCorrigendum'];
+      comp.fetchFromNationalPqb = StepFormDialog.prototype['fetchFromNationalPqb'];
+      comp.extractDateFromSpecRow = StepFormDialog.prototype['extractDateFromSpecRow'];
+
+      const fg = new FormGroup({
+        pqb_title: new FormControl(''),
+        pqb_no: new FormControl(''),
+        pqb_closing_date_time: new FormControl(null),
+        pqb_opening_date_time: new FormControl(null),
+        total_no_corrigendum_issued: new FormControl(null),
+      });
+
+      const tableArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      comp.tableFormArray = tableArray;
+      comp.tableVersion = { update: vi.fn() };
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+      comp.fetchingNationalPqb = { set: vi.fn() };
+      comp.projectId = () => 42;
+      comp.formGroup = () => fg;
+      comp.resolvedDef = () => pqbBidDocDef;
+
+      // Project has both PQB and Corrigendum in pipeline steps
+      const existingSteps: ProjectStep[] = [
+        {
+          id: 1,
+          project_id: 42,
+          step_number: 1,
+          step_name: 'National Pre-Qualification Bid (PQB)',
+          description: '',
+          form_code: 'FORM_01_PQB',
+          status: 'completed',
+          progress_percentage: 100,
+          completed_at: null,
+          data: { pqb_title: 'Original Title', pqb_no: 'ORIG-01' },
+        },
+        {
+          id: 2,
+          project_id: 42,
+          step_number: 2,
+          step_name: 'Corrigendum',
+          description: '',
+          form_code: 'FORM_03_CORRIGENDUM',
+          status: 'completed',
+          progress_percentage: 100,
+          completed_at: null,
+          data: { ref_title: 'Updated Corrigendum Title', against_ref_no: 'CORR-REF-01' },
+        },
+      ];
+      comp.existingSteps = () => existingSteps;
+
+      const mockFormApi = {
+        getLatestCorrigendum: vi.fn().mockReturnValue(
+          of({
+            id: 20,
+            project_id: 42,
+            corrigendum_no: 'CORR-01',
+            tender_title: 'Updated Corrigendum Title',
+            against_tender_no: 'CORR-REF-01',
+            closing_date_time: '2026-12-15T15:00:00',
+            opening_date_time: '2026-12-16T11:00:00',
+            items: [],
+          }),
+        ),
+      };
+
+      const mockPqbService = {
+        getLatest: vi.fn(),
+      };
+
+      comp.formApiService = mockFormApi;
+      comp.preQualificationBidService = mockPqbService;
+
+      comp.loadFromNationalPreQualificationBid(true);
+
+      // Must call Corrigendum API
+      expect(mockFormApi.getLatestCorrigendum).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestCorrigendum).toHaveBeenCalledWith(42);
+      // Must NOT call NPQB API
+      expect(mockPqbService.getLatest).not.toHaveBeenCalled();
+
+      expect(fg.get('pqb_title')?.value).toBe('Updated Corrigendum Title');
+      expect(fg.get('pqb_no')?.value).toBe('CORR-REF-01');
+      expect(fg.get('total_no_corrigendum_issued')?.value).toBe(1);
+      expect(fg.get('pqb_closing_date_time')?.value).toBeDefined();
+      expect(fg.get('pqb_opening_date_time')?.value).toBeDefined();
+    });
+
+    it('should determine source strictly from existingSteps: call only National PQB when Corrigendum is absent, never calling Corrigendum API', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.extractCorrigendumItems = StepFormDialog.prototype['extractCorrigendumItems'];
+      comp.populatePqbPricingTable = StepFormDialog.prototype['populatePqbPricingTable'];
+      comp.isCorrigendumAvailable = StepFormDialog.prototype['isCorrigendumAvailable'];
+      comp.fetchFromCorrigendum = StepFormDialog.prototype['fetchFromCorrigendum'];
+      comp.fetchFromNationalPqb = StepFormDialog.prototype['fetchFromNationalPqb'];
+
+      const fg = new FormGroup({
+        pqb_title: new FormControl(''),
+        pqb_no: new FormControl(''),
+        total_no_corrigendum_issued: new FormControl(null),
+      });
+
+      const tableArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      comp.tableFormArray = tableArray;
+      comp.tableVersion = { update: vi.fn() };
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+      comp.fetchingNationalPqb = { set: vi.fn() };
+      comp.projectId = () => 42;
+      comp.formGroup = () => fg;
+      comp.resolvedDef = () => pqbBidDocDef;
+
+      // Project only has National PQB, NO Corrigendum
+      const existingSteps: ProjectStep[] = [
+        {
+          id: 1,
+          project_id: 42,
+          step_number: 1,
+          step_name: 'National Pre-Qualification Bid (PQB)',
+          description: '',
+          form_code: 'FORM_01_PQB',
+          status: 'completed',
+          progress_percentage: 100,
+          completed_at: null,
+          data: { pqb_title: 'Original Title', pqb_no: 'ORIG-01' },
+        },
+      ];
+      comp.existingSteps = () => existingSteps;
+
+      const mockFormApi = {
+        getLatestCorrigendum: vi.fn(),
+      };
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(
+          of({
+            pqb_title: 'Original Title',
+            pqb_no: 'ORIG-01',
+            items: [{ sr_no: 1, description: 'Power Transformer', quantity: 2, unit: 'Sets' }],
+          }),
+        ),
+      };
+
+      comp.formApiService = mockFormApi;
+      comp.preQualificationBidService = mockPqbService;
+
+      comp.loadFromNationalPreQualificationBid(true);
+
+      // Must NOT call Corrigendum API
+      expect(mockFormApi.getLatestCorrigendum).not.toHaveBeenCalled();
+      // Must call NPQB API
+      expect(mockPqbService.getLatest).toHaveBeenCalledTimes(1);
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(42);
+
+      expect(fg.get('pqb_title')?.value).toBe('Original Title');
+      expect(fg.get('pqb_no')?.value).toBe('ORIG-01');
+      expect(fg.get('total_no_corrigendum_issued')?.value).toBe(0);
+    });
+  });
+
+  describe('Form 4: Limited Tender Enquiry (LTE) Auto-Patching from National PQB Latest', () => {
+    const lteDef = getFormDefinition('FORM_04_LTE')!;
+
+    it('should patch pqb_no and Requirements table from latest National PQB in FORM_04_LTE', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.populatePqbPricingTable = StepFormDialog.prototype['populatePqbPricingTable'];
+      comp.loadFromNationalPreQualificationBid = StepFormDialog.prototype['loadFromNationalPreQualificationBid'];
+      comp.fetchFromNationalPqb = StepFormDialog.prototype['fetchFromNationalPqb'];
+
+      const fg = new FormGroup({
+        pqb_no: new FormControl(''),
+        tender_title: new FormControl(''),
+        tender_enquiry_no: new FormControl('LTE-101'),
+      });
+
+      const tableArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      comp.tableFormArray = tableArray;
+      comp.tableVersion = { update: vi.fn() };
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+      comp.fetchingNationalPqb = { set: vi.fn() };
+      comp.projectId = () => 50;
+      comp.formGroup = () => fg;
+      comp.resolvedDef = () => lteDef;
+      comp.isLimitedTenderEnquiry = () => true;
+
+      const mockLatestPqb = {
+        id: 99,
+        project_id: 50,
+        pqb_title: 'Turbine Overhaul Package',
+        pqb_no: 'PQB-TO-2026',
+        items: [
+          { description: 'Turbine Rotor', unit: 'Nos', quantity: 2 },
+          { description: 'Stator Vane', unit: 'Sets', quantity: 4 },
+        ],
+      };
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(of(mockLatestPqb)),
+      };
+      comp.preQualificationBidService = mockPqbService;
+
+      comp.loadFromNationalPreQualificationBid(true);
+
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(50);
+      expect(fg.get('pqb_no')?.value).toBe('PQB-TO-2026');
+      expect(fg.get('tender_title')?.value).toBe('Turbine Overhaul Package');
+
+      const rows = tableArray().controls;
+      expect(rows.length).toBe(2);
+      expect(rows[0].get('description')?.value).toBe('Turbine Rotor');
+      expect(rows[0].get('unit')?.value).toBe('Nos');
+      expect(rows[0].get('quantity')?.value).toBe(2);
+      expect(rows[1].get('description')?.value).toBe('Stator Vane');
+      expect(rows[1].get('unit')?.value).toBe('Sets');
+      expect(rows[1].get('quantity')?.value).toBe(4);
+
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: 'Requirements Loaded from National PQB',
+        }),
+      );
+    });
+
+    it('should always take from National PQB latest even when Corrigendum is available in the project for FORM_04_LTE', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.populatePqbPricingTable = StepFormDialog.prototype['populatePqbPricingTable'];
+      comp.loadFromNationalPreQualificationBid = StepFormDialog.prototype['loadFromNationalPreQualificationBid'];
+      comp.fetchFromNationalPqb = StepFormDialog.prototype['fetchFromNationalPqb'];
+      comp.fetchFromCorrigendum = vi.fn();
+
+      const fg = new FormGroup({
+        pqb_no: new FormControl(''),
+        tender_title: new FormControl('Existing LTE Title'),
+      });
+
+      const tableArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      comp.tableFormArray = tableArray;
+      comp.tableVersion = { update: vi.fn() };
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+      comp.fetchingNationalPqb = { set: vi.fn() };
+      comp.projectId = () => 50;
+      comp.formGroup = () => fg;
+      comp.resolvedDef = () => lteDef;
+      comp.isLimitedTenderEnquiry = () => true;
+
+      // Project has Corrigendum in steps
+      comp.existingSteps = () => [
+        {
+          id: 3,
+          project_id: 50,
+          form_code: 'FORM_03_CORRIGENDUM',
+          step_name: 'Corrigendum',
+          status: 'completed',
+          progress_percentage: 100,
+          completed_at: null,
+          data: {},
+        },
+      ];
+      comp.hasCorrigendumStep = () => true;
+
+      const mockLatestPqb = {
+        id: 99,
+        project_id: 50,
+        pqb_title: 'Turbine Overhaul Package',
+        pqb_no: 'PQB-TO-2026',
+        items: [{ description: 'Main Bearing', unit: 'Nos', quantity: 6 }],
+      };
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(of(mockLatestPqb)),
+      };
+      const mockFormApi = {
+        getLatestCorrigendum: vi.fn(),
+      };
+
+      comp.preQualificationBidService = mockPqbService;
+      comp.formApiService = mockFormApi;
+
+      comp.loadFromNationalPreQualificationBid(true);
+
+      // Verify Corrigendum is NOT called, only National PQB
+      expect(mockFormApi.getLatestCorrigendum).not.toHaveBeenCalled();
+      expect(comp.fetchFromCorrigendum).not.toHaveBeenCalled();
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(50);
+      expect(fg.get('pqb_no')?.value).toBe('PQB-TO-2026');
+      expect(tableArray().controls.length).toBe(1);
+    });
+
+    it('should auto-trigger loadFromNationalPreQualificationBid in ADD mode for FORM_04_LTE', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.activeTab = { set: vi.fn() };
+      comp.newRemarkInput = { set: vi.fn() };
+      comp.ensureProjectMetadata = vi.fn();
+      comp.projectId = () => 50;
+      comp.resolvedDef = { set: vi.fn() };
+      comp.populateForm = vi.fn();
+      comp.loadFromNationalPreQualificationBid = vi.fn();
+
+      comp.initializeModal(null, lteDef);
+
+      expect(comp.resolvedDef.set).toHaveBeenCalledWith(lteDef);
+      expect(comp.populateForm).toHaveBeenCalledWith(lteDef, {}, []);
+      expect(comp.loadFromNationalPreQualificationBid).toHaveBeenCalledWith(false);
+    });
+
+    it('should compute pqbSourceStepName and pqbFetchButtonLabel appropriately for FORM_04_LTE', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.resolvedDef = () => lteDef;
+      comp.isLimitedTenderEnquiry = () => true;
+      comp.hasCorrigendumStep = () => true; // even if corrigendum exists
+
+      comp.getPqbSourceStepName = StepFormDialog.prototype['getPqbSourceStepName'];
+      comp.getPqbFetchButtonLabel = StepFormDialog.prototype['getPqbFetchButtonLabel'];
+
+      // Test pqbSourceStepName computed logic
+      const sourceName = comp.getPqbSourceStepName();
+      expect(sourceName).toBe('latest National Pre-Qualification Bid (PQB)');
+
+      // Test pqbFetchButtonLabel computed logic
+      const buttonLabel = comp.getPqbFetchButtonLabel();
+      expect(buttonLabel).toBe('Fetch from National PQB');
+    });
+  });
+
+  describe('Form 33: Single Tender Enquiry (STE) Auto-Patching from National PQB Latest', () => {
+    const steDef = getFormDefinition('FORM_33_STE')!;
+
+    it('should patch pqb_no, tender_title, and Requirements table from latest National PQB in FORM_33_STE', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.populatePqbPricingTable = StepFormDialog.prototype['populatePqbPricingTable'];
+      comp.loadFromNationalPreQualificationBid = StepFormDialog.prototype['loadFromNationalPreQualificationBid'];
+      comp.fetchFromNationalPqb = StepFormDialog.prototype['fetchFromNationalPqb'];
+
+      const fg = new FormGroup({
+        pqb_no: new FormControl(''),
+        tender_title: new FormControl(''),
+        tender_no: new FormControl('STE-2026-001'),
+      });
+
+      const tableArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      comp.tableFormArray = tableArray;
+      comp.tableVersion = { update: vi.fn() };
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+      comp.fetchingNationalPqb = { set: vi.fn() };
+      comp.projectId = () => 50;
+      comp.formGroup = () => fg;
+      comp.resolvedDef = () => steDef;
+      comp.isSingleTenderEnquiry = () => true;
+
+      const mockLatestPqb = {
+        id: 88,
+        project_id: 50,
+        pqb_title: 'Critical Piping Spares Package',
+        pqb_no: 'PQB-STE-888',
+        items: [
+          { description: 'High Pressure Pipe', unit: 'Mtr', quantity: 150 },
+          { description: 'Flange Joint 100mm', unit: 'Nos', quantity: 24 },
+        ],
+      };
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(of(mockLatestPqb)),
+      };
+      comp.preQualificationBidService = mockPqbService;
+
+      comp.loadFromNationalPreQualificationBid(true);
+
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(50);
+      expect(fg.get('pqb_no')?.value).toBe('PQB-STE-888');
+      expect(fg.get('tender_title')?.value).toBe('Critical Piping Spares Package');
+
+      const rows = tableArray().controls;
+      expect(rows.length).toBe(2);
+      expect(rows[0].get('description')?.value).toBe('High Pressure Pipe');
+      expect(rows[0].get('unit')?.value).toBe('Mtr');
+      expect(rows[0].get('quantity')?.value).toBe(150);
+      expect(rows[1].get('description')?.value).toBe('Flange Joint 100mm');
+      expect(rows[1].get('unit')?.value).toBe('Nos');
+      expect(rows[1].get('quantity')?.value).toBe(24);
+
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: 'Requirements Loaded from National PQB',
+          detail: expect.stringContaining('Critical Piping Spares Package'),
+        }),
+      );
+    });
+
+    it('should always take from National PQB latest even when Corrigendum is available in the project for FORM_33_STE', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.populatePqbPricingTable = StepFormDialog.prototype['populatePqbPricingTable'];
+      comp.loadFromNationalPreQualificationBid = StepFormDialog.prototype['loadFromNationalPreQualificationBid'];
+      comp.fetchFromNationalPqb = StepFormDialog.prototype['fetchFromNationalPqb'];
+      comp.fetchFromCorrigendum = vi.fn();
+
+      const fg = new FormGroup({
+        pqb_no: new FormControl(''),
+        tender_title: new FormControl(''),
+      });
+
+      const tableArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      comp.tableFormArray = tableArray;
+      comp.tableVersion = { update: vi.fn() };
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+      comp.fetchingNationalPqb = { set: vi.fn() };
+      comp.projectId = () => 50;
+      comp.formGroup = () => fg;
+      comp.resolvedDef = () => steDef;
+      comp.isSingleTenderEnquiry = () => true;
+
+      // Project has Corrigendum step
+      comp.existingSteps = () => [
+        {
+          id: 3,
+          project_id: 50,
+          form_code: 'FORM_03_CORRIGENDUM',
+          step_name: 'Corrigendum',
+          status: 'completed',
+          progress_percentage: 100,
+          completed_at: null,
+          data: {},
+        },
+      ];
+      comp.hasCorrigendumStep = () => true;
+
+      const mockLatestPqb = {
+        id: 88,
+        project_id: 50,
+        pqb_title: 'STE Boiler Package',
+        pqb_no: 'PQB-STE-777',
+        items: [{ description: 'Safety Valve', unit: 'Nos', quantity: 5 }],
+      };
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(of(mockLatestPqb)),
+      };
+      const mockFormApi = {
+        getLatestCorrigendum: vi.fn(),
+      };
+
+      comp.preQualificationBidService = mockPqbService;
+      comp.formApiService = mockFormApi;
+
+      comp.loadFromNationalPreQualificationBid(true);
+
+      expect(mockFormApi.getLatestCorrigendum).not.toHaveBeenCalled();
+      expect(comp.fetchFromCorrigendum).not.toHaveBeenCalled();
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(50);
+      expect(fg.get('pqb_no')?.value).toBe('PQB-STE-777');
+      expect(fg.get('tender_title')?.value).toBe('STE Boiler Package');
+      expect(tableArray().controls.length).toBe(1);
+    });
+
+    it('should auto-trigger loadFromNationalPreQualificationBid in ADD mode for FORM_33_STE', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.activeTab = { set: vi.fn() };
+      comp.newRemarkInput = { set: vi.fn() };
+      comp.ensureProjectMetadata = vi.fn();
+      comp.projectId = () => 50;
+      comp.resolvedDef = { set: vi.fn() };
+      comp.populateForm = vi.fn();
+      comp.loadFromNationalPreQualificationBid = vi.fn();
+
+      comp.initializeModal(null, steDef);
+
+      expect(comp.resolvedDef.set).toHaveBeenCalledWith(steDef);
+      expect(comp.populateForm).toHaveBeenCalledWith(steDef, {}, []);
+      expect(comp.loadFromNationalPreQualificationBid).toHaveBeenCalledWith(false);
+    });
+
+    it('should auto-trigger loadFromNationalPreQualificationBid in EDIT mode if pqb_no or tender_title or items are missing', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.activeTab = { set: vi.fn() };
+      comp.newRemarkInput = { set: vi.fn() };
+      comp.ensureProjectMetadata = vi.fn();
+      comp.projectId = () => 50;
+      comp.resolvedDef = { set: vi.fn() };
+      comp.loading = { set: vi.fn() };
+      comp.populateForm = vi.fn();
+      comp.loadFromNationalPreQualificationBid = vi.fn();
+
+      const incompleteStep: ProjectStep = {
+        id: 33,
+        project_id: 50,
+        form_code: 'FORM_33_STE',
+        step_name: 'Single Tender Enquiry (STE)',
+        description: 'Single tender enquiry (STE) terms',
+        step_number: 7,
+        step_order: 7,
+        status: 'in_progress',
+        progress_percentage: 50,
+        completed_at: null,
+        data: {
+          tender_no: 'STE-999',
+          // missing pqb_no, tender_title, items
+        },
+        remarks: [],
+      };
+
+      comp.formApiService = {
+        getEntryById: vi.fn().mockReturnValue(of(incompleteStep)),
+      };
+
+      comp.initializeModal(incompleteStep, null);
+
+      expect(comp.loadFromNationalPreQualificationBid).toHaveBeenCalledWith(false);
+    });
+
+    it('should compute pqbSourceStepName and pqbFetchButtonLabel appropriately for FORM_33_STE', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.resolvedDef = () => steDef;
+      comp.isSingleTenderEnquiry = () => true;
+      comp.hasCorrigendumStep = () => true; // even if corrigendum exists
+
+      comp.getPqbSourceStepName = StepFormDialog.prototype['getPqbSourceStepName'];
+      comp.getPqbFetchButtonLabel = StepFormDialog.prototype['getPqbFetchButtonLabel'];
+
+      const sourceName = comp.getPqbSourceStepName();
+      expect(sourceName).toBe('latest National Pre-Qualification Bid (PQB)');
+
+      const buttonLabel = comp.getPqbFetchButtonLabel();
+      expect(buttonLabel).toBe('Fetch from National PQB');
     });
   });
 
@@ -1641,6 +2187,212 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
         expect.objectContaining({ form_code: 'FORM_31_BID_DOC_LTE' }),
         true,
       );
+    });
+
+    it('should call only latest National PQB and NOT fetch all/forkJoin when previous step is National PQB (in-memory candidate)', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.findPrecedingTenderStep = StepFormDialog.prototype['findPrecedingTenderStep'];
+      comp.isTenderOrPqbStep = StepFormDialog.prototype['isTenderOrPqbStep'];
+      comp.isNationalPqbStep = StepFormDialog.prototype['isNationalPqbStep'];
+      comp.convertPqbToProjectStep = StepFormDialog.prototype['convertPqbToProjectStep'];
+      comp.fetchAndApplyLatestPqbToCorrigendum = StepFormDialog.prototype['fetchAndApplyLatestPqbToCorrigendum'];
+      comp.hasTenderData = StepFormDialog.prototype['hasTenderData'];
+
+      const mockPqbStep: ProjectStep = {
+        id: 1,
+        project_id: 25,
+        step_number: 1,
+        step_name: 'National Pre-Qualification Bid (PQB)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_01_PQB',
+        status: 'completed',
+        data: {},
+      };
+
+      const mockLatestPqb = {
+        id: 101,
+        project_id: 25,
+        pqb_title: 'National High Voltage Cable PQB',
+        pqb_no: 'PQB-HVC-2026',
+        pqb_closing_date_time: '2026-11-25T14:30:00Z',
+        pqb_opening_date_time: '2026-11-26T10:00:00Z',
+        items: [{ description: 'High Voltage Underground Cable', quantity: 1500, unit: 'm' }],
+      };
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(of(mockLatestPqb)),
+      };
+
+      comp.projectId = () => 25;
+      comp.existingSteps = () => [mockPqbStep];
+      comp.step = () => null; // ADD mode for Corrigendum
+      comp.preQualificationBidService = mockPqbService;
+      comp.fetchingPreviousStep = { set: vi.fn() };
+      comp.applyPreviousStepToCorrigendum = vi.fn();
+      comp.fetchLatestTenderFromBackend = vi.fn();
+      comp.fetchLatestTenderViaForkJoin = vi.fn();
+      comp.messageService = { add: vi.fn() };
+
+      comp.loadFromPreviousTenderStep(true);
+
+      // Verify that getLatest on PQB service was called directly
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(25);
+      // Verify applyPreviousStepToCorrigendum was called with converted PQB step
+      expect(comp.applyPreviousStepToCorrigendum).toHaveBeenCalledWith(
+        expect.objectContaining({
+          form_code: 'FORM_01_PQB',
+          data: expect.objectContaining({
+            pqb_title: 'National High Voltage Cable PQB',
+            pqb_no: 'PQB-HVC-2026',
+          }),
+        }),
+        true,
+      );
+      // Verify that "get all" (forkJoin / backend tender probing) was NEVER called
+      expect(comp.fetchLatestTenderFromBackend).not.toHaveBeenCalled();
+      expect(comp.fetchLatestTenderViaForkJoin).not.toHaveBeenCalled();
+    });
+
+    it('should call latest National PQB directly when previous step is National PQB loaded via projectStepService', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.findPrecedingTenderStep = StepFormDialog.prototype['findPrecedingTenderStep'];
+      comp.isTenderOrPqbStep = StepFormDialog.prototype['isTenderOrPqbStep'];
+      comp.isNationalPqbStep = StepFormDialog.prototype['isNationalPqbStep'];
+      comp.convertPqbToProjectStep = StepFormDialog.prototype['convertPqbToProjectStep'];
+      comp.fetchAndApplyLatestPqbToCorrigendum = StepFormDialog.prototype['fetchAndApplyLatestPqbToCorrigendum'];
+      comp.hasTenderData = StepFormDialog.prototype['hasTenderData'];
+
+      const mockSteps: ProjectStep[] = [
+        {
+          id: 5,
+          project_id: 30,
+          step_number: 1,
+          step_name: 'National Pre-Qualification Bid (PQB)',
+          description: '',
+          progress_percentage: 100,
+          completed_at: null,
+          form_code: 'FORM_01_PQB',
+          status: 'completed',
+          data: {},
+        },
+      ];
+
+      const mockLatestPqb = {
+        id: 202,
+        project_id: 30,
+        pqb_title: 'Turbine Generator PQB',
+        pqb_no: 'PQB-TG-2026-05',
+        pqb_closing_date_time: '2026-12-01T15:00:00Z',
+        items: [],
+      };
+
+      const mockProjectStepService = {
+        getSteps: vi.fn().mockReturnValue(of(mockSteps)),
+      };
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(of(mockLatestPqb)),
+      };
+
+      comp.projectId = () => 30;
+      comp.existingSteps = () => [];
+      comp.step = () => null;
+      comp.projectStepService = mockProjectStepService;
+      comp.preQualificationBidService = mockPqbService;
+      comp.fetchingPreviousStep = { set: vi.fn() };
+      comp.applyPreviousStepToCorrigendum = vi.fn();
+      comp.fetchLatestTenderFromBackend = vi.fn();
+      comp.fetchLatestTenderViaForkJoin = vi.fn();
+      comp.messageService = { add: vi.fn() };
+
+      comp.loadFromPreviousTenderStep(true);
+
+      expect(mockProjectStepService.getSteps).toHaveBeenCalledWith(30);
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(30);
+      expect(comp.applyPreviousStepToCorrigendum).toHaveBeenCalledWith(
+        expect.objectContaining({
+          form_code: 'FORM_01_PQB',
+          data: expect.objectContaining({
+            pqb_title: 'Turbine Generator PQB',
+            pqb_no: 'PQB-TG-2026-05',
+          }),
+        }),
+        true,
+      );
+      expect(comp.fetchLatestTenderFromBackend).not.toHaveBeenCalled();
+      expect(comp.fetchLatestTenderViaForkJoin).not.toHaveBeenCalled();
+    });
+
+    it('should delegate fetchAndApplyTenderStep to fetchAndApplyLatestPqbToCorrigendum for National PQB target step', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.isNationalPqbStep = StepFormDialog.prototype['isNationalPqbStep'];
+      comp.convertPqbToProjectStep = StepFormDialog.prototype['convertPqbToProjectStep'];
+      comp.fetchAndApplyLatestPqbToCorrigendum = StepFormDialog.prototype['fetchAndApplyLatestPqbToCorrigendum'];
+      comp.hasTenderData = StepFormDialog.prototype['hasTenderData'];
+
+      const targetStep: ProjectStep = {
+        id: 7,
+        project_id: 35,
+        step_number: 1,
+        step_name: 'National Pre-Qualification Bid (PQB)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_01_PQB',
+        status: 'completed',
+        data: {},
+      };
+
+      const mockLatestPqb = {
+        id: 303,
+        project_id: 35,
+        pqb_title: 'Boiler Fabrication PQB',
+        pqb_no: 'PQB-BF-2026',
+        items: [{ description: 'Boiler Steel Tube', quantity: 200, unit: 'pcs' }],
+      };
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(of(mockLatestPqb)),
+      };
+
+      comp.preQualificationBidService = mockPqbService;
+      comp.fetchingPreviousStep = { set: vi.fn() };
+      comp.applyPreviousStepToCorrigendum = vi.fn();
+      comp.fetchLatestTenderFromBackend = vi.fn();
+
+      comp['fetchAndApplyTenderStep'](35, targetStep, true);
+
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(35);
+      expect(comp.applyPreviousStepToCorrigendum).toHaveBeenCalledWith(
+        expect.objectContaining({
+          form_code: 'FORM_01_PQB',
+          data: expect.objectContaining({
+            pqb_title: 'Boiler Fabrication PQB',
+            pqb_no: 'PQB-BF-2026',
+          }),
+        }),
+        true,
+      );
+      expect(comp.fetchLatestTenderFromBackend).not.toHaveBeenCalled();
+    });
+
+    it('should correctly identify National PQB steps with isNationalPqbStep and exclude Bid Documents', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.isNationalPqbStep = StepFormDialog.prototype['isNationalPqbStep'];
+
+      expect(comp.isNationalPqbStep({ form_code: 'FORM_01_PQB', step_name: 'National PQB' })).toBe(true);
+      expect(comp.isNationalPqbStep({ form_code: 'FORM_01_PQB' })).toBe(true);
+      expect(comp.isNationalPqbStep({ step_name: 'National Pre-Qualification Bid (PQB)' })).toBe(true);
+      expect(comp.isNationalPqbStep({ step_name: 'Pre-Qualification Bid (PQB)' })).toBe(true);
+      expect(comp.isNationalPqbStep({ step_name: 'pqb' })).toBe(true);
+
+      // Must strictly exclude Bid Document and other steps
+      expect(comp.isNationalPqbStep({ form_code: 'FORM_02_PQB_BID_DOCUMENT' })).toBe(false);
+      expect(comp.isNationalPqbStep({ step_name: 'Bid Document - Pre-Qualification Bid' })).toBe(false);
+      expect(comp.isNationalPqbStep({ form_code: 'FORM_04_LTE', step_name: 'Limited Tender Enquiry (LTE)' })).toBe(false);
+      expect(comp.isNationalPqbStep({ form_code: 'FORM_35_ICB', step_name: 'ICB' })).toBe(false);
+      expect(comp.isNationalPqbStep(null)).toBe(false);
     });
 
     it('should fall back to fetchLatestTenderFromBackend when candidate in-memory step has 0 tender data and /latest returns null', () => {
@@ -2653,6 +3405,381 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       ]);
       comp.syncCorrigendumQuantityToTableFormArray();
       expect(comp.corrigendumTotalAmendedCount()).toBe(2);
+    });
+  });
+
+  describe('Form 31: Bid Document - Limited Tender Enquiry (LTE) Tender Title Auto-Patching', () => {
+    const bidDocLteDef = getFormDefinition('FORM_31_BID_DOC_LTE')!;
+
+    const setupBidDocLteComp = () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.loadForBidDocumentLte = StepFormDialog.prototype['loadForBidDocumentLte'];
+      comp.resolveLinkedStepForBidDocLte = StepFormDialog.prototype['resolveLinkedStepForBidDocLte'];
+      comp.isLteOrSteStep = StepFormDialog.prototype['isLteOrSteStep'];
+      comp.extractCandidateTenderTitle = StepFormDialog.prototype['extractCandidateTenderTitle'];
+      comp.hasTenderTitle = StepFormDialog.prototype['hasTenderTitle'];
+      comp.extractCandidateTenderNo = StepFormDialog.prototype['extractCandidateTenderNo'];
+      comp.pickLatestLteOrSteCandidate = StepFormDialog.prototype['pickLatestLteOrSteCandidate'];
+
+      const fg = new FormGroup({
+        tender_title: new FormControl(''),
+        tender_no: new FormControl(''),
+        customer_name: new FormControl(''),
+      });
+
+      const linkedStepSignal = signal<ProjectStep | null>(null);
+      const fetchingSignal = signal<boolean>(false);
+      const resolvedDefSignal = signal<FormDefinition | undefined>(bidDocLteDef);
+
+      comp.formGroup = () => fg;
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+      comp.projectId = () => 10;
+      comp.existingSteps = () => [];
+      comp.bidDocLteLinkedStep = linkedStepSignal;
+      comp.fetchingBidDocLte = fetchingSignal;
+      comp.resolvedDef = resolvedDefSignal;
+
+      return { comp, fg, linkedStepSignal, fetchingSignal, resolvedDefSignal };
+    };
+
+    it('should patch tender_title and tender_no from latest Limited Tender Enquiry when LTE is available', () => {
+      const { comp, fg } = setupBidDocLteComp();
+
+      const mockLteStep: ProjectStep = {
+        id: 41,
+        project_id: 10,
+        step_number: 4,
+        step_name: 'Limited Tender Enquiry (LTE)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_04_LTE',
+        status: 'completed',
+        updated_at: '2026-03-01T10:00:00Z',
+        data: {
+          tender_title: 'Solar Power Plant Equipment Tender',
+          tender_enquiry_no: 'LTE-SPP-2026-004',
+        },
+      };
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_04_LTE') return of(mockLteStep);
+          return of(null);
+        }),
+      };
+      comp.formApiService = mockFormApi;
+
+      comp.loadForBidDocumentLte(true);
+
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalled();
+      expect(fg.get('tender_title')?.value).toBe('Solar Power Plant Equipment Tender');
+      expect(fg.get('tender_no')?.value).toBe('LTE-SPP-2026-004');
+      expect(comp.bidDocLteLinkedStep()).toEqual(mockLteStep);
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: 'Tender Title Patched',
+          detail: expect.stringContaining('Solar Power Plant Equipment Tender'),
+        }),
+      );
+    });
+
+    it('should patch tender_title from latest Single Tender Enquiry when STE is available and LTE is not', () => {
+      const { comp, fg } = setupBidDocLteComp();
+
+      const mockSteStep: ProjectStep = {
+        id: 331,
+        project_id: 10,
+        step_number: 33,
+        step_name: 'Single Tender Enquiry (STE)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_33_STE',
+        status: 'completed',
+        updated_at: '2026-03-02T11:00:00Z',
+        data: {
+          tender_title: 'Proprietary OEM Turbomachinery Upgrade',
+          tender_no: 'STE-OEM-9921',
+        },
+      };
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_33_STE') return of(mockSteStep);
+          return of(null);
+        }),
+      };
+      comp.formApiService = mockFormApi;
+
+      comp.loadForBidDocumentLte(true);
+
+      expect(fg.get('tender_title')?.value).toBe('Proprietary OEM Turbomachinery Upgrade');
+      expect(fg.get('tender_no')?.value).toBe('STE-OEM-9921');
+      expect(comp.bidDocLteLinkedStep()).toEqual(mockSteStep);
+    });
+
+    it('should pick the latest available when both LTE and STE are returned based on newest timestamp', () => {
+      const { comp, fg } = setupBidDocLteComp();
+
+      const olderLte: ProjectStep = {
+        id: 10,
+        project_id: 10,
+        step_number: 4,
+        step_name: 'Limited Tender Enquiry (LTE)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_04_LTE',
+        status: 'completed',
+        updated_at: '2026-02-15T08:00:00Z',
+        data: { tender_title: 'Older LTE Title', tender_enquiry_no: 'LTE-OLD' },
+      };
+
+      const newerSte: ProjectStep = {
+        id: 20,
+        project_id: 10,
+        step_number: 33,
+        step_name: 'Single Tender Enquiry (STE)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_33_STE',
+        status: 'completed',
+        updated_at: '2026-02-25T14:00:00Z',
+        data: { tender_title: 'Newer STE Title', tender_no: 'STE-NEW' },
+      };
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_04_LTE') return of(olderLte);
+          if (def.formCode === 'FORM_33_STE') return of(newerSte);
+          return of(null);
+        }),
+      };
+      comp.formApiService = mockFormApi;
+
+      comp.loadForBidDocumentLte(false);
+
+      expect(fg.get('tender_title')?.value).toBe('Newer STE Title');
+      expect(comp.bidDocLteLinkedStep()?.id).toBe(20);
+
+      // Reverse: LTE is newer than STE
+      olderLte.updated_at = '2026-03-05T09:00:00Z';
+      newerSte.updated_at = '2026-02-25T14:00:00Z';
+
+      comp.loadForBidDocumentLte(false);
+      expect(fg.get('tender_title')?.value).toBe('Older LTE Title');
+      expect(comp.bidDocLteLinkedStep()?.id).toBe(10);
+    });
+
+    it('should pick candidate with higher ID when timestamps are equal or missing', () => {
+      const { comp, fg } = setupBidDocLteComp();
+
+      const lteStep: ProjectStep = {
+        id: 70,
+        project_id: 10,
+        step_number: 4,
+        step_name: 'Limited Tender Enquiry (LTE)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_04_LTE',
+        status: 'completed',
+        data: { tender_title: 'LTE High ID Title' },
+      };
+
+      const steStep: ProjectStep = {
+        id: 40,
+        project_id: 10,
+        step_number: 33,
+        step_name: 'Single Tender Enquiry (STE)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_33_STE',
+        status: 'completed',
+        data: { tender_title: 'STE Low ID Title' },
+      };
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_04_LTE') return of(lteStep);
+          if (def.formCode === 'FORM_33_STE') return of(steStep);
+          return of(null);
+        }),
+      };
+      comp.formApiService = mockFormApi;
+
+      comp.loadForBidDocumentLte(false);
+      expect(fg.get('tender_title')?.value).toBe('LTE High ID Title');
+    });
+
+    it('should prioritize candidate with non-empty tender_title', () => {
+      const { comp, fg } = setupBidDocLteComp();
+
+      const emptyLte: ProjectStep = {
+        id: 100,
+        project_id: 10,
+        step_number: 4,
+        step_name: 'Limited Tender Enquiry (LTE)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_04_LTE',
+        status: 'completed',
+        updated_at: '2026-03-10T10:00:00Z',
+        data: { tender_title: '' },
+      };
+
+      const validSte: ProjectStep = {
+        id: 50,
+        project_id: 10,
+        step_number: 33,
+        step_name: 'Single Tender Enquiry (STE)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_33_STE',
+        status: 'completed',
+        updated_at: '2026-03-01T10:00:00Z',
+        data: { tender_title: 'Valid STE Title' },
+      };
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_04_LTE') return of(emptyLte);
+          if (def.formCode === 'FORM_33_STE') return of(validSte);
+          return of(null);
+        }),
+      };
+      comp.formApiService = mockFormApi;
+
+      comp.loadForBidDocumentLte(false);
+      expect(fg.get('tender_title')?.value).toBe('Valid STE Title');
+    });
+
+    it('should use in-memory candidate from existingSteps if it is the latest', () => {
+      const { comp, fg } = setupBidDocLteComp();
+
+      const inMemorySte: ProjectStep = {
+        id: 999,
+        project_id: 10,
+        step_number: 33,
+        step_name: 'Single Tender Enquiry (STE)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_33_STE',
+        status: 'completed',
+        updated_at: '2026-03-20T10:00:00Z',
+        data: { tender_title: 'In-Memory STE Title', tender_no: 'STE-MEM-01' },
+      };
+      comp.existingSteps = () => [inMemorySte];
+
+      const olderBackendLte: ProjectStep = {
+        id: 10,
+        project_id: 10,
+        step_number: 4,
+        step_name: 'Limited Tender Enquiry (LTE)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_04_LTE',
+        status: 'completed',
+        updated_at: '2026-03-01T10:00:00Z',
+        data: { tender_title: 'Old Backend LTE' },
+      };
+
+      comp.formApiService = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_04_LTE') return of(olderBackendLte);
+          return of(null);
+        }),
+      };
+
+      comp.loadForBidDocumentLte(false);
+      expect(fg.get('tender_title')?.value).toBe('In-Memory STE Title');
+      expect(fg.get('tender_no')?.value).toBe('STE-MEM-01');
+    });
+
+    it('should show warning message when neither LTE nor STE is found', () => {
+      const { comp, fg } = setupBidDocLteComp();
+
+      comp.formApiService = {
+        getLatestEntry: vi.fn().mockReturnValue(of(null)),
+      };
+
+      comp.loadForBidDocumentLte(true);
+
+      expect(fg.get('tender_title')?.value).toBe('');
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'warn',
+          summary: 'Enquiry Not Found',
+        }),
+      );
+    });
+
+    it('should compute isBidDocumentLte, source step name, and fetch button label properly', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      const defSignal = signal<FormDefinition | undefined>(bidDocLteDef);
+      const linkedSignal = signal<ProjectStep | null>(null);
+
+      comp.resolvedDef = defSignal;
+      comp.bidDocLteLinkedStep = linkedSignal;
+
+      expect(StepFormDialog.prototype['isBidDocumentLte'].call(comp)).toBe(true);
+      expect(StepFormDialog.prototype['bidDocLteSourceStepName'].call(comp)).toBe(
+        'latest Limited Tender Enquiry (LTE) / Single Tender Enquiry (STE)',
+      );
+      expect(StepFormDialog.prototype['bidDocLteFetchButtonLabel'].call(comp)).toBe('Fetch from Enquiry');
+
+      // Linked to STE
+      linkedSignal.set({
+        id: 1,
+        project_id: 1,
+        step_number: 33,
+        step_name: 'Single Tender Enquiry (STE)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_33_STE',
+        status: 'completed',
+        data: {},
+      });
+      expect(StepFormDialog.prototype['bidDocLteSourceStepName'].call(comp)).toBe('Single Tender Enquiry (STE)');
+      expect(StepFormDialog.prototype['bidDocLteFetchButtonLabel'].call(comp)).toBe('Fetch from STE');
+
+      // Linked to LTE
+      linkedSignal.set({
+        id: 2,
+        project_id: 1,
+        step_number: 4,
+        step_name: 'Limited Tender Enquiry (LTE)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_04_LTE',
+        status: 'completed',
+        data: {},
+      });
+      expect(StepFormDialog.prototype['bidDocLteSourceStepName'].call(comp)).toBe('Limited Tender Enquiry (LTE)');
+      expect(StepFormDialog.prototype['bidDocLteFetchButtonLabel'].call(comp)).toBe('Fetch from LTE');
+    });
+
+    it('should correctly filter isLteOrSteStep and exclude Bid Documents', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.isLteOrSteStep = StepFormDialog.prototype['isLteOrSteStep'];
+
+      expect(comp.isLteOrSteStep({ form_code: 'FORM_04_LTE', step_name: 'Limited Tender Enquiry (LTE)' })).toBe(true);
+      expect(comp.isLteOrSteStep({ form_code: 'FORM_33_STE', step_name: 'Single Tender Enquiry (STE)' })).toBe(true);
+      expect(comp.isLteOrSteStep({ form_code: 'FORM_31_BID_DOC_LTE', step_name: 'Bid Document - Limited Tender Enquiry (LTE)' })).toBe(false);
+      expect(comp.isLteOrSteStep({ form_code: 'FORM_34_BID_DOC_STE', step_name: 'Bid Document - Single Tender Enquiry (STE)' })).toBe(false);
+      expect(comp.isLteOrSteStep({ form_code: 'FORM_01_PQB', step_name: 'National Pre-Qualification Bid (PQB)' })).toBe(false);
     });
   });
 });

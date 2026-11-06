@@ -60,17 +60,40 @@
     <!-- ── TAB 1: FORM INPUTS ──────────────────────────────────────── -->
     @if (activeTab() === 'fields') {
     <div class="tab-panel tab-panel--fields">
-      @if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT') {
+      @if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT' || def.formCode === 'FORM_04_LTE' || def.formCode ===
+      'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') {
       <div class="pqb-banner-action-bar" role="region" aria-label="PQB Auto-Patch Info">
         <div class="pqb-banner-info">
           <i class="pi pi-link" aria-hidden="true"></i>
-          <span>PQB Details & Pricing table are automatically linked and patched from {{ pqbSourceStepName() }}.</span>
+          <span>
+            @if (def.formCode === 'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') {
+            PQB No., Title, and Requirements table are automatically linked and patched from {{ pqbSourceStepName() }}.
+            } @else if (def.formCode === 'FORM_04_LTE') {
+            PQB No. and Requirements table are automatically linked and patched from {{ pqbSourceStepName() }}.
+            } @else {
+            PQB Details &amp; Pricing table are automatically linked and patched from {{ pqbSourceStepName() }}.
+            }
+          </span>
         </div>
         <button pButton type="button" icon="pi pi-sync" [label]="pqbFetchButtonLabel()"
-          class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn"
-          [loading]="fetchingNationalPqb()"
+          class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn" [loading]="fetchingNationalPqb()"
           (click)="loadFromNationalPreQualificationBid(true)"
-          [pTooltip]="'Refresh PQB details and Pricing table from ' + pqbSourceStepName()"
+          [pTooltip]="(def.formCode === 'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') ? 'Refresh PQB No., Title, and Requirements table from ' + pqbSourceStepName() : def.formCode === 'FORM_04_LTE' ? 'Refresh PQB No. and Requirements table from ' + pqbSourceStepName() : 'Refresh PQB details and Pricing table from ' + pqbSourceStepName()"
+          tooltipPosition="top">
+        </button>
+      </div>
+      }
+
+      @if (isBidDocumentLte()) {
+      <div class="pqb-banner-action-bar" role="region" aria-label="Bid Document LTE Auto-Patch Info">
+        <div class="pqb-banner-info">
+          <i class="pi pi-link" aria-hidden="true"></i>
+          <span>Tender Title is automatically linked and patched from {{ bidDocLteSourceStepName() }}.</span>
+        </div>
+        <button pButton type="button" icon="pi pi-sync" [label]="bidDocLteFetchButtonLabel()"
+          class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn" [loading]="fetchingBidDocLte()"
+          (click)="loadForBidDocumentLte(true)"
+          [pTooltip]="'Refresh Tender Title from ' + bidDocLteSourceStepName()"
           tooltipPosition="top">
         </button>
       </div>
@@ -80,11 +103,11 @@
       <div class="pqb-banner-action-bar" role="region" aria-label="Corrigendum Auto-Patch Info">
         <div class="pqb-banner-info">
           <i class="pi pi-link" aria-hidden="true"></i>
-          <span>EOI / PQB / Tender Title and Against EOI / PQB / Tender No. are automatically linked and patched from {{ corrigendumSourceStepName() }}.</span>
+          <span>EOI / PQB / Tender Title and Against EOI / PQB / Tender No. are automatically linked and patched from {{
+            corrigendumSourceStepName() }}.</span>
         </div>
         <button pButton type="button" icon="pi pi-sync" [label]="corrigendumFetchButtonLabel()"
-          class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn"
-          [loading]="fetchingPreviousStep()"
+          class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn" [loading]="fetchingPreviousStep()"
           (click)="loadFromPreviousTenderStep(true)"
           [pTooltip]="'Refresh Title, Tender No., and comparison specifications from ' + corrigendumSourceStepName()"
           tooltipPosition="top">
@@ -102,8 +125,16 @@
             @if (field.required) {
             <span class="req-star" aria-hidden="true">*</span>
             }
-            @if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT' && (field.key === 'pqb_title' || field.key === 'pqb_no')) {
+            @if ((def.formCode === 'FORM_02_PQB_BID_DOCUMENT' && (field.key === 'pqb_title' || field.key === 'pqb_no'))
+            || (def.formCode === 'FORM_04_LTE' && field.key === 'pqb_no') || ((def.formCode === 'FORM_33_STE' ||
+            def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') && (field.key === 'pqb_no' || field.key ===
+            'tender_title'))) {
             <span class="field-sync-pill" title="Patched from latest National Pre-Qualification Bid">
+              <i class="pi pi-link" aria-hidden="true"></i> Linked
+            </span>
+            }
+            @if (isBidDocumentLte() && field.key === 'tender_title') {
+            <span class="field-sync-pill" [title]="'Patched from ' + bidDocLteSourceStepName()">
               <i class="pi pi-link" aria-hidden="true"></i> Linked
             </span>
             }
@@ -126,52 +157,34 @@
           }
 
           @case ('currency') {
-            @if (isCurrencyWithSelect(field)) {
-              <div class="currency-compound-wrap">
-                <div class="currency-select-container">
-                  <p-select
-                    [options]="currencyOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    formControlName="currency_unit"
-                    (onChange)="onCurrencyChange($event.value)"
-                    appendTo="body"
-                    styleClass="w-full currency-select-box"
-                    [ariaLabel]="'Currency for ' + field.label">
-                  </p-select>
-                </div>
-                <div class="currency-input-wrap flex-1">
-                  <span class="currency-prefix">{{ selectedCurrencySymbol() }}</span>
-                  <input
-                    pInputText
-                    type="number"
-                    step="0.01"
-                    [id]="'field_' + field.key"
-                    [formControlName]="field.key"
-                    [placeholder]="field.placeholder || '0.00'"
-                    class="form-control-input w-full with-prefix"
-                  />
-                </div>
-              </div>
-            } @else {
-              <div class="currency-input-wrap">
-                <span class="currency-prefix">{{ field.prefix || (field.key.toLowerCase().includes('eur') ? '€' : '₹') }}</span>
-                <input
-                  pInputText
-                  type="number"
-                  [id]="'field_' + field.key"
-                  [formControlName]="field.key"
-                  [placeholder]="field.placeholder || '0.00'"
-                  class="form-control-input w-full with-prefix"
-                />
-              </div>
-            }
+          @if (isCurrencyWithSelect(field)) {
+          <div class="currency-compound-wrap">
+            <div class="currency-select-container">
+              <p-select [options]="currencyOptions" optionLabel="label" optionValue="value"
+                formControlName="currency_unit" (onChange)="onCurrencyChange($event.value)" appendTo="body"
+                styleClass="w-full currency-select-box" [ariaLabel]="'Currency for ' + field.label">
+              </p-select>
+            </div>
+            <div class="currency-input-wrap flex-1">
+              <span class="currency-prefix">{{ selectedCurrencySymbol() }}</span>
+              <input pInputText type="number" step="0.01" [id]="'field_' + field.key" [formControlName]="field.key"
+                [placeholder]="field.placeholder || '0.00'" class="form-control-input w-full with-prefix" />
+            </div>
+          </div>
+          } @else {
+          <div class="currency-input-wrap">
+            <span class="currency-prefix">{{ field.prefix || (field.key.toLowerCase().includes('eur') ? '€' : '₹')
+              }}</span>
+            <input pInputText type="number" [id]="'field_' + field.key" [formControlName]="field.key"
+              [placeholder]="field.placeholder || '0.00'" class="form-control-input w-full with-prefix" />
+          </div>
+          }
           }
 
           @case ('date') {
           <p-datepicker [formControlName]="field.key" [inputId]="'field_' + field.key" dateFormat="dd-mm-yy"
-            [minDate]="getMinDate(field.key)"
-            [showIcon]="true" [placeholder]="field.placeholder || 'Select Date'" appendTo="body" styleClass="w-full">
+            [minDate]="getMinDate(field.key)" [showIcon]="true" [placeholder]="field.placeholder || 'Select Date'"
+            appendTo="body" styleClass="w-full">
           </p-datepicker>
           @if (formGroup().get(field.key)?.hasError('dateBeforeClosing')) {
           <small class="date-error-hint">
@@ -183,9 +196,8 @@
 
           @case ('datetime') {
           <p-datepicker [formControlName]="field.key" [inputId]="'field_' + field.key" dateFormat="dd-mm-yy"
-            [minDate]="getMinDate(field.key)"
-            [showTime]="true" [showIcon]="true" [placeholder]="field.placeholder || 'Select Date & Time'"
-            appendTo="body" styleClass="w-full">
+            [minDate]="getMinDate(field.key)" [showTime]="true" [showIcon]="true"
+            [placeholder]="field.placeholder || 'Select Date & Time'" appendTo="body" styleClass="w-full">
           </p-datepicker>
           @if (formGroup().get(field.key)?.hasError('dateBeforeClosing')) {
           <small class="date-error-hint">
@@ -258,376 +270,376 @@
     @if (activeTab() === 'table') {
     <div class="tab-panel tab-panel--table">
       @if (isCorrigendum()) {
-        <!-- ── CORRIGENDUM STREAMLINED COMPARISON VIEW ───────────────────── -->
-        <div class="corr-clean-shell">
-          <!-- Minimal Top Bar -->
-          <div class="corr-minimal-bar">
-            <div class="bar-left">
-              <span class="bar-heading">
-                <i class="pi pi-sliders-h text-primary mr-1"></i>
-                Specification Comparison
-              </span>
-              <span class="bar-link-chip">
-                Comparing: <strong>{{ corrigendumSourceStepName() }}</strong>
-                @if (linkedTenderRefNo()) {
-                  <span class="bar-ref-pill">{{ linkedTenderRefNo() }}</span>
-                }
-              </span>
-            </div>
-            <div class="bar-right">
-              @if (corrigendumTotalAmendedCount() > 0) {
-                <span class="bar-mod-chip">
-                  <i class="pi pi-pencil mr-1"></i>{{ corrigendumTotalAmendedCount() }} Updates
-                </span>
+      <!-- ── CORRIGENDUM STREAMLINED COMPARISON VIEW ───────────────────── -->
+      <div class="corr-clean-shell">
+        <!-- Minimal Top Bar -->
+        <div class="corr-minimal-bar">
+          <div class="bar-left">
+            <span class="bar-heading">
+              <i class="pi pi-sliders-h text-primary mr-1"></i>
+              Specification Comparison
+            </span>
+            <span class="bar-link-chip">
+              Comparing: <strong>{{ corrigendumSourceStepName() }}</strong>
+              @if (linkedTenderRefNo()) {
+              <span class="bar-ref-pill">{{ linkedTenderRefNo() }}</span>
               }
-              <button pButton type="button" icon="pi pi-sync" [label]="corrigendumFetchButtonLabel()"
-                class="p-button-outlined p-button-sm bar-sync-btn"
-                [loading]="fetchingPreviousStep()"
-                (click)="loadFromPreviousTenderStep(true)"
-                [pTooltip]="'Fetch specifications from ' + corrigendumSourceStepName()"
-                tooltipPosition="top">
-              </button>
-            </div>
+            </span>
           </div>
-
-          <!-- Main Unified Comparison Table -->
-          <div class="corr-unified-table-wrap">
-            <table class="corr-unified-table">
-              <thead>
-                <tr>
-                  <th class="th-param" style="width: 26%;">Parameter / Specification</th>
-                  <th class="th-baseline" style="width: 37%;">
-                    <div class="th-label-wrap">
-                      <span>As Per Tender Document</span>
-                      <span class="th-tag base">Baseline</span>
-                    </div>
-                  </th>
-                  <th class="th-amended" style="width: 37%;">
-                    <div class="th-label-wrap">
-                      <div class="th-title-group">
-                        <span>As Per Corrigendum</span>
-                        <span class="th-tag amend">Updates</span>
-                      </div>
-                      <button type="button" class="corr-add-head-btn" (click)="addCorrigendumItem()"
-                        pTooltip="Add line item to Corrigendum" tooltipPosition="top" aria-label="Add Item">
-                        <i class="pi pi-plus mr-1"></i>Add Item
-                      </button>
-                    </div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (rowGroup of tableFormArray().controls; track $index; let rIdx = $index) {
-                  @if (rowGroup.get('sr_no')?.value === 3 || rIdx === 2) {
-                    <!-- ── ROW 3: QUANTITY / MATERIAL SPECIFICATIONS (SCROLLABLE LHS & RHS TABLES) ── -->
-                    <tr [formGroup]="rowGroup" class="corr-spec-row corr-row-materials" [class.is-modified]="isCorrigendumRowModified(rIdx)">
-                      <!-- Col 1: Parameter Info -->
-                      <td class="cell-param-info cell-param-mat">
-                        <div class="param-title-wrap">
-                          <i [class]="getCorrigendumParameterMeta(rIdx, rowGroup).icon" class="param-icon"></i>
-                          <div class="param-text-block">
-                            <span class="param-name">{{ (rIdx + 1) }}. {{ getCorrigendumParameterMeta(rIdx, rowGroup).title }}</span>
-                            <div class="param-meta-badges">
-                              <span class="meta-count-pill">{{ corrigendumQuantityItems().length }} Item{{ corrigendumQuantityItems().length === 1 ? '' : 's' }}</span>
-                              @if (corrigendumModifiedItemCount() > 0) {
-                                <span class="meta-mod-pill">{{ corrigendumModifiedItemCount() }} Updates</span>
-                              }
-                            </div>
-                            <button type="button" class="corr-inline-add-btn" (click)="addCorrigendumItem()"
-                              pTooltip="Add line item to Corrigendum" tooltipPosition="top" aria-label="Add Item">
-                              <i class="pi pi-plus mr-1"></i>Add Item
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-
-                      <!-- Col 2: LHS Table (As Per Tender Document - Baseline) -->
-                      <td class="cell-baseline cell-corr-subtable-td">
-                        <div class="corr-table-scroll-container" #lhsScroll (scroll)="syncScroll(lhsScroll, rhsScroll)">
-                          <table class="corr-grid-table">
-                            <thead>
-                              <tr>
-                                <th class="col-desc">DESCRIPTION</th>
-                                <th class="col-unit text-center">UNIT</th>
-                                <th class="col-qty text-right">QUANTITY</th>
-                                <th class="col-action"></th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              @for (qItem of corrigendumQuantityItems(); track qItem.id || $index; let qIdx = $index) {
-                                <tr class="grid-table-row">
-                                  <td class="col-desc" [title]="qItem.original_description">
-                                    {{ qItem.original_description || '—' }}
-                                  </td>
-                                  <td class="col-unit text-center">
-                                    {{ (!qItem.is_new && qItem.original_unit) ? qItem.original_unit : '—' }}
-                                  </td>
-                                  <td class="col-qty text-right">
-                                    @if (!qItem.is_new && qItem.original_quantity !== null && qItem.original_quantity !== undefined) {
-                                      <strong>{{ qItem.original_quantity }}</strong>
-                                    } @else {
-                                      <span class="text-muted">—</span>
-                                    }
-                                  </td>
-                                  <td class="col-action"></td>
-                                </tr>
-                              } @empty {
-                                <tr class="empty-row">
-                                  <td colspan="4" class="text-center text-muted">
-                                    No baseline materials specified in tender.
-                                  </td>
-                                </tr>
-                              }
-                            </tbody>
-                          </table>
-                        </div>
-                      </td>
-
-                      <!-- Col 3: RHS Table (As Per Corrigendum - Updates) -->
-                      <td class="cell-amended cell-corr-subtable-td">
-                        <div class="corr-table-scroll-container" #rhsScroll (scroll)="syncScroll(rhsScroll, lhsScroll)">
-                          <table class="corr-grid-table">
-                            <thead>
-                              <tr>
-                                <th class="col-desc">DESCRIPTION</th>
-                                <th class="col-unit text-center">UNIT</th>
-                                <th class="col-qty text-right">QUANTITY</th>
-                                <th class="col-action text-center">
-                                  @if (corrigendumModifiedItemCount() > 0) {
-                                    <button type="button" class="corr-head-icon-btn reset" (click)="resetAllCorrigendumItems()"
-                                      pTooltip="Reset all items to baseline" tooltipPosition="top" aria-label="Reset all items to baseline">
-                                      <i class="pi pi-undo"></i>
-                                    </button>
-                                  }
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              @for (qItem of corrigendumQuantityItems(); track qItem.id || $index; let qIdx = $index) {
-                                <tr class="grid-table-row" [class.is-modified]="isCorrigendumItemModified(qItem)" [class.is-new]="qItem.is_new">
-                                  <td class="col-desc">
-                                    <input type="text" class="flat-grid-input desc-input"
-                                      [value]="qItem.corrigendum_description"
-                                      (input)="updateCorrigendumItem(qIdx, { corrigendum_description: $any($event.target).value })"
-                                      placeholder="Description..."
-                                      [attr.aria-label]="'Description for item ' + (qIdx + 1)" />
-                                  </td>
-                                  <td class="col-unit text-center">
-                                    <input type="text" class="flat-grid-input unit-input text-center"
-                                      [value]="qItem.corrigendum_unit || ''"
-                                      (input)="updateCorrigendumItem(qIdx, { corrigendum_unit: $any($event.target).value })"
-                                      placeholder="Unit"
-                                      [attr.aria-label]="'Unit for item ' + (qIdx + 1)" />
-                                  </td>
-                                  <td class="col-qty text-right">
-                                    <input type="number" class="flat-grid-input qty-input text-right"
-                                      [value]="qItem.corrigendum_quantity !== null && qItem.corrigendum_quantity !== undefined ? qItem.corrigendum_quantity : ''"
-                                      (input)="updateCorrigendumItem(qIdx, { corrigendum_quantity: $any($event.target).value !== '' ? +$any($event.target).value : null })"
-                                      placeholder="0"
-                                      [attr.aria-label]="'Quantity for item ' + (qIdx + 1)" />
-                                  </td>
-                                  <td class="col-action text-center">
-                                    <div class="row-actions">
-                                      @if (isCorrigendumItemModified(qItem) && !qItem.is_new) {
-                                        <button type="button" class="grid-act-icon revert" (click)="resetCorrigendumItem(qIdx)"
-                                          pTooltip="Revert to baseline" tooltipPosition="top" [attr.aria-label]="'Revert item ' + (qIdx + 1)">
-                                          <i class="pi pi-undo"></i>
-                                        </button>
-                                      }
-                                      <button type="button" class="grid-act-icon delete" (click)="removeCorrigendumItem(qIdx)"
-                                        pTooltip="Remove item" tooltipPosition="top" [attr.aria-label]="'Remove item ' + (qIdx + 1)">
-                                        <i class="pi pi-trash"></i>
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              } @empty {
-                                <tr class="empty-row">
-                                  <td colspan="4" class="text-center text-muted">
-                                    No items added. Click <strong>+ Add Item</strong> above.
-                                  </td>
-                                </tr>
-                              }
-                            </tbody>
-                          </table>
-                        </div>
-                      </td>
-                    </tr>
-                  } @else {
-                    <!-- ── STANDARD SPECIFICATION ROWS (1, 2, 4-8) ── -->
-                    <tr [formGroup]="rowGroup" class="corr-spec-row" [class.is-modified]="isCorrigendumRowModified(rIdx)">
-                      <!-- Column 1: Parameter Name -->
-                      <td class="cell-param-info">
-                        <div class="param-title-wrap">
-                          <i [class]="getCorrigendumParameterMeta(rIdx, rowGroup).icon" class="param-icon"></i>
-                          <div class="param-text-block">
-                            <span class="param-name">{{ (rIdx + 1) }}. {{ getCorrigendumParameterMeta(rIdx, rowGroup).title }}</span>
-                          </div>
-                        </div>
-                      </td>
-
-                      <!-- Column 2: Baseline (As Per Tender Doc) -->
-                      <td class="cell-baseline">
-                        <div class="baseline-wrap">
-                          <textarea pTextarea formControlName="as_per_tender_doc" rows="2"
-                            class="flat-clean-textarea baseline-field"
-                            placeholder="As per tender document..."></textarea>
-                          <button type="button" class="copy-arrow-btn" (click)="copyOriginalToCorrigendum(rIdx)"
-                            pTooltip="Copy baseline value to Corrigendum" tooltipPosition="top"
-                            aria-label="Copy to Corrigendum">
-                            <i class="pi pi-arrow-right"></i>
-                          </button>
-                        </div>
-                      </td>
-
-                      <!-- Column 3: Updates (As Per Corrigendum) -->
-                      <td class="cell-amended">
-                        <div class="amended-wrap" [class.has-changes]="isCorrigendumRowModified(rIdx)">
-                          <textarea pTextarea formControlName="as_per_corrigendum" (input)="onCorrigendumRowChange(rIdx)" rows="2"
-                            class="flat-clean-textarea amended-field"
-                            [class.is-changed]="isCorrigendumRowModified(rIdx)"
-                            placeholder="Enter updated terms or leave unchanged..."></textarea>
-                          @if (isCorrigendumRowModified(rIdx)) {
-                            <span class="row-amended-badge">Updated</span>
-                          }
-                        </div>
-                      </td>
-                    </tr>
-                  }
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-      } @else {
-        <!-- Standard Dynamic Items Table (for RFQ, PO, etc.) -->
-        @if (def.tableConfig; as tbl) {
-        <div class="table-section-bar">
-          <div class="table-title-group">
-            <h3 class="table-section-title">{{ tbl.title }}</h3>
-            <span class="table-item-count">({{ tableFormArray().length }} {{ tableFormArray().length === 1 ? 'item' : 'items' }})</span>
-          </div>
-
-          <div class="table-actions-group">
-            @if (tbl.autoCalculateTotal && tbl.totalKey) {
-              @if (hasTableGst()) {
-              <div class="table-total-pill table-total-pill--net" title="Total Net Amount (Excl. GST)">
-                <span class="total-lbl">Net (Excl. GST):</span>
-                <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableNetAmount() | number:'1.2-2' }}</strong>
-              </div>
-              <div class="table-total-pill table-total-pill--gst" title="GST Amount">
-                <span class="total-lbl">GST ({{ tableGstRate() }}%):</span>
-                <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableGstAmount() | number:'1.2-2' }}</strong>
-              </div>
-              <div class="table-total-pill table-total-pill--gross" title="Total Gross Amount (Incl. GST)">
-                <span class="total-lbl">Gross (Incl. GST):</span>
-                <strong class="total-amt">{{ tableGrossTotalSum() | number:'1.2-2' }}</strong>
-              </div>
-              } @else {
-              <div class="table-total-pill" [title]="isCostSheet() ? 'Total Net Amount' : 'Net Total'">
-                <span class="total-lbl">{{ isCostSheet() ? 'Total Net Amount:' : 'Net Total:' }}</span>
-                <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableTotalSum() | number:'1.2-2' }}</strong>
-              </div>
-              }
+          <div class="bar-right">
+            @if (corrigendumTotalAmendedCount() > 0) {
+            <span class="bar-mod-chip">
+              <i class="pi pi-pencil mr-1"></i>{{ corrigendumTotalAmendedCount() }} Updates
+            </span>
             }
-            @if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT') {
-            <button pButton type="button" icon="pi pi-sync" [label]="pqbFetchButtonLabel()"
-              class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
-              [loading]="fetchingNationalPqb()"
-              (click)="loadFromNationalPreQualificationBid(true)"
-              [pTooltip]="'Import pricing items from ' + pqbSourceStepName()"
-              tooltipPosition="top">
-            </button>
-            }
-            @if (def.formCode === 'FORM_10_COST_SHEET') {
-            <button pButton type="button" icon="pi pi-sync" label="Fetch from Supplier Quotation"
-              class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
-              [loading]="fetchingSupplierQuotation()"
-              (click)="loadFromSupplierQuotation(true)"
-              pTooltip="Import line items and prices from latest Quotation from Supplier"
-              tooltipPosition="top">
-            </button>
-            }
-            <button pButton type="button" icon="pi pi-plus" label="Add Item Row"
-              class="p-button-outlined p-button-sm add-row-btn" (click)="addTableRow()">
+            <button pButton type="button" icon="pi pi-sync" [label]="corrigendumFetchButtonLabel()"
+              class="p-button-outlined p-button-sm bar-sync-btn" [loading]="fetchingPreviousStep()"
+              (click)="loadFromPreviousTenderStep(true)"
+              [pTooltip]="'Fetch specifications from ' + corrigendumSourceStepName()" tooltipPosition="top">
             </button>
           </div>
         </div>
 
-        <div class="table-scroll-wrapper">
-          <table class="dynamic-items-table">
+        <!-- Main Unified Comparison Table -->
+        <div class="corr-unified-table-wrap">
+          <table class="corr-unified-table">
             <thead>
               <tr>
-                @for (col of tbl.columns; track col.key) {
-                <th [style.width]="getColumnWidth(col.key, col.width)" [style.minWidth]="getColumnMinWidth(col.key)"
-                  [class.text-right]="col.type === 'number' || col.type === 'currency'"
-                  [class.text-center]="col.key === 'sr_no'">
-                  {{ getColumnLabel(col) }}
+                <th class="th-param" style="width: 26%;">Parameter / Specification</th>
+                <th class="th-baseline" style="width: 37%;">
+                  <div class="th-label-wrap">
+                    <span>As Per Tender Document</span>
+                    <span class="th-tag base">Baseline</span>
+                  </div>
                 </th>
-                }
-                <th style="width: 50px; text-align: center;"></th>
+                <th class="th-amended" style="width: 37%;">
+                  <div class="th-label-wrap">
+                    <div class="th-title-group">
+                      <span>As Per Corrigendum</span>
+                      <span class="th-tag amend">Updates</span>
+                    </div>
+                    <button type="button" class="corr-add-head-btn" (click)="addCorrigendumItem()"
+                      pTooltip="Add line item to Corrigendum" tooltipPosition="top" aria-label="Add Item">
+                      <i class="pi pi-plus mr-1"></i>Add Item
+                    </button>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
               @for (rowGroup of tableFormArray().controls; track $index; let rIdx = $index) {
-                <tr [formGroup]="rowGroup" class="item-table-row">
-                  @for (col of tbl.columns; track col.key) {
-                  <td [style.width]="getColumnWidth(col.key, col.width)" [style.minWidth]="getColumnMinWidth(col.key)"
-                    [class.text-right]="col.type === 'number' || col.type === 'currency'"
-                    [class.text-center]="col.key === 'sr_no'">
-
-                    @if (col.key === 'sr_no') {
-                    <span class="row-seq-num">{{ rIdx + 1 }}</span>
-                    } @else if (col.key === tbl.totalKey && tbl.autoCalculateTotal) {
-                    <span class="row-total-display">
-                      {{ tableCurrencySymbol() }} {{ (rowGroup.get(col.key)?.value || 0) | number:'1.2-2' }}
-                    </span>
-                    } @else if (col.type === 'currency' || col.type === 'number') {
-                    <input type="number" [formControlName]="col.key" (input)="onTableCellChange(rIdx)"
-                      [placeholder]="col.type === 'currency' ? '0.00' : '0'" class="table-flat-input text-right" />
-                    } @else if (col.type === 'textarea') {
-                    <textarea pTextarea [formControlName]="col.key" rows="2" class="table-flat-input table-flat-textarea"
-                      placeholder="Enter details..."></textarea>
-                    } @else if (col.type === 'date') {
-                    <input type="date" [formControlName]="col.key" class="table-flat-input date-field" />
-                    } @else {
-                    <input type="text" [formControlName]="col.key"
-                      [placeholder]="col.key === 'description' ? 'Item description...' : '—'" class="table-flat-input" />
-                    }
-                  </td>
-                  }
-                  <td class="text-center action-cell">
-                    <button type="button" class="table-row-del-btn" pTooltip="Remove item" tooltipPosition="top"
-                      (click)="removeTableRow(rIdx)" aria-label="Remove item">
-                      <i class="pi pi-trash" aria-hidden="true"></i>
-                    </button>
-                  </td>
-                </tr>
-              } @empty {
-              <tr class="empty-table-row">
-                <td [attr.colspan]="tbl.columns.length + 1" class="empty-table-cell">
-                  <div class="empty-table-prompt">
-                    <div class="empty-icon-badge">
-                      <i class="pi pi-inbox" aria-hidden="true"></i>
+              @if (rowGroup.get('sr_no')?.value === 3 || rIdx === 2) {
+              <!-- ── ROW 3: QUANTITY / MATERIAL SPECIFICATIONS (SCROLLABLE LHS & RHS TABLES) ── -->
+              <tr [formGroup]="rowGroup" class="corr-spec-row corr-row-materials"
+                [class.is-modified]="isCorrigendumRowModified(rIdx)">
+                <!-- Col 1: Parameter Info -->
+                <td class="cell-param-info cell-param-mat">
+                  <div class="param-title-wrap">
+                    <i [class]="getCorrigendumParameterMeta(rIdx, rowGroup).icon" class="param-icon"></i>
+                    <div class="param-text-block">
+                      <span class="param-name">{{ (rIdx + 1) }}. {{ getCorrigendumParameterMeta(rIdx, rowGroup).title
+                        }}</span>
+                      <div class="param-meta-badges">
+                        <span class="meta-count-pill">{{ corrigendumQuantityItems().length }} Item{{
+                          corrigendumQuantityItems().length === 1 ? '' : 's' }}</span>
+                        @if (corrigendumModifiedItemCount() > 0) {
+                        <span class="meta-mod-pill">{{ corrigendumModifiedItemCount() }} Updates</span>
+                        }
+                      </div>
+                      <button type="button" class="corr-inline-add-btn" (click)="addCorrigendumItem()"
+                        pTooltip="Add line item to Corrigendum" tooltipPosition="top" aria-label="Add Item">
+                        <i class="pi pi-plus mr-1"></i>Add Item
+                      </button>
                     </div>
-                    <p class="empty-title">No items added yet</p>
-                    <p class="empty-desc">Line items are optional. Click below to add requirement rows.</p>
-                    @if (def.formCode === 'FORM_10_COST_SHEET') {
-                    <button pButton type="button" icon="pi pi-sync" label="Fetch from Supplier Quotation"
-                      class="empty-add-row-btn p-button-outlined p-button-secondary"
-                      style="margin-right: 8px;"
-                      [loading]="fetchingSupplierQuotation()"
-                      (click)="loadFromSupplierQuotation(true)">
+                  </div>
+                </td>
+
+                <!-- Col 2: LHS Table (As Per Tender Document - Baseline) -->
+                <td class="cell-baseline cell-corr-subtable-td">
+                  <div class="corr-table-scroll-container" #lhsScroll (scroll)="syncScroll(lhsScroll, rhsScroll)">
+                    <table class="corr-grid-table">
+                      <thead>
+                        <tr>
+                          <th class="col-desc">DESCRIPTION</th>
+                          <th class="col-unit text-center">UNIT</th>
+                          <th class="col-qty text-right">QUANTITY</th>
+                          <th class="col-action"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (qItem of corrigendumQuantityItems(); track qItem.id || $index; let qIdx = $index) {
+                        <tr class="grid-table-row">
+                          <td class="col-desc" [title]="qItem.original_description">
+                            {{ qItem.original_description || '—' }}
+                          </td>
+                          <td class="col-unit text-center">
+                            {{ (!qItem.is_new && qItem.original_unit) ? qItem.original_unit : '—' }}
+                          </td>
+                          <td class="col-qty text-right">
+                            @if (!qItem.is_new && qItem.original_quantity !== null && qItem.original_quantity !==
+                            undefined) {
+                            <strong>{{ qItem.original_quantity }}</strong>
+                            } @else {
+                            <span class="text-muted">—</span>
+                            }
+                          </td>
+                          <td class="col-action"></td>
+                        </tr>
+                        } @empty {
+                        <tr class="empty-row">
+                          <td colspan="4" class="text-center text-muted">
+                            No baseline materials specified in tender.
+                          </td>
+                        </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </td>
+
+                <!-- Col 3: RHS Table (As Per Corrigendum - Updates) -->
+                <td class="cell-amended cell-corr-subtable-td">
+                  <div class="corr-table-scroll-container" #rhsScroll (scroll)="syncScroll(rhsScroll, lhsScroll)">
+                    <table class="corr-grid-table">
+                      <thead>
+                        <tr>
+                          <th class="col-desc">DESCRIPTION</th>
+                          <th class="col-unit text-center">UNIT</th>
+                          <th class="col-qty text-right">QUANTITY</th>
+                          <th class="col-action text-center">
+                            @if (corrigendumModifiedItemCount() > 0) {
+                            <button type="button" class="corr-head-icon-btn reset" (click)="resetAllCorrigendumItems()"
+                              pTooltip="Reset all items to baseline" tooltipPosition="top"
+                              aria-label="Reset all items to baseline">
+                              <i class="pi pi-undo"></i>
+                            </button>
+                            }
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (qItem of corrigendumQuantityItems(); track qItem.id || $index; let qIdx = $index) {
+                        <tr class="grid-table-row" [class.is-modified]="isCorrigendumItemModified(qItem)"
+                          [class.is-new]="qItem.is_new">
+                          <td class="col-desc">
+                            <input type="text" class="flat-grid-input desc-input"
+                              [value]="qItem.corrigendum_description"
+                              (input)="updateCorrigendumItem(qIdx, { corrigendum_description: $any($event.target).value })"
+                              placeholder="Description..." [attr.aria-label]="'Description for item ' + (qIdx + 1)" />
+                          </td>
+                          <td class="col-unit text-center">
+                            <input type="text" class="flat-grid-input unit-input text-center"
+                              [value]="qItem.corrigendum_unit || ''"
+                              (input)="updateCorrigendumItem(qIdx, { corrigendum_unit: $any($event.target).value })"
+                              placeholder="Unit" [attr.aria-label]="'Unit for item ' + (qIdx + 1)" />
+                          </td>
+                          <td class="col-qty text-right">
+                            <input type="number" class="flat-grid-input qty-input text-right"
+                              [value]="qItem.corrigendum_quantity !== null && qItem.corrigendum_quantity !== undefined ? qItem.corrigendum_quantity : ''"
+                              (input)="updateCorrigendumItem(qIdx, { corrigendum_quantity: $any($event.target).value !== '' ? +$any($event.target).value : null })"
+                              placeholder="0" [attr.aria-label]="'Quantity for item ' + (qIdx + 1)" />
+                          </td>
+                          <td class="col-action text-center">
+                            <div class="row-actions">
+                              @if (isCorrigendumItemModified(qItem) && !qItem.is_new) {
+                              <button type="button" class="grid-act-icon revert" (click)="resetCorrigendumItem(qIdx)"
+                                pTooltip="Revert to baseline" tooltipPosition="top"
+                                [attr.aria-label]="'Revert item ' + (qIdx + 1)">
+                                <i class="pi pi-undo"></i>
+                              </button>
+                              }
+                              <button type="button" class="grid-act-icon delete" (click)="removeCorrigendumItem(qIdx)"
+                                pTooltip="Remove item" tooltipPosition="top"
+                                [attr.aria-label]="'Remove item ' + (qIdx + 1)">
+                                <i class="pi pi-trash"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        } @empty {
+                        <tr class="empty-row">
+                          <td colspan="4" class="text-center text-muted">
+                            No items added. Click <strong>+ Add Item</strong> above.
+                          </td>
+                        </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </td>
+              </tr>
+              } @else {
+              <!-- ── STANDARD SPECIFICATION ROWS (1, 2, 4-8) ── -->
+              <tr [formGroup]="rowGroup" class="corr-spec-row" [class.is-modified]="isCorrigendumRowModified(rIdx)">
+                <!-- Column 1: Parameter Name -->
+                <td class="cell-param-info">
+                  <div class="param-title-wrap">
+                    <i [class]="getCorrigendumParameterMeta(rIdx, rowGroup).icon" class="param-icon"></i>
+                    <div class="param-text-block">
+                      <span class="param-name">{{ (rIdx + 1) }}. {{ getCorrigendumParameterMeta(rIdx, rowGroup).title
+                        }}</span>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Column 2: Baseline (As Per Tender Doc) -->
+                <td class="cell-baseline">
+                  <div class="baseline-wrap">
+                    <textarea pTextarea formControlName="as_per_tender_doc" rows="2"
+                      class="flat-clean-textarea baseline-field" placeholder="As per tender document..."></textarea>
+                    <button type="button" class="copy-arrow-btn" (click)="copyOriginalToCorrigendum(rIdx)"
+                      pTooltip="Copy baseline value to Corrigendum" tooltipPosition="top"
+                      aria-label="Copy to Corrigendum">
+                      <i class="pi pi-arrow-right"></i>
                     </button>
+                  </div>
+                </td>
+
+                <!-- Column 3: Updates (As Per Corrigendum) -->
+                <td class="cell-amended">
+                  <div class="amended-wrap" [class.has-changes]="isCorrigendumRowModified(rIdx)">
+                    <textarea pTextarea formControlName="as_per_corrigendum" (input)="onCorrigendumRowChange(rIdx)"
+                      rows="2" class="flat-clean-textarea amended-field"
+                      [class.is-changed]="isCorrigendumRowModified(rIdx)"
+                      placeholder="Enter updated terms or leave unchanged..."></textarea>
+                    @if (isCorrigendumRowModified(rIdx)) {
+                    <span class="row-amended-badge">Updated</span>
                     }
-                    <button pButton type="button" icon="pi pi-plus" label="Add Item Row" class="empty-add-row-btn"
-                      (click)="addTableRow()">
-                    </button>
                   </div>
                 </td>
               </tr>
               }
+              }
             </tbody>
+          </table>
+        </div>
+      </div>
+      } @else {
+      <!-- Standard Dynamic Items Table (for RFQ, PO, etc.) -->
+      @if (def.tableConfig; as tbl) {
+      <div class="table-section-bar">
+        <div class="table-title-group">
+          <h3 class="table-section-title">{{ tbl.title }}</h3>
+          <span class="table-item-count">({{ tableFormArray().length }} {{ tableFormArray().length === 1 ? 'item' :
+            'items' }})</span>
+        </div>
+
+        <div class="table-actions-group">
+          @if (tbl.autoCalculateTotal && tbl.totalKey) {
+          @if (hasTableGst()) {
+          <div class="table-total-pill table-total-pill--net" title="Total Net Amount (Excl. GST)">
+            <span class="total-lbl">Net (Excl. GST):</span>
+            <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableNetAmount() | number:'1.2-2' }}</strong>
+          </div>
+          <div class="table-total-pill table-total-pill--gst" title="GST Amount">
+            <span class="total-lbl">GST ({{ tableGstRate() }}%):</span>
+            <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableGstAmount() | number:'1.2-2' }}</strong>
+          </div>
+          <div class="table-total-pill table-total-pill--gross" title="Total Gross Amount (Incl. GST)">
+            <span class="total-lbl">Gross (Incl. GST):</span>
+            <strong class="total-amt">{{ tableGrossTotalSum() | number:'1.2-2' }}</strong>
+          </div>
+          } @else {
+          <div class="table-total-pill" [title]="isCostSheet() ? 'Total Net Amount' : 'Net Total'">
+            <span class="total-lbl">{{ isCostSheet() ? 'Total Net Amount:' : 'Net Total:' }}</span>
+            <strong class="total-amt">{{ tableCurrencySymbol() }}{{ tableTotalSum() | number:'1.2-2' }}</strong>
+          </div>
+          }
+          }
+          @if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT' || def.formCode === 'FORM_04_LTE' || def.formCode ===
+          'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') {
+          <button pButton type="button" icon="pi pi-sync" [label]="pqbFetchButtonLabel()"
+            class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
+            [loading]="fetchingNationalPqb()" (click)="loadFromNationalPreQualificationBid(true)"
+            [pTooltip]="(def.formCode === 'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') ? 'Import PQB No., Title, and Requirements from ' + pqbSourceStepName() : def.formCode === 'FORM_04_LTE' ? 'Import PQB No. and Requirements from ' + pqbSourceStepName() : 'Import pricing items from ' + pqbSourceStepName()"
+            tooltipPosition="top">
+          </button>
+          }
+          @if (def.formCode === 'FORM_10_COST_SHEET') {
+          <button pButton type="button" icon="pi pi-sync" label="Fetch from Supplier Quotation"
+            class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
+            [loading]="fetchingSupplierQuotation()" (click)="loadFromSupplierQuotation(true)"
+            pTooltip="Import line items and prices from latest Quotation from Supplier" tooltipPosition="top">
+          </button>
+          }
+          <button pButton type="button" icon="pi pi-plus" label="Add Item Row"
+            class="p-button-outlined p-button-sm add-row-btn" (click)="addTableRow()">
+          </button>
+        </div>
+      </div>
+
+      <div class="table-scroll-wrapper">
+        <table class="dynamic-items-table">
+          <thead>
+            <tr>
+              @for (col of tbl.columns; track col.key) {
+              <th [style.width]="getColumnWidth(col.key, col.width)" [style.minWidth]="getColumnMinWidth(col.key)"
+                [class.text-right]="col.type === 'number' || col.type === 'currency'"
+                [class.text-center]="col.key === 'sr_no'">
+                {{ getColumnLabel(col) }}
+              </th>
+              }
+              <th style="width: 50px; text-align: center;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (rowGroup of tableFormArray().controls; track $index; let rIdx = $index) {
+            <tr [formGroup]="rowGroup" class="item-table-row">
+              @for (col of tbl.columns; track col.key) {
+              <td [style.width]="getColumnWidth(col.key, col.width)" [style.minWidth]="getColumnMinWidth(col.key)"
+                [class.text-right]="col.type === 'number' || col.type === 'currency'"
+                [class.text-center]="col.key === 'sr_no'">
+
+                @if (col.key === 'sr_no') {
+                <span class="row-seq-num">{{ rIdx + 1 }}</span>
+                } @else if (col.key === tbl.totalKey && tbl.autoCalculateTotal) {
+                <span class="row-total-display">
+                  {{ tableCurrencySymbol() }} {{ (rowGroup.get(col.key)?.value || 0) | number:'1.2-2' }}
+                </span>
+                } @else if (col.type === 'currency' || col.type === 'number') {
+                <input type="number" [formControlName]="col.key" (input)="onTableCellChange(rIdx)"
+                  [placeholder]="col.type === 'currency' ? '0.00' : '0'" class="table-flat-input text-right" />
+                } @else if (col.type === 'textarea') {
+                <textarea pTextarea [formControlName]="col.key" rows="2" class="table-flat-input table-flat-textarea"
+                  placeholder="Enter details..."></textarea>
+                } @else if (col.type === 'date') {
+                <input type="date" [formControlName]="col.key" class="table-flat-input date-field" />
+                } @else {
+                <input type="text" [formControlName]="col.key"
+                  [placeholder]="col.key === 'description' ? 'Item description...' : '—'" class="table-flat-input" />
+                }
+              </td>
+              }
+              <td class="text-center action-cell">
+                <button type="button" class="table-row-del-btn" pTooltip="Remove item" tooltipPosition="top"
+                  (click)="removeTableRow(rIdx)" aria-label="Remove item">
+                  <i class="pi pi-trash" aria-hidden="true"></i>
+                </button>
+              </td>
+            </tr>
+            } @empty {
+            <tr class="empty-table-row">
+              <td [attr.colspan]="tbl.columns.length + 1" class="empty-table-cell">
+                <div class="empty-table-prompt">
+                  <div class="empty-icon-badge">
+                    <i class="pi pi-inbox" aria-hidden="true"></i>
+                  </div>
+                  <p class="empty-title">No items added yet</p>
+                  <p class="empty-desc">Line items are optional. Click below to add requirement rows.</p>
+                  @if (def.formCode === 'FORM_10_COST_SHEET') {
+                  <button pButton type="button" icon="pi pi-sync" label="Fetch from Supplier Quotation"
+                    class="empty-add-row-btn p-button-outlined p-button-secondary" style="margin-right: 8px;"
+                    [loading]="fetchingSupplierQuotation()" (click)="loadFromSupplierQuotation(true)">
+                  </button>
+                  }
+                  <button pButton type="button" icon="pi pi-plus" label="Add Item Row" class="empty-add-row-btn"
+                    (click)="addTableRow()">
+                  </button>
+                </div>
+              </td>
+            </tr>
+            }
+          </tbody>
           @if (tbl.autoCalculateTotal && tbl.totalKey && tableFormArray().length > 0) {
           <tfoot>
             @if (hasTableGst()) {
@@ -868,10 +880,8 @@
           [disabled]="saving() || deleting()" (click)="close()">
         </button>
 
-        <button pButton type="button" icon="pi pi-check"
-          [label]="isEditMode() ? 'Save Changes' : 'Save Step'"
-          class="p-button-primary complete-btn" [loading]="saving()"
-          [disabled]="isSaveDisabled()" (click)="saveStep()">
+        <button pButton type="button" icon="pi pi-check" [label]="isEditMode() ? 'Save Changes' : 'Save Step'"
+          class="p-button-primary complete-btn" [loading]="saving()" [disabled]="isSaveDisabled()" (click)="saveStep()">
         </button>
       </div>
     </div>
