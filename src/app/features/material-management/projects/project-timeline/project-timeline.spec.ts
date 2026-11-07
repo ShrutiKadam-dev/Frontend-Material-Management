@@ -150,13 +150,18 @@ describe('ProjectTimeline getStepDate', () => {
       data: {
         quotation_requested_date: '2026-09-23',
         supplier_contacted: true,
+        rfq_no: 'RFQ-2026-001',
       },
     };
 
     const badges = (component as any).getStepDataBadges(step);
     expect(badges).toHaveLength(2);
     expect(badges[0]).toEqual({ icon: 'pi pi-check-circle', label: 'Supplier Contacted', type: 'rfq' });
-    expect(badges[1].label).toContain('RFQ: 23-09-2026');
+    expect(badges[1]).toEqual({ icon: 'pi pi-tag', label: 'RFQ #RFQ-2026-001', type: 'rfq' });
+
+    // Date is handled by getStepDate rather than duplicated as an RFQ date badge
+    const dateRes = (component as any).getStepDate(step);
+    expect(dateRes).toEqual({ label: 'RFQ Date', date: '23-09-2026' });
   });
 
   it('should NOT treat National Pre-Qualification Bid (PQB) as a customer query step', () => {
@@ -256,7 +261,7 @@ describe('ProjectTimeline getStepDate', () => {
     });
   });
 
-  it('should extract query badge when flattened properties exist on step', () => {
+  it('should extract query date without duplicate Customer Query badge when flattened properties exist on step', () => {
     const step: ProjectStep = {
       id: 182,
       project_id: 16,
@@ -274,14 +279,9 @@ describe('ProjectTimeline getStepDate', () => {
     const dateRes = (component as any).getStepDate(step);
     expect(dateRes).toEqual({ label: 'Query Date', date: '28-10-2026' });
 
+    // Should not show redundant "Customer Query" badge when no specific requirements or query metadata exist
     const badges = (component as any).getStepDataBadges(step);
-    expect(badges).toHaveLength(1);
-    expect(badges[0]).toEqual({
-      icon: 'pi pi-question-circle',
-      label: 'Customer Query',
-      type: 'query',
-      tooltip: 'Customer query registered for project',
-    });
+    expect(badges).toHaveLength(0);
   });
 
   it('should extract customer query date from step data qo_date if not completed', () => {

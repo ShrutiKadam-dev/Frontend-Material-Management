@@ -122,7 +122,7 @@ export class StepFormDialog {
   private readonly supplierService = inject(SupplierService, { optional: true });
   private readonly supplierQuotationService = inject(SupplierQuotationService, { optional: true });
   private readonly preQualificationBidService = inject(PreQualificationBidService, { optional: true });
-  private readonly projectStepService = inject(ProjectStepService, { optional: true });
+  private readonly projectStepService = inject(ProjectStepService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   readonly fetchingSupplierQuotation = signal<boolean>(false);
@@ -461,24 +461,6 @@ export class StepFormDialog {
           s.form_code === 'FORM_03_CORRIGENDUM' ||
           (s.step_name && s.step_name.toLowerCase().includes('corrigendum')),
       );
-    }
-    const pId = typeof this.projectId === 'function' ? this.projectId() : null;
-    if (pId) {
-      try {
-        const stored = localStorage.getItem(`material_management_project_steps_${pId}`);
-        if (stored) {
-          const parsed = JSON.parse(stored) as ProjectStep[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed.some(
-              (s) =>
-                s.form_code === 'FORM_03_CORRIGENDUM' ||
-                (s.step_name && s.step_name.toLowerCase().includes('corrigendum')),
-            );
-          }
-        }
-      } catch {
-        // ignore JSON parse/localStorage errors
-      }
     }
     return false;
   });
@@ -871,24 +853,6 @@ export class StepFormDialog {
           (s.step_name && s.step_name.toLowerCase().includes('corrigendum')),
       );
     }
-    const pId = typeof this.projectId === 'function' ? this.projectId() : null;
-    if (pId) {
-      try {
-        const stored = localStorage.getItem(`material_management_project_steps_${pId}`);
-        if (stored) {
-          const parsed = JSON.parse(stored) as ProjectStep[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed.some(
-              (s) =>
-                s.form_code === 'FORM_03_CORRIGENDUM' ||
-                (s.step_name && s.step_name.toLowerCase().includes('corrigendum')),
-            );
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
     return false;
   }
 
@@ -1263,20 +1227,6 @@ export class StepFormDialog {
     if (Array.isArray(inMemory) && inMemory.length > 0) {
       return inMemory.some((s) => this.isSteStep(s));
     }
-    const pId = typeof this.projectId === 'function' ? this.projectId() : null;
-    if (pId) {
-      try {
-        const stored = localStorage.getItem(`material_management_project_steps_${pId}`);
-        if (stored) {
-          const parsed = JSON.parse(stored) as ProjectStep[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed.some((s) => this.isSteStep(s));
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
     return false;
   }
 
@@ -1285,43 +1235,12 @@ export class StepFormDialog {
     if (Array.isArray(inMemory) && inMemory.length > 0) {
       return inMemory.some((s) => this.isLteStep(s));
     }
-    const pId = typeof this.projectId === 'function' ? this.projectId() : null;
-    if (pId) {
-      try {
-        const stored = localStorage.getItem(`material_management_project_steps_${pId}`);
-        if (stored) {
-          const parsed = JSON.parse(stored) as ProjectStep[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed.some((s) => this.isLteStep(s));
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
     return false;
   }
 
   getAvailableEnquiryStep(): ProjectStep | null {
     const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
-    let steps: ProjectStep[] = Array.isArray(inMemory) ? inMemory : [];
-
-    if (steps.length === 0) {
-      const pId = typeof this.projectId === 'function' ? this.projectId() : null;
-      if (pId) {
-        try {
-          const stored = localStorage.getItem(`material_management_project_steps_${pId}`);
-          if (stored) {
-            const parsed = JSON.parse(stored) as ProjectStep[];
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              steps = parsed;
-            }
-          }
-        } catch {
-          // ignore
-        }
-      }
-    }
+    const steps: ProjectStep[] = Array.isArray(inMemory) ? inMemory : [];
 
     const candidates = steps.filter((s) => this.isLteOrSteStep(s));
     if (candidates.length === 0) return null;
@@ -1619,20 +1538,6 @@ export class StepFormDialog {
     if (Array.isArray(inMemory) && inMemory.length > 0) {
       return inMemory.some((s) => this.isBidDocSteStep(s));
     }
-    const pId = typeof this.projectId === 'function' ? this.projectId() : null;
-    if (pId) {
-      try {
-        const stored = localStorage.getItem(`material_management_project_steps_${pId}`);
-        if (stored) {
-          const parsed = JSON.parse(stored) as ProjectStep[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed.some((s) => this.isBidDocSteStep(s));
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
     return false;
   }
 
@@ -1641,43 +1546,12 @@ export class StepFormDialog {
     if (Array.isArray(inMemory) && inMemory.length > 0) {
       return inMemory.some((s) => this.isBidDocLteStep(s));
     }
-    const pId = typeof this.projectId === 'function' ? this.projectId() : null;
-    if (pId) {
-      try {
-        const stored = localStorage.getItem(`material_management_project_steps_${pId}`);
-        if (stored) {
-          const parsed = JSON.parse(stored) as ProjectStep[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed.some((s) => this.isBidDocLteStep(s));
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
     return false;
   }
 
   getAvailableBidDocStep(): ProjectStep | null {
     const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
-    let steps: ProjectStep[] = Array.isArray(inMemory) ? inMemory : [];
-
-    if (steps.length === 0) {
-      const pId = typeof this.projectId === 'function' ? this.projectId() : null;
-      if (pId) {
-        try {
-          const stored = localStorage.getItem(`material_management_project_steps_${pId}`);
-          if (stored) {
-            const parsed = JSON.parse(stored) as ProjectStep[];
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              steps = parsed;
-            }
-          }
-        } catch {
-          // ignore
-        }
-      }
-    }
+    const steps: ProjectStep[] = Array.isArray(inMemory) ? inMemory : [];
 
     const candidates = steps.filter((s) => this.isBidDocSteStep(s) || this.isBidDocLteStep(s));
     if (candidates.length === 0) return null;
@@ -4471,14 +4345,21 @@ export class StepFormDialog {
       .filter((f): f is File => !!f);
 
     if (existingStep) {
-      // ── PUT/PATCH OPERATION: Update existing step via FormApiService ─
+      // ── PUT OPERATION: Update existing step directly via projectStepService ─
       const stepId = existingStep.id || existingStep.step_number;
-      this.formApiService
-        .updateEntry(def, pId, stepId, combinedData, rawFiles)
+
+      this.projectStepService
+        .updateStep(pId, stepId, combinedData, 'completed', 100)
         .subscribe({
           next: (updatedStep) => {
+            if (def.apiEndpoint) {
+              this.formApiService.updateEntry(def, pId, stepId, combinedData, rawFiles).subscribe({
+                error: (e) => console.warn(`Dedicated endpoint sync:`, e),
+              });
+            }
+
             this.saving.set(false);
-            const stepToCache: ProjectStep = {
+            const stepResult: ProjectStep = {
               ...existingStep,
               ...updatedStep,
               id: updatedStep.id || existingStep.id,
@@ -4491,103 +4372,108 @@ export class StepFormDialog {
                 ...combinedData,
               },
             };
-            if (this.projectStepService) {
-              this.projectStepService.addStepToLocalCache(pId, stepToCache);
-            }
+
             this.messageService?.add({
               severity: 'success',
               summary: 'Changes Saved',
               detail: `${updatedStep.step_name || def.name} has been updated successfully.`,
             });
-            this.stepSaved.emit(stepToCache);
+            this.stepSaved.emit(stepResult);
             this.close();
           },
           error: () => {
-            this.saving.set(false);
-            this.messageService?.add({
-              severity: 'error',
-              summary: 'Save Failed',
-              detail: 'Could not update step data. Please try again.',
-            });
-          },
-        });
-    } else {
-      // ── POST OPERATION: Create new entry via FormApiService & attach to Project Steps ──
-      this.formApiService
-        .createEntry(def, pId, combinedData, rawFiles)
-        .subscribe({
-          next: (newStep) => {
-            if (this.projectStepService) {
-              this.projectStepService.addStep(pId, def.formCode, def.name, combinedData, 'completed', 100).subscribe({
-                next: (addedStep) => {
-                  this.saving.set(false);
-                  const stepWithMeta: ProjectStep = {
-                    ...newStep,
-                    ...addedStep,
-                    id: addedStep.id || newStep.id,
-                    project_id: pId,
-                    form_code: def.formCode,
-                    step_name: def.name,
-                    step_number: addedStep.step_number || addedStep.step_order || newStep.step_number,
-                    step_order: addedStep.step_order || addedStep.step_number || newStep.step_order,
-                    data: {
-                      ...((newStep.data as Record<string, unknown>) || {}),
-                      ...combinedData,
-                    },
-                  };
-                  this.projectStepService?.addStepToLocalCache(pId, stepWithMeta);
-                  this.messageService?.add({
-                    severity: 'success',
-                    summary: 'Form Attached!',
-                    detail: `${def.name} has been added to the project pipeline.`,
-                  });
-                  this.stepSaved.emit(stepWithMeta);
-                  this.close();
-                },
-                error: () => {
-                  this.saving.set(false);
-                  const fallbackStep: ProjectStep = {
-                    ...newStep,
-                    id: newStep.id || Date.now(),
-                    project_id: pId,
-                    form_code: def.formCode,
-                    step_name: def.name,
-                    step_number: this.step()?.step_number || newStep.step_number,
-                    step_order: this.step()?.step_order || newStep.step_order,
-                    data: combinedData,
-                  };
-                  this.projectStepService?.addStepToLocalCache(pId, fallbackStep);
-                  this.messageService?.add({
-                    severity: 'success',
-                    summary: 'Form Attached!',
-                    detail: `${def.name} has been added to the project pipeline.`,
-                  });
-                  this.stepSaved.emit(fallbackStep);
-                  this.close();
-                },
-              });
+            // Fallback: If project step PUT failed, attempt formApiService
+            if (def.apiEndpoint) {
+              this.formApiService
+                .updateEntry(def, pId, stepId, combinedData, rawFiles)
+                .subscribe({
+                  next: (fallbackStep) => {
+                    this.saving.set(false);
+                    const stepResult: ProjectStep = {
+                      ...existingStep,
+                      ...fallbackStep,
+                      id: fallbackStep.id || existingStep.id,
+                      project_id: pId,
+                      form_code: def.formCode,
+                      step_name: def.name,
+                      data: {
+                        ...((existingStep.data as Record<string, unknown>) || {}),
+                        ...((fallbackStep.data as Record<string, unknown>) || {}),
+                        ...combinedData,
+                      },
+                    };
+                    this.messageService?.add({
+                      severity: 'success',
+                      summary: 'Changes Saved',
+                      detail: `${fallbackStep.step_name || def.name} has been updated successfully.`,
+                    });
+                    this.stepSaved.emit(stepResult);
+                    this.close();
+                  },
+                  error: () => {
+                    this.saving.set(false);
+                    this.messageService?.add({
+                      severity: 'error',
+                      summary: 'Save Failed',
+                      detail: 'Could not update step data on the server. Please try again.',
+                    });
+                  },
+                });
             } else {
               this.saving.set(false);
               this.messageService?.add({
-                severity: 'success',
-                summary: 'Form Attached!',
-                detail: `${def.name} has been added to the project pipeline.`,
+                severity: 'error',
+                summary: 'Save Failed',
+                detail: 'Could not update step data on the server. Please try again.',
               });
-              this.stepSaved.emit(newStep);
-              this.close();
             }
           },
+        });
+    } else {
+      // ── POST OPERATION: Create new entry via projectStepService & attach to Project Steps ──
+      this.projectStepService
+        .addStep(pId, def.formCode, def.name, combinedData, 'completed', 100)
+        .subscribe({
+          next: (addedStep) => {
+            if (def.apiEndpoint) {
+              this.formApiService.createEntry(def, pId, combinedData, rawFiles).subscribe({
+                error: (e) => console.warn(`Dedicated endpoint creation:`, e),
+              });
+            }
+            this.saving.set(false);
+            const stepWithMeta: ProjectStep = {
+              ...addedStep,
+              id: addedStep.id,
+              project_id: pId,
+              form_code: def.formCode,
+              step_name: def.name,
+              step_number: addedStep.step_number || addedStep.step_order || this.step()?.step_number || 1,
+              step_order: addedStep.step_order || addedStep.step_number || this.step()?.step_order || 1,
+              data: {
+                ...((addedStep.data as Record<string, unknown>) || {}),
+                ...combinedData,
+              },
+            };
+            this.messageService?.add({
+              severity: 'success',
+              summary: 'Form Attached!',
+              detail: `${def.name} has been added to the project pipeline.`,
+            });
+            this.stepSaved.emit(stepWithMeta);
+            this.close();
+          },
           error: () => {
-            if (this.projectStepService) {
-              this.projectStepService.addStep(pId, def.formCode, def.name, combinedData, 'completed', 100).subscribe({
-                next: (addedStep) => {
+            // Fallback: If direct addStep failed, attempt formApiService createEntry
+            if (def.apiEndpoint) {
+              this.formApiService.createEntry(def, pId, combinedData, rawFiles).subscribe({
+                next: (newStep) => {
                   this.saving.set(false);
                   this.messageService?.add({
                     severity: 'success',
                     summary: 'Form Attached!',
                     detail: `${def.name} has been added to the project pipeline.`,
                   });
-                  this.stepSaved.emit(addedStep);
+                  this.stepSaved.emit(newStep);
                   this.close();
                 },
                 error: () => {
@@ -4595,7 +4481,7 @@ export class StepFormDialog {
                   this.messageService?.add({
                     severity: 'error',
                     summary: 'Creation Failed',
-                    detail: 'Could not attach step. Please try again.',
+                    detail: 'Could not attach step to the project on the server.',
                   });
                 },
               });
@@ -4604,7 +4490,7 @@ export class StepFormDialog {
               this.messageService?.add({
                 severity: 'error',
                 summary: 'Creation Failed',
-                detail: 'Could not attach step. Please try again.',
+                detail: 'Could not attach step to the project on the server.',
               });
             }
           },

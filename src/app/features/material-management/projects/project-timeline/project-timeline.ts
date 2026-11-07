@@ -738,13 +738,6 @@ export class ProjectTimeline implements OnInit {
           type: 'query',
           tooltip: rawReq,
         });
-      } else {
-        badges.push({
-          icon: 'pi pi-question-circle',
-          label: 'Customer Query',
-          type: 'query',
-          tooltip: 'Customer query registered for project',
-        });
       }
     }
 
@@ -817,10 +810,11 @@ export class ProjectTimeline implements OnInit {
       });
     }
 
-    if (d['quotation_requested_date']) {
+    const rfqNo = d['rfq_no'] || d['rfq_number'];
+    if (rfqNo) {
       badges.push({
-        icon: 'pi pi-send',
-        label: `RFQ: ${formatDisplayDate(d['quotation_requested_date'] as string)}`,
+        icon: 'pi pi-tag',
+        label: `RFQ #${rfqNo}`,
         type: 'rfq',
       });
     }

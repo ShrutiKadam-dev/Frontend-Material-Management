@@ -429,17 +429,6 @@ export class ProjectFormEntries implements OnInit {
             this.error.set('Could not load project context.');
           }
           this.allSteps.set(steps || []);
-          if (steps && steps.length > 0 && this.projectStepService) {
-            for (const s of steps) {
-              this.projectStepService?.addStepToLocalCache?.(projectId, {
-                ...s,
-                form_code: s.form_code || def.formCode,
-                step_name: s.step_name || def.name,
-                phase: s.phase || def.phaseId,
-                category: s.category || def.category,
-              });
-            }
-          }
         },
         error: () => {
           this.error.set('Could not load form entries for this project.');
@@ -508,9 +497,6 @@ export class ProjectFormEntries implements OnInit {
       phase: savedStep.phase || def?.phaseId,
       category: savedStep.category || def?.category,
     };
-    if (pId && this.projectStepService) {
-      this.projectStepService?.addStepToLocalCache?.(pId, stepWithMeta);
-    }
 
     this.allSteps.update((current) => {
       const idx = current.findIndex(

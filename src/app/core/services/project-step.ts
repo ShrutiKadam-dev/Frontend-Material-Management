@@ -23,47 +23,24 @@ export class ProjectStepService {
   private readonly http = inject(HttpClient);
   private readonly apiBaseUrl = inject(API_BASE_URL);
 
-  // In-memory fallback cache for dynamic steps added before backend implementation
-  private readonly localStepsCache = new Map<number, ProjectStep[]>();
-
-  getCachedSteps(projectId: number): ProjectStep[] {
-    const memory = this.localStepsCache.get(projectId);
-    if (memory && memory.length > 0) return memory;
-    try {
-      const stored = localStorage.getItem(`material_management_project_steps_${projectId}`);
-      if (stored) {
-        const parsed = JSON.parse(stored) as ProjectStep[];
-        if (Array.isArray(parsed)) {
-          this.localStepsCache.set(projectId, parsed);
-          return parsed;
-        }
-      }
-    } catch {
-      // ignore JSON parse/localStorage errors
-    }
-    return [];
+  constructor() {
+    this.clearLegacyLocalStorageCache();
   }
 
-  private setCachedSteps(projectId: number, steps: ProjectStep[]): void {
-    this.localStepsCache.set(projectId, steps);
-    try {
-      localStorage.setItem(`material_management_project_steps_${projectId}`, JSON.stringify(steps));
-    } catch {
-      // ignore localStorage quota errors
-    }
-  }
-
+  /**
+   * Clears legacy localStorage cache keys so stale cached project steps
+   * do not interfere with dynamic backend data.
+   */
   clearCachedSteps(projectId?: number): void {
-    if (projectId) {
-      this.localStepsCache.delete(projectId);
-      try {
+    this.clearLegacyLocalStorageCache(projectId);
+  }
+
+  private clearLegacyLocalStorageCache(projectId?: number): void {
+    try {
+      if (typeof localStorage === 'undefined') return;
+      if (projectId) {
         localStorage.removeItem(`material_management_project_steps_${projectId}`);
-      } catch {
-        // ignore JSON parse/localStorage errors
-      }
-    } else {
-      this.localStepsCache.clear();
-      try {
+      } else {
         const keysToRemove: string[] = [];
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
@@ -74,69 +51,17 @@ export class ProjectStepService {
         for (const k of keysToRemove) {
           localStorage.removeItem(k);
         }
-      } catch {
-        // ignore JSON parse/localStorage errors
       }
+    } catch {
+      // ignore JSON parse/localStorage errors
     }
   }
 
-  addStepToLocalCache(projectId: number, step: ProjectStep): void {
-    const cached = this.getCachedSteps(projectId);
-    const formCode = (step.form_code || '').trim();
-    const def = formCode
-      ? getFormDefinition(formCode)
-      : step.step_name
-        ? getFormDefinition(step.step_name)
-        : undefined;
-    const resolvedCode = formCode || def?.formCode;
-
-    const existingIdx = cached.findIndex(
-      (s) =>
-        (s.id && step.id && s.id === step.id) ||
-        (s.form_code && resolvedCode && s.form_code === resolvedCode) ||
-        (s.step_name && step.step_name && s.step_name.toLowerCase().trim() === step.step_name.toLowerCase().trim()),
-    );
-
-    const catMap: Record<string, string> = {
-      'Pre-Bidding & Tenders': 'phase-1',
-      'Sourcing & Quotations': 'phase-2',
-      'Supplier Orders & Invoices': 'phase-3',
-      'Logistics & Customs': 'phase-4',
-      'Customer & Supplier Settlement': 'phase-5',
-    };
-    const resolvedCategory = step.category || def?.category;
-    const resolvedPhase =
-      def?.phaseId ||
-      (resolvedCategory && catMap[resolvedCategory] ? catMap[resolvedCategory] : undefined) ||
-      step.phase ||
-      ((step as Record<string, unknown>)['phase_id'] as string) ||
-      'phase-1';
-
-    const stepWithMeta: ProjectStep = {
-      ...step,
-      project_id: projectId,
-      form_code: resolvedCode || step.form_code,
-      step_name: step.step_name || def?.name || 'Step Details',
-      phase: resolvedPhase,
-      phase_id: resolvedPhase,
-      category: resolvedCategory,
-    };
-
-    if (existingIdx >= 0) {
-      const copy = [...cached];
-      copy[existingIdx] = {
-        ...copy[existingIdx],
-        ...stepWithMeta,
-        data: { ...copy[existingIdx].data, ...stepWithMeta.data },
-      };
-      this.setCachedSteps(projectId, copy);
-    } else {
-      const nextOrder = cached.length + 1;
-      if (!stepWithMeta.step_number) {
-        stepWithMeta.step_number = nextOrder;
-      }
-      this.setCachedSteps(projectId, [...cached, stepWithMeta]);
-    }
+  /**
+   * Deprecated: Caching has been completely removed in favor of direct, dynamic backend persistence.
+   */
+  addStepToLocalCache(_projectId: number, _step: ProjectStep): void {
+    // No-op: steps are persisted dynamically to the backend
   }
 
   getSteps(projectId: number): Observable<ProjectStep[]> {
@@ -219,16 +144,7 @@ export class ProjectStepService {
               data: Object.keys(mergedData).length > 0 ? mergedData : null,
             };
           });
-
-          // Keep local cache strictly in sync with authoritative backend response.
-          // This ensures that steps deleted on the backend/database are removed from the browser.
-          this.setCachedSteps(projectId, normalized);
           return normalized;
-        }),
-        catchError(() => {
-          // If backend fails or is empty, return any cached steps
-          const cached = this.getCachedSteps(projectId);
-          return of(cached);
         }),
       );
   }
@@ -237,11 +153,7 @@ export class ProjectStepService {
     return this.http
       .get<ProjectStep>(`${this.apiBaseUrl}/api/v1/projects/${projectId}/steps/${stepId}`)
       .pipe(
-        catchError(() => {
-          const cached = this.getCachedSteps(projectId);
-          const match = cached.find((s) => s.id === stepId || s.step_number === stepId);
-          return of(match ?? null);
-        }),
+        catchError(() => of(null)),
       );
   }
 
@@ -276,8 +188,7 @@ export class ProjectStepService {
       .post<ProjectStep>(`${this.apiBaseUrl}/api/v1/projects/${projectId}/steps`, payload)
       .pipe(
         map((createdStep) => {
-          const cached = this.getCachedSteps(projectId);
-          const stepWithData: ProjectStep = {
+          return {
             ...createdStep,
             project_id: projectId,
             data:
@@ -291,33 +202,6 @@ export class ProjectStepService {
             phase: createdStep.phase || formDef?.phaseId,
             category: createdStep.category || formDef?.category,
           };
-          const filtered = cached.filter((s) => s.form_code !== formCode && s.id !== stepWithData.id);
-          this.setCachedSteps(projectId, [...filtered, stepWithData]);
-          return stepWithData;
-        }),
-        catchError(() => {
-          // Graceful fallback for local development before backend endpoint is live
-          const cached = this.getCachedSteps(projectId);
-          const nextOrder = cached.length + 1;
-          const mockStep: ProjectStep = {
-            id: Date.now(),
-            project_id: projectId,
-            step_number: nextOrder,
-            step_name: resolvedName,
-            description: formDef?.description || '',
-            status,
-            progress_percentage: progressPercentage,
-            completed_at: status === 'completed' ? new Date().toISOString() : null,
-            form_code: formCode,
-            category: formDef?.category,
-            phase: formDef?.phaseId,
-            data: sanitizedDataClean,
-            remarks: [],
-            created_at: new Date().toISOString(),
-          };
-          const filtered = cached.filter((s) => s.form_code !== formCode && s.id !== mockStep.id);
-          this.setCachedSteps(projectId, [...filtered, mockStep]);
-          return of(mockStep);
         }),
       );
   }
@@ -344,78 +228,17 @@ export class ProjectStepService {
       completed_at: status === 'completed' ? new Date().toISOString() : null,
     };
 
-    return this.http
-      .put<ProjectStep>(
-        `${this.apiBaseUrl}/api/v1/projects/${projectId}/steps/${stepId}`,
-        payload,
-      )
-      .pipe(
-        map((updated) => {
-          const cached = this.getCachedSteps(projectId);
-          const idx = cached.findIndex((s) => s.id === stepId || s.step_number === stepId);
-          if (idx >= 0) {
-            cached[idx] = {
-              ...cached[idx],
-              ...updated,
-              data: { ...cached[idx].data, ...data },
-              status,
-              progress_percentage: progressPercentage,
-            };
-            this.setCachedSteps(projectId, [...cached]);
-          }
-          return updated;
-        }),
-        catchError(() => {
-          // Local fallback
-          const cached = this.getCachedSteps(projectId);
-          const idx = cached.findIndex((s) => s.id === stepId || s.step_number === stepId);
-          if (idx >= 0) {
-            cached[idx] = {
-              ...cached[idx],
-              data: { ...cached[idx].data, ...data },
-              status,
-              progress_percentage: progressPercentage,
-              completed_at: payload.completed_at,
-            };
-            this.setCachedSteps(projectId, [...cached]);
-            return of(cached[idx]);
-          }
-          const fallback: ProjectStep = {
-            id: stepId,
-            project_id: projectId,
-            step_number: stepId,
-            step_name: 'Step Details',
-            description: '',
-            status,
-            progress_percentage: progressPercentage,
-            completed_at: payload.completed_at,
-            data,
-          };
-          return of(fallback);
-        }),
-      );
+    return this.http.put<ProjectStep>(
+      `${this.apiBaseUrl}/api/v1/projects/${projectId}/steps/${stepId}`,
+      payload,
+    );
   }
 
   removeStep(projectId: number, stepId: number): Observable<boolean> {
     return this.http
       .delete<void>(`${this.apiBaseUrl}/api/v1/projects/${projectId}/steps/${stepId}`)
       .pipe(
-        map(() => {
-          const cached = this.getCachedSteps(projectId);
-          this.setCachedSteps(
-            projectId,
-            cached.filter((s) => s.id !== stepId && s.step_number !== stepId),
-          );
-          return true;
-        }),
-        catchError(() => {
-          const cached = this.getCachedSteps(projectId);
-          this.setCachedSteps(
-            projectId,
-            cached.filter((s) => s.id !== stepId && s.step_number !== stepId),
-          );
-          return of(true);
-        }),
+        map(() => true),
       );
   }
 }
