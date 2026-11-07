@@ -135,47 +135,117 @@ export function normalizeBackendEntityToStep(
     if (item['hasRateIncrease'] !== undefined) combinedData['hasRateIncrease'] = item['hasRateIncrease'];
   }
 
-  // Ensure FORM_09_RFQ uses the canonical request_date field from form definition
+  // Bridge FORM_09_RFQ date fields (quotation_requested_date, request_date, rfq_date)
   if (formDef.formCode === 'FORM_09_RFQ') {
-    const rDate = formatLocalDate((item['request_date'] ?? item['quotation_requested_date']) as string | Date);
+    const rDate =
+      formatLocalDate(item['quotation_requested_date'] as string | Date) ||
+      formatLocalDate(item['rfq_date'] as string | Date) ||
+      formatLocalDate(item['request_date'] as string | Date);
     if (rDate) {
+      combinedData['quotation_requested_date'] = rDate;
       combinedData['request_date'] = rDate;
+      combinedData['rfq_date'] = rDate;
     }
   }
 
-  // Ensure FORM_26_TAX_INVOICE_CUSTOMER uses the canonical gst_pct field from form definition
+  // Bridge FORM_26_TAX_INVOICE_CUSTOMER gst_pct and gst_rate_pct
   if (formDef.formCode === 'FORM_26_TAX_INVOICE_CUSTOMER') {
     const rate = extractGstRate(item, formDef.fields);
     if (rate !== null && rate !== undefined) {
       combinedData['gst_pct'] = rate;
+      combinedData['gst_rate_pct'] = rate;
+      combinedData['gst_rate'] = rate;
     }
   }
 
-  // Canonical title and number fields for bid documents matching form definitions
+  // Bridge FORM_02_PQB_BID_DOCUMENT title and number fallbacks
   if (formDef.formCode === 'FORM_02_PQB_BID_DOCUMENT') {
-    const t = (item['pqb_title'] ?? item['title'] ?? '') as string;
-    const n = (item['pqb_no'] ?? item['number'] ?? '') as string;
-    if (t && !combinedData['pqb_title']) combinedData['pqb_title'] = t;
-    if (n && !combinedData['pqb_no']) combinedData['pqb_no'] = n;
+    const t = item['pqb_title'] || item['pqbTitle'] || item['title'] || item['bid_title'] || '';
+    const n = item['pqb_no'] || item['pqbNo'] || item['pqb_number'] || item['pqbNumber'] || item['bid_no'] || item['number'] || '';
+    if (t && !combinedData['pqb_title']) {
+      combinedData['pqb_title'] = t;
+    }
+    if (n && !combinedData['pqb_no']) {
+      combinedData['pqb_no'] = n;
+    }
   }
 
+  // Bridge FORM_03_CORRIGENDUM title and number fallbacks
   if (formDef.formCode === 'FORM_03_CORRIGENDUM') {
-    const t = (item['ref_title'] ?? item['title'] ?? '') as string;
-    const n = (item['against_ref_no'] ?? item['against_tender_no'] ?? item['tender_no'] ?? '') as string;
-    if (t && !combinedData['ref_title']) combinedData['ref_title'] = t;
-    if (n && !combinedData['against_ref_no']) combinedData['against_ref_no'] = n;
+    const t =
+      item['ref_title'] ||
+      item['tender_title'] ||
+      item['pqb_title'] ||
+      item['eoi_title'] ||
+      item['icb_title'] ||
+      item['title'] ||
+      '';
+    const n =
+      item['against_ref_no'] ||
+      item['against_tender_no'] ||
+      item['tender_enquiry_no'] ||
+      item['tender_no'] ||
+      item['pqb_no'] ||
+      item['eoi_no'] ||
+      item['ste_no'] ||
+      item['lte_no'] ||
+      item['icb_no'] ||
+      item['pac_no'] ||
+      '';
+    if (t && !combinedData['ref_title']) {
+      combinedData['ref_title'] = t;
+    }
+    if (n && !combinedData['against_ref_no']) {
+      combinedData['against_ref_no'] = n;
+    }
   }
 
-  if (
-    formDef.formCode === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL' ||
-    formDef.formCode === 'FORM_31_BID_DOC_LTE' ||
-    formDef.formCode === 'FORM_34_BID_DOC_STE' ||
-    formDef.formCode === 'FORM_36_BID_DOC_ICB'
-  ) {
-    const t = (item['tender_title'] ?? item['title'] ?? '') as string;
-    const n = (item['tender_no'] ?? item['number'] ?? '') as string;
-    if (t && !combinedData['tender_title']) combinedData['tender_title'] = t;
-    if (n && !combinedData['tender_no']) combinedData['tender_no'] = n;
+  // Bridge FORM_29_BID_DOC_TECHNO_COMMERCIAL title and number fallbacks
+  if (formDef.formCode === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL') {
+    const t = item['tender_title'] || item['title'] || '';
+    const n = item['tender_no'] || item['number'] || '';
+    if (t && !combinedData['tender_title']) {
+      combinedData['tender_title'] = t;
+    }
+    if (n && !combinedData['tender_no']) {
+      combinedData['tender_no'] = n;
+    }
+  }
+
+  // Bridge FORM_31_BID_DOC_LTE title and number fallbacks
+  if (formDef.formCode === 'FORM_31_BID_DOC_LTE') {
+    const t = item['tender_title'] || item['title'] || '';
+    const n = item['tender_no'] || item['lte_no'] || item['number'] || '';
+    if (t && !combinedData['tender_title']) {
+      combinedData['tender_title'] = t;
+    }
+    if (n && !combinedData['tender_no']) {
+      combinedData['tender_no'] = n;
+    }
+  }
+
+  // Bridge FORM_34_BID_DOC_STE title and number fallbacks
+  if (formDef.formCode === 'FORM_34_BID_DOC_STE') {
+    const t = item['tender_title'] || item['title'] || '';
+    const n = item['tender_no'] || item['ste_no'] || item['number'] || '';
+    if (t && !combinedData['tender_title']) {
+      combinedData['tender_title'] = t;
+    }
+    if (n && !combinedData['tender_no']) {
+      combinedData['tender_no'] = n;
+    }
+  }
+
+  // Bridge FORM_36_BID_DOC_ICB title and number fallbacks
+  if (formDef.formCode === 'FORM_36_BID_DOC_ICB') {
+    const t = item['tender_title'] || item['title'] || '';
+    const n = item['tender_no'] || item['number'] || '';
+    if (t && !combinedData['tender_title']) {
+      combinedData['tender_title'] = t;
+    }
+    if (n && !combinedData['tender_no']) {
+      combinedData['tender_no'] = n;
+    }
   }
 
   // Calculate and bridge total_net_amount and total_gross_amount for tables with autoCalculateTotal
@@ -417,12 +487,15 @@ export class FormApiService {
     };
 
     if (formDef.formCode === 'FORM_09_RFQ') {
-      const rDate = formatLocalDate((bodyPayload['request_date'] ?? bodyPayload['quotation_requested_date']) as string | Date);
+      const rDate =
+        formatLocalDate(bodyPayload['request_date'] as string | Date) ||
+        formatLocalDate(bodyPayload['quotation_requested_date'] as string | Date) ||
+        formatLocalDate(bodyPayload['rfq_date'] as string | Date);
       if (rDate) {
+        bodyPayload['quotation_requested_date'] = rDate;
         bodyPayload['request_date'] = rDate;
+        bodyPayload['rfq_date'] = rDate;
       }
-      delete bodyPayload['quotation_requested_date'];
-      delete bodyPayload['rfq_date'];
     }
 
     if (formDef.formCode === 'FORM_10_COST_SHEET') {
@@ -444,9 +517,9 @@ export class FormApiService {
       const rate = extractGstRate(bodyPayload, formDef.fields);
       if (rate !== null && rate !== undefined) {
         bodyPayload['gst_pct'] = rate;
+        bodyPayload['gst_rate_pct'] = rate;
+        bodyPayload['gst_rate'] = rate;
       }
-      delete bodyPayload['gst_rate_pct'];
-      delete bodyPayload['gst_rate'];
     }
 
     if (formDef.tableConfig?.autoCalculateTotal) {
@@ -524,12 +597,15 @@ export class FormApiService {
     };
 
     if (formDef.formCode === 'FORM_09_RFQ') {
-      const rDate = formatLocalDate((bodyPayload['request_date'] ?? bodyPayload['quotation_requested_date']) as string | Date);
+      const rDate =
+        formatLocalDate(bodyPayload['request_date'] as string | Date) ||
+        formatLocalDate(bodyPayload['quotation_requested_date'] as string | Date) ||
+        formatLocalDate(bodyPayload['rfq_date'] as string | Date);
       if (rDate) {
+        bodyPayload['quotation_requested_date'] = rDate;
         bodyPayload['request_date'] = rDate;
+        bodyPayload['rfq_date'] = rDate;
       }
-      delete bodyPayload['quotation_requested_date'];
-      delete bodyPayload['rfq_date'];
     }
 
     if (formDef.formCode === 'FORM_10_COST_SHEET') {
@@ -551,9 +627,9 @@ export class FormApiService {
       const rate = extractGstRate(bodyPayload, formDef.fields);
       if (rate !== null && rate !== undefined) {
         bodyPayload['gst_pct'] = rate;
+        bodyPayload['gst_rate_pct'] = rate;
+        bodyPayload['gst_rate'] = rate;
       }
-      delete bodyPayload['gst_rate_pct'];
-      delete bodyPayload['gst_rate'];
     }
 
     if (formDef.tableConfig?.autoCalculateTotal) {
