@@ -141,16 +141,10 @@ export class ProjectStepService {
               (s.step_name && s.step_name.toLowerCase().includes('quotation'))
             ) {
               const rfqDate =
-                formatLocalDate(mergedData['quotation_requested_date'] as string | Date) ||
-                formatLocalDate(mergedData['rfq_date'] as string | Date) ||
                 formatLocalDate(mergedData['request_date'] as string | Date) ||
-                formatLocalDate((s as Record<string, unknown>)['quotation_requested_date'] as string | Date) ||
-                formatLocalDate((s as Record<string, unknown>)['rfq_date'] as string | Date) ||
-                formatLocalDate((s as Record<string, unknown>)['request_date'] as string | Date);
+                formatLocalDate(mergedData['quotation_requested_date'] as string | Date);
               if (rfqDate) {
-                mergedData['quotation_requested_date'] = rfqDate;
                 mergedData['request_date'] = rfqDate;
-                mergedData['rfq_date'] = rfqDate;
               }
             }
 

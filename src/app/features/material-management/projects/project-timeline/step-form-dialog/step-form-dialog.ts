@@ -3438,15 +3438,9 @@ export class StepFormDialog {
       if (def?.formCode === 'FORM_09_RFQ') {
         const rDate =
           formatLocalDate(savedData['request_date'] as string | Date) ||
-          formatLocalDate(savedData['quotation_requested_date'] as string | Date) ||
-          formatLocalDate(savedData['rfq_date'] as string | Date) ||
-          formatLocalDate(activeRec['quotation_requested_date'] as string | Date) ||
-          formatLocalDate(activeRec['rfq_date'] as string | Date) ||
-          formatLocalDate(activeRec['request_date'] as string | Date);
+          formatLocalDate(savedData['quotation_requested_date'] as string | Date);
         if (rDate) {
           savedData['request_date'] = rDate;
-          savedData['quotation_requested_date'] = rDate;
-          savedData['rfq_date'] = rDate;
         }
       }
 
@@ -4229,7 +4223,6 @@ export class StepFormDialog {
       const cur = this.selectedCurrency();
       combinedData['currency_unit'] = cur;
       combinedData['currency_symbol'] = getCurrencySymbol(cur);
-      combinedData['currency'] = cur;
     }
 
     if (def.tableConfig?.autoCalculateTotal) {
@@ -4257,16 +4250,8 @@ export class StepFormDialog {
     }
 
     if (def.formCode === 'FORM_09_RFQ') {
-      const rDate =
-        formatLocalDate(combinedData['request_date'] as string | Date) ||
-        formatLocalDate(combinedData['quotation_requested_date'] as string | Date) ||
-        formatLocalDate(combinedData['rfq_date'] as string | Date) ||
-        formatLocalDate(rawFormData['request_date'] as string | Date);
-      if (rDate) {
-        combinedData['request_date'] = rDate;
-        combinedData['quotation_requested_date'] = rDate;
-        combinedData['rfq_date'] = rDate;
-      }
+      delete combinedData['quotation_requested_date'];
+      delete combinedData['rfq_date'];
     }
 
     const existingStep = this.step();

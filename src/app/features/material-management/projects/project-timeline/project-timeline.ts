@@ -971,6 +971,25 @@ export class ProjectTimeline implements OnInit {
   protected getStepDate(step: ProjectStep): { label: string; date: string } | null {
     const d = this.extractStepData(step);
 
+    // Form definition is the primary source of truth for date fields
+    const formCode = step.form_code || (step.step_number ? LEGACY_STEP_TO_FORM_CODE[step.step_number] : null);
+    if (formCode) {
+      const def = getFormDefinition(formCode);
+      if (def?.fields) {
+        const dateField = def.fields.find((f) => f.type === 'date' || f.type === 'datetime');
+        if (dateField && d[dateField.key]) {
+          const dateVal = d[dateField.key];
+          if (dateVal && (typeof dateVal === 'string' || typeof dateVal === 'number' || dateVal instanceof Date)) {
+            const formatted = formatDisplayDate(dateVal);
+            if (formatted && formatted !== '—') {
+              const label = this.resolveStepDateLabel(step, dateField.label || 'Date');
+              return { label, date: formatted };
+            }
+          }
+        }
+      }
+    }
+
     const priorityDatePairs: [string, string][] = [
         ['bid_submission_due_date_time', 'Due Date'],
         ['bid_opening_date_time', 'Opening Date'],
@@ -984,9 +1003,8 @@ export class ProjectTimeline implements OnInit {
         ['due_date', 'Due Date'],
         ['qo_date', 'Query Date'],
         ['query_date', 'Query Date'],
-        ['quotation_requested_date', 'RFQ Date'],
-        ['rfq_date', 'RFQ Date'],
         ['request_date', 'RFQ Date'],
+        ['quotation_requested_date', 'RFQ Date'],
         ['quotation_date', 'Quotation Date'],
         ['quote_date', 'Quotation Date'],
         ['valid_till', 'Valid Till'],
