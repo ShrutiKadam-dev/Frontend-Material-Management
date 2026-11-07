@@ -26,8 +26,10 @@ export interface ProjectStep {
   form_code?: string;
   category?: string;
   phase?: string;
+  phase_id?: string;
   data: Record<string, unknown> | null;
   remarks?: ProjectStepRemark[];
   created_at?: string;
   updated_at?: string;
+  [key: string]: unknown;
 }

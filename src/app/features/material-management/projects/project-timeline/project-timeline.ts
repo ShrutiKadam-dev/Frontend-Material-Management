@@ -35,16 +35,23 @@ import {
 } from '../../../../core/constants/form-catalog';
 import { StepFormDialog } from './step-form-dialog/step-form-dialog';
 
-export type PhaseFilter = 'all' | 'phase-1' | 'phase-2' | 'phase-3' | 'phase-4' | 'phase-5';
+import {
+  CATEGORY_TO_PHASE_ID,
+  PhaseFilter,
+  PhaseInfo,
+  PIPELINE_PHASES,
+} from '../../../../core/constants/pipeline-phases.constant';
+
+export type { PhaseFilter, PhaseInfo };
+export { CATEGORY_TO_PHASE_ID, PIPELINE_PHASES };
 export type TimelineStatusFilter = 'all' | 'completed' | 'in_progress' | 'pending';
 export type TimelineViewMode = 'grid' | 'board' | 'table';
 
-export interface PhaseInfo {
-  id: PhaseFilter;
-  title: string;
-  shortTitle: string;
-  stepRange: string;
-  badgeClass: string;
+export interface StepDataBadge {
+  icon?: string;
+  label: string;
+  type?: 'query' | 'tender' | 'order' | 'rfq' | 'finance' | 'logistics' | 'items' | 'neutral';
+  tooltip?: string;
 }
 
 export interface FormattedStepRemark {
@@ -58,44 +65,6 @@ export interface FormattedStepRemark {
   date?: string;
   source: 'audit' | 'data';
 }
-
-export const PIPELINE_PHASES: PhaseInfo[] = [
-  {
-    id: 'phase-1',
-    title: 'Pre-Bidding & Tenders',
-    shortTitle: 'Phase 1: Pre-Bidding',
-    stepRange: 'Phase 1',
-    badgeClass: 'phase-pill--bidding',
-  },
-  {
-    id: 'phase-2',
-    title: 'Sourcing & Quotations',
-    shortTitle: 'Phase 2: Sourcing',
-    stepRange: 'Phase 2',
-    badgeClass: 'phase-pill--sourcing',
-  },
-  {
-    id: 'phase-3',
-    title: 'Supplier Orders & Invoices',
-    shortTitle: 'Phase 3: Orders',
-    stepRange: 'Phase 3',
-    badgeClass: 'phase-pill--orders',
-  },
-  {
-    id: 'phase-4',
-    title: 'Logistics & Customs',
-    shortTitle: 'Phase 4: Logistics',
-    stepRange: 'Phase 4',
-    badgeClass: 'phase-pill--logistics',
-  },
-  {
-    id: 'phase-5',
-    title: 'Customer & Supplier Settlement',
-    shortTitle: 'Phase 5: Settlement',
-    stepRange: 'Phase 5',
-    badgeClass: 'phase-pill--settlement',
-  },
-];
 
 @Component({
   selector: 'app-project-timeline',
@@ -247,6 +216,32 @@ export class ProjectTimeline implements OnInit {
     return `PRJ-${p.id < 10 ? '0' + p.id : p.id}`;
   });
 
+  // ── Authoritative Phase Resolution ──────────────────────────────
+  protected resolveStepPhaseId(s: ProjectStep): string {
+    const def = s.form_code
+      ? getFormDefinition(s.form_code)
+      : s.step_name
+        ? getFormDefinition(s.step_name)
+        : undefined;
+
+    if (def?.phaseId) return def.phaseId;
+
+    if (s.category && CATEGORY_TO_PHASE_ID[s.category]) {
+      return CATEGORY_TO_PHASE_ID[s.category];
+    }
+
+    if (s.phase && s.phase.startsWith('phase-')) {
+      return s.phase;
+    }
+
+    const rawPhaseId = (s as Record<string, unknown>)['phase_id'];
+    if (typeof rawPhaseId === 'string' && rawPhaseId.startsWith('phase-')) {
+      return rawPhaseId;
+    }
+
+    return 'phase-1';
+  }
+
   // ── Filtered Steps for Dashboard ──────────────────────────────────
   protected readonly filteredSteps = computed(() => {
     let list = this.steps();
@@ -256,16 +251,7 @@ export class ProjectTimeline implements OnInit {
 
     // Phase Filter
     if (phase !== 'all') {
-      list = list.filter((s) => {
-        if (s.phase) return s.phase === phase;
-        const def = s.form_code
-          ? getFormDefinition(s.form_code)
-          : s.step_name
-            ? getFormDefinition(s.step_name)
-            : undefined;
-        if (def?.phaseId) return def.phaseId === phase;
-        return false;
-      });
+      list = list.filter((s) => this.resolveStepPhaseId(s) === phase);
     }
 
     // Status Filter
@@ -294,36 +280,7 @@ export class ProjectTimeline implements OnInit {
   // ── Phase Groups for Vertical Timeline ─────────────────────────────
   protected readonly timelinePhases = computed(() => {
     return PIPELINE_PHASES.map((phase) => {
-      const phaseSteps = this.steps().filter((s) => {
-        if (s.phase) return s.phase === phase.id;
-        const def = s.form_code
-          ? getFormDefinition(s.form_code)
-          : s.step_name
-            ? getFormDefinition(s.step_name)
-            : undefined;
-        if (def?.phaseId) return def.phaseId === phase.id;
-        if (phase.id === 'phase-1') {
-          return (
-            (s.step_number >= 1 && s.step_number <= 7) ||
-            s.step_number === 13 ||
-            s.step_number === 15 ||
-            (s.step_number >= 29 && s.step_number <= 31) ||
-            s.step_number === 33 ||
-            s.step_number === 34 ||
-            s.step_number === 35 ||
-            s.step_number === 36
-          );
-        } else if (phase.id === 'phase-2') {
-          return s.step_number >= 8 && s.step_number <= 12;
-        } else if (phase.id === 'phase-3') {
-          return s.step_number === 14 || (s.step_number >= 16 && s.step_number <= 20);
-        } else if (phase.id === 'phase-4') {
-          return s.step_number === 21 || s.step_number === 27 || s.step_number === 28 || s.step_number === 32;
-        } else if (phase.id === 'phase-5') {
-          return s.step_number >= 22 && s.step_number <= 26;
-        }
-        return false;
-      });
+      const phaseSteps = this.steps().filter((s) => this.resolveStepPhaseId(s) === phase.id);
 
       const completedInPhase = phaseSteps.filter((s) => s.status === 'completed').length;
       return {
@@ -421,11 +378,68 @@ export class ProjectTimeline implements OnInit {
     return true;
   }
 
+  protected extractStepData(step: ProjectStep): Record<string, unknown> {
+    const rootData: Record<string, unknown> = { ...(step as unknown as Record<string, unknown>) };
+    let nestedData: Record<string, unknown> = {};
+    if (step.data) {
+      if (typeof step.data === 'object' && !Array.isArray(step.data)) {
+        nestedData = step.data as Record<string, unknown>;
+      } else if (typeof step.data === 'string') {
+        try {
+          const parsed = JSON.parse(step.data);
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            nestedData = parsed as Record<string, unknown>;
+          }
+        } catch {
+          nestedData = {};
+        }
+      }
+    }
+    return { ...rootData, ...nestedData };
+  }
+
   protected isCustomerQueryStep(step: ProjectStep): boolean {
+    const code = (step.form_code || '').toUpperCase();
+    const name = (step.step_name || '').toLowerCase();
+
+    // Explicitly exclude tender, bid, invoice, and other non-query steps
+    if (
+      code === 'FORM_01_PQB' ||
+      code === 'FORM_03_CORRIGENDUM' ||
+      code === 'FORM_04_LTE' ||
+      code === 'FORM_06_CONSULTANCY_INVOICE' ||
+      code === 'FORM_13_PAC_TENDER' ||
+      code === 'FORM_15_BID_DOCUMENT' ||
+      code === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL' ||
+      code === 'FORM_09_RFQ' ||
+      code === 'FORM_11_SUPPLIER_QUOTATION' ||
+      code === 'FORM_12_CUSTOMER_QUOTATION' ||
+      code === 'FORM_14_PURCHASE_ORDER' ||
+      code === 'FORM_16_ORDER_CONFIRMATION' ||
+      name.includes('pre-qualification') ||
+      name.includes('corrigendum') ||
+      name.includes('tender') ||
+      name.includes('bid document') ||
+      name.includes('techno-commercial') ||
+      name.includes('consultancy invoice') ||
+      name.includes('purchase order')
+    ) {
+      return false;
+    }
+
     return (
-      step.step_number === 1 ||
-      step.form_code === 'FORM_08_CUSTOMER_QUERY' ||
-      (step.step_name ? step.step_name.toLowerCase().includes('query') : false)
+      code === 'FORM_08_CUSTOMER_QUERY' ||
+      code.includes('CUSTOMER_QUERY') ||
+      name === 'customer query' ||
+      name === 'query from customer' ||
+      name.includes('customer query') ||
+      name.includes('customer enquiry') ||
+      name.includes('client query') ||
+      (name.includes('query') &&
+        !name.includes('pre-bid') &&
+        !name.includes('bid meeting') &&
+        !name.includes('pre-qualification') &&
+        !name.includes('tender enquiry'))
     );
   }
 
@@ -664,93 +678,243 @@ export class ProjectTimeline implements OnInit {
     });
   }
 
-  protected getStepDataBadges(step: ProjectStep): { icon?: string; label: string }[] {
-    const badges: { icon?: string; label: string }[] = [];
+  protected getStepDataBadges(step: ProjectStep): StepDataBadge[] {
+    const badges: StepDataBadge[] = [];
+    const d = this.extractStepData(step);
+    const isQuery = this.isCustomerQueryStep(step);
 
-    let d: Record<string, unknown> = {};
-    if (step.data && typeof step.data === 'object' && !Array.isArray(step.data)) {
-      d = step.data as Record<string, unknown>;
-    } else if (typeof step.data === 'string') {
-      try {
-        const parsed = JSON.parse(step.data);
-        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-          d = parsed as Record<string, unknown>;
-        }
-      } catch {
-        d = {};
-      }
-    }
-
-    // Step 01 / Customer Query badge - extracted directly from step data without extra API calls
-    if (this.isCustomerQueryStep(step)) {
-      const qCount =
-        Number(d['query_count']) ||
-        (Array.isArray(d['queries']) ? d['queries'].length : 0) ||
-        (Array.isArray(d['items']) ? d['items'].length : 0) ||
-        (step.status === 'completed' || step.progress_percentage ? 1 : 0);
-
-      if (qCount > 0) {
+    // ── 1. ACTUAL CUSTOMER QUERY DETAILS (Standard Indigo Format for Managers) ──
+    if (isQuery) {
+      // Query Reference / Number
+      const qRef = d['query_no'] || d['query_reference'] || d['ref_no'] || d['reference_no'];
+      if (qRef) {
         badges.push({
-          icon: 'pi pi-file-edit',
-          label: `${qCount} ${qCount === 1 ? 'Query' : 'Queries'}`,
+          icon: 'pi pi-hashtag',
+          label: `Query #${qRef}`,
+          type: 'query',
+          tooltip: `Customer Query Reference: ${qRef}`,
+        });
+      }
+
+      // Customer / Client Name
+      const custName = d['customer_name'] || d['client_name'] || d['organization_name'];
+      if (custName) {
+        const rawCust = String(custName).trim();
+        const cleanCust = rawCust.length > 24 ? rawCust.slice(0, 22) + '…' : rawCust;
+        badges.push({
+          icon: 'pi pi-user',
+          label: cleanCust,
+          type: 'query',
+          tooltip: `Customer: ${rawCust}`,
+        });
+      }
+
+      // Material Requirements / Scope Items
+      if (Array.isArray(d['items']) && d['items'].length > 0) {
+        const items = d['items'] as Record<string, unknown>[];
+        if (items.length === 1 && (items[0]['description'] || items[0]['material_name'])) {
+          const rawDesc = String(items[0]['description'] || items[0]['material_name']).trim();
+          const cleanDesc = rawDesc.length > 26 ? rawDesc.slice(0, 24) + '…' : rawDesc;
+          badges.push({
+            icon: 'pi pi-question-circle',
+            label: `Req: ${cleanDesc}`,
+            type: 'query',
+            tooltip: `Customer Requirement: ${rawDesc}`,
+          });
+        } else {
+          badges.push({
+            icon: 'pi pi-question-circle',
+            label: `${items.length} Requirements`,
+            type: 'query',
+            tooltip: `${items.length} requirements queried by customer`,
+          });
+        }
+      } else if (d['material_name'] || d['material_requirements'] || d['subject'] || d['query_subject']) {
+        const rawReq = String(d['material_name'] || d['material_requirements'] || d['subject'] || d['query_subject']).trim();
+        const cleanReq = rawReq.length > 26 ? rawReq.slice(0, 24) + '…' : rawReq;
+        badges.push({
+          icon: 'pi pi-question-circle',
+          label: `Req: ${cleanReq}`,
+          type: 'query',
+          tooltip: rawReq,
+        });
+      } else {
+        badges.push({
+          icon: 'pi pi-question-circle',
+          label: 'Customer Query',
+          type: 'query',
+          tooltip: 'Customer query registered for project',
         });
       }
     }
 
+    // ── 2. PRE-QUALIFICATION BID (PQB) & TENDER IDENTIFIERS (Standard Blue Format) ──
+    const pqbNo = d['pqb_no'] || d['pqb_number'];
+    if (pqbNo) {
+      badges.push({
+        icon: 'pi pi-file-check',
+        label: `PQB #${pqbNo}`,
+        type: 'tender',
+        tooltip: `Pre-Qualification Bid No: ${pqbNo}`,
+      });
+    }
+
+    const tenderNo = d['tender_enquiry_no'] || d['tender_no'] || d['tender_ref_no'];
+    if (tenderNo) {
+      badges.push({
+        icon: 'pi pi-briefcase',
+        label: `Tender #${tenderNo}`,
+        type: 'tender',
+        tooltip: `Tender Enquiry No: ${tenderNo}`,
+      });
+    }
+
+    if (d['corrigendum_no']) {
+      badges.push({
+        icon: 'pi pi-sync',
+        label: `Corrigendum #${d['corrigendum_no']}`,
+        type: 'tender',
+      });
+    }
+
+    if (d['total_no_corrigendum_issued'] !== undefined && d['total_no_corrigendum_issued'] !== null) {
+      const c = Number(d['total_no_corrigendum_issued']);
+      if (c > 0) {
+        badges.push({
+          icon: 'pi pi-sync',
+          label: `${c} Corrigend${c === 1 ? 'um' : 'a'}`,
+          type: 'tender',
+          tooltip: `${c} corrigendum notices recorded`,
+        });
+      }
+    }
+
+    if (d['eoi_no']) {
+      badges.push({
+        icon: 'pi pi-compass',
+        label: `EOI #${d['eoi_no']}`,
+        type: 'tender',
+      });
+    }
+
+    // ── 3. PURCHASE ORDERS (Corporate Purple Format) ──
+    const poNum = d['po_number'] || d['po_no'];
+    if (poNum) {
+      badges.push({
+        icon: 'pi pi-shopping-bag',
+        label: `PO #${poNum}`,
+        type: 'order',
+        tooltip: `Purchase Order Number: ${poNum}`,
+      });
+    }
+
+    // ── 4. RFQ & SOURCING (Warm Amber Format) ──
     if (d['supplier_contacted'] === true) {
-      badges.push({ icon: 'pi pi-check-circle', label: 'Supplier Contacted' });
+      badges.push({
+        icon: 'pi pi-check-circle',
+        label: 'Supplier Contacted',
+        type: 'rfq',
+      });
     }
+
     if (d['quotation_requested_date']) {
-      badges.push({ icon: 'pi pi-send', label: `RFQ: ${formatDisplayDate(d['quotation_requested_date'] as string)}` });
+      badges.push({
+        icon: 'pi pi-send',
+        label: `RFQ: ${formatDisplayDate(d['quotation_requested_date'] as string)}`,
+        type: 'rfq',
+      });
     }
-    if (d['po_number'] || d['po_no']) {
-      badges.push({ icon: 'pi pi-file', label: `PO #${d['po_number'] || d['po_no']}` });
+
+    if (d['quotation_no'] || d['quote_no']) {
+      badges.push({
+        icon: 'pi pi-tag',
+        label: `Quote #${d['quotation_no'] || d['quote_no']}`,
+        type: 'rfq',
+      });
     }
-    if (d['invoice_number'] || d['invoice_no']) {
-      badges.push({ icon: 'pi pi-receipt', label: `Inv #${d['invoice_number'] || d['invoice_no']}` });
+
+    // ── 5. INVOICES & FINANCE (Emerald Format) ──
+    const invNum = d['invoice_number'] || d['invoice_no'];
+    if (invNum) {
+      badges.push({
+        icon: 'pi pi-receipt',
+        label: `Inv #${invNum}`,
+        type: 'finance',
+        tooltip: `Invoice Number: ${invNum}`,
+      });
     }
-    if (d['bill_of_entry_no'] || d['boe_no']) {
-      badges.push({ icon: 'pi pi-shield', label: `BOE #${d['bill_of_entry_no'] || d['boe_no']}` });
+
+    if (d['nac_no']) {
+      badges.push({
+        icon: 'pi pi-verified',
+        label: `NAC #${d['nac_no']}`,
+        type: 'finance',
+        tooltip: `Notification of Award of Contract: ${d['nac_no']}`,
+      });
     }
-    if (d['dc_number'] || d['delivery_challan_no']) {
-      badges.push({ icon: 'pi pi-truck', label: `DC #${d['dc_number'] || d['delivery_challan_no']}` });
+
+    // ── 6. LOGISTICS & CUSTOMS (Cyan Format) ──
+    const boeNum = d['bill_of_entry_no'] || d['boe_no'];
+    if (boeNum) {
+      badges.push({
+        icon: 'pi pi-shield',
+        label: `BOE #${boeNum}`,
+        type: 'logistics',
+        tooltip: `Bill of Entry: ${boeNum}`,
+      });
     }
+
+    const dcNum = d['dc_number'] || d['delivery_challan_no'] || d['dc_no'];
+    if (dcNum) {
+      badges.push({
+        icon: 'pi pi-truck',
+        label: `DC #${dcNum}`,
+        type: 'logistics',
+        tooltip: `Delivery Challan: ${dcNum}`,
+      });
+    }
+
+    // ── 7. SCOPE ITEMS (For Non-Query steps with line items) ──
+    if (!isQuery && Array.isArray(d['items']) && d['items'].length > 0) {
+      const items = d['items'] as Record<string, unknown>[];
+      if (items.length === 1 && (items[0]['description'] || items[0]['material_name'])) {
+        const rawDesc = String(items[0]['description'] || items[0]['material_name']).trim();
+        const cleanDesc = rawDesc.length > 26 ? rawDesc.slice(0, 24) + '…' : rawDesc;
+        badges.push({
+          icon: 'pi pi-box',
+          label: cleanDesc,
+          type: 'items',
+          tooltip: rawDesc,
+        });
+      } else {
+        badges.push({
+          icon: 'pi pi-box',
+          label: `${items.length} ${items.length === 1 ? 'Item' : 'Items'}`,
+          type: 'items',
+          tooltip: `${items.length} scope items recorded`,
+        });
+      }
+    }
+
     return badges;
   }
 
   protected getPhaseForStep(stepNumberOrStep: number | ProjectStep): PhaseInfo {
     if (typeof stepNumberOrStep === 'object' && stepNumberOrStep !== null) {
-      if (stepNumberOrStep.phase) {
-        const found = PIPELINE_PHASES.find((p) => p.id === stepNumberOrStep.phase);
-        if (found) return found;
-      }
-      const def = stepNumberOrStep.form_code
-        ? getFormDefinition(stepNumberOrStep.form_code)
-        : stepNumberOrStep.step_name
-          ? getFormDefinition(stepNumberOrStep.step_name)
-          : undefined;
-      if (def?.phaseId) {
-        const found = PIPELINE_PHASES.find((p) => p.id === def.phaseId);
-        if (found) return found;
-      }
-      return this.getPhaseForStep(stepNumberOrStep.step_number);
-    }
-    const stepNumber = stepNumberOrStep;
-    if (
-      stepNumber <= 7 ||
-      stepNumber === 13 ||
-      stepNumber === 15 ||
-      (stepNumber >= 29 && stepNumber <= 31) ||
-      stepNumber === 33 ||
-      stepNumber === 34 ||
-      stepNumber === 35 ||
-      stepNumber === 36
-    ) {
+      const phaseId = this.resolveStepPhaseId(stepNumberOrStep);
+      const found = PIPELINE_PHASES.find((p) => p.id === phaseId);
+      if (found) return found;
       return PIPELINE_PHASES[0];
     }
-    if (stepNumber <= 12) return PIPELINE_PHASES[1];
-    if (stepNumber === 14 || (stepNumber >= 16 && stepNumber <= 20)) return PIPELINE_PHASES[2];
-    if (stepNumber === 21 || stepNumber === 27 || stepNumber === 28 || stepNumber === 32) return PIPELINE_PHASES[3];
+    const stepNumber = stepNumberOrStep;
+    const match = this.steps().find((s) => s.step_number === stepNumber);
+    if (match) {
+      return this.getPhaseForStep(match);
+    }
+    if (stepNumber <= 7) return PIPELINE_PHASES[0];
+    if (stepNumber <= 11) return PIPELINE_PHASES[1];
+    if (stepNumber <= 15) return PIPELINE_PHASES[2];
+    if (stepNumber <= 19) return PIPELINE_PHASES[3];
     return PIPELINE_PHASES[4];
   }
 
@@ -811,24 +975,9 @@ export class ProjectTimeline implements OnInit {
 
   // ── Date Extraction Helper (Displays contextual business date label e.g. Query Date, RFQ Date, Cost Sheet Date) ──
   protected getStepDate(step: ProjectStep): { label: string; date: string } | null {
-    let d: Record<string, unknown> | null = null;
-    if (step.data) {
-      if (typeof step.data === 'object' && !Array.isArray(step.data)) {
-        d = step.data as Record<string, unknown>;
-      } else if (typeof step.data === 'string') {
-        try {
-          const parsed = JSON.parse(step.data);
-          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-            d = parsed as Record<string, unknown>;
-          }
-        } catch {
-          d = null;
-        }
-      }
-    }
+    const d = this.extractStepData(step);
 
-    if (d) {
-      const priorityDatePairs: [string, string][] = [
+    const priorityDatePairs: [string, string][] = [
         ['bid_submission_due_date_time', 'Due Date'],
         ['bid_opening_date_time', 'Opening Date'],
         ['pqb_closing_date_time', 'PQB Closed'],
@@ -886,6 +1035,9 @@ export class ProjectTimeline implements OnInit {
       for (const [key, fallbackLabel] of priorityDatePairs) {
         const dateVal = d[key];
         if (dateVal && (typeof dateVal === 'string' || typeof dateVal === 'number' || dateVal instanceof Date)) {
+          if (typeof dateVal === 'string' && /^\d{1,4}$/.test(dateVal.trim())) {
+            continue;
+          }
           const formatted = formatDisplayDate(dateVal);
           if (formatted && formatted !== '—') {
             const label = this.resolveStepDateLabel(step, fallbackLabel);
@@ -896,7 +1048,6 @@ export class ProjectTimeline implements OnInit {
           }
         }
       }
-    }
 
     if (step.completed_at) {
       const formatted = formatDisplayDate(step.completed_at);

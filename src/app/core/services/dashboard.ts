@@ -12,6 +12,8 @@ import {
 import { ProjectService } from './project';
 import { CustomerService } from './customer';
 import { SupplierService } from './supplier';
+import { PIPELINE_PHASES } from '../constants/pipeline-phases.constant';
+import { getFormDefinition } from '../constants/form-catalog';
 
 @Injectable({
   providedIn: 'root',
@@ -68,27 +70,42 @@ export class DashboardService {
       : [];
 
     const recent_projects: DashboardProject[] = Array.isArray(projectsRaw)
-      ? projectsRaw.map((p: Record<string, unknown>, index: number) => ({
-        id: Number(p['id'] ?? p['project_id'] ?? index + 1),
-        title: String(p['title'] ?? p['project_title'] ?? 'Untitled Project'),
-        supplier: String(p['supplier'] ?? p['supplier_name'] ?? 'N/A'),
-        customer: String(p['customer'] ?? p['customer_name'] ?? 'N/A'),
-        step: String(p['step'] ?? (p['current_step_number'] ? `Step ${p['current_step_number']} of 15` : 'Step 1 of 15')),
-        milestone: String(p['milestone'] ?? p['current_step_name'] ?? 'In Progress'),
-        progress: Number(p['progress'] ?? p['progress_percentage'] ?? 0),
-        status: (p['status'] as DashboardProject['status']) || 'In Progress',
-        current_step_number: p['current_step_number'] ? Number(p['current_step_number']) : undefined,
-        total_steps: p['total_steps'] ? Number(p['total_steps']) : 15,
-        total_value: p['total_value'] ? Number(p['total_value']) : undefined,
-        total_margin: p['total_margin'] !== undefined && p['total_margin'] !== null ? Number(p['total_margin']) : undefined,
-        currency: String(p['currency'] ?? 'INR'),
-        next_action: p['next_action'] ? String(p['next_action']) : undefined,
-        target_delivery_date: p['target_delivery_date'] ? String(p['target_delivery_date']) : null,
-        customer_payment_status: p['customer_payment_status'] ? String(p['customer_payment_status']) : undefined,
-        supplier_payment_status: p['supplier_payment_status'] ? String(p['supplier_payment_status']) : undefined,
-        created_at: p['created_at'] ? String(p['created_at']) : undefined,
-        updated_at: p['updated_at'] ? String(p['updated_at']) : undefined,
-      }))
+      ? projectsRaw.map((p: Record<string, unknown>, index: number) => {
+        const stepNum = p['current_step_number'] ? Number(p['current_step_number']) : undefined;
+        const totalSteps = p['total_steps'] !== undefined && p['total_steps'] !== null ? Number(p['total_steps']) : undefined;
+        const completedCount = p['completed_steps_count'] !== undefined && p['completed_steps_count'] !== null ? Number(p['completed_steps_count']) : undefined;
+        const stepStr = p['step']
+          ? String(p['step'])
+          : totalSteps && totalSteps > 0 && stepNum
+            ? `Step ${stepNum} of ${totalSteps}`
+            : stepNum
+              ? `Step ${stepNum}`
+              : 'Active Step';
+
+        return {
+          id: Number(p['id'] ?? p['project_id'] ?? index + 1),
+          title: String(p['title'] ?? p['project_title'] ?? 'Untitled Project'),
+          supplier: String(p['supplier'] ?? p['supplier_name'] ?? 'N/A'),
+          customer: String(p['customer'] ?? p['customer_name'] ?? 'N/A'),
+          step: stepStr,
+          milestone: String(p['milestone'] ?? p['current_step_name'] ?? 'In Progress'),
+          progress: Number(p['progress'] ?? p['progress_percentage'] ?? 0),
+          status: (p['status'] as DashboardProject['status']) || 'In Progress',
+          current_step_number: stepNum,
+          total_steps: totalSteps,
+          completed_steps_count: completedCount,
+          phase_id: p['phase_id'] ? String(p['phase_id']) : undefined,
+          total_value: p['total_value'] ? Number(p['total_value']) : undefined,
+          total_margin: p['total_margin'] !== undefined && p['total_margin'] !== null ? Number(p['total_margin']) : undefined,
+          currency: String(p['currency'] ?? 'INR'),
+          next_action: p['next_action'] ? String(p['next_action']) : undefined,
+          target_delivery_date: p['target_delivery_date'] ? String(p['target_delivery_date']) : null,
+          customer_payment_status: p['customer_payment_status'] ? String(p['customer_payment_status']) : undefined,
+          supplier_payment_status: p['supplier_payment_status'] ? String(p['supplier_payment_status']) : undefined,
+          created_at: p['created_at'] ? String(p['created_at']) : undefined,
+          updated_at: p['updated_at'] ? String(p['updated_at']) : undefined,
+        };
+      })
       : [];
 
     const overview_stats = (nestedData['overview_stats'] ?? payload['overview_stats']) as DashboardData['overview_stats'] | undefined;
@@ -122,16 +139,49 @@ export class DashboardService {
             projects.reduce((sum, p) => {
               const prog = p.progress_percentage !== undefined && p.progress_percentage !== null
                 ? p.progress_percentage
-                : Math.round(((p.current_step_number || 1) / 15) * 100);
+                : p.total_steps && p.total_steps > 0
+                  ? Math.round(((p.completed_steps_count ?? p.current_step_number ?? 1) / p.total_steps) * 100)
+                  : p.status === 'completed'
+                    ? 100
+                    : 0;
               return sum + prog;
             }, 0) / totalProjects,
           )
           : 0;
 
-        // Stage breakdown
-        const sourcingCount = projects.filter((p) => (p.current_step_number || 1) <= 5).length;
-        const logisticsCount = projects.filter((p) => (p.current_step_number || 1) >= 6 && (p.current_step_number || 1) <= 11).length;
-        const clearanceCount = projects.filter((p) => (p.current_step_number || 1) >= 12).length;
+        // Dynamic 5-phase breakdown
+        const phase_breakdown = PIPELINE_PHASES.map((phase) => {
+          const count = projects.filter((p) => {
+            if (p.status === 'completed' || p.progress_percentage === 100) {
+              return phase.id === 'phase-5';
+            }
+            if (p.current_form_code) {
+              const def = getFormDefinition(p.current_form_code);
+              if (def?.phaseId) return def.phaseId === phase.id;
+            }
+            if (p.current_step_name) {
+              const def = getFormDefinition(p.current_step_name);
+              if (def?.phaseId) return def.phaseId === phase.id;
+            }
+            const stepNum = p.current_step_number || 1;
+            if (stepNum <= 7) return phase.id === 'phase-1';
+            if (stepNum <= 12) return phase.id === 'phase-2';
+            if (stepNum <= 20) return phase.id === 'phase-3';
+            if (stepNum <= 28) return phase.id === 'phase-4';
+            return phase.id === 'phase-5';
+          }).length;
+          return {
+            phase_id: phase.id,
+            name: phase.title,
+            count,
+            percentage: totalProjects > 0 ? Math.round((count / totalProjects) * 100) : 0,
+          };
+        });
+
+        // Backward compatibility stage breakdown
+        const sourcingCount = phase_breakdown.find((p) => p.phase_id === 'phase-2')?.count ?? 0;
+        const logisticsCount = phase_breakdown.find((p) => p.phase_id === 'phase-4')?.count ?? 0;
+        const clearanceCount = phase_breakdown.find((p) => p.phase_id === 'phase-5')?.count ?? 0;
 
         // Commercial payments
         const customerPaid = projects.filter((p) => p.customer_payment_status?.toLowerCase() === 'paid').length;
@@ -178,7 +228,7 @@ export class DashboardService {
           {
             label: 'Average Completion',
             value: `${avgProgress}%`,
-            trend: 'Across 15 milestone stages',
+            trend: 'Across active milestone stages',
             tone: 'info',
           },
         ];
@@ -207,6 +257,7 @@ export class DashboardService {
             logistics: logisticsCount,
             clearance: clearanceCount,
           },
+          phase_breakdown: phase_breakdown,
         };
 
         // Format recent projects
@@ -221,17 +272,24 @@ export class DashboardService {
             `Customer #${proj.customer_id}`;
           const stepNum = proj.current_step_number || 1;
           const stepName = proj.current_step_name || 'Customer Query Initiated';
+          const total = proj.total_steps;
           const progress =
             proj.progress_percentage !== undefined && proj.progress_percentage !== null
               ? proj.progress_percentage
-              : Math.round((stepNum / 15) * 100);
+              : total && total > 0
+                ? Math.round(((proj.completed_steps_count ?? stepNum) / total) * 100)
+                : proj.status === 'completed'
+                  ? 100
+                  : 0;
+
+          const stepLabel = total && total > 0 ? `Step ${stepNum} of ${total}` : `Step ${stepNum}`;
 
           return {
             id: proj.id,
             title: proj.project_title || `Project #${proj.id}`,
             supplier: supplierName,
             customer: customerName,
-            step: `Step ${stepNum} of ${proj.total_steps || 15}`,
+            step: stepLabel,
             milestone: stepName,
             progress: progress,
             status: (proj.status === 'completed'
@@ -240,7 +298,8 @@ export class DashboardService {
                 ? 'On Hold'
                 : 'In Progress') as DashboardProject['status'],
             current_step_number: stepNum,
-            total_steps: proj.total_steps || 15,
+            total_steps: total,
+            completed_steps_count: proj.completed_steps_count,
             total_value: proj.total_value ? Number(proj.total_value) : undefined,
             total_margin: proj.total_margin !== undefined && proj.total_margin !== null ? Number(proj.total_margin) : undefined,
             currency: proj.currency || 'INR',

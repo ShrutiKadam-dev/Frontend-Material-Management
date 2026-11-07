@@ -6,8 +6,7 @@
       <span class="eyebrow">Executive Control Center · Operations Overview</span>
       <h1 id="dashboard-title" class="page-title">{{ greetingTitle() }}</h1>
       <p class="page-summary">
-        Overall portfolio visibility across all active procurement contracts, client milestones, and 15-step fulfillment
-        stages.
+        Overall portfolio visibility across all active procurement contracts, client milestones, and dynamic multi-phase fulfillment workflows.
       </p>
     </div>
 
@@ -74,69 +73,37 @@
   <!-- ── 4. Overall Operations & Portfolio Analytics Grid ─────────────── -->
   <div class="overview-analytics-grid">
 
-    <!-- Panel 1: 15-Step Pipeline Lifecycle Stages -->
+    <!-- Panel 1: Dynamic Pipeline Lifecycle Phases -->
     <div class="analytics-card app-panel">
       <div class="analytics-header">
         <div class="header-icon-badge header-icon--stages">
           <i class="pi pi-sitemap" aria-hidden="true"></i>
         </div>
         <div class="header-text">
-          <h3>15-Step Pipeline Lifecycle</h3>
-          <p>Distribution of active projects across operational phases</p>
+          <h3>Pipeline Lifecycle Phases</h3>
+          <p>Dynamic distribution of active projects across 5 fulfillment phases</p>
         </div>
       </div>
 
       <div class="stages-breakdown-list">
-        <!-- Stage Phase 1 -->
+        @for (phase of phasesBreakdown(); track phase.id) {
         <div class="stage-bar-item">
           <div class="stage-bar-meta">
             <span class="stage-name">
-              <span class="stage-badge-pill">Steps 1–5</span> Inquiry, Quotation & Sourcing
+              <span class="stage-badge-pill" [class]="phase.badgeClass">Phase {{ phase.phaseNumber }}</span>
+              {{ phase.title }}
             </span>
             <span class="stage-count">
-              <strong>{{ sourcingStageCount() }}</strong> project{{ sourcingStageCount() === 1 ? '' : 's' }}
-              ({{ getPercentage(sourcingStageCount(), totalProjectsCount()) }}%)
+              <strong>{{ phase.count }}</strong> project{{ phase.count === 1 ? '' : 's' }}
+              ({{ phase.percentage }}%)
             </span>
           </div>
           <div class="stage-track">
-            <div class="stage-fill stage-fill--sourcing"
-              [style.width.%]="getPercentage(sourcingStageCount(), totalProjectsCount())"></div>
+            <div class="stage-fill" [class]="phase.fillClass"
+              [style.width.%]="phase.percentage"></div>
           </div>
         </div>
-
-        <!-- Stage Phase 2 -->
-        <div class="stage-bar-item">
-          <div class="stage-bar-meta">
-            <span class="stage-name">
-              <span class="stage-badge-pill stage-badge--logistics">Steps 6–11</span> PO, Production & Logistics
-            </span>
-            <span class="stage-count">
-              <strong>{{ logisticsStageCount() }}</strong> project{{ logisticsStageCount() === 1 ? '' : 's' }}
-              ({{ getPercentage(logisticsStageCount(), totalProjectsCount()) }}%)
-            </span>
-          </div>
-          <div class="stage-track">
-            <div class="stage-fill stage-fill--logistics"
-              [style.width.%]="getPercentage(logisticsStageCount(), totalProjectsCount())"></div>
-          </div>
-        </div>
-
-        <!-- Stage Phase 3 -->
-        <div class="stage-bar-item">
-          <div class="stage-bar-meta">
-            <span class="stage-name">
-              <span class="stage-badge-pill stage-badge--clearance">Steps 12–15</span> Customs, Delivery & Settlement
-            </span>
-            <span class="stage-count">
-              <strong>{{ clearanceStageCount() }}</strong> project{{ clearanceStageCount() === 1 ? '' : 's' }}
-              ({{ getPercentage(clearanceStageCount(), totalProjectsCount()) }}%)
-            </span>
-          </div>
-          <div class="stage-track">
-            <div class="stage-fill stage-fill--clearance"
-              [style.width.%]="getPercentage(clearanceStageCount(), totalProjectsCount())"></div>
-          </div>
-        </div>
+        }
       </div>
 
       <div class="analytics-card-footer">
@@ -148,6 +115,12 @@
           <span class="dot dot--success"></span>
           <span><strong>{{ completedCount() }}</strong> Completed</span>
         </div>
+        @if (totalAttachedStepsCount() > 0) {
+        <div class="summary-chip">
+          <span class="dot dot--primary"></span>
+          <span><strong>{{ totalAttachedStepsCount() }}</strong> Steps Active</span>
+        </div>
+        }
       </div>
     </div>
 
@@ -243,7 +216,7 @@
         <i class="pi pi-folder-open"></i>
       </div>
       <h3>No Projects Recorded Yet</h3>
-      <p>Create your first procurement pipeline to start tracking the 15-step material lifecycle.</p>
+      <p>Create your first procurement pipeline to start tracking dynamic material workflows and milestone forms.</p>
       <a routerLink="/projects" class="create-project-link">
         <i class="pi pi-plus" aria-hidden="true"></i> Go to Projects
       </a>
@@ -328,9 +301,8 @@
         <div class="mpc-lifecycle">
           <div class="lifecycle-meta">
             <div class="lifecycle-stage">
-              <span class="stage-step-pill">Step {{ project.current_step_number || 1 }}/{{ project.total_steps || 15
-                }}</span>
-              <span class="stage-title">{{ project.current_step_name || 'Customer Query Initiated' }}</span>
+              <span class="stage-step-pill">{{ getStepDisplayLabel(project) }}</span>
+              <span class="stage-title" [title]="getProjectStepTitle(project)">{{ getProjectStepTitle(project) }}</span>
             </div>
             <span class="lifecycle-percent">{{ getProgressPercent(project) }}%</span>
           </div>
@@ -356,9 +328,21 @@
 
         <!-- 6. Bottom Bar -->
         <div class="mpc-bottom-bar">
-          <span class="financials-date">
-            <i class="pi pi-check-circle" style="color: #10b981;"></i> 15-Step Pipeline
-          </span>
+          <div class="mpc-phase-info">
+            <span class="mpc-phase-pill" [class]="getProjectPhase(project).badgeClass">
+              <i class="pi pi-compass" aria-hidden="true"></i>
+              {{ getProjectPhase(project).shortTitle }}
+            </span>
+            <span class="mpc-dynamic-steps-tag">
+              @if (project.total_steps && project.total_steps > 0) {
+                <i class="pi pi-check-circle text-success" aria-hidden="true"></i>
+                {{ project.total_steps }} Steps
+              } @else {
+                <i class="pi pi-bolt text-primary" aria-hidden="true"></i>
+                Dynamic Steps
+              }
+            </span>
+          </div>
 
           <button pButton type="button" label="View Pipeline" icon="pi pi-arrow-right" iconPos="right"
             class="mpc-pipeline-cta" (click)="navigateToProject(project.id)">

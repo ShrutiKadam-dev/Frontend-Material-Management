@@ -16,6 +16,8 @@ export interface DashboardProject {
   status: 'In Progress' | 'Completed' | 'Pending' | 'On Hold';
   current_step_number?: number;
   total_steps?: number;
+  completed_steps_count?: number;
+  phase_id?: string;
   total_value?: number;
   total_margin?: number;
   currency?: string;
@@ -25,6 +27,13 @@ export interface DashboardProject {
   supplier_payment_status?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface DashboardPhaseStat {
+  phase_id: string;
+  name: string;
+  count: number;
+  percentage?: number;
 }
 
 export interface DashboardOverviewStats {
@@ -45,11 +54,13 @@ export interface DashboardOverviewStats {
     pending: number;
     partial: number;
   };
-  stage_breakdown: {
-    sourcing: number;
-    logistics: number;
-    clearance: number;
+  stage_breakdown?: {
+    sourcing?: number;
+    logistics?: number;
+    clearance?: number;
+    [key: string]: number | undefined;
   };
+  phase_breakdown?: DashboardPhaseStat[];
 }
 
 export interface DashboardData {

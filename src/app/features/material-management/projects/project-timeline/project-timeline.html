@@ -259,13 +259,20 @@
                 </div>
           </div>
 
-          <!-- Col 3: Dates, Remarks, Data Chips -->
+          <!-- Col 3: Dates, Data Badges & Remarks -->
           <div class="col-step-badges">
             @if (getStepDate(step); as stepDateInfo) {
             <span class="meta-tag meta-tag--date" [class.meta-tag--completed]="step.status === 'completed'" [title]="stepDateInfo.label + ': ' + stepDateInfo.date">
               <i class="pi pi-calendar" aria-hidden="true"></i>
               <span class="meta-date-label">{{ stepDateInfo.label }}:</span>
               {{ stepDateInfo.date }}
+            </span>
+            }
+
+            @for (badge of getStepDataBadges(step); track badge.label) {
+            <span class="meta-tag" [class]="'meta-tag--' + (badge.type || 'data')" [title]="badge.tooltip || badge.label">
+              @if (badge.icon) { <i [class]="badge.icon" aria-hidden="true"></i> }
+              {{ badge.label }}
             </span>
             }
 
@@ -276,25 +283,9 @@
               {{ getRemarksCount(step) }} Remark{{ getRemarksCount(step) === 1 ? '' : 's' }}
             </button>
             }
-
-            @for (badge of getStepDataBadges(step); track badge.label) {
-            <span class="meta-tag meta-tag--data">
-              @if (badge.icon) { <i [class]="badge.icon" aria-hidden="true"></i> }
-              {{ badge.label }}
-            </span>
-            }
           </div>
 
-          <!-- Col 4: Mini Progress Bar -->
-          <div class="col-step-progress" [pTooltip]="step.progress_percentage + '% complete'" tooltipPosition="top">
-            <div class="mini-track">
-              <div class="mini-fill" [style.width.%]="step.progress_percentage"
-                [class.mini-fill--completed]="step.status === 'completed'"></div>
-            </div>
-            <span class="mini-pct">{{ step.progress_percentage }}%</span>
-          </div>
-
-          <!-- Col 5: Status Chip -->
+          <!-- Col 4: Status Chip -->
           <div class="col-step-status">
             <span class="row-status-chip" [class]="'row-status-chip--' + step.status">
               <i class="pi" [class]="statusIcon(step.status)" aria-hidden="true"></i>
@@ -302,7 +293,7 @@
             </span>
           </div>
 
-          <!-- Col 6: Action Arrow -->
+          <!-- Col 5: Action Arrow -->
           <div class="col-step-action">
             @if (step.form_code) {
             <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger remove-step-ico-btn"
@@ -370,7 +361,7 @@
       <div class="history-context-left">
         <span class="history-status-indicator" [class]="'history-status--' + currentStep.status">
           <i class="pi" [class]="statusIcon(currentStep.status)" aria-hidden="true"></i>
-          {{ statusLabel(currentStep.status) }} ({{ currentStep.progress_percentage }}%)
+          {{ statusLabel(currentStep.status) }}
         </span>
       </div>
 

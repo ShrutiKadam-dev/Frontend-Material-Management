@@ -332,23 +332,44 @@
 .stage-badge-pill {
   font-size: 0.68rem;
   font-weight: 800;
-  background: #fef2f2;
-  color: #c0522f;
-  border: 1px solid rgba(192, 82, 47, 0.2);
   border-radius: 4px;
-  padding: 2px 6px;
+  padding: 2px 7px;
   white-space: nowrap;
 
-  &.stage-badge--logistics {
-    background: #eff6ff;
-    color: #2563eb;
-    border-color: #bfdbfe;
+  &.phase-pill--bidding,
+  &.stage-badge--bidding {
+    background: #fdf2ec;
+    color: #a4481b;
+    border: 1px solid rgba(164, 72, 27, 0.25);
   }
 
+  &.phase-pill--sourcing,
+  &.stage-badge--sourcing {
+    background: #eef2fa;
+    color: #1f4e91;
+    border: 1px solid rgba(31, 78, 145, 0.25);
+  }
+
+  &.phase-pill--orders,
+  &.stage-badge--orders {
+    background: #f5f3ff;
+    color: #6d28d9;
+    border: 1px solid rgba(109, 40, 217, 0.25);
+  }
+
+  &.phase-pill--logistics,
+  &.stage-badge--logistics {
+    background: #f2f7ed;
+    color: #2e661c;
+    border: 1px solid rgba(46, 102, 28, 0.25);
+  }
+
+  &.phase-pill--settlement,
+  &.stage-badge--settlement,
   &.stage-badge--clearance {
-    background: #ecfdf5;
-    color: #059669;
-    border-color: #a7f3d0;
+    background: #f7eefc;
+    color: #6a1a9a;
+    border: 1px solid rgba(106, 26, 154, 0.25);
   }
 }
 
@@ -374,16 +395,30 @@
     border-radius: 999px;
     transition: width 350ms cubic-bezier(0.4, 0, 0.2, 1);
 
+    &--p1,
+    &--bidding {
+      background: linear-gradient(90deg, #c0522f, #ea580c);
+    }
+
+    &--p2,
     &--sourcing {
-      background: linear-gradient(90deg, #c0522f, #f97316);
+      background: linear-gradient(90deg, #1f4e91, #2563eb);
     }
 
+    &--p3,
+    &--orders {
+      background: linear-gradient(90deg, #6d28d9, #8b5cf6);
+    }
+
+    &--p4,
     &--logistics {
-      background: linear-gradient(90deg, #2563eb, #3b82f6);
+      background: linear-gradient(90deg, #2e661c, #16a34a);
     }
 
+    &--p5,
+    &--settlement,
     &--clearance {
-      background: linear-gradient(90deg, #059669, #10b981);
+      background: linear-gradient(90deg, #6a1a9a, #a855f7);
     }
   }
 }
@@ -424,6 +459,11 @@
     &--info {
       background: #3b82f6;
       box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+    }
+
+    &--primary {
+      background: var(--color-primary, #c0522f);
+      box-shadow: 0 0 0 2px rgba(192, 82, 47, 0.25);
     }
   }
 
@@ -605,6 +645,71 @@
 
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
+  }
+}
+
+.mpc-phase-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  .mpc-phase-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.72rem;
+    font-weight: 750;
+    padding: 3px 8px;
+    border-radius: 6px;
+    line-height: 1;
+
+    .pi {
+      font-size: 0.7rem;
+    }
+
+    &.phase-pill--bidding {
+      background: #fdf2ec;
+      color: #a4481b;
+      border: 1px solid rgba(164, 72, 27, 0.25);
+    }
+
+    &.phase-pill--sourcing {
+      background: #eef2fa;
+      color: #1f4e91;
+      border: 1px solid rgba(31, 78, 145, 0.25);
+    }
+
+    &.phase-pill--orders {
+      background: #f5f3ff;
+      color: #6d28d9;
+      border: 1px solid rgba(109, 40, 217, 0.25);
+    }
+
+    &.phase-pill--logistics {
+      background: #f2f7ed;
+      color: #2e661c;
+      border: 1px solid rgba(46, 102, 28, 0.25);
+    }
+
+    &.phase-pill--settlement {
+      background: #f7eefc;
+      color: #6a1a9a;
+      border: 1px solid rgba(106, 26, 154, 0.25);
+    }
+  }
+
+  .mpc-dynamic-steps-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--color-muted, #6b6864);
+
+    .pi {
+      font-size: 0.75rem;
+    }
   }
 }
 

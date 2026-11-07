@@ -50,6 +50,41 @@ describe('Dashboard', () => {
 
     const projectWithStep = { id: 3, current_step_number: 3 } as unknown as Parameters<typeof component['getProgressPercent']>[0];
     expect(component['getProgressPercent'](projectWithStep)).toBe(Math.round((3 / 15) * 100));
+
+    const projectWithDynamicSteps = { id: 4, current_step_number: 3, total_steps: 6 } as unknown as Parameters<typeof component['getProgressPercent']>[0];
+    expect(component['getProgressPercent'](projectWithDynamicSteps)).toBe(50);
+
+    const projectCompleted = { id: 5, status: 'completed' } as unknown as Parameters<typeof component['getProgressPercent']>[0];
+    expect(component['getProgressPercent'](projectCompleted)).toBe(100);
+  });
+
+  it('should compute dynamic phasesBreakdown across all 5 operational phases', () => {
+    (component as unknown as { projects: { set: (val: unknown) => void } }).projects.set([
+      { id: 1, current_form_code: 'FORM_01_PQB' },
+      { id: 2, current_step_name: 'Customer Query' },
+      { id: 3, current_step_name: 'Purchase Order' },
+      { id: 4, current_step_name: 'Transportation Details' },
+      { id: 5, status: 'completed' },
+    ]);
+
+    const breakdown = component['phasesBreakdown']();
+    expect(breakdown.length).toBe(5);
+    expect(breakdown[0].count).toBe(1); // Pre-Bidding
+    expect(breakdown[1].count).toBe(1); // Sourcing
+    expect(breakdown[2].count).toBe(1); // Orders
+    expect(breakdown[3].count).toBe(1); // Logistics
+    expect(breakdown[4].count).toBe(1); // Settlement
+  });
+
+  it('should format step display labels dynamically', () => {
+    const dynamicProject = { current_step_number: 2, total_steps: 8 } as unknown as Parameters<typeof component['getStepDisplayLabel']>[0];
+    expect(component['getStepDisplayLabel'](dynamicProject)).toBe('Step 2 of 8');
+
+    const completedProject = { status: 'completed', total_steps: 5 } as unknown as Parameters<typeof component['getStepDisplayLabel']>[0];
+    expect(component['getStepDisplayLabel'](completedProject)).toBe('5/5 Steps Done');
+
+    const noTotalStepsProject = { current_step_number: 3 } as unknown as Parameters<typeof component['getStepDisplayLabel']>[0];
+    expect(component['getStepDisplayLabel'](noTotalStepsProject)).toBe('Step 3');
   });
 
   it('should map status labels and badge classes appropriately', () => {

@@ -155,8 +155,44 @@ describe('ProjectTimeline getStepDate', () => {
 
     const badges = (component as any).getStepDataBadges(step);
     expect(badges).toHaveLength(2);
-    expect(badges[0]).toEqual({ icon: 'pi pi-check-circle', label: 'Supplier Contacted' });
+    expect(badges[0]).toEqual({ icon: 'pi pi-check-circle', label: 'Supplier Contacted', type: 'rfq' });
     expect(badges[1].label).toContain('RFQ: 23-09-2026');
+  });
+
+  it('should NOT treat National Pre-Qualification Bid (PQB) as a customer query step', () => {
+    const step: ProjectStep = {
+      id: 1,
+      project_id: 4,
+      step_number: 1,
+      form_code: 'FORM_01_PQB',
+      step_name: 'National Pre-Qualification Bid (PQB)',
+      description: 'PQB description',
+      status: 'completed',
+      progress_percentage: 100,
+      completed_at: '2026-10-28T00:00:00',
+      data: {
+        pqb_no: 'PQB-2026-88',
+        items: [{ sr_no: 1, description: 'High Voltage Cables', quantity: 100 }],
+      },
+    };
+
+    const isQuery = (component as any).isCustomerQueryStep(step);
+    expect(isQuery).toBe(false);
+
+    const badges = (component as any).getStepDataBadges(step);
+    expect(badges.some((b: any) => b.label.includes('Query'))).toBe(false);
+    expect(badges[0]).toEqual({
+      icon: 'pi pi-file-check',
+      label: 'PQB #PQB-2026-88',
+      type: 'tender',
+      tooltip: 'Pre-Qualification Bid No: PQB-2026-88',
+    });
+    expect(badges[1]).toEqual({
+      icon: 'pi pi-box',
+      label: 'High Voltage Cables',
+      type: 'items',
+      tooltip: 'High Voltage Cables',
+    });
   });
 
   it('should categorize steps into the correct phases', () => {
@@ -187,25 +223,65 @@ describe('ProjectTimeline getStepDate', () => {
     expect(phase5.shortTitle).toBe('Phase 5: Settlement');
   });
 
-  it('should extract customer query badge from step data without extra api calls', () => {
+  it('should extract customer query badge in standard Indigo format', () => {
     const step: ProjectStep = {
-      id: 1,
-      project_id: 22,
-      step_number: 1,
+      id: 182,
+      project_id: 16,
+      step_number: 8,
       form_code: 'FORM_08_CUSTOMER_QUERY',
       step_name: 'Customer Query',
-      description: 'Customer inquiry',
+      description: 'Query received from customer (to ST)',
       status: 'completed',
       progress_percentage: 100,
-      completed_at: '2026-10-31T00:00:00',
+      completed_at: '2026-10-28T17:43:21.900753+05:30',
       data: {
-        query_count: 1,
+        query_no: 'CQ-2026-001',
+        customer_name: 'Indian Oil',
       },
     };
 
     const badges = (component as any).getStepDataBadges(step);
+    expect(badges).toHaveLength(2);
+    expect(badges[0]).toEqual({
+      icon: 'pi pi-hashtag',
+      label: 'Query #CQ-2026-001',
+      type: 'query',
+      tooltip: 'Customer Query Reference: CQ-2026-001',
+    });
+    expect(badges[1]).toEqual({
+      icon: 'pi pi-user',
+      label: 'Indian Oil',
+      type: 'query',
+      tooltip: 'Customer: Indian Oil',
+    });
+  });
+
+  it('should extract query badge when flattened properties exist on step', () => {
+    const step: ProjectStep = {
+      id: 182,
+      project_id: 16,
+      step_number: 8,
+      form_code: 'FORM_08_CUSTOMER_QUERY',
+      step_name: 'Customer Query',
+      description: 'Query received from customer (to ST)',
+      status: 'completed',
+      progress_percentage: 100,
+      completed_at: '2026-10-28T17:43:21.900753+05:30',
+      qo_date: '2026-10-28',
+      data: null,
+    };
+
+    const dateRes = (component as any).getStepDate(step);
+    expect(dateRes).toEqual({ label: 'Query Date', date: '28-10-2026' });
+
+    const badges = (component as any).getStepDataBadges(step);
     expect(badges).toHaveLength(1);
-    expect(badges[0]).toEqual({ icon: 'pi pi-file-edit', label: '1 Query' });
+    expect(badges[0]).toEqual({
+      icon: 'pi pi-question-circle',
+      label: 'Customer Query',
+      type: 'query',
+      tooltip: 'Customer query registered for project',
+    });
   });
 
   it('should extract customer query date from step data qo_date if not completed', () => {

@@ -97,13 +97,29 @@ export class ProjectStepService {
         (s.step_name && step.step_name && s.step_name.toLowerCase().trim() === step.step_name.toLowerCase().trim()),
     );
 
+    const catMap: Record<string, string> = {
+      'Pre-Bidding & Tenders': 'phase-1',
+      'Sourcing & Quotations': 'phase-2',
+      'Supplier Orders & Invoices': 'phase-3',
+      'Logistics & Customs': 'phase-4',
+      'Customer & Supplier Settlement': 'phase-5',
+    };
+    const resolvedCategory = step.category || def?.category;
+    const resolvedPhase =
+      def?.phaseId ||
+      (resolvedCategory && catMap[resolvedCategory] ? catMap[resolvedCategory] : undefined) ||
+      step.phase ||
+      ((step as Record<string, unknown>)['phase_id'] as string) ||
+      'phase-1';
+
     const stepWithMeta: ProjectStep = {
       ...step,
       project_id: projectId,
       form_code: resolvedCode || step.form_code,
       step_name: step.step_name || def?.name || 'Step Details',
-      phase: step.phase || def?.phaseId,
-      category: step.category || def?.category,
+      phase: resolvedPhase,
+      phase_id: resolvedPhase,
+      category: resolvedCategory,
     };
 
     if (existingIdx >= 0) {
@@ -136,17 +152,71 @@ export class ProjectStepService {
               Array.isArray((backendSteps as { data: ProjectStep[] }).data)
               ? (backendSteps as { data: ProjectStep[] }).data
               : [];
+          const catMap: Record<string, string> = {
+            'Pre-Bidding & Tenders': 'phase-1',
+            'Sourcing & Quotations': 'phase-2',
+            'Supplier Orders & Invoices': 'phase-3',
+            'Logistics & Customs': 'phase-4',
+            'Customer & Supplier Settlement': 'phase-5',
+          };
+          const systemKeys = new Set([
+            'id',
+            'project_id',
+            'step_number',
+            'step_order',
+            'step_name',
+            'description',
+            'status',
+            'progress_percentage',
+            'completed_at',
+            'form_code',
+            'category',
+            'phase',
+            'phase_id',
+            'remarks',
+            'created_at',
+            'updated_at',
+            'attachments',
+            'icon',
+            'data',
+          ]);
+
           const normalized = rawSteps.map((s) => {
             const def = s.form_code
               ? getFormDefinition(s.form_code)
               : s.step_name
                 ? getFormDefinition(s.step_name)
                 : undefined;
+            const resolvedCategory = s.category || def?.category;
+            const resolvedPhase =
+              def?.phaseId ||
+              (resolvedCategory && catMap[resolvedCategory] ? catMap[resolvedCategory] : undefined) ||
+              s.phase ||
+              ((s as Record<string, unknown>)['phase_id'] as string) ||
+              'phase-1';
+
+            // Gather root backend attributes into data if not already present
+            const rootExtraData: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(s)) {
+              if (!systemKeys.has(k) && v !== undefined && v !== null && v !== '') {
+                rootExtraData[k] = v;
+              }
+            }
+
+            const existingData =
+              s.data && typeof s.data === 'object' && !Array.isArray(s.data)
+                ? (s.data as Record<string, unknown>)
+                : {};
+
+            const mergedData = { ...rootExtraData, ...existingData };
+
             return {
               ...s,
               form_code: s.form_code || def?.formCode,
-              phase: s.phase || def?.phaseId,
-              category: s.category || def?.category,
+              phase: resolvedPhase,
+              phase_id: resolvedPhase,
+              category: resolvedCategory,
+              data: Object.keys(mergedData).length > 0 ? mergedData : null,
             };
           });
 

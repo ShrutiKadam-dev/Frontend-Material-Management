@@ -16,9 +16,23 @@ import { DashboardService } from '../../../core/services/dashboard';
 import { ProjectService } from '../../../core/services/project';
 import { DashboardMetric, DashboardOverviewStats, DashboardProject } from '../../../core/models/dashboard.model';
 import { Project } from '../../../core/models/project.model';
+import { PIPELINE_PHASES, PhaseInfo } from '../../../core/constants/pipeline-phases.constant';
+import { getFormDefinition } from '../../../core/constants/form-catalog';
 
 import { AppDatePipe } from '../../../core/pipes/app-date.pipe';
 import { resolveTimeGreeting, resolveUserDisplayName } from '../../../core/utils/user.utils';
+
+export interface DashboardPhaseCard {
+  id: string;
+  phaseNumber: number;
+  title: string;
+  shortTitle: string;
+  stepRange: string;
+  badgeClass: string;
+  fillClass: string;
+  count: number;
+  percentage: number;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -94,28 +108,66 @@ export class Dashboard implements OnInit {
     return Math.max(0, this.totalProjectsCount() - this.completedCount());
   });
 
-  // 15-Step Lifecycle Stage Breakdown
-  protected readonly sourcingStageCount = computed(() => {
-    if (this.overviewStats()?.stage_breakdown) {
-      return this.overviewStats()!.stage_breakdown.sourcing;
+  // ── Dynamic Pipeline Lifecycle Phases Breakdown ────────────────
+  protected readonly phasesBreakdown = computed<DashboardPhaseCard[]>(() => {
+    const list = this.projects().length > 0 ? this.projects() : (this.recentProjects() as unknown as Project[]);
+    const total = this.totalProjectsCount() || list.length;
+
+    const countMap = new Map<string, number>();
+    for (const p of PIPELINE_PHASES) {
+      countMap.set(p.id, 0);
     }
-    return this.recentProjects().filter((p) => (p.current_step_number || 1) <= 5).length;
+
+    for (const project of list) {
+      const phase = this.getProjectPhase(project);
+      countMap.set(phase.id, (countMap.get(phase.id) ?? 0) + 1);
+    }
+
+    return PIPELINE_PHASES.map((phase, idx) => {
+      const count = countMap.get(phase.id) ?? 0;
+      const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+      return {
+        id: phase.id,
+        phaseNumber: idx + 1,
+        title: phase.title,
+        shortTitle: phase.shortTitle,
+        stepRange: phase.stepRange,
+        badgeClass: phase.badgeClass,
+        fillClass: `stage-fill--p${idx + 1}`,
+        count,
+        percentage,
+      };
+    });
+  });
+
+  protected readonly totalAttachedStepsCount = computed(() => {
+    const list = this.projects();
+    return list.reduce((sum, p) => sum + (p.total_steps || 0), 0);
+  });
+
+  // Backward-compatible getters for legacy references
+  protected readonly sourcingStageCount = computed(() => {
+    const stats = this.overviewStats();
+    if (stats?.stage_breakdown?.sourcing !== undefined) {
+      return stats.stage_breakdown.sourcing;
+    }
+    return this.phasesBreakdown().find((p) => p.id === 'phase-2')?.count ?? 0;
   });
 
   protected readonly logisticsStageCount = computed(() => {
-    if (this.overviewStats()?.stage_breakdown) {
-      return this.overviewStats()!.stage_breakdown.logistics;
+    const stats = this.overviewStats();
+    if (stats?.stage_breakdown?.logistics !== undefined) {
+      return stats.stage_breakdown.logistics;
     }
-    return this.recentProjects().filter(
-      (p) => (p.current_step_number || 1) >= 6 && (p.current_step_number || 1) <= 11,
-    ).length;
+    return this.phasesBreakdown().find((p) => p.id === 'phase-4')?.count ?? 0;
   });
 
   protected readonly clearanceStageCount = computed(() => {
-    if (this.overviewStats()?.stage_breakdown) {
-      return this.overviewStats()!.stage_breakdown.clearance;
+    const stats = this.overviewStats();
+    if (stats?.stage_breakdown?.clearance !== undefined) {
+      return stats.stage_breakdown.clearance;
     }
-    return this.recentProjects().filter((p) => (p.current_step_number || 1) >= 12).length;
+    return this.phasesBreakdown().find((p) => p.id === 'phase-5')?.count ?? 0;
   });
 
   // Commercial Payments Breakdown
@@ -227,7 +279,7 @@ export class Dashboard implements OnInit {
       project.progress_percentage !== null &&
       !isNaN(project.progress_percentage)
     ) {
-      return project.progress_percentage;
+      return Math.min(100, Math.max(0, project.progress_percentage));
     }
     if (
       'progress' in project &&
@@ -235,10 +287,140 @@ export class Dashboard implements OnInit {
       project.progress !== null &&
       !isNaN(project.progress)
     ) {
-      return project.progress;
+      return Math.min(100, Math.max(0, project.progress));
     }
-    const step = project.current_step_number || 1;
-    return Math.round((step / 15) * 100);
+    const total = project.total_steps;
+    const current = project.current_step_number;
+    if (total && total > 0) {
+      const completed = (project as Project).completed_steps_count ?? current ?? 0;
+      return Math.min(100, Math.max(0, Math.round((completed / total) * 100)));
+    }
+    if (current) {
+      return Math.min(100, Math.round((current / (total || 15)) * 100));
+    }
+    if (project.status === 'Completed' || project.status === 'completed') {
+      return 100;
+    }
+    return 0;
+  }
+
+  protected getProjectPhase(project: Project | DashboardProject): PhaseInfo {
+    if (
+      project.status?.toLowerCase() === 'completed' ||
+      ('progress_percentage' in project && project.progress_percentage === 100) ||
+      ('progress' in project && project.progress === 100)
+    ) {
+      return PIPELINE_PHASES[4];
+    }
+
+    const formCode = (project as Project).current_form_code;
+    if (formCode) {
+      const def = getFormDefinition(formCode);
+      if (def?.phaseId) {
+        const match = PIPELINE_PHASES.find((p) => p.id === def.phaseId);
+        if (match) return match;
+      }
+    }
+
+    const stepName =
+      (project as Project).current_step_name ||
+      (project as DashboardProject).milestone ||
+      (project as DashboardProject).step;
+    if (stepName) {
+      const def = getFormDefinition(stepName);
+      if (def?.phaseId) {
+        const match = PIPELINE_PHASES.find((p) => p.id === def.phaseId);
+        if (match) return match;
+      }
+      const lower = stepName.toLowerCase();
+      if (
+        lower.includes('tender') ||
+        lower.includes('pqb') ||
+        lower.includes('eoi') ||
+        lower.includes('corrigendum') ||
+        lower.includes('bidding') ||
+        lower.includes('lte') ||
+        lower.includes('icb') ||
+        lower.includes('ste')
+      ) {
+        return PIPELINE_PHASES[0];
+      }
+      if (
+        lower.includes('sourcing') ||
+        lower.includes('quotation') ||
+        lower.includes('rfq') ||
+        lower.includes('query') ||
+        lower.includes('cost sheet')
+      ) {
+        return PIPELINE_PHASES[1];
+      }
+      if (
+        lower.includes('order') ||
+        lower.includes('po') ||
+        (lower.includes('invoice') && !lower.includes('tax invoice')) ||
+        lower.includes('payment to supplier')
+      ) {
+        return PIPELINE_PHASES[2];
+      }
+      if (
+        lower.includes('logistics') ||
+        lower.includes('customs') ||
+        lower.includes('transport') ||
+        lower.includes('freight') ||
+        lower.includes('cha') ||
+        lower.includes('eway') ||
+        lower.includes('shipping')
+      ) {
+        return PIPELINE_PHASES[3];
+      }
+      if (
+        lower.includes('settlement') ||
+        lower.includes('challan') ||
+        lower.includes('warranty') ||
+        lower.includes('tax invoice') ||
+        lower.includes('payment from customer')
+      ) {
+        return PIPELINE_PHASES[4];
+      }
+    }
+
+    const stepNum = project.current_step_number;
+    if (stepNum) {
+      if (stepNum <= 7) return PIPELINE_PHASES[0];
+      if (stepNum <= 12) return PIPELINE_PHASES[1];
+      if (stepNum <= 20) return PIPELINE_PHASES[2];
+      if (stepNum <= 28) return PIPELINE_PHASES[3];
+      return PIPELINE_PHASES[4];
+    }
+
+    return PIPELINE_PHASES[0];
+  }
+
+  protected getStepDisplayLabel(project: Project | DashboardProject): string {
+    const total = project.total_steps;
+    const current = project.current_step_number;
+    if (project.status?.toLowerCase() === 'completed') {
+      return total && total > 0 ? `${total}/${total} Steps Done` : 'Completed';
+    }
+    if (total && total > 0) {
+      const completed = (project as Project).completed_steps_count;
+      if (completed !== undefined && completed >= total) {
+        return `${total}/${total} Steps Done`;
+      }
+      return `Step ${current || 1} of ${total}`;
+    }
+    if (current) {
+      return `Step ${current}`;
+    }
+    return 'Active Step';
+  }
+
+  protected getProjectStepTitle(project: Project | DashboardProject): string {
+    return (
+      (project as Project).current_step_name ||
+      (project as DashboardProject).milestone ||
+      'Workflow in progress'
+    );
   }
 
   protected getPercentage(count: number, total: number): number {

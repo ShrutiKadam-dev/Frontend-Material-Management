@@ -549,10 +549,10 @@
   align-items: center;
   cursor: pointer;
   display: grid;
-  /* Col 1: Spine (48px) | Col 2: Step Info (flex 1fr) | Col 3: Badges (230px) | Col 4: Progress (115px) | Col 5: Status (110px) | Col 6: Actions (68px) */
-  grid-template-columns: 48px minmax(220px, 1fr) 230px 115px 110px 68px;
+  /* Col 1: Spine (48px) | Col 2: Step Info (390px) | Col 3: Badges (1fr) | Col 4: Status (120px) | Col 5: Actions (72px) */
+  grid-template-columns: 48px 390px 1fr 120px 72px;
   min-height: 52px;
-  padding: 6px 16px 6px 0;
+  padding: 8px 20px 8px 0;
   position: relative;
   transition: background 0.15s ease;
 
@@ -680,7 +680,7 @@
   gap: 10px;
   min-width: 0;
   overflow: hidden;
-  padding-right: 12px;
+  padding-right: 14px;
 }
 
 .row-step-num {
@@ -710,9 +710,10 @@
 
 .row-step-title {
   color: var(--color-heading);
-  flex-shrink: 0;
+  flex: 1;
   font-size: 0.86rem;
   font-weight: 600;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -731,102 +732,170 @@
 .col-step-badges {
   align-items: center;
   display: flex;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 8px;
   min-width: 0;
   overflow: hidden;
-  padding-right: 8px;
+  padding-right: 14px;
   white-space: nowrap;
 }
 
 .meta-tag {
   align-items: center;
-  background: var(--color-surface-muted, #faf9f6);
-  border: 1px solid var(--color-border-soft, #edeae4);
   border-radius: var(--radius-pill);
-  color: var(--color-muted);
   display: inline-flex;
   flex-shrink: 0;
   font-size: 0.72rem;
   font-weight: 500;
-  gap: 4px;
+  gap: 5px;
   line-height: 1.3;
-  padding: 2px 8px;
+  padding: 2.5px 9px;
   white-space: nowrap;
+  transition: all 0.15s ease;
+
+  .pi {
+    font-size: 0.72rem;
+  }
 
   &--date {
+    background: var(--color-surface-muted, #faf9f6);
+    border: 1px solid var(--color-border-soft, #edeae4);
+    color: var(--color-muted);
+
     .meta-date-label {
       font-weight: 600;
     }
 
     &.meta-tag--completed {
-      background: #f3faf5;
-      border-color: #d1eedc;
-      color: #1a6f37;
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+      color: #166534;
+
+      .pi {
+        color: #16a34a;
+      }
+    }
+  }
+
+  /* Customer Query & Requirements (Clear Indigo/Sky Format for Managers) */
+  &--query {
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    color: #4338ca;
+    font-weight: 600;
+
+    .pi {
+      color: #6366f1;
+    }
+  }
+
+  /* Tenders, PQB, LTE & Bids Badge (Standard Blue Format) */
+  &--tender {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    font-weight: 600;
+
+    .pi {
+      color: #3b82f6;
+    }
+  }
+
+  /* Purchase Orders & Commitments (Corporate Purple Format) */
+  &--order {
+    background: #faf5ff;
+    border: 1px solid #e9d5ff;
+    color: #7e22ce;
+    font-weight: 600;
+
+    .pi {
+      color: #a855f7;
+    }
+  }
+
+  /* RFQ & Sourcing Badges (Warm Amber Format) */
+  &--rfq {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #b45309;
+    font-weight: 500;
+
+    .pi {
+      color: #f59e0b;
+    }
+  }
+
+  /* Invoices & Contract Awards (Fresh Emerald Format) */
+  &--finance {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+    font-weight: 600;
+
+    .pi {
+      color: #10b981;
+    }
+  }
+
+  /* Logistics, Shipping, BOE & Challans (Cyan Format) */
+  &--logistics {
+    background: #ecfeff;
+    border: 1px solid #a5f3fc;
+    color: #0e7490;
+    font-weight: 500;
+
+    .pi {
+      color: #06b6d4;
+    }
+  }
+
+  /* Scope Items & Materials (Clean Neutral Format) */
+  &--items {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+    font-weight: 500;
+
+    .pi {
+      color: #64748b;
     }
   }
 
   &--remarks {
-    background: #f9f3fd;
-    border-color: #ebd7f9;
-    color: #6a1a9a;
+    background: #fdf4ff;
+    border: 1px solid #f5d0fe;
+    color: #a21caf;
     cursor: pointer;
     font-weight: 500;
-    transition: all 0.15s ease;
 
     &:hover {
-      background: #f1e2fa;
+      background: #fae8ff;
+      border-color: #f0abfc;
     }
   }
 
-  &--data {
-    background: #f5f4ef;
-    border-color: #e4dfd7;
-    color: #555048;
+  &--data,
+  &--neutral {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    .pi {
+      color: #64748b;
+      font-size: 0.7rem;
+    }
   }
 }
 
-/* Col 4: Mini Progress Bar */
-.col-step-progress {
-  align-items: center;
-  display: flex;
-  gap: 8px;
-  padding-right: 8px;
-  width: 100%;
-}
-
-.mini-track {
-  background: var(--color-border-soft, #edeae4);
-  border-radius: var(--radius-pill);
-  flex: 1;
-  height: 6px;
-  overflow: hidden;
-}
-
-.mini-fill {
-  background: linear-gradient(90deg, #1967d2, #4285f4);
-  border-radius: var(--radius-pill);
-  height: 100%;
-
-  &--completed {
-    background: linear-gradient(90deg, #1a6f37, #34a853);
-  }
-}
-
-.mini-pct {
-  color: var(--color-muted);
-  font-family: ui-monospace, monospace;
-  font-size: 0.72rem;
-  font-weight: 600;
-  min-width: 32px;
-  text-align: right;
-}
-
-/* Col 5: Status Chip */
+/* Col 4: Status Chip */
 .col-step-status {
   align-items: center;
   display: flex;
   justify-content: flex-start;
-  padding-right: 4px;
+  padding-right: 6px;
   width: 100%;
 }
 
@@ -866,7 +935,7 @@
   }
 }
 
-/* Col 6: Action Arrow */
+/* Col 5: Action Arrow & Delete */
 .col-step-action {
   align-items: center;
   display: flex;
@@ -1397,7 +1466,8 @@
    ══════════════════════════════════════════════════════════════════════ */
 @media (max-width: 1080px) {
   .timeline-row {
-    grid-template-columns: 46px minmax(180px, 1fr) 190px 105px 105px 64px;
+    grid-template-columns: 46px 320px 1fr 115px 68px;
+    padding: 8px 16px 8px 0;
   }
 
   .phase-desc-hint {
@@ -1426,12 +1496,17 @@
   .col-step-badges {
     flex: 1 1 100%;
     padding-left: 48px;
+    flex-wrap: wrap;
   }
 
-  .col-step-progress,
-  .col-step-status,
-  .col-step-action {
+  .col-step-status {
     padding-left: 48px;
+    width: auto;
+  }
+
+  .col-step-action {
+    margin-left: auto;
+    padding-left: 0;
     width: auto;
   }
 
