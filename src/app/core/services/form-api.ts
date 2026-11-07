@@ -5,7 +5,7 @@ import { catchError, map, Observable, of, throwError } from 'rxjs';
 import { API_BASE_URL } from '../tokens/api-base-url.token';
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../models/project-step.model';
 import { FormDefinition, getFormDefinition } from '../constants/form-catalog';
-import { sanitizePayloadDates } from '../utils/date.utils';
+import { formatLocalDate, sanitizePayloadDates } from '../utils/date.utils';
 import {
   calculateTableTotalsWithGst,
   cleanTableItems,
@@ -133,6 +133,19 @@ export function normalizeBackendEntityToStep(
     if (item['totalGst'] !== undefined) combinedData['gst_amount'] = item['totalGst'];
     if (item['versionNumber'] !== undefined) combinedData['versionNumber'] = item['versionNumber'];
     if (item['hasRateIncrease'] !== undefined) combinedData['hasRateIncrease'] = item['hasRateIncrease'];
+  }
+
+  // Bridge FORM_09_RFQ date fields (quotation_requested_date, request_date, rfq_date)
+  if (formDef.formCode === 'FORM_09_RFQ') {
+    const rDate =
+      formatLocalDate(item['quotation_requested_date'] as string | Date) ||
+      formatLocalDate(item['rfq_date'] as string | Date) ||
+      formatLocalDate(item['request_date'] as string | Date);
+    if (rDate) {
+      combinedData['quotation_requested_date'] = rDate;
+      combinedData['request_date'] = rDate;
+      combinedData['rfq_date'] = rDate;
+    }
   }
 
   // Bridge FORM_26_TAX_INVOICE_CUSTOMER gst_pct and gst_rate_pct
@@ -473,6 +486,18 @@ export class FormApiService {
       items: cleanedItems,
     };
 
+    if (formDef.formCode === 'FORM_09_RFQ') {
+      const rDate =
+        formatLocalDate(bodyPayload['request_date'] as string | Date) ||
+        formatLocalDate(bodyPayload['quotation_requested_date'] as string | Date) ||
+        formatLocalDate(bodyPayload['rfq_date'] as string | Date);
+      if (rDate) {
+        bodyPayload['quotation_requested_date'] = rDate;
+        bodyPayload['request_date'] = rDate;
+        bodyPayload['rfq_date'] = rDate;
+      }
+    }
+
     if (formDef.formCode === 'FORM_10_COST_SHEET') {
       const existingGp = (payload['globalParams'] || {}) as Record<string, unknown>;
       bodyPayload['title'] = payload['title'] || payload['project_title'] || 'Cost Sheet';
@@ -570,6 +595,18 @@ export class FormApiService {
       ...restPayload,
       items: cleanedItems,
     };
+
+    if (formDef.formCode === 'FORM_09_RFQ') {
+      const rDate =
+        formatLocalDate(bodyPayload['request_date'] as string | Date) ||
+        formatLocalDate(bodyPayload['quotation_requested_date'] as string | Date) ||
+        formatLocalDate(bodyPayload['rfq_date'] as string | Date);
+      if (rDate) {
+        bodyPayload['quotation_requested_date'] = rDate;
+        bodyPayload['request_date'] = rDate;
+        bodyPayload['rfq_date'] = rDate;
+      }
+    }
 
     if (formDef.formCode === 'FORM_10_COST_SHEET') {
       const existingGp = (payload['globalParams'] || {}) as Record<string, unknown>;

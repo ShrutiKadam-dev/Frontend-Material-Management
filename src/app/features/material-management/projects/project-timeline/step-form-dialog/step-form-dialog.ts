@@ -3337,17 +3337,28 @@ export class StepFormDialog {
       this.formStatusSub?.unsubscribe();
     });
 
+    let lastInitializedKey = '';
+
     // Synchronize form when dialog becomes visible or step/definition changes
     effect(() => {
       const isVis = this.visible();
       const currentStep = this.step();
       const defInput = this.formDefinition();
+      const pId = this.projectId();
 
       if (isVis) {
-        untracked(() => {
-          this.initializeModal(currentStep, defInput);
-        });
+        const stepKey = currentStep ? `step_${currentStep.id ?? currentStep.step_number}` : 'new';
+        const defKey = defInput?.formCode ?? currentStep?.form_code ?? '';
+        const initKey = `${pId}_${stepKey}_${defKey}`;
+
+        if (initKey !== lastInitializedKey) {
+          lastInitializedKey = initKey;
+          untracked(() => {
+            this.initializeModal(currentStep, defInput);
+          });
+        }
       } else {
+        lastInitializedKey = '';
         untracked(() => {
           this.deleteConfirmVisible.set(false);
         });
@@ -3408,206 +3419,112 @@ export class StepFormDialog {
       }
       this.resolvedDef.set(def);
 
-      const pId = this.projectId();
-      const stepId = step.id || step.step_number;
+      this.loading.set(false);
+      let savedData: Record<string, unknown> = {};
+      if (typeof step.data === 'string') {
+        try {
+          savedData = JSON.parse(step.data);
+        } catch {
+          savedData = {};
+        }
+      } else if (step.data && typeof step.data === 'object') {
+        savedData = { ...(step.data as Record<string, unknown>) };
+      }
+      const activeRec = step as unknown as Record<string, unknown>;
+      if (!savedData['items'] && Array.isArray(activeRec['items'])) {
+        savedData['items'] = activeRec['items'];
+      }
 
-      // GET operation to fetch freshest step state via individual form API (with /latest fallback)
-      this.loading.set(true);
-      const fetch$ = def?.apiEndpoint
-        ? this.formApiService.getEntryById(def, stepId, pId).pipe(
-          catchError(() => (pId ? this.formApiService.getLatestEntry(def, pId) : of(null))),
-          map((res) => res || step),
-          catchError(() => of(step)),
-        )
-        : of(step);
+      if (def?.formCode === 'FORM_09_RFQ') {
+        const rDate =
+          formatLocalDate(savedData['request_date'] as string | Date) ||
+          formatLocalDate(savedData['quotation_requested_date'] as string | Date) ||
+          formatLocalDate(savedData['rfq_date'] as string | Date) ||
+          formatLocalDate(activeRec['quotation_requested_date'] as string | Date) ||
+          formatLocalDate(activeRec['rfq_date'] as string | Date) ||
+          formatLocalDate(activeRec['request_date'] as string | Date);
+        if (rDate) {
+          savedData['request_date'] = rDate;
+          savedData['quotation_requested_date'] = rDate;
+          savedData['rfq_date'] = rDate;
+        }
+      }
 
-      fetch$.subscribe({
-        next: (freshStep) => {
-          this.loading.set(false);
-          const activeStep = freshStep || step;
-          let savedData: Record<string, unknown> = {};
-          if (typeof activeStep.data === 'string') {
-            try {
-              savedData = JSON.parse(activeStep.data);
-            } catch {
-              savedData = {};
-            }
-          } else if (activeStep.data && typeof activeStep.data === 'object') {
-            savedData = { ...(activeStep.data as Record<string, unknown>) };
-          }
-          const activeRec = activeStep as unknown as Record<string, unknown>;
-          if (!savedData['items'] && Array.isArray(activeRec['items'])) {
-            savedData['items'] = activeRec['items'];
-          }
-          this.populateForm(def!, savedData, activeStep.remarks || []);
+      this.populateForm(def!, savedData, step.remarks || []);
 
-          if (
-            def!.formCode === 'FORM_10_COST_SHEET' &&
-            (!savedData['items'] || (Array.isArray(savedData['items']) && savedData['items'].length === 0))
-          ) {
-            this.loadFromSupplierQuotation(false);
-          }
+      if (
+        def!.formCode === 'FORM_10_COST_SHEET' &&
+        (!savedData['items'] || (Array.isArray(savedData['items']) && savedData['items'].length === 0))
+      ) {
+        this.loadFromSupplierQuotation(false);
+      }
 
-          if (
-            def!.formCode === 'FORM_02_PQB_BID_DOCUMENT' &&
-            (!savedData['pqb_title'] ||
-              !savedData['pqb_no'] ||
-              !savedData['items'] ||
-              (Array.isArray(savedData['items']) && savedData['items'].length === 0))
-          ) {
-            this.loadFromNationalPreQualificationBid(false);
-          }
+      if (
+        def!.formCode === 'FORM_02_PQB_BID_DOCUMENT' &&
+        (!savedData['pqb_title'] ||
+          !savedData['pqb_no'] ||
+          !savedData['items'] ||
+          (Array.isArray(savedData['items']) && savedData['items'].length === 0))
+      ) {
+        this.loadFromNationalPreQualificationBid(false);
+      }
 
-          if (
-            def!.formCode === 'FORM_04_LTE' &&
-            (!savedData['pqb_no'] ||
-              !savedData['items'] ||
-              (Array.isArray(savedData['items']) && savedData['items'].length === 0))
-          ) {
-            this.loadFromNationalPreQualificationBid(false);
-          }
+      if (
+        def!.formCode === 'FORM_04_LTE' &&
+        (!savedData['pqb_no'] ||
+          !savedData['items'] ||
+          (Array.isArray(savedData['items']) && savedData['items'].length === 0))
+      ) {
+        this.loadFromNationalPreQualificationBid(false);
+      }
 
-          if (
-            (def!.formCode === 'FORM_33_STE' || def!.formCode === 'FORM_30_STE' || def!.formCode === 'FORM_STE') &&
-            (!savedData['pqb_no'] ||
-              !savedData['tender_title'] ||
-              !savedData['items'] ||
-              (Array.isArray(savedData['items']) && savedData['items'].length === 0))
-          ) {
-            this.loadFromNationalPreQualificationBid(false);
-          }
+      if (
+        (def!.formCode === 'FORM_33_STE' || def!.formCode === 'FORM_30_STE' || def!.formCode === 'FORM_STE') &&
+        (!savedData['pqb_no'] ||
+          !savedData['tender_title'] ||
+          !savedData['items'] ||
+          (Array.isArray(savedData['items']) && savedData['items'].length === 0))
+      ) {
+        this.loadFromNationalPreQualificationBid(false);
+      }
 
-          if (def!.formCode === 'FORM_03_CORRIGENDUM') {
-            if (!savedData['items'] || (Array.isArray(savedData['items']) && savedData['items'].length === 0) || !savedData['against_ref_no'] || !savedData['ref_title']) {
-              this.loadFromPreviousTenderStep(false);
-            } else {
-              this.resolveLinkedTenderStepForCorrigendum();
-            }
-          }
+      if (def!.formCode === 'FORM_03_CORRIGENDUM') {
+        if (!savedData['items'] || (Array.isArray(savedData['items']) && savedData['items'].length === 0) || !savedData['against_ref_no'] || !savedData['ref_title']) {
+          this.loadFromPreviousTenderStep(false);
+        } else {
+          this.resolveLinkedTenderStepForCorrigendum();
+        }
+      }
 
-          if (
-            def!.formCode === 'FORM_31_BID_DOC_LTE' ||
-            (def!.name.toLowerCase().includes('bid doc') && (def!.name.toLowerCase().includes('lte') || def!.name.toLowerCase().includes('limited tender')))
-          ) {
-            if (!savedData['tender_title'] || !String(savedData['tender_title']).trim()) {
-              this.loadForBidDocumentLte(false);
-            } else {
-              this.resolveLinkedStepForBidDocLte();
-            }
-          }
+      if (
+        def!.formCode === 'FORM_31_BID_DOC_LTE' ||
+        (def!.name.toLowerCase().includes('bid doc') && (def!.name.toLowerCase().includes('lte') || def!.name.toLowerCase().includes('limited tender')))
+      ) {
+        if (!savedData['tender_title'] || !String(savedData['tender_title']).trim()) {
+          this.loadForBidDocumentLte(false);
+        } else {
+          this.resolveLinkedStepForBidDocLte();
+        }
+      }
 
-          if (
-            def!.formCode === 'FORM_14_PURCHASE_ORDER' ||
-            (def!.name.toLowerCase().includes('purchase order') || def!.name.toLowerCase().startsWith('po '))
-          ) {
-            const hasItems = Array.isArray(savedData['items']) && savedData['items'].length > 0;
-            const hasDeliveryTerms = Boolean(savedData['delivery_terms']);
-            const hasPaymentTerms = Boolean(savedData['payment_terms']);
-            const hasWarranty = Boolean(savedData['warranty_period']);
-            const hasGst =
-              savedData['gst_rate_pct'] !== undefined &&
-              savedData['gst_rate_pct'] !== null &&
-              savedData['gst_rate_pct'] !== '';
-            if (!hasItems || !hasDeliveryTerms || !hasPaymentTerms || !hasWarranty || !hasGst) {
-              this.loadForPurchaseOrder(false);
-            } else {
-              this.resolveLinkedStepForPurchaseOrder();
-            }
-          }
-        },
-        error: () => {
-          this.loading.set(false);
-          let savedData: Record<string, unknown> = {};
-          if (typeof step.data === 'string') {
-            try {
-              savedData = JSON.parse(step.data);
-            } catch {
-              savedData = {};
-            }
-          } else if (step.data && typeof step.data === 'object') {
-            savedData = { ...(step.data as Record<string, unknown>) };
-          }
-          const stepRec = step as unknown as Record<string, unknown>;
-          if (!savedData['items'] && Array.isArray(stepRec['items'])) {
-            savedData['items'] = stepRec['items'];
-          }
-          this.populateForm(def!, savedData, step.remarks || []);
-
-          if (
-            def!.formCode === 'FORM_10_COST_SHEET' &&
-            (!savedData['items'] || (Array.isArray(savedData['items']) && savedData['items'].length === 0))
-          ) {
-            this.loadFromSupplierQuotation(false);
-          }
-
-          if (
-            def!.formCode === 'FORM_02_PQB_BID_DOCUMENT' &&
-            (!savedData['pqb_title'] ||
-              !savedData['pqb_no'] ||
-              !savedData['items'] ||
-              (Array.isArray(savedData['items']) && savedData['items'].length === 0))
-          ) {
-            this.loadFromNationalPreQualificationBid(false);
-          }
-
-          if (
-            def!.formCode === 'FORM_04_LTE' &&
-            (!savedData['pqb_no'] ||
-              !savedData['items'] ||
-              (Array.isArray(savedData['items']) && savedData['items'].length === 0))
-          ) {
-            this.loadFromNationalPreQualificationBid(false);
-          }
-
-          if (
-            (def!.formCode === 'FORM_33_STE' || def!.formCode === 'FORM_30_STE' || def!.formCode === 'FORM_STE') &&
-            (!savedData['pqb_no'] ||
-              !savedData['tender_title'] ||
-              !savedData['items'] ||
-              (Array.isArray(savedData['items']) && savedData['items'].length === 0))
-          ) {
-            this.loadFromNationalPreQualificationBid(false);
-          }
-
-          if (def!.formCode === 'FORM_03_CORRIGENDUM') {
-            if (!savedData['items'] || (Array.isArray(savedData['items']) && savedData['items'].length === 0) || !savedData['against_ref_no'] || !savedData['ref_title']) {
-              this.loadFromPreviousTenderStep(false);
-            } else {
-              this.resolveLinkedTenderStepForCorrigendum();
-            }
-          }
-
-          if (
-            def!.formCode === 'FORM_31_BID_DOC_LTE' ||
-            (def!.name.toLowerCase().includes('bid doc') && (def!.name.toLowerCase().includes('lte') || def!.name.toLowerCase().includes('limited tender')))
-          ) {
-            if (!savedData['tender_title'] || !String(savedData['tender_title']).trim()) {
-              this.loadForBidDocumentLte(false);
-            } else {
-              this.resolveLinkedStepForBidDocLte();
-            }
-          }
-
-          if (
-            def!.formCode === 'FORM_14_PURCHASE_ORDER' ||
-            (def!.name.toLowerCase().includes('purchase order') || def!.name.toLowerCase().startsWith('po '))
-          ) {
-            const hasItems = Array.isArray(savedData['items']) && savedData['items'].length > 0;
-            const hasDeliveryTerms = Boolean(savedData['delivery_terms']);
-            const hasPaymentTerms = Boolean(savedData['payment_terms']);
-            const hasWarranty = Boolean(savedData['warranty_period']);
-            const hasGst =
-              savedData['gst_rate_pct'] !== undefined &&
-              savedData['gst_rate_pct'] !== null &&
-              savedData['gst_rate_pct'] !== '';
-            if (!hasItems || !hasDeliveryTerms || !hasPaymentTerms || !hasWarranty || !hasGst) {
-              this.loadForPurchaseOrder(false);
-            } else {
-              this.resolveLinkedStepForPurchaseOrder();
-            }
-          }
-        },
-      });
+      if (
+        def!.formCode === 'FORM_14_PURCHASE_ORDER' ||
+        (def!.name.toLowerCase().includes('purchase order') || def!.name.toLowerCase().startsWith('po '))
+      ) {
+        const hasItems = Array.isArray(savedData['items']) && savedData['items'].length > 0;
+        const hasDeliveryTerms = Boolean(savedData['delivery_terms']);
+        const hasPaymentTerms = Boolean(savedData['payment_terms']);
+        const hasWarranty = Boolean(savedData['warranty_period']);
+        const hasGst =
+          savedData['gst_rate_pct'] !== undefined &&
+          savedData['gst_rate_pct'] !== null &&
+          savedData['gst_rate_pct'] !== '';
+        if (!hasItems || !hasDeliveryTerms || !hasPaymentTerms || !hasWarranty || !hasGst) {
+          this.loadForPurchaseOrder(false);
+        } else {
+          this.resolveLinkedStepForPurchaseOrder();
+        }
+      }
     } else if (defInput) {
       // ── ADD MODE (POST new step from catalog) ──────────────────────
       this.resolvedDef.set(defInput);
@@ -4339,162 +4256,180 @@ export class StepFormDialog {
       }
     }
 
+    if (def.formCode === 'FORM_09_RFQ') {
+      const rDate =
+        formatLocalDate(combinedData['request_date'] as string | Date) ||
+        formatLocalDate(combinedData['quotation_requested_date'] as string | Date) ||
+        formatLocalDate(combinedData['rfq_date'] as string | Date) ||
+        formatLocalDate(rawFormData['request_date'] as string | Date);
+      if (rDate) {
+        combinedData['request_date'] = rDate;
+        combinedData['quotation_requested_date'] = rDate;
+        combinedData['rfq_date'] = rDate;
+      }
+    }
+
     const existingStep = this.step();
     const rawFiles = this.uploadedFiles()
       .map((f) => f.fileRef)
       .filter((f): f is File => !!f);
 
     if (existingStep) {
-      // ── PUT OPERATION: Update existing step directly via projectStepService ─
+      // ── UPDATE OPERATION: Update existing step via dedicated endpoint (PATCH) ─
       const stepId = existingStep.id || existingStep.step_number;
 
-      this.projectStepService
-        .updateStep(pId, stepId, combinedData, 'completed', 100)
-        .subscribe({
-          next: (updatedStep) => {
-            if (def.apiEndpoint) {
-              this.formApiService.updateEntry(def, pId, stepId, combinedData, rawFiles).subscribe({
-                error: (e) => console.warn(`Dedicated endpoint sync:`, e),
+      if (def.apiEndpoint) {
+        // Dedicated endpoint uses PATCH only (no PUT)
+        this.formApiService
+          .updateEntry(def, pId, stepId, combinedData, rawFiles)
+          .subscribe({
+            next: (updatedStep) => {
+              this.saving.set(false);
+              const stepResult: ProjectStep = {
+                ...existingStep,
+                ...updatedStep,
+                id: updatedStep.id || existingStep.id,
+                project_id: pId,
+                form_code: def.formCode,
+                step_name: def.name,
+                data: {
+                  ...((existingStep.data as Record<string, unknown>) || {}),
+                  ...((updatedStep.data as Record<string, unknown>) || {}),
+                  ...combinedData,
+                },
+              };
+
+              this.messageService?.add({
+                severity: 'success',
+                summary: 'Changes Saved',
+                detail: `${updatedStep.step_name || def.name} has been updated successfully.`,
               });
-            }
-
-            this.saving.set(false);
-            const stepResult: ProjectStep = {
-              ...existingStep,
-              ...updatedStep,
-              id: updatedStep.id || existingStep.id,
-              project_id: pId,
-              form_code: def.formCode,
-              step_name: def.name,
-              data: {
-                ...((existingStep.data as Record<string, unknown>) || {}),
-                ...((updatedStep.data as Record<string, unknown>) || {}),
-                ...combinedData,
-              },
-            };
-
-            this.messageService?.add({
-              severity: 'success',
-              summary: 'Changes Saved',
-              detail: `${updatedStep.step_name || def.name} has been updated successfully.`,
-            });
-            this.stepSaved.emit(stepResult);
-            this.close();
-          },
-          error: () => {
-            // Fallback: If project step PUT failed, attempt formApiService
-            if (def.apiEndpoint) {
-              this.formApiService
-                .updateEntry(def, pId, stepId, combinedData, rawFiles)
-                .subscribe({
-                  next: (fallbackStep) => {
-                    this.saving.set(false);
-                    const stepResult: ProjectStep = {
-                      ...existingStep,
-                      ...fallbackStep,
-                      id: fallbackStep.id || existingStep.id,
-                      project_id: pId,
-                      form_code: def.formCode,
-                      step_name: def.name,
-                      data: {
-                        ...((existingStep.data as Record<string, unknown>) || {}),
-                        ...((fallbackStep.data as Record<string, unknown>) || {}),
-                        ...combinedData,
-                      },
-                    };
-                    this.messageService?.add({
-                      severity: 'success',
-                      summary: 'Changes Saved',
-                      detail: `${fallbackStep.step_name || def.name} has been updated successfully.`,
-                    });
-                    this.stepSaved.emit(stepResult);
-                    this.close();
-                  },
-                  error: () => {
-                    this.saving.set(false);
-                    this.messageService?.add({
-                      severity: 'error',
-                      summary: 'Save Failed',
-                      detail: 'Could not update step data on the server. Please try again.',
-                    });
-                  },
-                });
-            } else {
+              this.stepSaved.emit(stepResult);
+              this.close();
+            },
+            error: () => {
               this.saving.set(false);
               this.messageService?.add({
                 severity: 'error',
                 summary: 'Save Failed',
                 detail: 'Could not update step data on the server. Please try again.',
               });
-            }
-          },
-        });
+            },
+          });
+      } else {
+        // Fallback for steps without dedicated endpoint
+        this.projectStepService
+          .updateStep(pId, stepId, combinedData, 'completed', 100)
+          .subscribe({
+            next: (updatedStep) => {
+              this.saving.set(false);
+              const stepResult: ProjectStep = {
+                ...existingStep,
+                ...updatedStep,
+                id: updatedStep.id || existingStep.id,
+                project_id: pId,
+                form_code: def.formCode,
+                step_name: def.name,
+                data: {
+                  ...((existingStep.data as Record<string, unknown>) || {}),
+                  ...((updatedStep.data as Record<string, unknown>) || {}),
+                  ...combinedData,
+                },
+              };
+
+              this.messageService?.add({
+                severity: 'success',
+                summary: 'Changes Saved',
+                detail: `${updatedStep.step_name || def.name} has been updated successfully.`,
+              });
+              this.stepSaved.emit(stepResult);
+              this.close();
+            },
+            error: () => {
+              this.saving.set(false);
+              this.messageService?.add({
+                severity: 'error',
+                summary: 'Save Failed',
+                detail: 'Could not update step data on the server. Please try again.',
+              });
+            },
+          });
+      }
     } else {
-      // ── POST OPERATION: Create new entry via projectStepService & attach to Project Steps ──
-      this.projectStepService
-        .addStep(pId, def.formCode, def.name, combinedData, 'completed', 100)
-        .subscribe({
-          next: (addedStep) => {
-            if (def.apiEndpoint) {
-              this.formApiService.createEntry(def, pId, combinedData, rawFiles).subscribe({
-                error: (e) => console.warn(`Dedicated endpoint creation:`, e),
-              });
-            }
-            this.saving.set(false);
-            const stepWithMeta: ProjectStep = {
-              ...addedStep,
-              id: addedStep.id,
-              project_id: pId,
-              form_code: def.formCode,
-              step_name: def.name,
-              step_number: addedStep.step_number || addedStep.step_order || this.step()?.step_number || 1,
-              step_order: addedStep.step_order || addedStep.step_number || this.step()?.step_order || 1,
-              data: {
-                ...((addedStep.data as Record<string, unknown>) || {}),
-                ...combinedData,
-              },
-            };
-            this.messageService?.add({
-              severity: 'success',
-              summary: 'Form Attached!',
-              detail: `${def.name} has been added to the project pipeline.`,
-            });
-            this.stepSaved.emit(stepWithMeta);
-            this.close();
-          },
-          error: () => {
-            // Fallback: If direct addStep failed, attempt formApiService createEntry
-            if (def.apiEndpoint) {
-              this.formApiService.createEntry(def, pId, combinedData, rawFiles).subscribe({
-                next: (newStep) => {
-                  this.saving.set(false);
-                  this.messageService?.add({
-                    severity: 'success',
-                    summary: 'Form Attached!',
-                    detail: `${def.name} has been added to the project pipeline.`,
-                  });
-                  this.stepSaved.emit(newStep);
-                  this.close();
+      // ── CREATE OPERATION: Create new step directly via dedicated endpoint or projectStepService ──
+      if (def.apiEndpoint) {
+        this.formApiService
+          .createEntry(def, pId, combinedData, rawFiles)
+          .subscribe({
+            next: (newStep) => {
+              this.saving.set(false);
+              const stepWithMeta: ProjectStep = {
+                ...newStep,
+                id: newStep.id,
+                project_id: pId,
+                form_code: def.formCode,
+                step_name: def.name,
+                step_number: newStep.step_number || newStep.step_order || 1,
+                step_order: newStep.step_order || newStep.step_number || 1,
+                data: {
+                  ...((newStep.data as Record<string, unknown>) || {}),
+                  ...combinedData,
                 },
-                error: () => {
-                  this.saving.set(false);
-                  this.messageService?.add({
-                    severity: 'error',
-                    summary: 'Creation Failed',
-                    detail: 'Could not attach step to the project on the server.',
-                  });
-                },
+              };
+              this.messageService?.add({
+                severity: 'success',
+                summary: 'Form Attached!',
+                detail: `${def.name} has been added to the project pipeline.`,
               });
-            } else {
+              this.stepSaved.emit(stepWithMeta);
+              this.close();
+            },
+            error: () => {
               this.saving.set(false);
               this.messageService?.add({
                 severity: 'error',
                 summary: 'Creation Failed',
                 detail: 'Could not attach step to the project on the server.',
               });
-            }
-          },
-        });
+            },
+          });
+      } else {
+        this.projectStepService
+          .addStep(pId, def.formCode, def.name, combinedData, 'completed', 100)
+          .subscribe({
+            next: (addedStep) => {
+              this.saving.set(false);
+              const stepWithMeta: ProjectStep = {
+                ...addedStep,
+                id: addedStep.id,
+                project_id: pId,
+                form_code: def.formCode,
+                step_name: def.name,
+                step_number: addedStep.step_number || addedStep.step_order || 1,
+                step_order: addedStep.step_order || addedStep.step_number || 1,
+                data: {
+                  ...((addedStep.data as Record<string, unknown>) || {}),
+                  ...combinedData,
+                },
+              };
+              this.messageService?.add({
+                severity: 'success',
+                summary: 'Form Attached!',
+                detail: `${def.name} has been added to the project pipeline.`,
+              });
+              this.stepSaved.emit(stepWithMeta);
+              this.close();
+            },
+            error: () => {
+              this.saving.set(false);
+              this.messageService?.add({
+                severity: 'error',
+                summary: 'Creation Failed',
+                detail: 'Could not attach step to the project on the server.',
+              });
+            },
+          });
+      }
     }
   }
 
