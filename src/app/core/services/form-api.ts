@@ -178,6 +178,22 @@ export function normalizeBackendEntityToStep(
     if (n && !combinedData['tender_no']) combinedData['tender_no'] = n;
   }
 
+  // Canonical title, number, and issue date fields for PAC Tender (FORM_13_PAC_TENDER)
+  if (formDef.formCode === 'FORM_13_PAC_TENDER') {
+    const t = (item['tender_title'] ?? item['title'] ?? item['pac_title'] ?? '') as string;
+    const n = (item['tender_no'] ?? item['tender_number'] ?? item['pac_no'] ?? item['number'] ?? '') as string;
+    const d = (item['tender_issue_date'] ?? item['tender_date'] ?? item['issue_date'] ?? '') as string;
+    if (t && !combinedData['tender_title']) combinedData['tender_title'] = t;
+    if (n) {
+      if (!combinedData['tender_no']) combinedData['tender_no'] = n;
+      if (!combinedData['tender_number']) combinedData['tender_number'] = n;
+    }
+    if (d) {
+      if (!combinedData['tender_issue_date']) combinedData['tender_issue_date'] = d;
+      if (!combinedData['tender_date']) combinedData['tender_date'] = d;
+    }
+  }
+
   // Calculate and bridge total_net_amount and total_gross_amount for tables with autoCalculateTotal
   if (formDef.tableConfig?.autoCalculateTotal) {
     const tKey = formDef.tableConfig.totalKey || 'total_amount';
@@ -449,6 +465,19 @@ export class FormApiService {
       delete bodyPayload['gst_rate'];
     }
 
+    if (formDef.formCode === 'FORM_13_PAC_TENDER') {
+      if (bodyPayload['tender_no'] && !bodyPayload['tender_number']) {
+        bodyPayload['tender_number'] = bodyPayload['tender_no'];
+      } else if (bodyPayload['tender_number'] && !bodyPayload['tender_no']) {
+        bodyPayload['tender_no'] = bodyPayload['tender_number'];
+      }
+      if (bodyPayload['tender_issue_date'] && !bodyPayload['tender_date']) {
+        bodyPayload['tender_date'] = bodyPayload['tender_issue_date'];
+      } else if (bodyPayload['tender_date'] && !bodyPayload['tender_issue_date']) {
+        bodyPayload['tender_issue_date'] = bodyPayload['tender_date'];
+      }
+    }
+
     if (formDef.tableConfig?.autoCalculateTotal) {
       const tKey = formDef.tableConfig.totalKey || 'total_amount';
       const computedNet = cleanedItems.reduce((sum, row) => sum + (Number(row[tKey]) || 0), 0);
@@ -556,6 +585,19 @@ export class FormApiService {
       delete bodyPayload['gst_rate'];
     }
 
+    if (formDef.formCode === 'FORM_13_PAC_TENDER') {
+      if (bodyPayload['tender_no'] && !bodyPayload['tender_number']) {
+        bodyPayload['tender_number'] = bodyPayload['tender_no'];
+      } else if (bodyPayload['tender_number'] && !bodyPayload['tender_no']) {
+        bodyPayload['tender_no'] = bodyPayload['tender_number'];
+      }
+      if (bodyPayload['tender_issue_date'] && !bodyPayload['tender_date']) {
+        bodyPayload['tender_date'] = bodyPayload['tender_issue_date'];
+      } else if (bodyPayload['tender_date'] && !bodyPayload['tender_issue_date']) {
+        bodyPayload['tender_issue_date'] = bodyPayload['tender_date'];
+      }
+    }
+
     if (formDef.tableConfig?.autoCalculateTotal) {
       const tKey = formDef.tableConfig.totalKey || 'total_amount';
       const computedNet = cleanedItems.reduce((sum, row) => sum + (Number(row[tKey]) || 0), 0);
@@ -595,6 +637,12 @@ export class FormApiService {
     files.forEach((file) => fd.append('file', file, file.name));
 
     return this.http.patch<Record<string, unknown>>(endpointUrl, fd).pipe(
+      catchError((err: unknown) => {
+        if (err && typeof err === 'object' && 'status' in err && (err as { status: number }).status === 405) {
+          return this.http.put<Record<string, unknown>>(endpointUrl, fd);
+        }
+        return throwError(() => err);
+      }),
       map((res) => {
         const item = (res && typeof res === 'object' && 'data' in res ? res['data'] : res) as Record<string, unknown>;
         return normalizeBackendEntityToStep(item || bodyPayload, formDef, projectId);

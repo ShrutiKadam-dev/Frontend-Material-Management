@@ -453,7 +453,10 @@ export class ProjectTimeline implements OnInit {
         : stepOrNumber;
 
     let formCode = step?.form_code;
-    if (!formCode && step?.step_number) {
+    const sName = (step?.step_name || '').toLowerCase();
+    if (sName.includes('pac') || sName.includes('customer tender') || step?.step_number === 6) {
+      formCode = 'FORM_13_PAC_TENDER';
+    } else if (!formCode && step?.step_number) {
       formCode = getFormDefinition(step.step_number)?.formCode;
     } else if (!formCode && typeof stepOrNumber === 'number') {
       formCode = getFormDefinition(stepOrNumber)?.formCode;

@@ -482,7 +482,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     phaseId: 'phase-1',
     icon: 'pi pi-building',
     description: 'Proprietary Article Certificate (PAC) tender enquiry terms, dates, and specifications',
-    apiEndpoint: '/api/v1/customer-tenders',
+    apiEndpoint: '/api/v1/pac-tenders',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
@@ -1332,6 +1332,15 @@ export const FORM_CODE_ALIASES: Record<string, string> = {
   BID_DOC_ICB: 'FORM_36_BID_DOC_ICB',
   'bid-document-icb': 'FORM_36_BID_DOC_ICB',
   'bid_document_icb': 'FORM_36_BID_DOC_ICB',
+  FORM_13: 'FORM_13_PAC_TENDER',
+  FORM_PAC_TENDER: 'FORM_13_PAC_TENDER',
+  'pac-tender': 'FORM_13_PAC_TENDER',
+  'pac_tender': 'FORM_13_PAC_TENDER',
+  'pac-tenders': 'FORM_13_PAC_TENDER',
+  FORM_CUSTOMER_TENDER: 'FORM_13_PAC_TENDER',
+  'customer-tenders': 'FORM_13_PAC_TENDER',
+  'customer-tender': 'FORM_13_PAC_TENDER',
+  'customer_tender': 'FORM_13_PAC_TENDER',
 };
 
 /** Lookup map by form code */
@@ -1374,7 +1383,10 @@ export function getFormDefinition(codeOrId: string | number): FormDefinition | u
     FORM_CATALOG.find((f) => f.formCode.toLowerCase() === lower) ||
     FORM_CATALOG.find((f) => f.formCode.toLowerCase() === resolvedCode.toLowerCase()) ||
     FORM_CATALOG.find((f) => f.name.toLowerCase() === lower) ||
-    FORM_CATALOG.find((f) => f.apiEndpoint && f.apiEndpoint.toLowerCase() === lower)
+    FORM_CATALOG.find((f) => f.apiEndpoint && f.apiEndpoint.toLowerCase() === lower) ||
+    (lower === '/api/v1/customer-tenders' || lower === '/api/v1/pac-tenders'
+      ? FORM_CATALOG.find((f) => f.formCode === 'FORM_13_PAC_TENDER')
+      : undefined)
   );
 }
 

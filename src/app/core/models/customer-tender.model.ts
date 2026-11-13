@@ -85,3 +85,8 @@ export interface CustomerTenderUpdateInput {
   remarks?: Array<{ remark: string }> | string[];
   items?: CustomerTenderItem[];
 }
+
+export type PacTender = CustomerTender;
+export type PacTenderCreateInput = CustomerTenderCreateInput;
+export type PacTenderUpdateInput = CustomerTenderUpdateInput;
+export type PacTenderItem = CustomerTenderItem;

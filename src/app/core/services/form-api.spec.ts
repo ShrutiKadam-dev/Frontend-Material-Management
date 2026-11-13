@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { of, throwError } from 'rxjs';
 
 import { FormApiService, normalizeBackendEntityToStep } from './form-api';
-import { FormDefinition } from '../constants/form-catalog';
+import { FormDefinition, getFormDefinition } from '../constants/form-catalog';
 import { ProjectStep } from '../models/project-step.model';
 
 describe('FormApiService', () => {
@@ -559,6 +559,142 @@ describe('FormApiService', () => {
       });
 
       expect(corr).toBeNull();
+    });
+  });
+
+  describe('FORM_13_PAC_TENDER endpoint & CRUD operations', () => {
+    it('should configure FORM_13_PAC_TENDER with dedicated endpoint /api/v1/pac-tenders', () => {
+      const pacDef = getFormDefinition('FORM_13_PAC_TENDER');
+      expect(pacDef).toBeDefined();
+      expect(pacDef?.apiEndpoint).toBe('/api/v1/pac-tenders');
+    });
+
+    it('getEntries should query /api/v1/pac-tenders?project_id=16 for PAC Tender', async () => {
+      const pacDef = getFormDefinition('FORM_13_PAC_TENDER')!;
+      const mockHttp = {
+        get: vi.fn().mockReturnValue(
+          of([
+            {
+              id: 101,
+              project_id: 16,
+              tender_title: 'Defense Turbine PAC',
+              tender_no: 'PAC-2026-001',
+              tender_issue_date: '2026-11-10',
+            },
+          ]),
+        ),
+        post: vi.fn(),
+        patch: vi.fn(),
+        delete: vi.fn(),
+      };
+
+      const service = Object.create(FormApiService.prototype);
+      service.http = mockHttp;
+      service.apiBaseUrl = 'http://localhost:5000';
+
+      const entries = await new Promise<ProjectStep[]>((resolve) => {
+        service.getEntries(pacDef, 16).subscribe(resolve);
+      });
+
+      expect(mockHttp.get).toHaveBeenCalledWith('http://localhost:5000/api/v1/pac-tenders?project_id=16');
+      expect(entries.length).toBe(1);
+      expect(entries[0].data?.['tender_no']).toBe('PAC-2026-001');
+      expect(entries[0].data?.['tender_number']).toBe('PAC-2026-001');
+    });
+
+    it('createEntry should send POST to /api/v1/pac-tenders', async () => {
+      const pacDef = getFormDefinition('FORM_13_PAC_TENDER')!;
+      const mockHttp = {
+        get: vi.fn(),
+        post: vi.fn().mockReturnValue(
+          of({
+            id: 101,
+            project_id: 16,
+            tender_title: 'New PAC Tender',
+            tender_no: 'PAC-2026-001',
+          }),
+        ),
+        patch: vi.fn(),
+        delete: vi.fn(),
+      };
+
+      const service = Object.create(FormApiService.prototype);
+      service.http = mockHttp;
+      service.apiBaseUrl = 'http://localhost:5000';
+
+      const created = await new Promise<ProjectStep>((resolve) => {
+        service
+          .createEntry(pacDef, 16, {
+            tender_title: 'New PAC Tender',
+            tender_no: 'PAC-2026-001',
+          })
+          .subscribe(resolve);
+      });
+
+      expect(mockHttp.post).toHaveBeenCalledWith(
+        'http://localhost:5000/api/v1/pac-tenders',
+        expect.any(FormData),
+      );
+      expect(created.data?.['tender_title']).toBe('New PAC Tender');
+      expect(created.data?.['tender_no']).toBe('PAC-2026-001');
+    });
+
+    it('updateEntry should send PATCH to /api/v1/pac-tenders/:id', async () => {
+      const pacDef = getFormDefinition('FORM_13_PAC_TENDER')!;
+      const mockHttp = {
+        get: vi.fn(),
+        post: vi.fn(),
+        patch: vi.fn().mockReturnValue(
+          of({
+            id: 101,
+            project_id: 16,
+            tender_title: 'Updated PAC Tender',
+            tender_no: 'PAC-2026-001-REV',
+          }),
+        ),
+        delete: vi.fn(),
+      };
+
+      const service = Object.create(FormApiService.prototype);
+      service.http = mockHttp;
+      service.apiBaseUrl = 'http://localhost:5000';
+
+      const updated = await new Promise<ProjectStep>((resolve) => {
+        service
+          .updateEntry(pacDef, 16, 101, {
+            tender_title: 'Updated PAC Tender',
+            tender_no: 'PAC-2026-001-REV',
+          })
+          .subscribe(resolve);
+      });
+
+      expect(mockHttp.patch).toHaveBeenCalledWith(
+        'http://localhost:5000/api/v1/pac-tenders/101',
+        expect.any(FormData),
+      );
+      expect(updated.data?.['tender_title']).toBe('Updated PAC Tender');
+      expect(updated.data?.['tender_no']).toBe('PAC-2026-001-REV');
+    });
+
+    it('deleteEntry should send DELETE to /api/v1/pac-tenders/:id', async () => {
+      const pacDef = getFormDefinition('FORM_13_PAC_TENDER')!;
+      const mockHttp = {
+        get: vi.fn(),
+        post: vi.fn(),
+        patch: vi.fn(),
+        delete: vi.fn().mockReturnValue(of(null)),
+      };
+
+      const service = Object.create(FormApiService.prototype);
+      service.http = mockHttp;
+      service.apiBaseUrl = 'http://localhost:5000';
+
+      const result = await new Promise<boolean>((resolve) => {
+        service.deleteEntry(pacDef, 16, 101).subscribe(resolve);
+      });
+
+      expect(mockHttp.delete).toHaveBeenCalledWith('http://localhost:5000/api/v1/pac-tenders/101');
+      expect(result).toBe(true);
     });
   });
 });

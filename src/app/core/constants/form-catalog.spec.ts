@@ -3,6 +3,7 @@ import {
   FORM_CATALOG,
   FORM_CATALOG_MAP,
   getFormDefinition,
+  LEGACY_STEP_TO_FORM_CODE,
 } from './form-catalog';
 
 describe('FORM_CATALOG Extended Forms (26, 29, 30, 31, 32, 33, 34, 35, 36)', () => {
@@ -63,6 +64,36 @@ describe('FORM_CATALOG Extended Forms (26, 29, 30, 31, 32, 33, 34, 35, 36)', () 
         'as_per_tender_doc',
         'as_per_corrigendum',
       ]);
+    });
+  });
+
+  describe('Form 13: PAC TENDER', () => {
+    it('should be registered with code FORM_13_PAC_TENDER and id 13', () => {
+      const def = getFormDefinition('FORM_13_PAC_TENDER');
+      expect(def).toBeDefined();
+      expect(def?.id).toBe(13);
+      expect(def?.name).toBe('PAC Tender');
+      expect(def?.category).toBe('Pre-Bidding & Tenders');
+      expect(def?.phaseId).toBe('phase-1');
+      expect(getFormDefinition(13)).toEqual(def);
+    });
+
+    it('should use dedicated endpoint /api/v1/pac-tenders', () => {
+      const def = getFormDefinition('FORM_13_PAC_TENDER');
+      expect(def?.apiEndpoint).toBe('/api/v1/pac-tenders');
+      expect(getFormDefinition('/api/v1/pac-tenders')?.formCode).toBe('FORM_13_PAC_TENDER');
+    });
+
+    it('should resolve aliases like pac-tender and FORM_13 to FORM_13_PAC_TENDER', () => {
+      expect(getFormDefinition('pac-tender')?.id).toBe(13);
+      expect(getFormDefinition('pac_tender')?.id).toBe(13);
+      expect(getFormDefinition('FORM_13')?.id).toBe(13);
+      expect(getFormDefinition('customer-tender')?.id).toBe(13);
+      expect(getFormDefinition('customer-tenders')?.id).toBe(13);
+    });
+
+    it('should map legacy step 6 to FORM_13_PAC_TENDER', () => {
+      expect(LEGACY_STEP_TO_FORM_CODE[6]).toBe('FORM_13_PAC_TENDER');
     });
   });
 
