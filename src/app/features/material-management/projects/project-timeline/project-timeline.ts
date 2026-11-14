@@ -449,17 +449,51 @@ export class ProjectTimeline implements OnInit {
 
     const step =
       typeof stepOrNumber === 'number'
-        ? this.steps().find((s) => s.step_number === stepOrNumber || s.id === stepOrNumber)
+        ? (typeof this.steps === 'function' ? this.steps() : []).find(
+            (s) => s.step_number === stepOrNumber || s.id === stepOrNumber,
+          )
         : stepOrNumber;
 
     let formCode = step?.form_code;
-    const sName = (step?.step_name || '').toLowerCase();
-    if (sName.includes('pac') || sName.includes('customer tender') || step?.step_number === 6) {
+    const sName = (step?.step_name || '').toLowerCase().trim();
+
+    // 1. Explicit check for Purchase Order first (by step name or formCode alias)
+    if (
+      sName.includes('purchase order') ||
+      sName.startsWith('po ') ||
+      sName === 'po' ||
+      formCode === 'FORM_14_PURCHASE_ORDER' ||
+      formCode === 'FORM_14' ||
+      formCode === 'FORM_PO' ||
+      formCode === 'purchase-order'
+    ) {
+      formCode = 'FORM_14_PURCHASE_ORDER';
+    }
+    // 2. PAC Tender / Customer Tender (strictly for tender steps, never purchase order)
+    else if (
+      sName.includes('pac tender') ||
+      sName.includes('customer tender') ||
+      (sName.includes('pac') && !sName.includes('package') && !sName.includes('order'))
+    ) {
       formCode = 'FORM_13_PAC_TENDER';
-    } else if (!formCode && step?.step_number) {
-      formCode = getFormDefinition(step.step_number)?.formCode;
-    } else if (!formCode && typeof stepOrNumber === 'number') {
-      formCode = getFormDefinition(stepOrNumber)?.formCode;
+    }
+    // 3. If formCode exists, resolve it via getFormDefinition
+    else if (formCode) {
+      const resolved = getFormDefinition(formCode);
+      if (resolved) {
+        formCode = resolved.formCode;
+      }
+    }
+    // 4. Missing formCode: fallback to legacy step mapping, THEN getFormDefinition
+    else if (step?.step_number) {
+      formCode = LEGACY_STEP_TO_FORM_CODE[step.step_number] || getFormDefinition(step.step_number)?.formCode;
+    } else if (typeof stepOrNumber === 'number') {
+      formCode = LEGACY_STEP_TO_FORM_CODE[stepOrNumber] || getFormDefinition(stepOrNumber)?.formCode;
+    }
+
+    // Safeguard: Never allow a Purchase Order step to route to PAC Tender
+    if (formCode === 'FORM_13_PAC_TENDER' && (sName.includes('purchase order') || sName.startsWith('po ') || sName === 'po')) {
+      formCode = 'FORM_14_PURCHASE_ORDER';
     }
 
     if (formCode) {
@@ -904,9 +938,16 @@ export class ProjectTimeline implements OnInit {
       return PIPELINE_PHASES[0];
     }
     const stepNumber = stepNumberOrStep;
-    const match = this.steps().find((s) => s.step_number === stepNumber);
-    if (match) {
-      return this.getPhaseForStep(match);
+    if (typeof this.steps === 'function') {
+      const match = this.steps().find((s) => s.step_number === stepNumber);
+      if (match) {
+        return this.getPhaseForStep(match);
+      }
+    }
+    const def = getFormDefinition(stepNumber);
+    if (def?.phaseId) {
+      const found = PIPELINE_PHASES.find((p) => p.id === def.phaseId);
+      if (found) return found;
     }
     if (stepNumber <= 7) return PIPELINE_PHASES[0];
     if (stepNumber <= 11) return PIPELINE_PHASES[1];

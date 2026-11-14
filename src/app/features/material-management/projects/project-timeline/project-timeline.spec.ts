@@ -323,4 +323,78 @@ describe('ProjectTimeline getStepDate', () => {
     const res = (component as any).getStepDate(step);
     expect(res).toEqual({ label: 'Cost Sheet Date', date: '31-10-2026' });
   });
+
+  describe('navigateToStep isolation', () => {
+    it('should navigate to FORM_14_PURCHASE_ORDER even when step_number is 6', () => {
+      const navigatedRoutes: unknown[][] = [];
+      const mockRouter = {
+        navigate: (commands: unknown[]) => {
+          navigatedRoutes.push(commands);
+        },
+      };
+      const compInstance = Object.create(ProjectTimeline.prototype);
+      compInstance.router = mockRouter;
+      compInstance.projectIdNumber = () => 16;
+      compInstance.steps = () => [];
+
+      const poStep: ProjectStep = {
+        id: 60,
+        project_id: 16,
+        step_number: 6,
+        step_name: 'Purchase Order (PO)',
+        description: 'Customer purchase order',
+        status: 'in_progress',
+        progress_percentage: 50,
+        completed_at: null,
+        data: null,
+      };
+
+      compInstance.navigateToStep(poStep);
+      expect(navigatedRoutes).toEqual([['/projects', 16, 'forms', 'FORM_14_PURCHASE_ORDER']]);
+    });
+
+    it('should navigate to FORM_13_PAC_TENDER for PAC Tender step', () => {
+      const navigatedRoutes: unknown[][] = [];
+      const mockRouter = {
+        navigate: (commands: unknown[]) => {
+          navigatedRoutes.push(commands);
+        },
+      };
+      const compInstance = Object.create(ProjectTimeline.prototype);
+      compInstance.router = mockRouter;
+      compInstance.projectIdNumber = () => 16;
+      compInstance.steps = () => [];
+
+      const pacStep: ProjectStep = {
+        id: 130,
+        project_id: 16,
+        step_number: 6,
+        step_name: 'PAC Tender',
+        description: 'PAC Tender document',
+        status: 'in_progress',
+        progress_percentage: 50,
+        completed_at: null,
+        data: null,
+      };
+
+      compInstance.navigateToStep(pacStep);
+      expect(navigatedRoutes).toEqual([['/projects', 16, 'forms', 'FORM_13_PAC_TENDER']]);
+    });
+
+    it('should map legacy step 8 to FORM_14_PURCHASE_ORDER when no form_code is present', () => {
+      const navigatedRoutes: unknown[][] = [];
+      const mockRouter = {
+        navigate: (commands: unknown[]) => {
+          navigatedRoutes.push(commands);
+        },
+      };
+      const compInstance = Object.create(ProjectTimeline.prototype);
+      compInstance.router = mockRouter;
+      compInstance.projectIdNumber = () => 16;
+      compInstance.steps = () => [];
+
+      compInstance.navigateToStep(8);
+      expect(navigatedRoutes).toEqual([['/projects', 16, 'forms', 'FORM_14_PURCHASE_ORDER']]);
+    });
+  });
 });

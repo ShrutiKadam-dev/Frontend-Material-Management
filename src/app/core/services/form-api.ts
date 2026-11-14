@@ -264,6 +264,15 @@ export function normalizeBackendEntityToStep(
     }
   }
 
+  // Bridge FORM_14_PURCHASE_ORDER po_no and po_number
+  if (formDef.formCode === 'FORM_14_PURCHASE_ORDER') {
+    const pNo = (item['po_no'] ?? item['po_number'] ?? '') as string;
+    if (pNo) {
+      if (!combinedData['po_no']) combinedData['po_no'] = pNo;
+      if (!combinedData['po_number']) combinedData['po_number'] = pNo;
+    }
+  }
+
   // Calculate and bridge total_net_amount and total_gross_amount for tables with autoCalculateTotal
   if (formDef.tableConfig?.autoCalculateTotal) {
     const tKey = formDef.tableConfig.totalKey || 'total_amount';
@@ -551,6 +560,14 @@ export class FormApiService {
       }
     }
 
+    if (formDef.formCode === 'FORM_14_PURCHASE_ORDER') {
+      if (bodyPayload['po_no'] && !bodyPayload['po_number']) {
+        bodyPayload['po_number'] = bodyPayload['po_no'];
+      } else if (bodyPayload['po_number'] && !bodyPayload['po_no']) {
+        bodyPayload['po_no'] = bodyPayload['po_number'];
+      }
+    }
+
     if (formDef.tableConfig?.autoCalculateTotal) {
       const tKey = formDef.tableConfig.totalKey || 'total_amount';
       const computedNet = cleanedItems.reduce((sum, row) => sum + (Number(row[tKey]) || 0), 0);
@@ -671,6 +688,14 @@ export class FormApiService {
         bodyPayload['tender_date'] = bodyPayload['tender_issue_date'];
       } else if (bodyPayload['tender_date'] && !bodyPayload['tender_issue_date']) {
         bodyPayload['tender_issue_date'] = bodyPayload['tender_date'];
+      }
+    }
+
+    if (formDef.formCode === 'FORM_14_PURCHASE_ORDER') {
+      if (bodyPayload['po_no'] && !bodyPayload['po_number']) {
+        bodyPayload['po_number'] = bodyPayload['po_no'];
+      } else if (bodyPayload['po_number'] && !bodyPayload['po_no']) {
+        bodyPayload['po_no'] = bodyPayload['po_number'];
       }
     }
 

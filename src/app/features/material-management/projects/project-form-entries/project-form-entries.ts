@@ -21,7 +21,7 @@ import { Project } from '../../../../core/models/project.model';
 import { Customer } from '../../../../core/models/customer.model';
 import { Supplier } from '../../../../core/models/supplier.model';
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../../../../core/models/project-step.model';
-import { FormDefinition, FormTableColumn, FORM_CATALOG, getFormDefinition } from '../../../../core/constants/form-catalog';
+import { FormDefinition, FormTableColumn, FORM_CATALOG, getFormDefinition, LEGACY_STEP_TO_FORM_CODE } from '../../../../core/constants/form-catalog';
 import {
   CURRENCY_SYMBOLS,
   getCurrencySymbol,
@@ -313,12 +313,22 @@ export class ProjectFormEntries implements OnInit {
     return steps.filter((s) => {
       const sCode = (s.form_code || '').toLowerCase();
       const sName = (s.step_name || '').toLowerCase();
+
+      // If step has an explicit form_code that doesn't match defCode, don't include it
+      if (sCode && sCode !== defCode && sCode !== rawCode) {
+        return false;
+      }
+
+      const legacyCode = (s.step_number && LEGACY_STEP_TO_FORM_CODE[s.step_number] || '').toLowerCase();
+
       return (
         sCode === defCode ||
         sCode === rawCode ||
+        legacyCode === defCode ||
         s.step_number === def.id ||
         sName === defName ||
-        (defName.length > 5 && sName.includes(defName))
+        (defName.length > 5 && sName.includes(defName)) ||
+        (sName.length > 3 && defName.includes(sName))
       );
     });
   });

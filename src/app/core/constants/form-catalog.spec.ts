@@ -97,6 +97,37 @@ describe('FORM_CATALOG Extended Forms (26, 29, 30, 31, 32, 33, 34, 35, 36)', () 
     });
   });
 
+  describe('Form 14: PURCHASE ORDER (PO)', () => {
+    it('should be registered with code FORM_14_PURCHASE_ORDER and id 14', () => {
+      const def = getFormDefinition('FORM_14_PURCHASE_ORDER');
+      expect(def).toBeDefined();
+      expect(def?.id).toBe(14);
+      expect(def?.name).toBe('Purchase Order (PO)');
+      expect(def?.category).toBe('Supplier Orders & Invoices');
+      expect(def?.phaseId).toBe('phase-3');
+      expect(getFormDefinition(14)).toEqual(def);
+    });
+
+    it('should use dedicated endpoint /api/v1/purchase-orders', () => {
+      const def = getFormDefinition('FORM_14_PURCHASE_ORDER');
+      expect(def?.apiEndpoint).toBe('/api/v1/purchase-orders');
+      expect(getFormDefinition('/api/v1/purchase-orders')?.formCode).toBe('FORM_14_PURCHASE_ORDER');
+    });
+
+    it('should resolve aliases like purchase-order, FORM_PO, FORM_14, and po to FORM_14_PURCHASE_ORDER', () => {
+      expect(getFormDefinition('purchase-order')?.id).toBe(14);
+      expect(getFormDefinition('purchase_order')?.id).toBe(14);
+      expect(getFormDefinition('purchase-orders')?.id).toBe(14);
+      expect(getFormDefinition('FORM_14')?.id).toBe(14);
+      expect(getFormDefinition('FORM_PO')?.id).toBe(14);
+      expect(getFormDefinition('po')?.id).toBe(14);
+    });
+
+    it('should map legacy step 8 to FORM_14_PURCHASE_ORDER', () => {
+      expect(LEGACY_STEP_TO_FORM_CODE[8]).toBe('FORM_14_PURCHASE_ORDER');
+    });
+  });
+
   describe('Form 29: BID DOCUMENT - TECHNO COMMERCIAL TENDER', () => {
     it('should be registered with code FORM_29_BID_DOC_TECHNO_COMMERCIAL and id 29', () => {
       const def = getFormDefinition('FORM_29_BID_DOC_TECHNO_COMMERCIAL');

@@ -1341,6 +1341,16 @@ export const FORM_CODE_ALIASES: Record<string, string> = {
   'customer-tenders': 'FORM_13_PAC_TENDER',
   'customer-tender': 'FORM_13_PAC_TENDER',
   'customer_tender': 'FORM_13_PAC_TENDER',
+  FORM_14: 'FORM_14_PURCHASE_ORDER',
+  FORM_PO: 'FORM_14_PURCHASE_ORDER',
+  FORM_PURCHASE_ORDER: 'FORM_14_PURCHASE_ORDER',
+  'purchase-order': 'FORM_14_PURCHASE_ORDER',
+  'purchase_order': 'FORM_14_PURCHASE_ORDER',
+  'purchase-orders': 'FORM_14_PURCHASE_ORDER',
+  'purchase_orders': 'FORM_14_PURCHASE_ORDER',
+  po: 'FORM_14_PURCHASE_ORDER',
+  'customer-po': 'FORM_14_PURCHASE_ORDER',
+  'customer_po': 'FORM_14_PURCHASE_ORDER',
 };
 
 /** Lookup map by form code */
@@ -1386,7 +1396,9 @@ export function getFormDefinition(codeOrId: string | number): FormDefinition | u
     FORM_CATALOG.find((f) => f.apiEndpoint && f.apiEndpoint.toLowerCase() === lower) ||
     (lower === '/api/v1/customer-tenders' || lower === '/api/v1/pac-tenders'
       ? FORM_CATALOG.find((f) => f.formCode === 'FORM_13_PAC_TENDER')
-      : undefined)
+      : lower === '/api/v1/purchase-orders'
+        ? FORM_CATALOG.find((f) => f.formCode === 'FORM_14_PURCHASE_ORDER')
+        : undefined)
   );
 }
 

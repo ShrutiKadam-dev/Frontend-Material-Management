@@ -1958,8 +1958,13 @@ export class StepFormDialog {
         name.includes('single tender')
       ));
 
-    // Strictly exclude Corrigendum, Bid Submission, and any other non-whitelisted Bid Documents
+    // Strictly exclude Purchase Order, Corrigendum, Bid Submission, and any other non-whitelisted Bid Documents
     if (
+      fcode === 'FORM_14_PURCHASE_ORDER' ||
+      canonicalCode === 'FORM_14_PURCHASE_ORDER' ||
+      name.includes('purchase order') ||
+      name.startsWith('po ') ||
+      name === 'po' ||
       fcode === 'FORM_03_CORRIGENDUM' ||
       canonicalCode === 'FORM_03_CORRIGENDUM' ||
       name.includes('corrigendum') ||
