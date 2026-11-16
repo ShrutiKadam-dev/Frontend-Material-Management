@@ -163,14 +163,6 @@ export class ProjectTimeline implements OnInit {
     () => this.steps().filter((s) => s.status === 'completed').length,
   );
 
-  protected readonly inProgressCount = computed(
-    () => this.steps().filter((s) => s.status === 'in_progress').length,
-  );
-
-  protected readonly pendingCount = computed(
-    () => this.steps().filter((s) => s.status === 'pending' || s.status === 'skipped').length,
-  );
-
   protected readonly progressPercent = computed(() =>
     this.steps().length ? Math.round((this.completedCount() / this.steps().length) * 100) : 0,
   );
@@ -183,10 +175,6 @@ export class ProjectTimeline implements OnInit {
     const firstPending = list.find((s) => s.status === 'pending');
     if (firstPending) return firstPending;
     return list[list.length - 1] ?? null;
-  });
-
-  protected readonly totalRemarksCount = computed(() => {
-    return this.steps().reduce((sum, s) => sum + this.getRemarksCount(s), 0);
   });
 
   protected readonly projectCode = computed(() => {

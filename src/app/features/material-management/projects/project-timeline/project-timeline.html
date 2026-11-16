@@ -105,51 +105,14 @@
         <div class="commercial-col commercial-col--value"
           [title]="'Total Margin: ₹' + ((p.total_margin || 0) | number:'1.2-2')">
           <span class="commercial-label">Total Margin</span>
-          <span class="commercial-value commercial-value--currency" style="color: #059669;">₹{{ (p.total_margin || 0) | number:'1.2-2'
+          <span class="commercial-value commercial-value--currency" style="color: #059669;">₹{{ (p.total_margin || 0) |
+            number:'1.2-2'
             }}</span>
         </div>
         }
       </div>
       }
     </div>
-
-    <!-- Overall Progress Track & Metrics Counter Row (Minimal & Integrated) -->
-    @if (!loading() && steps().length) {
-    <div class="hero-progress-section">
-      <div class="progress-meta-line">
-        <div class="progress-headline">
-          <span class="progress-title">Pipeline Progress</span>
-          <span class="progress-pct" [class.progress-pct--completed]="progressPercent() === 100">{{ progressPercent() }}%</span>
-          <span class="progress-steps-count">({{ completedCount() }} of {{ steps().length }} completed)</span>
-        </div>
-
-        <div class="progress-inline-stats">
-          @if (inProgressCount() > 0) {
-          <span class="progress-stat progress-stat--active">
-            <i class="pi pi-spinner pi-spin" aria-hidden="true"></i>
-            {{ inProgressCount() }} in progress
-          </span>
-          <span class="stat-sep" aria-hidden="true">·</span>
-          }
-          <span class="progress-stat progress-stat--pending">
-            {{ pendingCount() }} in queue
-          </span>
-          @if (totalRemarksCount() > 0) {
-          <span class="stat-sep" aria-hidden="true">·</span>
-          <span class="progress-stat progress-stat--remarks">
-            <i class="pi pi-comments" aria-hidden="true"></i>
-            {{ totalRemarksCount() }} remarks
-          </span>
-          }
-        </div>
-      </div>
-
-      <div class="progress-track" role="progressbar" [attr.aria-valuenow]="progressPercent()" aria-valuemin="0"
-        aria-valuemax="100">
-        <div class="progress-fill" [style.width.%]="progressPercent()" [class.progress-fill--completed]="progressPercent() === 100"></div>
-      </div>
-    </div>
-    }
   </header>
 
   <!-- ── 2. Loading / Error States ────────────────────────────────────── -->
@@ -175,10 +138,11 @@
     </div>
     <div class="empty-pipeline-text">
       <h2>Project Pipeline is Ready</h2>
-      <p>This project has no steps attached yet. Attach your first form (e.g. Query from Customer, RFQ, or Pre-Qualification Bid) to begin tracking milestones.</p>
+      <p>This project has no steps attached yet. Attach your first form (e.g. Query from Customer, RFQ, or
+        Pre-Qualification Bid) to begin tracking milestones.</p>
     </div>
-    <button pButton type="button" icon="pi pi-plus" label="Attach First Form as Step" class="p-button-lg p-button-primary"
-      (click)="openAddStepModal()">
+    <button pButton type="button" icon="pi pi-plus" label="Attach First Form as Step"
+      class="p-button-lg p-button-primary" (click)="openAddStepModal()">
     </button>
   </div>
   } @else {
@@ -186,13 +150,13 @@
   <!-- ── 3. High-Density, Perfectly Aligned Vertical Timeline ─────────── -->
   <div class="vertical-timeline-card app-panel">
     <ol class="project-steps-timeline">
-      @for (step of orderedSteps(); track (step.id || step.step_number); let isLastStep = $last; let isFirstStep = $first) {
+      @for (step of orderedSteps(); track (step.id || step.step_number); let isLastStep = $last; let isFirstStep =
+      $first) {
       <li class="timeline-row" [class.timeline-row--completed]="step.status === 'completed'"
         [class.timeline-row--active]="step.status === 'in_progress'"
         [class.timeline-row--pending]="step.status === 'pending' || step.status === 'skipped'"
-        [attr.role]="isStepClickable(step) ? 'button' : null"
-        [attr.tabindex]="isStepClickable(step) ? 0 : null" (click)="navigateToStep(step)"
-        (keydown.enter)="navigateToStep(step)">
+        [attr.role]="isStepClickable(step) ? 'button' : null" [attr.tabindex]="isStepClickable(step) ? 0 : null"
+        (click)="navigateToStep(step)" (keydown.enter)="navigateToStep(step)">
 
         <!-- Col 1: Spine / Node -->
         <div class="row-spine" aria-hidden="true">
@@ -206,20 +170,19 @@
             }
           </div>
           @if (orderedSteps().length > 1) {
-            @if (isFirstStep) {
-            <span class="spine-line spine-line--first"></span>
-            } @else if (isLastStep) {
-            <span class="spine-line spine-line--last"></span>
-            } @else {
-            <span class="spine-line"></span>
-            }
+          @if (isFirstStep) {
+          <span class="spine-line spine-line--first"></span>
+          } @else if (isLastStep) {
+          <span class="spine-line spine-line--last"></span>
+          } @else {
+          <span class="spine-line"></span>
+          }
           }
         </div>
 
         <!-- Col 2: Step Tag + Title + Description -->
         <div class="col-step-info">
-          <span class="row-step-num">Step {{ step.step_number < 10 ? '0' + step.step_number : step.step_number
-              }}</span>
+          <span class="row-step-num">Step {{ step.step_number < 10 ? '0' + step.step_number : step.step_number }}</span>
               <div class="row-text-stack">
                 <strong class="row-step-title" [title]="step.step_name">{{ step.step_name }}</strong>
               </div>
@@ -228,7 +191,8 @@
         <!-- Col 3: Dates, Data Badges & Remarks -->
         <div class="col-step-badges">
           @if (getStepDate(step); as stepDateInfo) {
-          <span class="meta-tag meta-tag--date" [class.meta-tag--completed]="step.status === 'completed'" [title]="stepDateInfo.label + ': ' + stepDateInfo.date">
+          <span class="meta-tag meta-tag--date" [class.meta-tag--completed]="step.status === 'completed'"
+            [title]="stepDateInfo.label + ': ' + stepDateInfo.date">
             <i class="pi pi-calendar" aria-hidden="true"></i>
             <span class="meta-date-label">{{ stepDateInfo.label }}:</span>
             {{ stepDateInfo.date }}
@@ -262,9 +226,9 @@
         <!-- Col 5: Action Arrow -->
         <div class="col-step-action">
           @if (step.form_code) {
-          <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger remove-step-ico-btn"
-            pTooltip="Remove step from project" tooltipPosition="top" (click)="removeStep(step, $event)"
-            aria-label="Remove step"></button>
+          <button pButton type="button" icon="pi pi-trash"
+            class="p-button-text p-button-sm p-button-danger remove-step-ico-btn" pTooltip="Remove step from project"
+            tooltipPosition="top" (click)="removeStep(step, $event)" aria-label="Remove step"></button>
           }
           <button pButton type="button" icon="pi pi-arrow-right" class="p-button-text p-button-sm open-arrow-btn"
             pTooltip="Open Step Details" tooltipPosition="top" aria-label="Open step"></button>
@@ -284,10 +248,12 @@
       </div>
       <div>
         <h3 class="quick-add-title">Attach Next Form as Step</h3>
-        <p class="quick-add-sub">Choose from {{ allCatalogForms.length }} available forms across Tenders, RFQs, Invoices, Customs, and Settlements</p>
+        <p class="quick-add-sub">Choose from {{ allCatalogForms.length }} available forms across Tenders, RFQs,
+          Invoices, Customs, and Settlements</p>
       </div>
     </div>
-    <button pButton type="button" icon="pi pi-plus" [label]="'Browse ' + allCatalogForms.length + ' Forms'" class="p-button-outlined quick-add-btn"></button>
+    <button pButton type="button" icon="pi pi-plus" [label]="'Browse ' + allCatalogForms.length + ' Forms'"
+      class="p-button-outlined quick-add-btn"></button>
   </div>
   }
 
@@ -372,11 +338,11 @@
 
               <div class="history-entry-meta">
                 <span class="entry-seq-pill">#{{ item.sequence < 10 ? '0' + item.sequence : item.sequence }}</span>
-                @if (item.date) {
-                <span class="entry-timestamp" [title]="'Recorded on ' + item.date">
-                  <i class="pi pi-clock" aria-hidden="true"></i> {{ item.date }}
-                </span>
-                }
+                    @if (item.date) {
+                    <span class="entry-timestamp" [title]="'Recorded on ' + item.date">
+                      <i class="pi pi-clock" aria-hidden="true"></i> {{ item.date }}
+                    </span>
+                    }
               </div>
             </div>
 
@@ -396,25 +362,14 @@
         <span>TM</span>
       </div>
       <div class="composer-input-wrapper">
-        <input
-          pInputText
-          type="text"
-          [value]="newTimelineRemark()"
+        <input pInputText type="text" [value]="newTimelineRemark()"
           (input)="newTimelineRemark.set($any($event.target).value)"
           (keydown.enter)="$event.preventDefault(); addTimelineRemark(currentStep)"
           placeholder="Type a remark or observation for this step and press Enter to send..."
-          class="timeline-chat-input w-full"
-          aria-label="Type remark" />
+          class="timeline-chat-input w-full" aria-label="Type remark" />
       </div>
-      <button
-        pButton
-        type="button"
-        icon="pi pi-send"
-        label="Send"
-        class="timeline-chat-send-btn"
-        [disabled]="!newTimelineRemark().trim()"
-        (click)="addTimelineRemark(currentStep)"
-        aria-label="Send remark">
+      <button pButton type="button" icon="pi pi-send" label="Send" class="timeline-chat-send-btn"
+        [disabled]="!newTimelineRemark().trim()" (click)="addTimelineRemark(currentStep)" aria-label="Send remark">
       </button>
     </div>
   </div>
@@ -434,16 +389,9 @@
 <!-- ══════════════════════════════════════════════════════════════════════
      MODAL: ATTACH FORM AS STEP (CATALOG OF 28 FORMS)
 ══════════════════════════════════════════════════════════════════════ -->
-<p-dialog
-  [visible]="addStepModalVisible()"
-  (visibleChange)="addStepModalVisible.set($event)"
-  [modal]="true"
-  [blockScroll]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [dismissableMask]="false"
-  [style]="{ width: '92vw', maxWidth: '940px', height: '85vh', maxHeight: '90vh' }"
-  styleClass="catalog-modal-dialog"
+<p-dialog [visible]="addStepModalVisible()" (visibleChange)="addStepModalVisible.set($event)" [modal]="true"
+  [blockScroll]="true" [draggable]="false" [resizable]="false" [dismissableMask]="false"
+  [style]="{ width: '92vw', maxWidth: '940px', height: '85vh', maxHeight: '90vh' }" styleClass="catalog-modal-dialog"
   appendTo="body">
 
   <ng-template pTemplate="header">
@@ -471,45 +419,32 @@
             <i class="pi pi-search search-icon"></i>
           </div>
 
-          <input
-            #catalogSearchInput
-            pInputText
-            type="text"
-            [value]="catalogSearch()"
-            (input)="catalogSearch.set($any($event.target).value)"
-            (keydown.escape)="clearCatalogSearch()"
+          <input #catalogSearchInput pInputText type="text" [value]="catalogSearch()"
+            (input)="catalogSearch.set($any($event.target).value)" (keydown.escape)="clearCatalogSearch()"
             placeholder="Search forms by name, code (e.g. PQB, PO, Delivery, RFQ), or description..."
-            class="catalog-search-input"
-            aria-label="Search forms by name or code" />
+            class="catalog-search-input" aria-label="Search forms by name or code" />
 
           <div class="search-actions-group">
             @if (catalogSearch()) {
-              <span
-                class="search-match-pill"
-                [class.search-match-pill--zero]="filteredCatalog().length === 0">
-                @if (filteredCatalog().length > 0) {
-                  <i class="pi pi-check" aria-hidden="true"></i>
-                  <span>{{ filteredCatalog().length }} {{ filteredCatalog().length === 1 ? 'match' : 'matches' }}</span>
-                } @else {
-                  <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-                  <span>0 matches</span>
-                }
-              </span>
+            <span class="search-match-pill" [class.search-match-pill--zero]="filteredCatalog().length === 0">
+              @if (filteredCatalog().length > 0) {
+              <i class="pi pi-check" aria-hidden="true"></i>
+              <span>{{ filteredCatalog().length }} {{ filteredCatalog().length === 1 ? 'match' : 'matches' }}</span>
+              } @else {
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+              <span>0 matches</span>
+              }
+            </span>
 
-              <button
-                type="button"
-                class="search-clear-btn"
-                (click)="clearCatalogSearch()"
-                pTooltip="Clear search (Esc)"
-                tooltipPosition="bottom"
-                aria-label="Clear search">
-                <i class="pi pi-times" aria-hidden="true"></i>
-              </button>
+            <button type="button" class="search-clear-btn" (click)="clearCatalogSearch()" pTooltip="Clear search (Esc)"
+              tooltipPosition="bottom" aria-label="Clear search">
+              <i class="pi pi-times" aria-hidden="true"></i>
+            </button>
             } @else {
-              <div class="search-hint-kbd" pTooltip="Press Esc while typing to clear" tooltipPosition="bottom">
-                <kbd class="kbd-key">ESC</kbd>
-                <span class="kbd-label">to clear</span>
-              </div>
+            <div class="search-hint-kbd" pTooltip="Press Esc while typing to clear" tooltipPosition="bottom">
+              <kbd class="kbd-key">ESC</kbd>
+              <span class="kbd-label">to clear</span>
+            </div>
             }
           </div>
         </div>
@@ -518,16 +453,11 @@
       <!-- Category Filter Chips with Live Counts -->
       <div class="category-chips-row" role="tablist" aria-label="Filter forms by category">
         @for (cat of catalogCategories(); track cat.label) {
-          <button
-            type="button"
-            class="cat-chip"
-            [class.cat-chip--active]="selectedCategory() === cat.label"
-            (click)="selectedCategory.set(cat.label)"
-            role="tab"
-            [attr.aria-selected]="selectedCategory() === cat.label">
-            <span class="cat-chip-label">{{ cat.label }}</span>
-            <span class="cat-chip-count">{{ cat.count }}</span>
-          </button>
+        <button type="button" class="cat-chip" [class.cat-chip--active]="selectedCategory() === cat.label"
+          (click)="selectedCategory.set(cat.label)" role="tab" [attr.aria-selected]="selectedCategory() === cat.label">
+          <span class="cat-chip-label">{{ cat.label }}</span>
+          <span class="cat-chip-count">{{ cat.count }}</span>
+        </button>
         }
       </div>
     </div>
@@ -535,65 +465,52 @@
     <!-- Forms Grid Container -->
     <div class="catalog-cards-container">
       @if (filteredCatalog().length === 0) {
-        <div class="catalog-empty-state">
-          <div class="catalog-empty-icon" aria-hidden="true">
-            <i class="pi pi-search"></i>
-          </div>
-          <h3 class="catalog-empty-title">No Matching Forms Found</h3>
-          <p class="catalog-empty-desc">
-            No form in <strong>"{{ selectedCategory() }}"</strong> matches <span class="empty-search-term">"{{ catalogSearch() }}"</span>. Try adjusting your search term or reset filters.
-          </p>
-          <div class="empty-state-actions">
-            @if (catalogSearch()) {
-              <button
-                pButton
-                type="button"
-                icon="pi pi-times"
-                label="Clear Search Query"
-                class="p-button-outlined p-button-sm clear-search-action-btn"
-                (click)="clearCatalogSearch()">
-              </button>
-            }
-            <button
-              pButton
-              type="button"
-              icon="pi pi-refresh"
-              label="Reset Filters"
-              class="p-button-outlined p-button-sm reset-filter-btn"
-              (click)="resetCatalogFilters()">
-            </button>
-          </div>
+      <div class="catalog-empty-state">
+        <div class="catalog-empty-icon" aria-hidden="true">
+          <i class="pi pi-search"></i>
         </div>
-      } @else {
-        <div class="catalog-cards-grid">
-          @for (form of filteredCatalog(); track form.formCode) {
-            <div
-              class="catalog-card"
-              (click)="onSelectCatalogForm(form)"
-              role="button"
-              tabindex="0"
-              (keydown.enter)="onSelectCatalogForm(form)">
-              
-              <div class="catalog-card-icon" aria-hidden="true">
-                <i [class]="form.icon"></i>
-              </div>
-
-              <div class="catalog-card-body">
-                <div class="card-tags-line">
-                  <span class="card-form-id">{{ form.formCode }}</span>
-                </div>
-                <h4 class="card-form-name">{{ form.name }}</h4>
-              </div>
-
-              <div class="catalog-card-action">
-                <span class="attach-btn-pill">
-                  <i class="pi pi-plus"></i>
-                  <span>Attach</span>
-                </span>
-              </div>
-            </div>
+        <h3 class="catalog-empty-title">No Matching Forms Found</h3>
+        <p class="catalog-empty-desc">
+          No form in <strong>"{{ selectedCategory() }}"</strong> matches <span class="empty-search-term">"{{
+            catalogSearch() }}"</span>. Try adjusting your search term or reset filters.
+        </p>
+        <div class="empty-state-actions">
+          @if (catalogSearch()) {
+          <button pButton type="button" icon="pi pi-times" label="Clear Search Query"
+            class="p-button-outlined p-button-sm clear-search-action-btn" (click)="clearCatalogSearch()">
+          </button>
           }
+          <button pButton type="button" icon="pi pi-refresh" label="Reset Filters"
+            class="p-button-outlined p-button-sm reset-filter-btn" (click)="resetCatalogFilters()">
+          </button>
         </div>
+      </div>
+      } @else {
+      <div class="catalog-cards-grid">
+        @for (form of filteredCatalog(); track form.formCode) {
+        <div class="catalog-card" (click)="onSelectCatalogForm(form)" role="button" tabindex="0"
+          (keydown.enter)="onSelectCatalogForm(form)">
+
+          <div class="catalog-card-icon" aria-hidden="true">
+            <i [class]="form.icon"></i>
+          </div>
+
+          <div class="catalog-card-body">
+            <div class="card-tags-line">
+              <span class="card-form-id">{{ form.formCode }}</span>
+            </div>
+            <h4 class="card-form-name">{{ form.name }}</h4>
+          </div>
+
+          <div class="catalog-card-action">
+            <span class="attach-btn-pill">
+              <i class="pi pi-plus"></i>
+              <span>Attach</span>
+            </span>
+          </div>
+        </div>
+        }
+      </div>
       }
     </div>
   </div>
@@ -601,11 +518,7 @@
   <ng-template pTemplate="footer">
     <div class="catalog-dlg-footer">
       <div class="catalog-footer-right">
-        <button
-          pButton
-          type="button"
-          label="Close"
-          class="p-button-text p-button-secondary cancel-catalog-btn"
+        <button pButton type="button" label="Close" class="p-button-text p-button-secondary cancel-catalog-btn"
           (click)="addStepModalVisible.set(false)">
         </button>
       </div>
@@ -616,36 +529,21 @@
 <!-- ══════════════════════════════════════════════════════════════════════
      MODAL: STEP FORM INPUTS POPUP (GET, POST, PUT, DELETE)
 ══════════════════════════════════════════════════════════════════════ -->
-<app-step-form-dialog
-  [visible]="stepFormModalVisible()"
-  (visibleChange)="stepFormModalVisible.set($event)"
-  [projectId]="projectIdNumber()"
-  [step]="selectedStepForForm()"
-  [formDefinition]="selectedDefForForm()"
-  [projectCode]="projectCode()"
-  [projectTitle]="project()?.project_title || ''"
+<app-step-form-dialog [visible]="stepFormModalVisible()" (visibleChange)="stepFormModalVisible.set($event)"
+  [projectId]="projectIdNumber()" [step]="selectedStepForForm()" [formDefinition]="selectedDefForForm()"
+  [projectCode]="projectCode()" [projectTitle]="project()?.project_title || ''"
   [customerName]="customer()?.name || project()?.customer_name || ''"
-  [supplierName]="supplier()?.name || project()?.supplier_name || ''"
-  [existingSteps]="steps()"
-  (stepSaved)="onStepSaved($event)"
-  (stepDeleted)="onStepDeleted($event)">
+  [supplierName]="supplier()?.name || project()?.supplier_name || ''" [existingSteps]="steps()"
+  (stepSaved)="onStepSaved($event)" (stepDeleted)="onStepDeleted($event)">
 </app-step-form-dialog>
 
 <!-- ══════════════════════════════════════════════════════════════════════
      MODAL: CONFIRM REMOVE STEP DIALOG
 ══════════════════════════════════════════════════════════════════════ -->
-<p-dialog
-  header="Confirm Remove Step"
-  [visible]="deleteStepDialogVisible()"
-  (visibleChange)="deleteStepDialogVisible.set($event)"
-  [modal]="true"
-  [blockScroll]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [dismissableMask]="false"
-  [style]="{ width: '92vw', maxWidth: '440px' }"
-  styleClass="delete-step-confirm-dialog"
-  appendTo="body">
+<p-dialog header="Confirm Remove Step" [visible]="deleteStepDialogVisible()"
+  (visibleChange)="deleteStepDialogVisible.set($event)" [modal]="true" [blockScroll]="true" [draggable]="false"
+  [resizable]="false" [dismissableMask]="false" [style]="{ width: '92vw', maxWidth: '440px' }"
+  styleClass="delete-step-confirm-dialog" appendTo="body">
 
   @if (stepToDelete(); as s) {
   <div class="del-confirm-body">
@@ -664,22 +562,11 @@
 
   <ng-template pTemplate="footer">
     <div class="del-confirm-footer">
-      <button
-        pButton
-        type="button"
-        label="Cancel"
-        class="p-button-text p-button-secondary cancel-del-btn"
-        (click)="cancelDeleteStep()"
-        [disabled]="isDeletingStep()">
+      <button pButton type="button" label="Cancel" class="p-button-text p-button-secondary cancel-del-btn"
+        (click)="cancelDeleteStep()" [disabled]="isDeletingStep()">
       </button>
-      <button
-        pButton
-        type="button"
-        label="Remove Step"
-        icon="pi pi-trash"
-        class="p-button-danger confirm-del-btn"
-        [loading]="isDeletingStep()"
-        (click)="confirmDeleteStep()">
+      <button pButton type="button" label="Remove Step" icon="pi pi-trash" class="p-button-danger confirm-del-btn"
+        [loading]="isDeletingStep()" (click)="confirmDeleteStep()">
       </button>
     </div>
   </ng-template>

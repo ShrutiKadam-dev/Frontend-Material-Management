@@ -5,9 +5,6 @@
     <div class="hero-left">
       <span class="eyebrow">Executive Control Center · Operations Overview</span>
       <h1 id="dashboard-title" class="page-title">{{ greetingTitle() }}</h1>
-      <p class="page-summary">
-        Overall portfolio visibility across all active procurement contracts, client milestones, and dynamic fulfillment workflows.
-      </p>
     </div>
 
     <div class="hero-actions">
@@ -44,33 +41,7 @@
   </div>
   } @else {
 
-  <!-- ── 3. Executive KPI Metrics Grid ───────────────────────────────── -->
-  <div class="kpi-metrics-grid" aria-label="Portfolio executive metrics">
-    @for (metric of metrics(); track metric.label; let idx = $index) {
-    <article class="kpi-card app-panel">
-      <div class="kpi-icon-wrap" [class.kpi-icon--primary]="idx === 0" [class.kpi-icon--success]="idx === 1"
-        [class.kpi-icon--completed]="idx === 2" [class.kpi-icon--progress]="idx === 3">
-        @switch (idx) {
-        @case (0) { <i class="pi pi-briefcase" aria-hidden="true"></i> }
-        @case (1) { <i class="pi pi-wallet" aria-hidden="true"></i> }
-        @case (2) { <i class="pi pi-check-circle" aria-hidden="true"></i> }
-        @default { <i class="pi pi-chart-line" aria-hidden="true"></i> }
-        }
-      </div>
-
-      <div class="kpi-content">
-        <span class="kpi-label">{{ metric.label }}</span>
-        <strong class="kpi-num">{{ metric.value }}</strong>
-        <span class="kpi-hint" [class.hint-warning]="metric.tone === 'warning'"
-          [class.hint-danger]="metric.tone === 'danger'" [class.hint-success]="metric.tone === 'success'">
-          {{ metric.trend }}
-        </span>
-      </div>
-    </article>
-    }
-  </div>
-
-  <!-- ── 4. Overall Operations & Portfolio Analytics Grid ─────────────── -->
+  <!-- ── 3. Overall Operations & Portfolio Analytics Grid ─────────────── -->
   <div class="overview-analytics-grid">
 
     <!-- Panel 1: Pipeline Execution & Project Statuses -->
@@ -98,8 +69,7 @@
             </span>
           </div>
           <div class="stage-track">
-            <div class="stage-fill" [class]="item.fillClass"
-              [style.width.%]="item.percentage"></div>
+            <div class="stage-fill" [class]="item.fillClass" [style.width.%]="item.percentage"></div>
           </div>
         </div>
         }
@@ -330,11 +300,11 @@
           <div class="mpc-steps-info">
             <span class="mpc-dynamic-steps-tag">
               @if (project.total_steps && project.total_steps > 0) {
-                <i class="pi pi-check-circle text-success" aria-hidden="true"></i>
-                {{ project.total_steps }} Steps
+              <i class="pi pi-check-circle text-success" aria-hidden="true"></i>
+              {{ project.total_steps }} Steps
               } @else {
-                <i class="pi pi-bolt text-primary" aria-hidden="true"></i>
-                Dynamic Steps
+              <i class="pi pi-bolt text-primary" aria-hidden="true"></i>
+              Dynamic Steps
               }
             </span>
           </div>

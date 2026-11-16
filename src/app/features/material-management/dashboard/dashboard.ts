@@ -14,7 +14,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { AuthService } from '../../../core/services/auth';
 import { DashboardService } from '../../../core/services/dashboard';
 import { ProjectService } from '../../../core/services/project';
-import { DashboardMetric, DashboardOverviewStats, DashboardProject } from '../../../core/models/dashboard.model';
+import { DashboardOverviewStats, DashboardProject } from '../../../core/models/dashboard.model';
 import { Project } from '../../../core/models/project.model';
 import { getFormDefinition } from '../../../core/constants/form-catalog';
 
@@ -44,7 +44,6 @@ export class Dashboard implements OnInit {
   private readonly router = inject(Router);
 
   // ── State Signals ──────────────────────────────────────────────
-  protected readonly metrics = signal<DashboardMetric[]>([]);
   protected readonly projects = signal<Project[]>([]);
   protected readonly latestProjects = computed(() => {
     const list = this.projects();
@@ -222,7 +221,6 @@ export class Dashboard implements OnInit {
 
     this.dashboardService.getDashboardData().subscribe({
       next: (data) => {
-        this.metrics.set(data.metrics);
         this.recentProjects.set(data.recent_projects);
         if (data.overview_stats) {
           this.overviewStats.set(data.overview_stats);
