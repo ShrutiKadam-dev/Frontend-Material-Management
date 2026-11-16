@@ -39,7 +39,7 @@
         <div class="identity-tags-row">
           <span class="step-seq-badge">Step {{ currentStepIndex() }} of {{ totalStepsCount() }}</span>
           <span class="form-id-badge">{{ def.formCode }}</span>
-          <span class="phase-pill">{{ def.category }}</span>
+          <span class="step-category-pill">{{ def.category }}</span>
           <span class="status-pill" [class]="'status-pill--' + (currentStep()?.status || 'in_progress')">
             {{ currentStep()?.status === 'completed' ? 'Completed' : 'In Progress' }}
           </span>

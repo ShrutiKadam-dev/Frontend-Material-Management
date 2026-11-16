@@ -536,6 +536,7 @@
 }
 
 /* Steps List Container */
+.project-steps-timeline,
 .phase-steps-timeline {
   display: flex;
   flex-direction: column;
@@ -2192,5 +2193,55 @@
   .catalog-cards-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DELETE STEP CONFIRMATION MODAL
+   ══════════════════════════════════════════════════════════════════════ */
+.del-confirm-body {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  padding: 12px 0 6px 0;
+}
+
+.del-warning-icon {
+  align-items: center;
+  background: #fef2f2;
+  border-radius: 50%;
+  color: #dc2626;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 1.4rem;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.del-confirm-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.del-confirm-heading {
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.del-confirm-desc {
+  color: #64748b;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.del-confirm-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 8px;
 }
 

@@ -185,130 +185,94 @@
 
   <!-- ── 3. High-Density, Perfectly Aligned Vertical Timeline ─────────── -->
   <div class="vertical-timeline-card app-panel">
-    @for (phase of timelinePhases(); track phase.id; let isLastPhase = $last) {
-    <section class="timeline-phase-group" [class.phase-group--completed]="phase.isCompleted"
-      [class.phase-group--active]="phase.hasActive">
+    <ol class="project-steps-timeline">
+      @for (step of orderedSteps(); track (step.id || step.step_number); let isLastStep = $last; let isFirstStep = $first) {
+      <li class="timeline-row" [class.timeline-row--completed]="step.status === 'completed'"
+        [class.timeline-row--active]="step.status === 'in_progress'"
+        [class.timeline-row--pending]="step.status === 'pending' || step.status === 'skipped'"
+        [attr.role]="isStepClickable(step) ? 'button' : null"
+        [attr.tabindex]="isStepClickable(step) ? 0 : null" (click)="navigateToStep(step)"
+        (keydown.enter)="navigateToStep(step)">
 
-      <!-- Phase Milestone Header Ribbon -->
-      <div class="phase-ribbon">
-        <div class="phase-ribbon-left">
-          <span class="phase-badge" [class]="phase.badgeClass">{{ phase.stepRange }}</span>
-          <h2 class="phase-title">{{ phase.title }}</h2>
+        <!-- Col 1: Spine / Node -->
+        <div class="row-spine" aria-hidden="true">
+          <div class="spine-node" [class]="'spine-node--' + step.status">
+            @if (step.status === 'completed') {
+            <i class="pi pi-check node-ico"></i>
+            } @else if (step.status === 'in_progress') {
+            <i class="pi pi-spin pi-spinner node-ico"></i>
+            } @else {
+            <span class="node-num">{{ step.step_number }}</span>
+            }
+          </div>
+          @if (orderedSteps().length > 1) {
+            @if (isFirstStep) {
+            <span class="spine-line spine-line--first"></span>
+            } @else if (isLastStep) {
+            <span class="spine-line spine-line--last"></span>
+            } @else {
+            <span class="spine-line"></span>
+            }
+          }
         </div>
 
-        <div class="phase-ribbon-right">
-          @if (phase.totalCount > 0) {
-          <span class="phase-done-pill" [class.phase-done-pill--all]="phase.isCompleted">
-            @if (phase.isCompleted) {
-            <i class="pi pi-check" aria-hidden="true"></i>
-            }
-            {{ phase.completedCount }} / {{ phase.totalCount }} Done
+        <!-- Col 2: Step Tag + Title + Description -->
+        <div class="col-step-info">
+          <span class="row-step-num">Step {{ step.step_number < 10 ? '0' + step.step_number : step.step_number
+              }}</span>
+              <div class="row-text-stack">
+                <strong class="row-step-title" [title]="step.step_name">{{ step.step_name }}</strong>
+              </div>
+        </div>
+
+        <!-- Col 3: Dates, Data Badges & Remarks -->
+        <div class="col-step-badges">
+          @if (getStepDate(step); as stepDateInfo) {
+          <span class="meta-tag meta-tag--date" [class.meta-tag--completed]="step.status === 'completed'" [title]="stepDateInfo.label + ': ' + stepDateInfo.date">
+            <i class="pi pi-calendar" aria-hidden="true"></i>
+            <span class="meta-date-label">{{ stepDateInfo.label }}:</span>
+            {{ stepDateInfo.date }}
           </span>
-          } @else {
-          <button
-            type="button"
-            class="phase-attach-mini-btn"
-            (click)="openAddStepModal(phase.title)"
-            [pTooltip]="'Attach a ' + phase.title + ' form'"
-            tooltipPosition="left">
-            <i class="pi pi-plus" aria-hidden="true"></i>
-            <span>Attach Form</span>
+          }
+
+          @for (badge of getStepDataBadges(step); track badge.label) {
+          <span class="meta-tag" [class]="'meta-tag--' + (badge.type || 'data')" [title]="badge.tooltip || badge.label">
+            @if (badge.icon) { <i [class]="badge.icon" aria-hidden="true"></i> }
+            {{ badge.label }}
+          </span>
+          }
+
+          @if (getRemarksCount(step) > 0) {
+          <button type="button" class="meta-tag meta-tag--remarks" (click)="openRemarksDialog(step, $event)"
+            pTooltip="View step remarks" tooltipPosition="top" aria-label="View remarks for this step">
+            <i class="pi pi-comments" aria-hidden="true"></i>
+            {{ getRemarksCount(step) }} Remark{{ getRemarksCount(step) === 1 ? '' : 's' }}
           </button>
           }
         </div>
-      </div>
 
-      <!-- Timeline Steps (Structured Grid Columns for Clean Alignment) -->
-      <ol class="phase-steps-timeline">
-        @for (step of phase.steps; track (step.id || step.step_number); let isLastStep = $last; let isFirstStep = $first) {
-        <li class="timeline-row" [class.timeline-row--completed]="step.status === 'completed'"
-          [class.timeline-row--active]="step.status === 'in_progress'"
-          [class.timeline-row--pending]="step.status === 'pending' || step.status === 'skipped'"
-          [attr.role]="isStepClickable(step) ? 'button' : null"
-          [attr.tabindex]="isStepClickable(step) ? 0 : null" (click)="navigateToStep(step)"
-          (keydown.enter)="navigateToStep(step)">
+        <!-- Col 4: Status Chip -->
+        <div class="col-step-status">
+          <span class="row-status-chip" [class]="'row-status-chip--' + step.status">
+            <i class="pi" [class]="statusIcon(step.status)" aria-hidden="true"></i>
+            {{ statusLabel(step.status) }}
+          </span>
+        </div>
 
-          <!-- Col 1: Spine / Node -->
-          <div class="row-spine" aria-hidden="true">
-            <div class="spine-node" [class]="'spine-node--' + step.status">
-              @if (step.status === 'completed') {
-              <i class="pi pi-check node-ico"></i>
-              } @else if (step.status === 'in_progress') {
-              <i class="pi pi-spin pi-spinner node-ico"></i>
-              } @else {
-              <span class="node-num">{{ step.step_number }}</span>
-              }
-            </div>
-            @if (phase.steps.length > 1) {
-              @if (isFirstStep) {
-              <span class="spine-line spine-line--first"></span>
-              } @else if (isLastStep) {
-              <span class="spine-line spine-line--last"></span>
-              } @else {
-              <span class="spine-line"></span>
-              }
-            }
-          </div>
+        <!-- Col 5: Action Arrow -->
+        <div class="col-step-action">
+          @if (step.form_code) {
+          <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger remove-step-ico-btn"
+            pTooltip="Remove step from project" tooltipPosition="top" (click)="removeStep(step, $event)"
+            aria-label="Remove step"></button>
+          }
+          <button pButton type="button" icon="pi pi-arrow-right" class="p-button-text p-button-sm open-arrow-btn"
+            pTooltip="Open Step Details" tooltipPosition="top" aria-label="Open step"></button>
+        </div>
 
-          <!-- Col 2: Step Tag + Title + Description -->
-          <div class="col-step-info">
-            <span class="row-step-num">Step {{ step.step_number < 10 ? '0' + step.step_number : step.step_number
-                }}</span>
-                <div class="row-text-stack">
-                  <strong class="row-step-title" [title]="step.step_name">{{ step.step_name }}</strong>
-                </div>
-          </div>
-
-          <!-- Col 3: Dates, Data Badges & Remarks -->
-          <div class="col-step-badges">
-            @if (getStepDate(step); as stepDateInfo) {
-            <span class="meta-tag meta-tag--date" [class.meta-tag--completed]="step.status === 'completed'" [title]="stepDateInfo.label + ': ' + stepDateInfo.date">
-              <i class="pi pi-calendar" aria-hidden="true"></i>
-              <span class="meta-date-label">{{ stepDateInfo.label }}:</span>
-              {{ stepDateInfo.date }}
-            </span>
-            }
-
-            @for (badge of getStepDataBadges(step); track badge.label) {
-            <span class="meta-tag" [class]="'meta-tag--' + (badge.type || 'data')" [title]="badge.tooltip || badge.label">
-              @if (badge.icon) { <i [class]="badge.icon" aria-hidden="true"></i> }
-              {{ badge.label }}
-            </span>
-            }
-
-            @if (getRemarksCount(step) > 0) {
-            <button type="button" class="meta-tag meta-tag--remarks" (click)="openRemarksDialog(step, $event)"
-              pTooltip="View step remarks" tooltipPosition="top" aria-label="View remarks for this step">
-              <i class="pi pi-comments" aria-hidden="true"></i>
-              {{ getRemarksCount(step) }} Remark{{ getRemarksCount(step) === 1 ? '' : 's' }}
-            </button>
-            }
-          </div>
-
-          <!-- Col 4: Status Chip -->
-          <div class="col-step-status">
-            <span class="row-status-chip" [class]="'row-status-chip--' + step.status">
-              <i class="pi" [class]="statusIcon(step.status)" aria-hidden="true"></i>
-              {{ statusLabel(step.status) }}
-            </span>
-          </div>
-
-          <!-- Col 5: Action Arrow -->
-          <div class="col-step-action">
-            @if (step.form_code) {
-            <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger remove-step-ico-btn"
-              pTooltip="Remove step from project" tooltipPosition="top" (click)="removeStep(step, $event)"
-              aria-label="Remove step"></button>
-            }
-            <button pButton type="button" icon="pi pi-arrow-right" class="p-button-text p-button-sm open-arrow-btn"
-              pTooltip="Open Step Details" tooltipPosition="top" aria-label="Open step"></button>
-          </div>
-
-        </li>
-        }
-      </ol>
-    </section>
-    }
+      </li>
+      }
+    </ol>
   </div>
 
   <!-- Quick Add Form as Step Callout Card -->
@@ -346,7 +310,6 @@
         <div class="dlg-history-chips">
           <span class="dlg-step-badge">Step {{ currentStep.step_number < 10 ? '0' + currentStep.step_number :
               currentStep.step_number }}</span>
-              <span class="dlg-phase-badge">{{ getPhaseForStep(currentStep.step_number).shortTitle }}</span>
         </div>
         <h2 class="dlg-history-title">{{ currentStep.step_name }}</h2>
       </div>
@@ -667,3 +630,57 @@
   (stepSaved)="onStepSaved($event)"
   (stepDeleted)="onStepDeleted($event)">
 </app-step-form-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: CONFIRM REMOVE STEP DIALOG
+══════════════════════════════════════════════════════════════════════ -->
+<p-dialog
+  header="Confirm Remove Step"
+  [visible]="deleteStepDialogVisible()"
+  (visibleChange)="deleteStepDialogVisible.set($event)"
+  [modal]="true"
+  [blockScroll]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [dismissableMask]="false"
+  [style]="{ width: '92vw', maxWidth: '440px' }"
+  styleClass="delete-step-confirm-dialog"
+  appendTo="body">
+
+  @if (stepToDelete(); as s) {
+  <div class="del-confirm-body">
+    <div class="del-warning-icon" aria-hidden="true">
+      <i class="pi pi-exclamation-triangle"></i>
+    </div>
+    <div class="del-confirm-text">
+      <h3 class="del-confirm-heading">Remove Step {{ s.step_number }}?</h3>
+      <p class="del-confirm-desc">
+        Are you sure you want to remove <strong>{{ s.step_name }}</strong> from this project?
+        This action cannot be undone and will permanently remove all associated form data.
+      </p>
+    </div>
+  </div>
+  }
+
+  <ng-template pTemplate="footer">
+    <div class="del-confirm-footer">
+      <button
+        pButton
+        type="button"
+        label="Cancel"
+        class="p-button-text p-button-secondary cancel-del-btn"
+        (click)="cancelDeleteStep()"
+        [disabled]="isDeletingStep()">
+      </button>
+      <button
+        pButton
+        type="button"
+        label="Remove Step"
+        icon="pi pi-trash"
+        class="p-button-danger confirm-del-btn"
+        [loading]="isDeletingStep()"
+        (click)="confirmDeleteStep()">
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>

@@ -2340,8 +2340,8 @@ export class StepFormDialog {
             : status === 'completed'
               ? (raw['updated_at'] ? String(raw['updated_at']) : raw['created_at'] ? String(raw['created_at']) : null)
               : null,
-      category: fallbackStep?.category || 'Pre-Bidding & Tenders',
-      phase: fallbackStep?.phase || 'phase-1',
+      category: fallbackStep?.category,
+      phase: fallbackStep?.phase,
       data: dataObj,
       remarks: fallbackStep?.remarks || [],
       created_at: (raw['created_at'] as string) || fallbackStep?.created_at,

@@ -504,7 +504,6 @@ export class ProjectFormEntries implements OnInit {
       ...savedStep,
       form_code: savedStep.form_code || def?.formCode,
       step_name: savedStep.step_name || def?.name || 'Step Details',
-      phase: savedStep.phase || def?.phaseId,
       category: savedStep.category || def?.category,
     };
 

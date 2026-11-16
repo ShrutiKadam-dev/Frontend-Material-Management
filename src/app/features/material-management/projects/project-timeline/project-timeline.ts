@@ -35,15 +35,6 @@ import {
 } from '../../../../core/constants/form-catalog';
 import { StepFormDialog } from './step-form-dialog/step-form-dialog';
 
-import {
-  CATEGORY_TO_PHASE_ID,
-  PhaseFilter,
-  PhaseInfo,
-  PIPELINE_PHASES,
-} from '../../../../core/constants/pipeline-phases.constant';
-
-export type { PhaseFilter, PhaseInfo };
-export { CATEGORY_TO_PHASE_ID, PIPELINE_PHASES };
 export type TimelineStatusFilter = 'all' | 'completed' | 'in_progress' | 'pending';
 export type TimelineViewMode = 'grid' | 'board' | 'table';
 
@@ -102,7 +93,6 @@ export class ProjectTimeline implements OnInit {
   protected readonly error = signal<string | null>(null);
 
   // ── Interactive Dashboard Controls ────────────────────────────────
-  protected readonly activePhaseFilter = signal<PhaseFilter>('all');
   protected readonly activeStatusFilter = signal<TimelineStatusFilter>('all');
   protected readonly searchQuery = signal<string>('');
   protected readonly viewMode = signal<TimelineViewMode>('grid');
@@ -135,6 +125,11 @@ export class ProjectTimeline implements OnInit {
     () => Number(this.route.snapshot.paramMap.get('projectId')) || 0,
   );
 
+  // ── Delete Step Confirmation Dialog Signals ──────────────────────
+  protected readonly deleteStepDialogVisible = signal<boolean>(false);
+  protected readonly stepToDelete = signal<ProjectStep | null>(null);
+  protected readonly isDeletingStep = signal<boolean>(false);
+
   protected readonly filteredCatalog = computed(() => {
     const q = this.catalogSearch().toLowerCase().trim();
     const cat = this.selectedCategory();
@@ -158,25 +153,10 @@ export class ProjectTimeline implements OnInit {
     this.selectedCategory.set('All');
   }
 
-  protected getCatalogPhaseName(phaseId?: string): string {
-    switch (phaseId) {
-      case 'phase-1': return 'Phase 1: Pre-Bidding & Tenders';
-      case 'phase-2': return 'Phase 2: Sourcing & Quotations';
-      case 'phase-3': return 'Phase 3: Supplier Orders & Invoices';
-      case 'phase-4': return 'Phase 4: Logistics & Customs';
-      case 'phase-5': return 'Phase 5: Customer & Supplier Settlement';
-      default: return 'Standard';
-    }
-  }
-
   // ── Step Remarks Dialog Signal ────────────────────────────────────
   protected readonly selectedStepForRemarks = signal<ProjectStep | null>(null);
   protected readonly remarksDialogVisible = signal<boolean>(false);
   protected readonly newTimelineRemark = signal<string>('');
-
-  // ── Phases Definition ─────────────────────────────────────────────
-  protected readonly phases: PhaseInfo[] = PIPELINE_PHASES;
-
 
   // ── KPI Derived Signals ────────────────────────────────────────────
   protected readonly completedCount = computed(
@@ -216,43 +196,11 @@ export class ProjectTimeline implements OnInit {
     return `PRJ-${p.id < 10 ? '0' + p.id : p.id}`;
   });
 
-  // ── Authoritative Phase Resolution ──────────────────────────────
-  protected resolveStepPhaseId(s: ProjectStep): string {
-    const def = s.form_code
-      ? getFormDefinition(s.form_code)
-      : s.step_name
-        ? getFormDefinition(s.step_name)
-        : undefined;
-
-    if (def?.phaseId) return def.phaseId;
-
-    if (s.category && CATEGORY_TO_PHASE_ID[s.category]) {
-      return CATEGORY_TO_PHASE_ID[s.category];
-    }
-
-    if (s.phase && s.phase.startsWith('phase-')) {
-      return s.phase;
-    }
-
-    const rawPhaseId = (s as Record<string, unknown>)['phase_id'];
-    if (typeof rawPhaseId === 'string' && rawPhaseId.startsWith('phase-')) {
-      return rawPhaseId;
-    }
-
-    return 'phase-1';
-  }
-
   // ── Filtered Steps for Dashboard ──────────────────────────────────
   protected readonly filteredSteps = computed(() => {
     let list = this.steps();
-    const phase = this.activePhaseFilter();
     const status = this.activeStatusFilter();
     const query = this.searchQuery().toLowerCase().trim();
-
-    // Phase Filter
-    if (phase !== 'all') {
-      list = list.filter((s) => this.resolveStepPhaseId(s) === phase);
-    }
 
     // Status Filter
     if (status === 'completed') {
@@ -277,28 +225,11 @@ export class ProjectTimeline implements OnInit {
     return [...list].sort((a, b) => (a.step_number ?? a.step_order ?? 0) - (b.step_number ?? b.step_order ?? 0));
   });
 
-  // ── Phase Groups for Vertical Timeline ─────────────────────────────
-  protected readonly timelinePhases = computed(() => {
-    return PIPELINE_PHASES.map((phase) => {
-      const phaseSteps = this.steps()
-        .filter((s) => this.resolveStepPhaseId(s) === phase.id)
-        .sort((a, b) => (a.step_number ?? a.step_order ?? 0) - (b.step_number ?? b.step_order ?? 0));
-
-      const completedInPhase = phaseSteps.filter((s) => s.status === 'completed').length;
-      return {
-        ...phase,
-        steps: phaseSteps,
-        completedCount: completedInPhase,
-        totalCount: phaseSteps.length,
-        isCompleted: phaseSteps.length > 0 && completedInPhase === phaseSteps.length,
-        hasActive: phaseSteps.some((s) => s.status === 'in_progress'),
-      };
-    });
-  });
-
-  // ── Phase Columns for Board View ─────────────────────────────────
-  protected readonly boardPhases = computed(() => {
-    return this.timelinePhases();
+  // ── Ordered Steps (Kept One by One as Added by Client) ────────────
+  protected readonly orderedSteps = computed(() => {
+    return [...this.steps()].sort(
+      (a, b) => (a.step_number ?? a.step_order ?? 0) - (b.step_number ?? b.step_order ?? 0),
+    );
   });
 
   ngOnInit(): void {
@@ -521,10 +452,10 @@ export class ProjectTimeline implements OnInit {
     }
   }
 
-  protected openAddStepModal(categoryOrPhase?: string): void {
-    if (categoryOrPhase) {
+  protected openAddStepModal(category?: string): void {
+    if (category) {
       const matched = this.allCatalogForms.find(
-        (f) => f.category === categoryOrPhase || f.phaseId === categoryOrPhase,
+        (f) => f.category === category,
       );
       if (matched) {
         this.selectedCategory.set(matched.category);
@@ -603,15 +534,47 @@ export class ProjectTimeline implements OnInit {
 
   protected removeStep(step: ProjectStep, event: Event): void {
     event.stopPropagation();
-    const projectId = Number(this.route.snapshot.paramMap.get('projectId'));
-    if (!projectId) return;
+    this.promptDeleteStep(step);
+  }
+
+  protected promptDeleteStep(step: ProjectStep): void {
+    this.stepToDelete.set(step);
+    this.deleteStepDialogVisible.set(true);
+  }
+
+  protected cancelDeleteStep(): void {
+    this.deleteStepDialogVisible.set(false);
+    this.stepToDelete.set(null);
+    this.isDeletingStep.set(false);
+  }
+
+  protected confirmDeleteStep(): void {
+    const step = this.stepToDelete();
+    if (!step) {
+      this.cancelDeleteStep();
+      return;
+    }
+
+    const projectId = this.projectIdNumber();
+    if (!projectId) {
+      this.cancelDeleteStep();
+      return;
+    }
 
     const stepId = step.id || step.step_number;
+    this.isDeletingStep.set(true);
+
     this.projectStepService.removeStep(projectId, stepId).subscribe({
       next: () => {
         this.steps.update((cur) =>
-          cur.filter((s) => s.id !== step.id),
+          cur.filter((s) => (s.id ? s.id !== step.id : s.step_number !== step.step_number)),
         );
+        this.messageService?.add({
+          severity: 'success',
+          summary: 'Step Removed',
+          detail: `${step.step_name} has been removed from the project pipeline.`,
+        });
+        this.cancelDeleteStep();
         this.projectStepService.getSteps(projectId).subscribe({
           next: (steps) => {
             if (steps) {
@@ -620,11 +583,15 @@ export class ProjectTimeline implements OnInit {
           },
         });
       },
+      error: () => {
+        this.isDeletingStep.set(false);
+        this.messageService?.add({
+          severity: 'error',
+          summary: 'Delete Failed',
+          detail: 'Could not remove step. Please try again.',
+        });
+      },
     });
-  }
-
-  protected setPhaseFilter(phase: PhaseFilter): void {
-    this.activePhaseFilter.set(phase);
   }
 
   protected setStatusFilter(status: TimelineStatusFilter): void {
@@ -972,32 +939,6 @@ export class ProjectTimeline implements OnInit {
     }
 
     return badges;
-  }
-
-  protected getPhaseForStep(stepNumberOrStep: number | ProjectStep): PhaseInfo {
-    if (typeof stepNumberOrStep === 'object' && stepNumberOrStep !== null) {
-      const phaseId = this.resolveStepPhaseId(stepNumberOrStep);
-      const found = PIPELINE_PHASES.find((p) => p.id === phaseId);
-      if (found) return found;
-      return PIPELINE_PHASES[0];
-    }
-    const stepNumber = stepNumberOrStep;
-    if (typeof this.steps === 'function') {
-      const match = this.steps().find((s) => s.step_number === stepNumber);
-      if (match) {
-        return this.getPhaseForStep(match);
-      }
-    }
-    const def = getFormDefinition(stepNumber);
-    if (def?.phaseId) {
-      const found = PIPELINE_PHASES.find((p) => p.id === def.phaseId);
-      if (found) return found;
-    }
-    if (stepNumber <= 7) return PIPELINE_PHASES[0];
-    if (stepNumber <= 11) return PIPELINE_PHASES[1];
-    if (stepNumber <= 15) return PIPELINE_PHASES[2];
-    if (stepNumber <= 19) return PIPELINE_PHASES[3];
-    return PIPELINE_PHASES[4];
   }
 
   protected statusLabel(status: StepStatus): string {

@@ -12,7 +12,6 @@ import {
 import { ProjectService } from './project';
 import { CustomerService } from './customer';
 import { SupplierService } from './supplier';
-import { PIPELINE_PHASES } from '../constants/pipeline-phases.constant';
 import { getFormDefinition } from '../constants/form-catalog';
 
 @Injectable({
@@ -149,39 +148,10 @@ export class DashboardService {
           )
           : 0;
 
-        // Dynamic 5-phase breakdown
-        const phase_breakdown = PIPELINE_PHASES.map((phase) => {
-          const count = projects.filter((p) => {
-            if (p.status === 'completed' || p.progress_percentage === 100) {
-              return phase.id === 'phase-5';
-            }
-            if (p.current_form_code) {
-              const def = getFormDefinition(p.current_form_code);
-              if (def?.phaseId) return def.phaseId === phase.id;
-            }
-            if (p.current_step_name) {
-              const def = getFormDefinition(p.current_step_name);
-              if (def?.phaseId) return def.phaseId === phase.id;
-            }
-            const stepNum = p.current_step_number || 1;
-            if (stepNum <= 7) return phase.id === 'phase-1';
-            if (stepNum <= 12) return phase.id === 'phase-2';
-            if (stepNum <= 20) return phase.id === 'phase-3';
-            if (stepNum <= 28) return phase.id === 'phase-4';
-            return phase.id === 'phase-5';
-          }).length;
-          return {
-            phase_id: phase.id,
-            name: phase.title,
-            count,
-            percentage: totalProjects > 0 ? Math.round((count / totalProjects) * 100) : 0,
-          };
-        });
-
-        // Backward compatibility stage breakdown
-        const sourcingCount = phase_breakdown.find((p) => p.phase_id === 'phase-2')?.count ?? 0;
-        const logisticsCount = phase_breakdown.find((p) => p.phase_id === 'phase-4')?.count ?? 0;
-        const clearanceCount = phase_breakdown.find((p) => p.phase_id === 'phase-5')?.count ?? 0;
+        // Operations stage counts
+        const sourcingCount = projects.filter((p) => p.current_step_name?.toLowerCase().includes('sourcing') || p.current_step_name?.toLowerCase().includes('quotation')).length;
+        const logisticsCount = projects.filter((p) => p.current_step_name?.toLowerCase().includes('logistics') || p.current_step_name?.toLowerCase().includes('transport')).length;
+        const clearanceCount = projects.filter((p) => p.status === 'completed' || p.current_step_name?.toLowerCase().includes('settlement')).length;
 
         // Commercial payments
         const customerPaid = projects.filter((p) => p.customer_payment_status?.toLowerCase() === 'paid').length;
@@ -257,7 +227,6 @@ export class DashboardService {
             logistics: logisticsCount,
             clearance: clearanceCount,
           },
-          phase_breakdown: phase_breakdown,
         };
 
         // Format recent projects

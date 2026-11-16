@@ -77,13 +77,6 @@ export class ProjectStepService {
               Array.isArray((backendSteps as { data: ProjectStep[] }).data)
               ? (backendSteps as { data: ProjectStep[] }).data
               : [];
-          const catMap: Record<string, string> = {
-            'Pre-Bidding & Tenders': 'phase-1',
-            'Sourcing & Quotations': 'phase-2',
-            'Supplier Orders & Invoices': 'phase-3',
-            'Logistics & Customs': 'phase-4',
-            'Customer & Supplier Settlement': 'phase-5',
-          };
           const systemKeys = new Set([
             'id',
             'project_id',
@@ -113,12 +106,6 @@ export class ProjectStepService {
                 ? getFormDefinition(s.step_name)
                 : undefined;
             const resolvedCategory = s.category || def?.category;
-            const resolvedPhase =
-              def?.phaseId ||
-              (resolvedCategory && catMap[resolvedCategory] ? catMap[resolvedCategory] : undefined) ||
-              s.phase ||
-              ((s as Record<string, unknown>)['phase_id'] as string) ||
-              'phase-1';
 
             // Gather root backend attributes into data if not already present
             const rootExtraData: Record<string, unknown> = {};
@@ -157,8 +144,6 @@ export class ProjectStepService {
             return {
               ...s,
               form_code: s.form_code || def?.formCode,
-              phase: resolvedPhase,
-              phase_id: resolvedPhase,
               category: resolvedCategory,
               data: Object.keys(mergedData).length > 0 ? mergedData : null,
             };
@@ -218,7 +203,6 @@ export class ProjectStepService {
             progress_percentage: createdStep.progress_percentage ?? progressPercentage,
             form_code: createdStep.form_code || formCode,
             step_name: createdStep.step_name || resolvedName,
-            phase: createdStep.phase || formDef?.phaseId,
             category: createdStep.category || formDef?.category,
           };
         }),

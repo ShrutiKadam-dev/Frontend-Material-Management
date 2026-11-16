@@ -343,7 +343,6 @@ export function normalizeBackendEntityToStep(
         : null,
     form_code: formDef.formCode,
     category: formDef.category,
-    phase: formDef.phaseId,
     data: combinedData,
     remarks: Array.isArray(rawRemarks) ? (rawRemarks as ProjectStepRemark[]) : [],
     created_at: item['created_at'] ? String(item['created_at']) : undefined,

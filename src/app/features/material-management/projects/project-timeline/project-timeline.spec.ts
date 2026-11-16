@@ -200,34 +200,6 @@ describe('ProjectTimeline getStepDate', () => {
     });
   });
 
-  it('should categorize steps into the correct phases', () => {
-    const phase1 = (component as any).getPhaseForStep(2);
-    expect(phase1.id).toBe('phase-1');
-    expect(phase1.shortTitle).toBe('Phase 1: Pre-Bidding');
-
-    const phase1_icb = (component as any).getPhaseForStep(35);
-    expect(phase1_icb.id).toBe('phase-1');
-
-    const phase1_bid_icb = (component as any).getPhaseForStep(36);
-    expect(phase1_bid_icb.id).toBe('phase-1');
-
-    const phase2 = (component as any).getPhaseForStep(9);
-    expect(phase2.id).toBe('phase-2');
-    expect(phase2.shortTitle).toBe('Phase 2: Sourcing');
-
-    const phase3 = (component as any).getPhaseForStep(14);
-    expect(phase3.id).toBe('phase-3');
-    expect(phase3.shortTitle).toBe('Phase 3: Orders');
-
-    const phase4 = (component as any).getPhaseForStep(21);
-    expect(phase4.id).toBe('phase-4');
-    expect(phase4.shortTitle).toBe('Phase 4: Logistics');
-
-    const phase5 = (component as any).getPhaseForStep(24);
-    expect(phase5.id).toBe('phase-5');
-    expect(phase5.shortTitle).toBe('Phase 5: Settlement');
-  });
-
   it('should extract customer query badge in standard Indigo format', () => {
     const step: ProjectStep = {
       id: 182,

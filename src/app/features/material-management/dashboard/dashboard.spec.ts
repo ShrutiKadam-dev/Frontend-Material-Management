@@ -58,22 +58,19 @@ describe('Dashboard', () => {
     expect(component['getProgressPercent'](projectCompleted)).toBe(100);
   });
 
-  it('should compute dynamic phasesBreakdown across all 5 operational phases', () => {
+  it('should compute statusBreakdown across project fulfillment states', () => {
     (component as unknown as { projects: { set: (val: unknown) => void } }).projects.set([
-      { id: 1, current_form_code: 'FORM_01_PQB' },
-      { id: 2, current_step_name: 'Customer Query' },
-      { id: 3, current_step_name: 'Purchase Order' },
-      { id: 4, current_step_name: 'Transportation Details' },
-      { id: 5, status: 'completed' },
+      { id: 1, status: 'in_progress', progress_percentage: 50 },
+      { id: 2, status: 'in_progress', progress_percentage: 20 },
+      { id: 3, status: 'completed', progress_percentage: 100 },
+      { id: 4, status: 'pending', progress_percentage: 0 },
     ]);
 
-    const breakdown = component['phasesBreakdown']();
-    expect(breakdown.length).toBe(5);
-    expect(breakdown[0].count).toBe(1); // Pre-Bidding
-    expect(breakdown[1].count).toBe(1); // Sourcing
-    expect(breakdown[2].count).toBe(1); // Orders
-    expect(breakdown[3].count).toBe(1); // Logistics
-    expect(breakdown[4].count).toBe(1); // Settlement
+    const breakdown = component['statusBreakdown']();
+    expect(breakdown.length).toBe(3);
+    expect(breakdown.find((b) => b.id === 'in_progress')?.count).toBe(2);
+    expect(breakdown.find((b) => b.id === 'completed')?.count).toBe(1);
+    expect(breakdown.find((b) => b.id === 'pending')?.count).toBe(1);
   });
 
   it('should format step display labels dynamically', () => {

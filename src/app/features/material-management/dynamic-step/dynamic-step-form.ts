@@ -452,7 +452,6 @@ export class DynamicStepForm implements OnInit {
         completed_at: null,
         form_code: finalDef.formCode,
         category: finalDef.category,
-        phase: finalDef.phaseId,
         data: {},
         remarks: [],
       };

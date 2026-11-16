@@ -888,27 +888,55 @@
   </div>
   }
 
-  <!-- ── 3. Delete Confirmation Overlay Banner ───────────────────────── -->
-  @if (deleteConfirmVisible()) {
-  <div class="delete-confirmation-banner" role="alert">
-    <div class="del-confirm-left">
-      <i class="pi pi-exclamation-triangle warn-ico"></i>
-      <div>
-        <strong class="warn-title">Remove this step from project?</strong>
-        <p class="warn-sub">This will permanently delete this step and its recorded form data from the project timeline.
+  <!-- ── 3. Delete Step Confirmation Modal Dialog ───────────────────────── -->
+  <p-dialog
+    header="Confirm Remove Step"
+    [visible]="deleteConfirmVisible()"
+    (visibleChange)="deleteConfirmVisible.set($event)"
+    [modal]="true"
+    [blockScroll]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [dismissableMask]="false"
+    [style]="{ width: '92vw', maxWidth: '440px' }"
+    styleClass="delete-step-confirm-dialog"
+    appendTo="body">
+
+    <div class="del-confirm-body">
+      <div class="del-warning-icon" aria-hidden="true">
+        <i class="pi pi-exclamation-triangle"></i>
+      </div>
+      <div class="del-confirm-text">
+        <h3 class="del-confirm-heading">Delete Step?</h3>
+        <p class="del-confirm-desc">
+          Are you sure you want to remove <strong>{{ step()?.step_name || 'this step' }}</strong> from the project?
+          This action cannot be undone and will permanently remove all associated form data.
         </p>
       </div>
     </div>
-    <div class="del-confirm-actions">
-      <button pButton type="button" label="No, Keep Step" class="p-button-text p-button-secondary p-button-sm"
-        (click)="cancelDelete()">
-      </button>
-      <button pButton type="button" icon="pi pi-trash" label="Yes, Delete Step" class="p-button-danger p-button-sm"
-        [loading]="deleting()" (click)="confirmDelete()">
-      </button>
-    </div>
-  </div>
-  }
+
+    <ng-template pTemplate="footer">
+      <div class="del-confirm-footer">
+        <button
+          pButton
+          type="button"
+          label="Cancel"
+          class="p-button-text p-button-secondary cancel-del-btn"
+          (click)="cancelDelete()"
+          [disabled]="deleting()">
+        </button>
+        <button
+          pButton
+          type="button"
+          label="Delete Step"
+          icon="pi pi-trash"
+          class="p-button-danger confirm-del-btn"
+          [loading]="deleting()"
+          (click)="confirmDelete()">
+        </button>
+      </div>
+    </ng-template>
+  </p-dialog>
 
   <!-- ── 4. Dialog Footer (CRUD Actions: POST, PUT, DELETE) ──────────── -->
   <ng-template pTemplate="footer">

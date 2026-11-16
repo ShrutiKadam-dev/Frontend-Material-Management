@@ -6,7 +6,7 @@
       <span class="eyebrow">Executive Control Center · Operations Overview</span>
       <h1 id="dashboard-title" class="page-title">{{ greetingTitle() }}</h1>
       <p class="page-summary">
-        Overall portfolio visibility across all active procurement contracts, client milestones, and dynamic multi-phase fulfillment workflows.
+        Overall portfolio visibility across all active procurement contracts, client milestones, and dynamic fulfillment workflows.
       </p>
     </div>
 
@@ -73,34 +73,33 @@
   <!-- ── 4. Overall Operations & Portfolio Analytics Grid ─────────────── -->
   <div class="overview-analytics-grid">
 
-    <!-- Panel 1: Dynamic Pipeline Lifecycle Phases -->
+    <!-- Panel 1: Pipeline Execution & Project Statuses -->
     <div class="analytics-card app-panel">
       <div class="analytics-header">
         <div class="header-icon-badge header-icon--stages">
-          <i class="pi pi-sitemap" aria-hidden="true"></i>
+          <i class="pi pi-chart-pie" aria-hidden="true"></i>
         </div>
         <div class="header-text">
-          <h3>Pipeline Lifecycle Phases</h3>
-          <p>Dynamic distribution of active projects across 5 fulfillment phases</p>
+          <h3>Pipeline Project Statuses</h3>
+          <p>Distribution of active projects across fulfillment stages</p>
         </div>
       </div>
 
       <div class="stages-breakdown-list">
-        @for (phase of phasesBreakdown(); track phase.id) {
+        @for (item of statusBreakdown(); track item.id) {
         <div class="stage-bar-item">
           <div class="stage-bar-meta">
             <span class="stage-name">
-              <span class="stage-badge-pill" [class]="phase.badgeClass">Phase {{ phase.phaseNumber }}</span>
-              {{ phase.title }}
+              <span class="stage-badge-pill" [class]="item.badgeClass">{{ item.title }}</span>
             </span>
             <span class="stage-count">
-              <strong>{{ phase.count }}</strong> project{{ phase.count === 1 ? '' : 's' }}
-              ({{ phase.percentage }}%)
+              <strong>{{ item.count }}</strong> project{{ item.count === 1 ? '' : 's' }}
+              ({{ item.percentage }}%)
             </span>
           </div>
           <div class="stage-track">
-            <div class="stage-fill" [class]="phase.fillClass"
-              [style.width.%]="phase.percentage"></div>
+            <div class="stage-fill" [class]="item.fillClass"
+              [style.width.%]="item.percentage"></div>
           </div>
         </div>
         }
@@ -328,11 +327,7 @@
 
         <!-- 6. Bottom Bar -->
         <div class="mpc-bottom-bar">
-          <div class="mpc-phase-info">
-            <span class="mpc-phase-pill" [class]="getProjectPhase(project).badgeClass">
-              <i class="pi pi-compass" aria-hidden="true"></i>
-              {{ getProjectPhase(project).shortTitle }}
-            </span>
+          <div class="mpc-steps-info">
             <span class="mpc-dynamic-steps-tag">
               @if (project.total_steps && project.total_steps > 0) {
                 <i class="pi pi-check-circle text-success" aria-hidden="true"></i>

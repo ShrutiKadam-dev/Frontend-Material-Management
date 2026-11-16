@@ -237,8 +237,8 @@
             }
           </td> -->
           <td style="text-align: center;">
-            <span class="mpc-chip mpc-chip--phase"
-              [class]="'mpc-chip mpc-chip--phase ' + getStatusBadgeClass(getProjectStatus(p))">
+            <span class="mpc-chip mpc-chip--status"
+              [class]="'mpc-chip mpc-chip--status ' + getStatusBadgeClass(getProjectStatus(p))">
               {{ getStatusLabel(getProjectStatus(p)) }}
             </span>
           </td>
@@ -338,7 +338,7 @@
 
           <div class="field">
             <label for="dlg-project-nickname">Project Nickname</label>
-            <input id="dlg-project-nickname" pInputText formControlName="nickname" placeholder="e.g. CSRU-Phase1" />
+            <input id="dlg-project-nickname" pInputText formControlName="nickname" placeholder="e.g. CSRU-Batch1" />
           </div>
 
           <div class="field">
