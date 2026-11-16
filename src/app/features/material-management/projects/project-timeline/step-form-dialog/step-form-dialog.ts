@@ -4362,20 +4362,35 @@ export class StepFormDialog {
       }
     } else {
       // ── CREATE OPERATION: Create new step directly via dedicated endpoint or projectStepService ──
+      const existing = this.existingSteps() || [];
+      const maxStepNumber = existing.reduce(
+        (max, s) => Math.max(max, s.step_number ?? s.step_order ?? 0),
+        0,
+      );
+      const nextStepNumber = maxStepNumber + 1;
+
       if (def.apiEndpoint) {
         this.formApiService
           .createEntry(def, pId, combinedData, rawFiles)
           .subscribe({
             next: (newStep) => {
               this.saving.set(false);
+              const hasExplicitStepNumber =
+                newStep.step_number &&
+                newStep.step_number > 0 &&
+                !existing.some((s) => s.step_number === newStep.step_number);
+              const assignedStepNumber = hasExplicitStepNumber
+                ? newStep.step_number
+                : nextStepNumber;
+
               const stepWithMeta: ProjectStep = {
                 ...newStep,
                 id: newStep.id,
                 project_id: pId,
                 form_code: def.formCode,
                 step_name: def.name,
-                step_number: newStep.step_number || newStep.step_order || 1,
-                step_order: newStep.step_order || newStep.step_number || 1,
+                step_number: assignedStepNumber,
+                step_order: assignedStepNumber,
                 data: {
                   ...((newStep.data as Record<string, unknown>) || {}),
                   ...combinedData,
@@ -4404,14 +4419,16 @@ export class StepFormDialog {
           .subscribe({
             next: (addedStep) => {
               this.saving.set(false);
+              const assignedStepNumber =
+                addedStep.step_number || addedStep.step_order || nextStepNumber;
               const stepWithMeta: ProjectStep = {
                 ...addedStep,
                 id: addedStep.id,
                 project_id: pId,
                 form_code: def.formCode,
                 step_name: def.name,
-                step_number: addedStep.step_number || addedStep.step_order || 1,
-                step_order: addedStep.step_order || addedStep.step_number || 1,
+                step_number: assignedStepNumber,
+                step_order: assignedStepNumber,
                 data: {
                   ...((addedStep.data as Record<string, unknown>) || {}),
                   ...combinedData,

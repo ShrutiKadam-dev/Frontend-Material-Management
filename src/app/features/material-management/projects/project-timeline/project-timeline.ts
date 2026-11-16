@@ -274,13 +274,15 @@ export class ProjectTimeline implements OnInit {
       );
     }
 
-    return list;
+    return [...list].sort((a, b) => (a.step_number ?? a.step_order ?? 0) - (b.step_number ?? b.step_order ?? 0));
   });
 
   // ── Phase Groups for Vertical Timeline ─────────────────────────────
   protected readonly timelinePhases = computed(() => {
     return PIPELINE_PHASES.map((phase) => {
-      const phaseSteps = this.steps().filter((s) => this.resolveStepPhaseId(s) === phase.id);
+      const phaseSteps = this.steps()
+        .filter((s) => this.resolveStepPhaseId(s) === phase.id)
+        .sort((a, b) => (a.step_number ?? a.step_order ?? 0) - (b.step_number ?? b.step_order ?? 0));
 
       const completedInPhase = phaseSteps.filter((s) => s.status === 'completed').length;
       return {
@@ -545,10 +547,35 @@ export class ProjectTimeline implements OnInit {
   }
 
   protected onStepSaved(savedStep: ProjectStep): void {
+    // 1. Safely update local state optimistically (without overwriting steps of different forms)
+    this.applyLocalStepUpdate(savedStep);
+
+    // 2. Refresh authoritative step pipeline from backend immediately
+    const pId = this.projectIdNumber();
+    if (pId) {
+      this.projectStepService.getSteps(pId).subscribe({
+        next: (steps) => {
+          if (steps && steps.length > 0) {
+            this.steps.set(steps);
+          }
+        },
+      });
+    }
+  }
+
+  private applyLocalStepUpdate(savedStep: ProjectStep): void {
     this.steps.update((cur) => {
-      const idx = cur.findIndex(
-        (s) => (s.id && s.id === savedStep.id) || s.step_number === savedStep.step_number,
-      );
+      const idx = cur.findIndex((s) => {
+        const isSameForm = !s.form_code || !savedStep.form_code || s.form_code === savedStep.form_code;
+        if (s.id && savedStep.id && s.id === savedStep.id && isSameForm) {
+          return true;
+        }
+        if (s.step_number && savedStep.step_number && s.step_number === savedStep.step_number && isSameForm) {
+          return true;
+        }
+        return false;
+      });
+
       if (idx >= 0) {
         const copy = [...cur];
         copy[idx] = savedStep;
@@ -560,8 +587,18 @@ export class ProjectTimeline implements OnInit {
 
   protected onStepDeleted(stepId: number): void {
     this.steps.update((cur) =>
-      cur.filter((s) => s.id !== stepId && s.step_number !== stepId),
+      cur.filter((s) => s.id !== stepId),
     );
+    const pId = this.projectIdNumber();
+    if (pId) {
+      this.projectStepService.getSteps(pId).subscribe({
+        next: (steps) => {
+          if (steps) {
+            this.steps.set(steps);
+          }
+        },
+      });
+    }
   }
 
   protected removeStep(step: ProjectStep, event: Event): void {
@@ -573,8 +610,15 @@ export class ProjectTimeline implements OnInit {
     this.projectStepService.removeStep(projectId, stepId).subscribe({
       next: () => {
         this.steps.update((cur) =>
-          cur.filter((s) => s.id !== step.id && s.step_number !== step.step_number),
+          cur.filter((s) => s.id !== step.id),
         );
+        this.projectStepService.getSteps(projectId).subscribe({
+          next: (steps) => {
+            if (steps) {
+              this.steps.set(steps);
+            }
+          },
+        });
       },
     });
   }

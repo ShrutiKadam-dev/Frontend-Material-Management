@@ -318,10 +318,16 @@ export function normalizeBackendEntityToStep(
     }
   }
 
+  const rawStepNumber = item['step_number'] ?? item['step_order'];
+  const stepNumber =
+    rawStepNumber !== undefined && rawStepNumber !== null && !isNaN(Number(rawStepNumber))
+      ? Number(rawStepNumber)
+      : 0;
+
   return {
     id: stepId,
     project_id: Number(item['project_id']) || projectId,
-    step_number: Number(item['step_number'] ?? stepId),
+    step_number: stepNumber,
     step_name: String(item['step_name'] || formDef.name),
     description: String(item['description'] || formDef.description || ''),
     status,
