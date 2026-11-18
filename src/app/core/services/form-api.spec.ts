@@ -180,6 +180,21 @@ describe('FormApiService', () => {
       service.getLatestEntry(sampleDef, 7).subscribe(resolve);
     });
     expect(latestRawEmpty).toBeNull();
+
+    // Also test error envelope { error: { code: 'NOT_FOUND', message: '...' }, success: false }
+    mockHttp.get.mockReturnValue(
+      of({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Pre-qualification bid not found.',
+        },
+        success: false,
+      }),
+    );
+    const latestErrorEnvelope = await new Promise<ProjectStep | null>((resolve) => {
+      service.getLatestEntry(sampleDef, 7).subscribe(resolve);
+    });
+    expect(latestErrorEnvelope).toBeNull();
   });
 
   it('getLatestEntry should return null when /latest fails without calling any fallback endpoint', async () => {

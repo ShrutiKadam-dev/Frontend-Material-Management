@@ -61,8 +61,8 @@
     <!-- ── TAB 1: FORM INPUTS ──────────────────────────────────────── -->
     @if (activeTab() === 'fields') {
     <div class="tab-panel tab-panel--fields">
-      @if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT' || def.formCode === 'FORM_04_LTE' || def.formCode ===
-      'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') {
+      @if ((def.formCode === 'FORM_02_PQB_BID_DOCUMENT' || def.formCode === 'FORM_04_LTE' || def.formCode ===
+      'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') && pqbAutoPatched()) {
       <div class="pqb-banner-action-bar" role="region" aria-label="PQB Auto-Patch Info">
         <div class="pqb-banner-info">
           <i class="pi pi-link" aria-hidden="true"></i>
@@ -85,7 +85,7 @@
       </div>
       }
 
-      @if (isTechnoCommercialTender()) {
+      @if (isTechnoCommercialTender() && technoCommercialLinkedPqbStep()) {
       <div class="pqb-banner-action-bar" role="region" aria-label="Techno Commercial Tender PQB Auto-Patch Info">
         <div class="pqb-banner-info">
           <i class="pi pi-link" aria-hidden="true"></i>
@@ -100,11 +100,19 @@
       </div>
       }
 
-      @if (isBidDocumentTechnoCommercial()) {
+      @if (isBidDocumentTechnoCommercial() && (bidDocTechnoLinkedTenderStep() || bidDocTechnoLinkedPqbBidDocStep())) {
       <div class="pqb-banner-action-bar" role="region" aria-label="Bid Document Techno Commercial Auto-Patch Info">
         <div class="pqb-banner-info">
           <i class="pi pi-link" aria-hidden="true"></i>
-          <span>Tender Title, Tender No., and Tender Issue Date are automatically linked from Techno Commercial Tender; Requirements are linked from {{ bidDocTechnoPqbSourceStepName() }}.</span>
+          <span>
+            @if (bidDocTechnoLinkedTenderStep() && bidDocTechnoLinkedPqbBidDocStep()) {
+            Tender Title, Tender No., and Tender Issue Date are automatically linked from Techno Commercial Tender; Requirements are linked from {{ bidDocTechnoPqbSourceStepName() }}.
+            } @else if (bidDocTechnoLinkedTenderStep()) {
+            Tender Title, Tender No., and Tender Issue Date are automatically linked and patched from Techno Commercial Tender.
+            } @else {
+            Requirements are automatically linked and patched from {{ bidDocTechnoPqbSourceStepName() }}.
+            }
+          </span>
         </div>
         <button pButton type="button" icon="pi pi-sync" label="Fetch from Tender & PQB"
           class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn" [loading]="fetchingBidDocTechnoCommercial()"
@@ -115,7 +123,7 @@
       </div>
       }
 
-      @if (isNac()) {
+      @if (isNac() && nacLinkedStep()) {
       <div class="pqb-banner-action-bar" role="region" aria-label="NAC Auto-Patch Info">
         <div class="pqb-banner-info">
           <i class="pi pi-link" aria-hidden="true"></i>
@@ -130,7 +138,7 @@
       </div>
       }
 
-      @if (isBidDocumentLte()) {
+      @if (isBidDocumentLte() && bidDocLteLinkedStep()) {
       <div class="pqb-banner-action-bar" role="region" aria-label="Bid Document LTE Auto-Patch Info">
         <div class="pqb-banner-info">
           <i class="pi pi-link" aria-hidden="true"></i>
@@ -145,7 +153,7 @@
       </div>
       }
 
-      @if (isCorrigendum()) {
+      @if (isCorrigendum() && linkedTenderStep()) {
       <div class="pqb-banner-action-bar" role="region" aria-label="Corrigendum Auto-Patch Info">
         <div class="pqb-banner-info">
           <i class="pi pi-link" aria-hidden="true"></i>
@@ -161,7 +169,7 @@
       </div>
       }
 
-      @if (isPurchaseOrder()) {
+      @if (isPurchaseOrder() && poLinkedStep()) {
       <div class="pqb-banner-action-bar" role="region" aria-label="Purchase Order Auto-Patch Info">
         <div class="pqb-banner-info">
           <i class="pi pi-link" aria-hidden="true"></i>
@@ -186,40 +194,40 @@
             @if (field.required) {
             <span class="req-star" aria-hidden="true">*</span>
             }
-            @if ((def.formCode === 'FORM_02_PQB_BID_DOCUMENT' && (field.key === 'pqb_title' || field.key === 'pqb_no'))
+            @if (pqbAutoPatched() && ((def.formCode === 'FORM_02_PQB_BID_DOCUMENT' && (field.key === 'pqb_title' || field.key === 'pqb_no'))
             || (def.formCode === 'FORM_04_LTE' && field.key === 'pqb_no') || ((def.formCode === 'FORM_33_STE' ||
             def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') && (field.key === 'pqb_no' || field.key ===
-            'tender_title'))) {
+            'tender_title')))) {
             <span class="field-sync-pill" title="Patched from latest National Pre-Qualification Bid">
               <i class="pi pi-link" aria-hidden="true"></i> Linked
             </span>
             }
-            @if (isTechnoCommercialTender() && field.key === 'pqb_no') {
+            @if (isTechnoCommercialTender() && technoCommercialLinkedPqbStep() && field.key === 'pqb_no') {
             <span class="field-sync-pill" [title]="'Patched from ' + technoCommercialPqbSourceStepName()">
               <i class="pi pi-link" aria-hidden="true"></i> Linked
             </span>
             }
-            @if (isBidDocumentTechnoCommercial() && (field.key === 'tender_title' || field.key === 'tender_no' || field.key === 'tender_issue_date')) {
+            @if (isBidDocumentTechnoCommercial() && bidDocTechnoLinkedTenderStep() && (field.key === 'tender_title' || field.key === 'tender_no' || field.key === 'tender_issue_date')) {
             <span class="field-sync-pill" title="Patched from latest Techno Commercial Tender">
               <i class="pi pi-link" aria-hidden="true"></i> Linked
             </span>
             }
-            @if (isNac() && field.key === 'gst_pct') {
+            @if (isNac() && nacLinkedStep() && field.key === 'gst_pct') {
             <span class="field-sync-pill" [title]="'Patched from ' + nacSourceStepName()">
               <i class="pi pi-link" aria-hidden="true"></i> Linked
             </span>
             }
-            @if (isBidDocumentLte() && field.key === 'tender_title') {
+            @if (isBidDocumentLte() && bidDocLteLinkedStep() && field.key === 'tender_title') {
             <span class="field-sync-pill" [title]="'Patched from ' + bidDocLteSourceStepName()">
               <i class="pi pi-link" aria-hidden="true"></i> Linked
             </span>
             }
-            @if (isCorrigendum() && (field.key === 'against_ref_no' || field.key === 'ref_title')) {
+            @if (isCorrigendum() && linkedTenderStep() && (field.key === 'against_ref_no' || field.key === 'ref_title')) {
             <span class="field-sync-pill" [title]="'Patched from ' + corrigendumSourceStepName()">
               <i class="pi pi-link" aria-hidden="true"></i> Linked
             </span>
             }
-            @if (isPurchaseOrder() && (field.key === 'delivery_terms' || field.key === 'payment_terms' || field.key === 'warranty_period' || field.key === 'gst_rate_pct')) {
+            @if (isPurchaseOrder() && poLinkedStep() && (field.key === 'delivery_terms' || field.key === 'payment_terms' || field.key === 'warranty_period' || field.key === 'gst_rate_pct')) {
             <span class="field-sync-pill" [title]="'Patched from ' + poSourceStepName()">
               <i class="pi pi-link" aria-hidden="true"></i> Linked
             </span>
@@ -360,12 +368,14 @@
               <i class="pi pi-sliders-h text-primary mr-1"></i>
               Specification Comparison
             </span>
+            @if (linkedTenderStep()) {
             <span class="bar-link-chip">
               Comparing: <strong>{{ corrigendumSourceStepName() }}</strong>
               @if (linkedTenderRefNo()) {
               <span class="bar-ref-pill">{{ linkedTenderRefNo() }}</span>
               }
             </span>
+            }
           </div>
           <div class="bar-right">
             @if (corrigendumTotalAmendedCount() > 0) {
@@ -598,6 +608,20 @@
       } @else {
       <!-- Standard Dynamic Items Table (for RFQ, PO, etc.) -->
       @if (def.tableConfig; as tbl) {
+      @if (isBidDocumentTechnoCommercial() && bidDocTechnoLinkedPqbBidDocStep()) {
+      <div class="pqb-banner-action-bar table-banner-bar" role="region" aria-label="Bid Document Techno Commercial Requirements Auto-Patch Info">
+        <div class="pqb-banner-info">
+          <i class="pi pi-link" aria-hidden="true"></i>
+          <span>Requirements are automatically linked and patched from {{ bidDocTechnoPqbSourceStepName() }}.</span>
+        </div>
+        <button pButton type="button" icon="pi pi-sync" [label]="bidDocTechnoPqbFetchButtonLabel()"
+          class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn" [loading]="fetchingBidDocTechnoCommercial()"
+          (click)="loadPqbBidDocItemsForBidDocTechnoCommercial(true)"
+          [pTooltip]="'Refresh Requirements from ' + bidDocTechnoPqbSourceStepName()"
+          tooltipPosition="top">
+        </button>
+      </div>
+      }
       <div class="table-section-bar">
         <div class="table-title-group">
           <h3 class="table-section-title">{{ tbl.title }}</h3>
@@ -648,7 +672,7 @@
               tooltipPosition="top">
             </button>
             }
-            @if (isBidDocumentTechnoCommercial()) {
+            @if (isBidDocumentTechnoCommercial() && !bidDocTechnoLinkedPqbBidDocStep()) {
             <button pButton type="button" icon="pi pi-sync" [label]="bidDocTechnoPqbFetchButtonLabel()"
               class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
               [loading]="fetchingBidDocTechnoCommercial()" (click)="loadPqbBidDocItemsForBidDocTechnoCommercial(true)"

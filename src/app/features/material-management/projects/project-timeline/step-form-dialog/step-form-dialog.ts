@@ -33,7 +33,7 @@ import { MessageService } from 'primeng/api';
 import { Observable, catchError, finalize, forkJoin, map, of, Subscription, switchMap, timeout } from 'rxjs';
 
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../../../../../core/models/project-step.model';
-import { FormApiService } from '../../../../../core/services/form-api';
+import { FormApiService, normalizeBackendEntityToStep } from '../../../../../core/services/form-api';
 import {
   FORM_CATALOG,
   FormDefinition,
@@ -72,6 +72,7 @@ import {
   toValidDate,
   validateDateSequence,
 } from '../../../../../core/utils/form.utils';
+import { unwrapLatestApiRecord } from '../../../../../core/utils/api-response.utils';
 import { Project } from '../../../../../core/models/project.model';
 import { Customer } from '../../../../../core/models/customer.model';
 import { Supplier } from '../../../../../core/models/supplier.model';
@@ -81,6 +82,7 @@ import { SupplierService } from '../../../../../core/services/supplier';
 import { SupplierQuotationService } from '../../../../../core/services/supplier-quotation';
 import { PreQualificationBid } from '../../../../../core/models/pre-qualification-bid.model';
 import { PreQualificationBidService } from '../../../../../core/services/pre-qualification-bid';
+import { TechnoCommercialTenderService } from '../../../../../core/services/techno-commercial-tender';
 import { ProjectStepService } from '../../../../../core/services/project-step';
 
 export interface CorrigendumQuantityItem {
@@ -122,11 +124,13 @@ export class StepFormDialog {
   private readonly supplierService = inject(SupplierService, { optional: true });
   private readonly supplierQuotationService = inject(SupplierQuotationService, { optional: true });
   private readonly preQualificationBidService = inject(PreQualificationBidService, { optional: true });
+  private readonly technoCommercialTenderService = inject(TechnoCommercialTenderService, { optional: true });
   private readonly projectStepService = inject(ProjectStepService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   readonly fetchingSupplierQuotation = signal<boolean>(false);
   readonly fetchingNationalPqb = signal<boolean>(false);
+  readonly pqbAutoPatched = signal<boolean>(false);
   readonly fetchingPreviousStep = signal<boolean>(false);
 
   // ── Inputs & Two-Way Model ──────────────────────────────────────────
@@ -684,7 +688,7 @@ export class StepFormDialog {
     this.supplierQuotationService.getLatest(pId).subscribe({
       next: (res: unknown) => {
         this.fetchingSupplierQuotation.set(false);
-        const data = (res || {}) as Record<string, unknown>;
+        const data = unwrapLatestApiRecord(res) || {};
         const rawItems = Array.isArray(data['items']) ? (data['items'] as Array<Record<string, unknown>>) : [];
 
         if (rawItems.length === 0) {
@@ -917,8 +921,67 @@ export class StepFormDialog {
       .pipe(finalize(() => this.fetchingNationalPqb.set(false)))
       .subscribe({
         next: (corr) => {
-          if (corr) {
-            const corrItems = this.extractCorrigendumItems(corr);
+          const unwrappedCorr = unwrapLatestApiRecord(corr);
+          if (unwrappedCorr) {
+            const corrItems = this.extractCorrigendumItems(unwrappedCorr);
+            const refTitle = String(unwrappedCorr['tender_title'] || unwrappedCorr['ref_title'] || '').trim();
+            const refNo = String(unwrappedCorr['against_tender_no'] || unwrappedCorr['against_ref_no'] || '').trim();
+            const rawIssueDate =
+              unwrappedCorr['tender_issue_date'] || unwrappedCorr['ref_issue_date'] || unwrappedCorr['issue_date'];
+            const directClosing = unwrappedCorr['closing_date_time'] || unwrappedCorr['pqb_closing_date_time'];
+            const directOpening = unwrappedCorr['opening_date_time'] || unwrappedCorr['pqb_opening_date_time'];
+
+            let specClosingDt: Date | null = null;
+            let specOpeningDt: Date | null = null;
+            if (Array.isArray(unwrappedCorr['items'])) {
+              const rawCorrItems = unwrappedCorr['items'] as Array<Record<string, unknown>>;
+              const row1 = rawCorrItems.find((r) => Number(r['sr_no']) === 1);
+              if (row1) {
+                const closeStr = this.extractDateFromSpecRow(
+                  row1,
+                  /^CLOSING\s*DATE\s*(&|AND)?\s*TIME:\s*/i,
+                );
+                if (closeStr) {
+                  specClosingDt = parseLocalDateTime(closeStr);
+                }
+              }
+
+              const row2 = rawCorrItems.find((r) => Number(r['sr_no']) === 2);
+              if (row2) {
+                const openStr = this.extractDateFromSpecRow(
+                  row2,
+                  /^OPENING\s*DATE\s*(&|AND)?\s*TIME:\s*/i,
+                );
+                if (openStr) {
+                  specOpeningDt = parseLocalDateTime(openStr);
+                }
+              }
+            }
+
+            const hasCorrData = Boolean(
+              corrItems.length > 0 ||
+              refTitle ||
+              refNo ||
+              rawIssueDate ||
+              directClosing ||
+              directOpening ||
+              specClosingDt ||
+              specOpeningDt,
+            );
+
+            if (!hasCorrData) {
+              this.pqbAutoPatched?.set?.(false);
+              this.cdr?.markForCheck?.();
+              if (showNotification) {
+                this.messageService.add({
+                  severity: 'warn',
+                  summary: 'Corrigendum Not Found',
+                  detail: 'No latest Corrigendum found for this project to patch.',
+                });
+              }
+              return;
+            }
+
             if (corrItems.length > 0) {
               this.populatePqbPricingTable(corrItems);
             }
@@ -926,22 +989,15 @@ export class StepFormDialog {
             const fg = this.formGroup();
             if (fg) {
               const patchPayload: Record<string, unknown> = {};
-              const refTitle = String(corr['tender_title'] || corr['ref_title'] || '').trim();
-              const refNo = String(corr['against_tender_no'] || corr['against_ref_no'] || '').trim();
               if (refTitle && fg.get('pqb_title')) {
                 patchPayload['pqb_title'] = refTitle;
               }
               if (refNo && fg.get('pqb_no')) {
                 patchPayload['pqb_no'] = refNo;
               }
-
-              const rawIssueDate =
-                corr['tender_issue_date'] || corr['ref_issue_date'] || corr['issue_date'];
               if (rawIssueDate && fg.get('pqb_issue_date') && !fg.get('pqb_issue_date')?.value) {
                 patchPayload['pqb_issue_date'] = parseLocalDate(rawIssueDate as string | Date);
               }
-
-              const directClosing = corr['closing_date_time'] || corr['pqb_closing_date_time'];
               if (
                 directClosing &&
                 fg.get('pqb_closing_date_time') &&
@@ -950,9 +1006,14 @@ export class StepFormDialog {
                 patchPayload['pqb_closing_date_time'] = parseLocalDateTime(
                   directClosing as string | Date,
                 );
+              } else if (
+                specClosingDt &&
+                fg.get('pqb_closing_date_time') &&
+                !fg.get('pqb_closing_date_time')?.value
+              ) {
+                patchPayload['pqb_closing_date_time'] = specClosingDt;
               }
 
-              const directOpening = corr['opening_date_time'] || corr['pqb_opening_date_time'];
               if (
                 directOpening &&
                 fg.get('pqb_opening_date_time') &&
@@ -961,41 +1022,12 @@ export class StepFormDialog {
                 patchPayload['pqb_opening_date_time'] = parseLocalDateTime(
                   directOpening as string | Date,
                 );
-              }
-
-              if (Array.isArray(corr['items'])) {
-                const rawCorrItems = corr['items'] as Array<Record<string, unknown>>;
-                const row1 = rawCorrItems.find((r) => Number(r['sr_no']) === 1);
-                if (
-                  row1 &&
-                  fg.get('pqb_closing_date_time') &&
-                  !fg.get('pqb_closing_date_time')?.value
-                ) {
-                  const closeStr = this.extractDateFromSpecRow(
-                    row1,
-                    /^CLOSING\s*DATE\s*(&|AND)?\s*TIME:\s*/i,
-                  );
-                  if (closeStr) {
-                    const dt = parseLocalDateTime(closeStr);
-                    if (dt) patchPayload['pqb_closing_date_time'] = dt;
-                  }
-                }
-
-                const row2 = rawCorrItems.find((r) => Number(r['sr_no']) === 2);
-                if (
-                  row2 &&
-                  fg.get('pqb_opening_date_time') &&
-                  !fg.get('pqb_opening_date_time')?.value
-                ) {
-                  const openStr = this.extractDateFromSpecRow(
-                    row2,
-                    /^OPENING\s*DATE\s*(&|AND)?\s*TIME:\s*/i,
-                  );
-                  if (openStr) {
-                    const dt = parseLocalDateTime(openStr);
-                    if (dt) patchPayload['pqb_opening_date_time'] = dt;
-                  }
-                }
+              } else if (
+                specOpeningDt &&
+                fg.get('pqb_opening_date_time') &&
+                !fg.get('pqb_opening_date_time')?.value
+              ) {
+                patchPayload['pqb_opening_date_time'] = specOpeningDt;
               }
 
               if (fg.get('total_no_corrigendum_issued')) {
@@ -1014,8 +1046,10 @@ export class StepFormDialog {
               fg.patchValue(patchPayload);
               fg.markAsDirty();
               this.formVersion.update((v) => v + 1);
-              this.cdr.markForCheck();
             }
+
+            this.pqbAutoPatched?.set?.(true);
+            this.cdr?.markForCheck?.();
 
             if (showNotification) {
               this.messageService.add({
@@ -1024,15 +1058,21 @@ export class StepFormDialog {
                 detail: `Loaded ${corrItems.length} line items from latest Corrigendum.`,
               });
             }
-          } else if (showNotification) {
-            this.messageService.add({
-              severity: 'warn',
-              summary: 'Corrigendum Not Found',
-              detail: 'No latest Corrigendum found for this project to patch.',
-            });
+          } else {
+            this.pqbAutoPatched?.set?.(false);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService.add({
+                severity: 'warn',
+                summary: 'Corrigendum Not Found',
+                detail: 'No latest Corrigendum found for this project to patch.',
+              });
+            }
           }
         },
         error: () => {
+          this.pqbAutoPatched?.set?.(false);
+          this.cdr?.markForCheck?.();
           if (showNotification) {
             this.messageService.add({
               severity: 'info',
@@ -1080,18 +1120,19 @@ export class StepFormDialog {
       .pipe(finalize(() => this.fetchingNationalPqb.set(false)))
       .subscribe({
         next: (pqb) => {
-          const raw = (pqb || {}) as Record<string, unknown>;
-          let innerData: Record<string, unknown> = {};
-          if (typeof raw['data'] === 'string') {
-            try {
-              innerData = JSON.parse(raw['data']);
-            } catch {
-              innerData = {};
+          const data = unwrapLatestApiRecord(pqb);
+          if (!data) {
+            this.pqbAutoPatched?.set?.(false);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService.add({
+                severity: 'warn',
+                summary: 'National PQB Not Found',
+                detail: 'No latest National Pre-Qualification Bid found for this project to patch.',
+              });
             }
-          } else if (raw['data'] && typeof raw['data'] === 'object') {
-            innerData = { ...(raw['data'] as Record<string, unknown>) };
+            return;
           }
-          const data = { ...innerData, ...raw };
 
           const title = String(
             data['pqb_title'] ||
@@ -1114,6 +1155,33 @@ export class StepFormDialog {
             '',
           ).trim();
 
+          const rawIssueDate =
+            data['pqb_issuing_date'] || data['pqb_issue_date'] || data['issue_date'];
+          const rawClosing = data['pqb_closing_date_time'] || data['closing_date_time'];
+          const rawOpening = data['pqb_opening_date_time'] || data['opening_date_time'];
+
+          const pqbItems =
+            ((data['items'] || data['table_items'] || data['requirements'] || []) as Array<
+              Record<string, unknown>
+            >) || [];
+
+          const hasPqbData = Boolean(
+            title || no || rawIssueDate || rawClosing || rawOpening || pqbItems.length > 0,
+          );
+
+          if (!hasPqbData) {
+            this.pqbAutoPatched?.set?.(false);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService.add({
+                severity: 'warn',
+                summary: 'National PQB Not Found',
+                detail: 'No latest National Pre-Qualification Bid found for this project to patch.',
+              });
+            }
+            return;
+          }
+
           const fg = this.formGroup();
           if (fg) {
             const patchPayload: Record<string, unknown> = {};
@@ -1127,13 +1195,10 @@ export class StepFormDialog {
               patchPayload['tender_title'] = title;
             }
 
-            const rawIssueDate =
-              data['pqb_issuing_date'] || data['pqb_issue_date'] || data['issue_date'];
             if (rawIssueDate && fg.get('pqb_issue_date') && !fg.get('pqb_issue_date')?.value) {
               patchPayload['pqb_issue_date'] = parseLocalDate(rawIssueDate as string | Date);
             }
 
-            const rawClosing = data['pqb_closing_date_time'] || data['closing_date_time'];
             if (
               rawClosing &&
               fg.get('pqb_closing_date_time') &&
@@ -1142,7 +1207,6 @@ export class StepFormDialog {
               patchPayload['pqb_closing_date_time'] = parseLocalDateTime(rawClosing as string | Date);
             }
 
-            const rawOpening = data['pqb_opening_date_time'] || data['opening_date_time'];
             if (
               rawOpening &&
               fg.get('pqb_opening_date_time') &&
@@ -1161,13 +1225,11 @@ export class StepFormDialog {
             fg.patchValue(patchPayload);
             fg.markAsDirty();
             this.formVersion.update((v) => v + 1);
-            this.cdr.markForCheck();
           }
 
-          const pqbItems =
-            ((data['items'] || data['table_items'] || data['requirements'] || []) as Array<
-              Record<string, unknown>
-            >) || [];
+          this.pqbAutoPatched?.set?.(true);
+          this.cdr?.markForCheck?.();
+
           if (pqbItems.length > 0) {
             this.populatePqbPricingTable(pqbItems);
             if (showNotification) {
@@ -1208,6 +1270,8 @@ export class StepFormDialog {
           }
         },
         error: () => {
+          this.pqbAutoPatched?.set?.(false);
+          this.cdr?.markForCheck?.();
           if (showNotification) {
             this.messageService.add({
               severity: 'info',
@@ -1277,14 +1341,20 @@ export class StepFormDialog {
       fcode === 'FORM_02' ||
       fcode === 'FORM_PQB_BID_DOCUMENT' ||
       fcode === 'BID_DOCUMENT_PQB' ||
-      fcode === 'BID_DOC_PQB'
+      fcode === 'BID_DOC_PQB' ||
+      fcode.includes('PQB_BID_DOC') ||
+      fcode.includes('BID_DOC_PQB') ||
+      fcode.includes('BID_DOCUMENT_PQB')
     ) {
       return true;
     }
     const resolved = s.form_code ? getFormDefinition(s.form_code) : undefined;
     if (resolved?.formCode === 'FORM_02_PQB_BID_DOCUMENT') return true;
     const name = (s.step_name || '').toLowerCase().trim();
-    return (name.includes('bid doc') || name.includes('bid document')) && name.includes('pqb');
+    return (
+      (name.includes('bid doc') || name.includes('bid document')) &&
+      (name.includes('pqb') || name.includes('pre-qualification') || name.includes('pre qualification'))
+    );
   }
 
   isPqbOrPqbBidDocStep(s: ProjectStep | null | undefined): boolean {
@@ -1354,12 +1424,20 @@ export class StepFormDialog {
     const candidateArrays: unknown[] = [
       inner['items'],
       inner['requirements'],
+      inner['requirement_items'],
+      inner['pqb_items'],
+      inner['bid_items'],
+      inner['line_items'],
       inner['table_items'],
       inner['materials'],
       inner['pricing_items'],
       inner['pricing'],
       raw['items'],
       raw['requirements'],
+      raw['requirement_items'],
+      raw['pqb_items'],
+      raw['bid_items'],
+      raw['line_items'],
       raw['table_items'],
       raw['materials'],
       raw['pricing_items'],
@@ -1663,23 +1741,31 @@ export class StepFormDialog {
 
           if (candidate && this.hasPqbDataForTechnoCommercial(candidate)) {
             this.applyPqbStepToTechnoCommercial(candidate, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'warn',
-              summary: 'Bid Document for PQB Not Found',
-              detail: 'No latest Bid Document for PQB found for this project to patch.',
-            });
+          } else {
+            this.technoCommercialLinkedPqbStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'warn',
+                summary: 'Bid Document for PQB Not Found',
+                detail: 'No latest Bid Document for PQB found for this project to patch.',
+              });
+            }
           }
         },
         error: () => {
           if (availableStep && this.hasPqbDataForTechnoCommercial(availableStep)) {
             this.applyPqbStepToTechnoCommercial(availableStep, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'info',
-              summary: 'Bid Document for PQB Unavailable',
-              detail: 'Could not fetch latest Bid Document for PQB for this project.',
-            });
+          } else {
+            this.technoCommercialLinkedPqbStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'info',
+                summary: 'Bid Document for PQB Unavailable',
+                detail: 'Could not fetch latest Bid Document for PQB for this project.',
+              });
+            }
           }
         },
       });
@@ -1715,9 +1801,10 @@ export class StepFormDialog {
       )
       .subscribe({
         next: (latestPqb) => {
-          const convertedLatest = latestPqb
+          const validLatestPqb = unwrapLatestApiRecord(latestPqb);
+          const convertedLatest = validLatestPqb
             ? this.convertPqbToProjectStep(
-                latestPqb as PreQualificationBid | Record<string, unknown>,
+                validLatestPqb,
                 availableStep || undefined,
                 pId,
               )
@@ -1732,23 +1819,31 @@ export class StepFormDialog {
 
           if (candidate && this.hasPqbDataForTechnoCommercial(candidate)) {
             this.applyPqbStepToTechnoCommercial(candidate, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'warn',
-              summary: 'National PQB Not Found',
-              detail: 'No latest National Pre-Qualification Bid found for this project to patch.',
-            });
+          } else {
+            this.technoCommercialLinkedPqbStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'warn',
+                summary: 'National PQB Not Found',
+                detail: 'No latest National Pre-Qualification Bid found for this project to patch.',
+              });
+            }
           }
         },
         error: () => {
           if (availableStep && this.hasPqbDataForTechnoCommercial(availableStep)) {
             this.applyPqbStepToTechnoCommercial(availableStep, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'info',
-              summary: 'National PQB Unavailable',
-              detail: 'Could not fetch latest National Pre-Qualification Bid for this project.',
-            });
+          } else {
+            this.technoCommercialLinkedPqbStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'info',
+                summary: 'National PQB Unavailable',
+                detail: 'Could not fetch latest National Pre-Qualification Bid for this project.',
+              });
+            }
           }
         },
       });
@@ -2071,9 +2166,10 @@ export class StepFormDialog {
     return fetch$.pipe(
       catchError(() => of(null)),
       map((latestPqb) => {
-        const converted = latestPqb
+        const validLatestPqb = unwrapLatestApiRecord(latestPqb);
+        const converted = validLatestPqb
           ? this.convertPqbToProjectStep(
-              latestPqb as PreQualificationBid | Record<string, unknown>,
+              validLatestPqb,
               fallbackStep || undefined,
               pId,
             )
@@ -2092,7 +2188,7 @@ export class StepFormDialog {
     pId: number,
     resolvedStep: ProjectStep,
   ): Observable<ProjectStep | null> {
-    // Call ONLY the single latest step's endpoint (never call both PQB endpoints at the same time)
+    // Call ONLY the single latest step's endpoint (never call both PQB endpoints)
     if (this.isPqbBidDocStep(resolvedStep)) {
       return this.fetchLatestPqbBidDocCandidate$(pId, resolvedStep);
     }
@@ -2102,7 +2198,7 @@ export class StepFormDialog {
   private fetchSingleDefaultPqbSourceForBidDocTechnoCommercial$(
     pId: number,
   ): Observable<ProjectStep | null> {
-    // Never fire two PQB calls at once: pick the single applicable endpoint
+    // Never fire two PQB calls: pick the single applicable endpoint
     if (this.isPqbBidDocAvailable()) {
       return this.fetchLatestPqbBidDocCandidate$(pId, null);
     }
@@ -2149,6 +2245,8 @@ export class StepFormDialog {
       const desc = String(
         item['corrigendum_description'] ||
         item['description'] ||
+        item['item_description'] ||
+        item['material_description'] ||
         item['original_description'] ||
         item['material_name'] ||
         item['item_name'] ||
@@ -2158,14 +2256,17 @@ export class StepFormDialog {
 
       const hsn = String(item['hsn_sac'] || item['hsn_code'] || '').trim();
 
-      const qty =
-        item['corrigendum_quantity'] !== null && item['corrigendum_quantity'] !== undefined
-          ? Number(item['corrigendum_quantity'])
-          : item['quantity'] !== null && item['quantity'] !== undefined
-            ? Number(item['quantity'])
-            : item['original_quantity'] !== null && item['original_quantity'] !== undefined
-              ? Number(item['original_quantity'])
-              : null;
+      const rawQty =
+        item['corrigendum_quantity'] !== null && item['corrigendum_quantity'] !== undefined && item['corrigendum_quantity'] !== ''
+          ? item['corrigendum_quantity']
+          : item['quantity'] !== null && item['quantity'] !== undefined && item['quantity'] !== ''
+            ? item['quantity']
+            : item['qty'] !== null && item['qty'] !== undefined && item['qty'] !== ''
+              ? item['qty']
+              : item['original_quantity'] !== null && item['original_quantity'] !== undefined && item['original_quantity'] !== ''
+                ? item['original_quantity']
+                : null;
+      const qty = rawQty !== null && !isNaN(Number(rawQty)) ? Number(rawQty) : null;
 
       const unitPrice =
         item['unit_price'] !== null && item['unit_price'] !== undefined && item['unit_price'] !== ''
@@ -2207,17 +2308,21 @@ export class StepFormDialog {
     const availableTechnoStep = this.getAvailableTechnoCommercialTenderStep();
     const availablePqbStep = this.getAvailablePqbStepForBidDocTechnoCommercial();
 
-    const technoDef = getFormDefinition('FORM_30_TECHNO_COMMERCIAL_TENDER');
-
+    const hasTechnoService = Boolean(
+      this.technoCommercialTenderService &&
+        typeof this.technoCommercialTenderService.getLatest === 'function',
+    );
     const hasFormApi = Boolean(
       this.formApiService && typeof this.formApiService.getLatestEntry === 'function',
     );
     const hasPqbService = Boolean(
       this.preQualificationBidService && typeof this.preQualificationBidService.getLatest === 'function',
     );
-    if (!hasFormApi && !hasPqbService) {
+    if (!hasTechnoService && !hasFormApi && !hasPqbService) {
       this.applySourcesToBidDocTechnoCommercial(
-        availableTechnoStep,
+        availableTechnoStep && this.hasTechnoCommercialTenderDetails(availableTechnoStep)
+          ? availableTechnoStep
+          : null,
         availablePqbStep && this.extractPqbItemsFromSource(availablePqbStep).length > 0
           ? availablePqbStep
           : null,
@@ -2226,10 +2331,7 @@ export class StepFormDialog {
       return;
     }
 
-    const techno$: Observable<ProjectStep | null> =
-      technoDef && hasFormApi
-        ? this.formApiService.getLatestEntry(technoDef, pId).pipe(catchError(() => of(null)))
-        : of(null);
+    const techno$: Observable<ProjectStep | null> = this.fetchLatestTechnoCommercialTender$(pId);
     const pqbSource$ = this.fetchLatestPqbSourceForBidDocTechnoCommercial$(pId, availablePqbStep);
 
     this.fetchingBidDocTechnoCommercial.set(true);
@@ -2253,7 +2355,9 @@ export class StepFormDialog {
         },
         error: () => {
           this.applySourcesToBidDocTechnoCommercial(
-            availableTechnoStep,
+            availableTechnoStep && this.hasTechnoCommercialTenderDetails(availableTechnoStep)
+              ? availableTechnoStep
+              : null,
             availablePqbStep && this.extractPqbItemsFromSource(availablePqbStep).length > 0
               ? availablePqbStep
               : null,
@@ -2261,6 +2365,35 @@ export class StepFormDialog {
           );
         },
       });
+  }
+
+  private fetchLatestTechnoCommercialTender$(pId: number): Observable<ProjectStep | null> {
+    const technoDef = getFormDefinition('FORM_30_TECHNO_COMMERCIAL_TENDER');
+    if (!technoDef) return of(null);
+
+    if (
+      this.technoCommercialTenderService &&
+      typeof this.technoCommercialTenderService.getLatest === 'function'
+    ) {
+      return this.technoCommercialTenderService.getLatest(pId).pipe(
+        map((tender) =>
+          tender
+            ? normalizeBackendEntityToStep(
+                tender as unknown as Record<string, unknown>,
+                technoDef,
+                pId,
+              )
+            : null,
+        ),
+        catchError(() => of(null)),
+      );
+    }
+
+    if (this.formApiService && typeof this.formApiService.getLatestEntry === 'function') {
+      return this.formApiService.getLatestEntry(technoDef, pId).pipe(catchError(() => of(null)));
+    }
+
+    return of(null);
   }
 
   loadPqbBidDocItemsForBidDocTechnoCommercial(showNotification = true): void {
@@ -2313,7 +2446,7 @@ export class StepFormDialog {
         next: (candidate) => {
           if (candidate && this.extractPqbItemsFromSource(candidate).length > 0) {
             const items = this.extractPqbItemsFromSource(candidate);
-            this.bidDocTechnoLinkedPqbBidDocStep.set(candidate);
+            this.bidDocTechnoLinkedPqbBidDocStep?.set?.(candidate);
             this.populateBidDocTechnoCommercialItemsTable(items);
             if (showNotification) {
               const sourceName = this.getPqbSourceDisplayName(candidate);
@@ -2323,27 +2456,35 @@ export class StepFormDialog {
                 detail: `Loaded ${items.length} requirement items from latest ${sourceName}.`,
               });
             }
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'warn',
-              summary: 'PQB Requirements Not Found',
-              detail:
-                'No Requirements data found in Bid Document for PQB or National Pre-Qualification Bid (PQB) for this project.',
-            });
+          } else {
+            this.bidDocTechnoLinkedPqbBidDocStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'warn',
+                summary: 'PQB Requirements Not Found',
+                detail:
+                  'No Requirements data found in Bid Document for PQB or National Pre-Qualification Bid (PQB) for this project.',
+              });
+            }
           }
         },
         error: () => {
           if (availablePqbStep && this.extractPqbItemsFromSource(availablePqbStep).length > 0) {
             const items = this.extractPqbItemsFromSource(availablePqbStep);
-            this.bidDocTechnoLinkedPqbBidDocStep.set(availablePqbStep);
+            this.bidDocTechnoLinkedPqbBidDocStep?.set?.(availablePqbStep);
             this.populateBidDocTechnoCommercialItemsTable(items);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'info',
-              summary: 'PQB Requirements Unavailable',
-              detail:
-                'Could not fetch latest Requirements data from Bid Document for PQB or National Pre-Qualification Bid (PQB) for this project.',
-            });
+          } else {
+            this.bidDocTechnoLinkedPqbBidDocStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'info',
+                summary: 'PQB Requirements Unavailable',
+                detail:
+                  'Could not fetch latest Requirements data from Bid Document for PQB or National Pre-Qualification Bid (PQB) for this project.',
+              });
+            }
           }
         },
       });
@@ -2358,7 +2499,7 @@ export class StepFormDialog {
     let patchedItemsCount = 0;
 
     if (technoStep) {
-      this.bidDocTechnoLinkedTenderStep.set(technoStep);
+      this.bidDocTechnoLinkedTenderStep?.set?.(technoStep);
       const details = this.extractTechnoCommercialDetails(technoStep);
       const fg = this.formGroup();
       if (fg) {
@@ -2396,17 +2537,23 @@ export class StepFormDialog {
           patchedTenderFields = true;
         }
       }
+    } else {
+      this.bidDocTechnoLinkedTenderStep?.set?.(null);
     }
 
     if (pqbSourceStep) {
-      this.bidDocTechnoLinkedPqbBidDocStep.set(pqbSourceStep);
+      this.bidDocTechnoLinkedPqbBidDocStep?.set?.(pqbSourceStep);
       const pqbItems = this.extractPqbItemsFromSource(pqbSourceStep);
       const currentRowsCount = typeof this.tableFormArray === 'function' ? this.tableFormArray().length : 0;
       if (pqbItems.length > 0 && (showNotification || currentRowsCount === 0)) {
         this.populateBidDocTechnoCommercialItemsTable(pqbItems);
         patchedItemsCount = pqbItems.length;
       }
+    } else {
+      this.bidDocTechnoLinkedPqbBidDocStep?.set?.(null);
     }
+
+    this.cdr?.markForCheck?.();
 
     if (showNotification) {
       const pqbSourceName = pqbSourceStep
@@ -2454,6 +2601,37 @@ export class StepFormDialog {
       if (pqbStep) {
         this.bidDocTechnoLinkedPqbBidDocStep.set(pqbStep);
       }
+    }
+
+    if (
+      (!this.bidDocTechnoLinkedTenderStep() || !this.bidDocTechnoLinkedPqbBidDocStep()) &&
+      this.projectStepService &&
+      typeof this.projectStepService.getSteps === 'function'
+    ) {
+      const pId = typeof this.projectId === 'function' ? this.projectId() : (this.projectId as unknown as number);
+      if (!pId) return;
+      this.projectStepService
+        .getSteps(pId)
+        .pipe(
+          timeout({ each: 4000, with: () => of([] as ProjectStep[]) }),
+          catchError(() => of([] as ProjectStep[])),
+        )
+        .subscribe((allSteps) => {
+          const steps = allSteps || [];
+          if (!this.bidDocTechnoLinkedTenderStep()) {
+            const technoCandidates = steps.filter((s) => this.isTechnoCommercialTenderStep(s));
+            if (technoCandidates.length > 0) {
+              this.bidDocTechnoLinkedTenderStep.set(technoCandidates[technoCandidates.length - 1]);
+            }
+          }
+          if (!this.bidDocTechnoLinkedPqbBidDocStep()) {
+            const pqbStep = this.resolveLatestPqbStepFromList(steps);
+            if (pqbStep) {
+              this.bidDocTechnoLinkedPqbBidDocStep.set(pqbStep);
+            }
+          }
+          this.cdr?.markForCheck?.();
+        });
     }
   }
 
@@ -2800,23 +2978,31 @@ export class StepFormDialog {
 
           if (candidate && this.hasNacSourceData(candidate)) {
             this.applyBidDocStepToNac(candidate, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'warn',
-              summary: 'Bid Document Not Found',
-              detail: `No latest ${sourceDef.name} data found for this project to patch NAC.`,
-            });
+          } else {
+            this.nacLinkedStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'warn',
+                summary: 'Bid Document Not Found',
+                detail: `No latest ${sourceDef.name} data found for this project to patch NAC.`,
+              });
+            }
           }
         },
         error: () => {
           if (this.hasNacSourceData(availableStep)) {
             this.applyBidDocStepToNac(availableStep, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'info',
-              summary: 'Bid Document Unavailable',
-              detail: `Could not fetch latest ${sourceDef.name} for this project.`,
-            });
+          } else {
+            this.nacLinkedStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'info',
+                summary: 'Bid Document Unavailable',
+                detail: `Could not fetch latest ${sourceDef.name} for this project.`,
+              });
+            }
           }
         },
       });
@@ -2862,16 +3048,22 @@ export class StepFormDialog {
           const latestCandidate = this.pickLatestNacBidDocCandidate(candidates);
           if (latestCandidate) {
             this.applyBidDocStepToNac(latestCandidate, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'warn',
-              summary: 'Bid Document Not Found',
-              detail:
-                'No preceding Bid Document (STE, LTE, Techno-Commercial, ICB, or Bid Document) found for this project.',
-            });
+          } else {
+            this.nacLinkedStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'warn',
+                summary: 'Bid Document Not Found',
+                detail:
+                  'No preceding Bid Document (STE, LTE, Techno-Commercial, ICB, or Bid Document) found for this project.',
+              });
+            }
           }
         },
         error: () => {
+          this.nacLinkedStep?.set?.(null);
+          this.cdr?.markForCheck?.();
           if (showNotification) {
             this.messageService?.add({
               severity: 'info',
@@ -3120,23 +3312,31 @@ export class StepFormDialog {
 
           if (candidate && this.hasTenderTitle(candidate)) {
             this.applyEnquiryStepToBidDocLte(candidate, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'warn',
-              summary: 'Single Tender Enquiry Not Found',
-              detail: 'No latest Single Tender Enquiry found for this project to patch Tender Title.',
-            });
+          } else {
+            this.bidDocLteLinkedStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'warn',
+                summary: 'Single Tender Enquiry Not Found',
+                detail: 'No latest Single Tender Enquiry found for this project to patch Tender Title.',
+              });
+            }
           }
         },
         error: () => {
           if (availableStep && this.hasTenderTitle(availableStep)) {
             this.applyEnquiryStepToBidDocLte(availableStep, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'info',
-              summary: 'Single Tender Enquiry Unavailable',
-              detail: 'Could not fetch latest Single Tender Enquiry for this project.',
-            });
+          } else {
+            this.bidDocLteLinkedStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'info',
+                summary: 'Single Tender Enquiry Unavailable',
+                detail: 'Could not fetch latest Single Tender Enquiry for this project.',
+              });
+            }
           }
         },
       });
@@ -3175,23 +3375,31 @@ export class StepFormDialog {
 
           if (candidate && this.hasTenderTitle(candidate)) {
             this.applyEnquiryStepToBidDocLte(candidate, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'warn',
-              summary: 'Limited Tender Enquiry Not Found',
-              detail: 'No latest Limited Tender Enquiry found for this project to patch Tender Title.',
-            });
+          } else {
+            this.bidDocLteLinkedStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'warn',
+                summary: 'Limited Tender Enquiry Not Found',
+                detail: 'No latest Limited Tender Enquiry found for this project to patch Tender Title.',
+              });
+            }
           }
         },
         error: () => {
           if (availableStep && this.hasTenderTitle(availableStep)) {
             this.applyEnquiryStepToBidDocLte(availableStep, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'info',
-              summary: 'Limited Tender Enquiry Unavailable',
-              detail: 'Could not fetch latest Limited Tender Enquiry for this project.',
-            });
+          } else {
+            this.bidDocLteLinkedStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'info',
+                summary: 'Limited Tender Enquiry Unavailable',
+                detail: 'Could not fetch latest Limited Tender Enquiry for this project.',
+              });
+            }
           }
         },
       });
@@ -3683,23 +3891,31 @@ export class StepFormDialog {
 
           if (candidate && this.hasBidDocData(candidate)) {
             this.applyBidDocStepToPurchaseOrder(candidate, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'warn',
-              summary: `${sourceDef.name} Not Found`,
-              detail: `No latest ${sourceDef.name} found for this project to patch Purchase Order.`,
-            });
+          } else {
+            this.poLinkedStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'warn',
+                summary: `${sourceDef.name} Not Found`,
+                detail: `No latest ${sourceDef.name} found for this project to patch Purchase Order.`,
+              });
+            }
           }
         },
         error: () => {
           if (availableStep && this.hasBidDocData(availableStep)) {
             this.applyBidDocStepToPurchaseOrder(availableStep, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'info',
-              summary: `${sourceDef.name} Unavailable`,
-              detail: `Could not fetch latest ${sourceDef.name} for this project.`,
-            });
+          } else {
+            this.poLinkedStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'info',
+                summary: `${sourceDef.name} Unavailable`,
+                detail: `Could not fetch latest ${sourceDef.name} for this project.`,
+              });
+            }
           }
         },
       });
@@ -3738,23 +3954,31 @@ export class StepFormDialog {
 
           if (candidate && this.hasBidDocData(candidate)) {
             this.applyBidDocStepToPurchaseOrder(candidate, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'warn',
-              summary: 'Bid Document (STE) Not Found',
-              detail: 'No latest Bid Document - Single Tender Enquiry found for this project to patch Purchase Order.',
-            });
+          } else {
+            this.poLinkedStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'warn',
+                summary: 'Bid Document (STE) Not Found',
+                detail: 'No latest Bid Document - Single Tender Enquiry found for this project to patch Purchase Order.',
+              });
+            }
           }
         },
         error: () => {
           if (availableStep && this.hasBidDocData(availableStep)) {
             this.applyBidDocStepToPurchaseOrder(availableStep, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'info',
-              summary: 'Bid Document (STE) Unavailable',
-              detail: 'Could not fetch latest Bid Document - Single Tender Enquiry for this project.',
-            });
+          } else {
+            this.poLinkedStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'info',
+                summary: 'Bid Document (STE) Unavailable',
+                detail: 'Could not fetch latest Bid Document - Single Tender Enquiry for this project.',
+              });
+            }
           }
         },
       });
@@ -3793,23 +4017,31 @@ export class StepFormDialog {
 
           if (candidate && this.hasBidDocData(candidate)) {
             this.applyBidDocStepToPurchaseOrder(candidate, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'warn',
-              summary: 'Bid Document (LTE) Not Found',
-              detail: 'No latest Bid Document - Limited Tender Enquiry found for this project to patch Purchase Order.',
-            });
+          } else {
+            this.poLinkedStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'warn',
+                summary: 'Bid Document (LTE) Not Found',
+                detail: 'No latest Bid Document - Limited Tender Enquiry found for this project to patch Purchase Order.',
+              });
+            }
           }
         },
         error: () => {
           if (availableStep && this.hasBidDocData(availableStep)) {
             this.applyBidDocStepToPurchaseOrder(availableStep, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'info',
-              summary: 'Bid Document (LTE) Unavailable',
-              detail: 'Could not fetch latest Bid Document - Limited Tender Enquiry for this project.',
-            });
+          } else {
+            this.poLinkedStep?.set?.(null);
+            this.cdr?.markForCheck?.();
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'info',
+                summary: 'Bid Document (LTE) Unavailable',
+                detail: 'Could not fetch latest Bid Document - Limited Tender Enquiry for this project.',
+              });
+            }
           }
         },
       });
@@ -4470,9 +4702,10 @@ export class StepFormDialog {
       )
       .subscribe({
         next: (latestPqb) => {
-          if (latestPqb) {
+          const validLatestPqb = unwrapLatestApiRecord(latestPqb);
+          if (validLatestPqb) {
             const stepToApply = this.convertPqbToProjectStep(
-              latestPqb as PreQualificationBid | Record<string, unknown>,
+              validLatestPqb,
               candidateStep,
               pId,
             );
@@ -4487,7 +4720,9 @@ export class StepFormDialog {
             return;
           }
 
+          this.linkedTenderStep?.set?.(null);
           this.ensureCorrigendumDefaultRows();
+          this.cdr?.markForCheck?.();
           if (showNotification) {
             this.messageService?.add({
               severity: 'info',
@@ -4502,7 +4737,9 @@ export class StepFormDialog {
             this.applyPreviousStepToCorrigendum(candidateStep, showNotification);
             return;
           }
+          this.linkedTenderStep?.set?.(null);
           this.ensureCorrigendumDefaultRows();
+          this.cdr?.markForCheck?.();
           if (showNotification) {
             this.messageService?.add({
               severity: 'info',
@@ -4532,8 +4769,14 @@ export class StepFormDialog {
     const selectedStep = targetStep;
 
     this.fetchingPreviousStep?.set?.(true);
-    const fetchTarget$: Observable<ProjectStep> = (targetDef?.apiEndpoint && this.formApiService)
-      ? this.formApiService.getLatestEntry(targetDef, pId).pipe(
+    const latestStep$: Observable<ProjectStep | null> | null =
+      targetDef?.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER'
+        ? this.fetchLatestTechnoCommercialTender$(pId)
+        : targetDef?.apiEndpoint && this.formApiService
+          ? this.formApiService.getLatestEntry(targetDef, pId)
+          : null;
+    const fetchTarget$: Observable<ProjectStep> = latestStep$
+      ? latestStep$.pipe(
         map((latestStep: ProjectStep | null): ProjectStep => {
           if (latestStep) {
             let selectedData: Record<string, unknown> = {};
@@ -4713,7 +4956,6 @@ export class StepFormDialog {
     const icbBidDocDef = getFormDefinition('FORM_36_BID_DOC_ICB');
     const icbDef = getFormDefinition('FORM_35_ICB');
     const technoBidDocDef = getFormDefinition('FORM_29_BID_DOC_TECHNO_COMMERCIAL');
-    const technoDef = getFormDefinition('FORM_30_TECHNO_COMMERCIAL_TENDER');
     const pacDef = getFormDefinition('FORM_13_PAC_TENDER');
     const eoiDef = getFormDefinition('FORM_07_EOI');
     const pqbBidDocDef = getFormDefinition('FORM_02_PQB_BID_DOCUMENT');
@@ -4731,7 +4973,7 @@ export class StepFormDialog {
       icbBidDoc: wrapReq(icbBidDocDef ? this.formApiService.getLatestEntry(icbBidDocDef, pId) : undefined),
       icb: wrapReq(icbDef ? this.formApiService.getLatestEntry(icbDef, pId) : undefined),
       technoBidDoc: wrapReq(technoBidDocDef ? this.formApiService.getLatestEntry(technoBidDocDef, pId) : undefined),
-      techno: wrapReq(technoDef ? this.formApiService.getLatestEntry(technoDef, pId) : undefined),
+      techno: wrapReq(this.fetchLatestTechnoCommercialTender$(pId)),
       pac: wrapReq(pacDef ? this.formApiService.getLatestEntry(pacDef, pId) : undefined),
       eoi: wrapReq(eoiDef ? this.formApiService.getLatestEntry(eoiDef, pId) : undefined),
       pqbBidDoc: wrapReq(pqbBidDocDef ? this.formApiService.getLatestEntry(pqbBidDocDef, pId) : undefined),
@@ -4789,7 +5031,9 @@ export class StepFormDialog {
         if (activeStep) {
           this.applyPreviousStepToCorrigendum(activeStep, showNotification);
         } else {
+          this.linkedTenderStep?.set?.(null);
           this.ensureCorrigendumDefaultRows();
+          this.cdr?.markForCheck?.();
           if (showNotification) {
             this.messageService?.add({
               severity: 'info',
@@ -4801,7 +5045,9 @@ export class StepFormDialog {
       },
       error: () => {
         this.fetchingPreviousStep?.set?.(false);
+        this.linkedTenderStep?.set?.(null);
         this.ensureCorrigendumDefaultRows();
+        this.cdr?.markForCheck?.();
         if (showNotification) {
           this.messageService?.add({
             severity: 'info',
@@ -5583,7 +5829,9 @@ export class StepFormDialog {
         untracked(() => {
           this.deleteConfirmVisible.set(false);
           this.fetchingPreviousStep?.set?.(false);
+          this.linkedTenderStep?.set?.(null);
           this.fetchingNationalPqb?.set?.(false);
+          this.pqbAutoPatched?.set?.(false);
           this.fetchingTechnoCommercialPqb?.set?.(false);
           this.technoCommercialLinkedPqbStep?.set?.(null);
           this.fetchingBidDocTechnoCommercial?.set?.(false);
@@ -5640,7 +5888,9 @@ export class StepFormDialog {
     this.activeTab.set('fields');
     this.newRemarkInput.set('');
     this.fetchingPreviousStep?.set?.(false);
+    this.linkedTenderStep?.set?.(null);
     this.fetchingNationalPqb?.set?.(false);
+    this.pqbAutoPatched?.set?.(false);
     this.fetchingTechnoCommercialPqb?.set?.(false);
     this.technoCommercialLinkedPqbStep?.set?.(null);
     this.fetchingBidDocTechnoCommercial?.set?.(false);
@@ -5708,33 +5958,42 @@ export class StepFormDialog {
         this.loadFromSupplierQuotation(false);
       }
 
-      if (
-        def!.formCode === 'FORM_02_PQB_BID_DOCUMENT' &&
-        (!savedData['pqb_title'] ||
+      if (def!.formCode === 'FORM_02_PQB_BID_DOCUMENT') {
+        if (
+          !savedData['pqb_title'] ||
           !savedData['pqb_no'] ||
           !savedData['items'] ||
-          (Array.isArray(savedData['items']) && savedData['items'].length === 0))
-      ) {
-        this.loadFromNationalPreQualificationBid(false);
+          (Array.isArray(savedData['items']) && savedData['items'].length === 0)
+        ) {
+          this.loadFromNationalPreQualificationBid(false);
+        } else if (this.isNationalPqbAvailable() || this.isCorrigendumAvailable()) {
+          this.pqbAutoPatched?.set?.(true);
+        }
       }
 
-      if (
-        def!.formCode === 'FORM_04_LTE' &&
-        (!savedData['pqb_no'] ||
+      if (def!.formCode === 'FORM_04_LTE') {
+        if (
+          !savedData['pqb_no'] ||
           !savedData['items'] ||
-          (Array.isArray(savedData['items']) && savedData['items'].length === 0))
-      ) {
-        this.loadFromNationalPreQualificationBid(false);
+          (Array.isArray(savedData['items']) && savedData['items'].length === 0)
+        ) {
+          this.loadFromNationalPreQualificationBid(false);
+        } else if (this.isNationalPqbAvailable()) {
+          this.pqbAutoPatched?.set?.(true);
+        }
       }
 
-      if (
-        (def!.formCode === 'FORM_33_STE' || def!.formCode === 'FORM_30_STE' || def!.formCode === 'FORM_STE') &&
-        (!savedData['pqb_no'] ||
+      if (def!.formCode === 'FORM_33_STE' || def!.formCode === 'FORM_30_STE' || def!.formCode === 'FORM_STE') {
+        if (
+          !savedData['pqb_no'] ||
           !savedData['tender_title'] ||
           !savedData['items'] ||
-          (Array.isArray(savedData['items']) && savedData['items'].length === 0))
-      ) {
-        this.loadFromNationalPreQualificationBid(false);
+          (Array.isArray(savedData['items']) && savedData['items'].length === 0)
+        ) {
+          this.loadFromNationalPreQualificationBid(false);
+        } else if (this.isNationalPqbAvailable()) {
+          this.pqbAutoPatched?.set?.(true);
+        }
       }
 
       if (

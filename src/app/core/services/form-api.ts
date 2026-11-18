@@ -13,6 +13,7 @@ import {
   isTableRowEmpty,
   normalizeTableRow,
 } from '../utils/form.utils';
+import { unwrapLatestApiRecord } from '../utils/api-response.utils';
 
 export function normalizeBackendEntityToStep(
   item: Record<string, unknown>,
@@ -72,14 +73,23 @@ export function normalizeBackendEntityToStep(
   } else if (
     item['output'] &&
     typeof item['output'] === 'object' &&
-    Array.isArray((item['output'] as Record<string, unknown>)['items'])
+    Array.isArray((item['output'] as Record<string, unknown>)['items']) &&
+    ((item['output'] as Record<string, unknown>)['items'] as unknown[]).length > 0
   ) {
     rawTableItems = (item['output'] as Record<string, unknown>)['items'] as unknown[];
-  } else if (Array.isArray(item['table_items'])) {
+  } else if (Array.isArray(item['table_items']) && (item['table_items'] as unknown[]).length > 0) {
     rawTableItems = item['table_items'] as unknown[];
-  } else if (Array.isArray(item['requirements'])) {
+  } else if (Array.isArray(item['requirements']) && (item['requirements'] as unknown[]).length > 0) {
     rawTableItems = item['requirements'] as unknown[];
-  } else if (Array.isArray(item['materials'])) {
+  } else if (Array.isArray(item['requirement_items']) && (item['requirement_items'] as unknown[]).length > 0) {
+    rawTableItems = item['requirement_items'] as unknown[];
+  } else if (Array.isArray(item['pqb_items']) && (item['pqb_items'] as unknown[]).length > 0) {
+    rawTableItems = item['pqb_items'] as unknown[];
+  } else if (Array.isArray(item['bid_items']) && (item['bid_items'] as unknown[]).length > 0) {
+    rawTableItems = item['bid_items'] as unknown[];
+  } else if (Array.isArray(item['line_items']) && (item['line_items'] as unknown[]).length > 0) {
+    rawTableItems = item['line_items'] as unknown[];
+  } else if (Array.isArray(item['materials']) && (item['materials'] as unknown[]).length > 0) {
     rawTableItems = item['materials'] as unknown[];
   }
 
@@ -379,6 +389,38 @@ export function normalizeBackendEntityToStep(
   };
 }
 
+/**
+ * Explicit mapping of form codes to their actual backend latest-record API endpoints.
+ * Avoids dynamically appending `/latest` to `apiEndpoint`.
+ */
+export const FORM_LATEST_API_ENDPOINTS: Readonly<Record<string, string>> = {
+  FORM_01_PQB: '/api/v1/pre-qualification-bids/latest',
+  FORM_02_PQB_BID_DOCUMENT: '/api/v1/pqb-bid-documents/latest',
+  FORM_03_CORRIGENDUM: '/api/v1/corrigendums/latest',
+  FORM_04_LTE: '/api/v1/limited-tender-enquiries/latest',
+  FORM_07_EOI: '/api/v1/expressions-of-interest/latest',
+  FORM_08_CUSTOMER_QUERY: '/api/v1/customer-queries/latest',
+  FORM_09_RFQ: '/api/v1/quotation-requests/latest',
+  FORM_10_COST_SHEET: '/api/cost-sheet/latest',
+  FORM_11_SUPPLIER_QUOTATION: '/api/v1/supplier-quotations/latest',
+  FORM_12_CUSTOMER_QUOTATION: '/api/v1/customer-quotations/latest',
+  FORM_13_PAC_TENDER: '/api/v1/pac-tenders/latest',
+  FORM_14_PURCHASE_ORDER: '/api/v1/purchase-orders/latest',
+  FORM_15_BID_DOCUMENT: '/api/v1/bid-submissions/latest',
+  FORM_16_ORDER_CONFIRMATION: '/api/v1/order-confirmations/latest',
+  FORM_17_PROFORMA_INVOICE: '/api/v1/proforma-invoices/latest',
+  FORM_19_SUPPLIER_PACKING_LIST: '/api/v1/supplier-packing-lists/latest',
+  FORM_26_TAX_INVOICE_CUSTOMER: '/api/v1/customer-tax-invoices/latest',
+  FORM_27_SHIPPING_CLEARANCE: '/api/v1/bills-of-entry/latest',
+  FORM_29_BID_DOC_TECHNO_COMMERCIAL: '/api/v1/bid-document-techno-commercial/latest',
+  FORM_30_TECHNO_COMMERCIAL_TENDER: '/api/v1/techno-commercial-tenders/latest',
+  FORM_31_BID_DOC_LTE: '/api/v1/bid-document-lte/latest',
+  FORM_33_STE: '/api/v1/single-tender-enquiries/latest',
+  FORM_34_BID_DOC_STE: '/api/v1/bid-document-ste/latest',
+  FORM_35_ICB: '/api/v1/international-competitive-biddings/latest',
+  FORM_36_BID_DOC_ICB: '/api/v1/bid-document-icb/latest',
+};
+
 @Injectable({
   providedIn: 'root',
 })
@@ -415,52 +457,23 @@ export class FormApiService {
   }
 
   /**
-   * Retrieves the latest entry for a given form definition and project using its dedicated /latest endpoint.
-   * Route: GET {apiEndpoint}/latest?project_id={projectId}
-   * Directly fetches latest data without falling back to list GET.
+   * Retrieves the latest entry for a given form definition and project using its explicit
+   * `latestApiEndpoint` (or explicit entry in `FORM_LATEST_API_ENDPOINTS`).
+   * Does NOT dynamically append `/latest` to `apiEndpoint` and does not fall back to list GET.
    */
   getLatestEntry(formDef: FormDefinition, projectId: number): Observable<ProjectStep | null> {
-    if (!formDef.apiEndpoint) {
+    const latestEndpoint =
+      formDef.latestApiEndpoint ||
+      (formDef.apiEndpoint ? FORM_LATEST_API_ENDPOINTS[formDef.formCode] : undefined);
+    if (!latestEndpoint) {
       return of(null);
     }
 
-    const endpointUrl = `${this.apiBaseUrl}${formDef.apiEndpoint}/latest?project_id=${projectId}`;
+    const endpointUrl = `${this.apiBaseUrl}${latestEndpoint}?project_id=${projectId}`;
     return this.http.get<Record<string, unknown> | { data: Record<string, unknown> }>(endpointUrl).pipe(
       map((res) => {
-        if (!res || typeof res !== 'object') return null;
-
-        if (Array.isArray(res)) {
-          if (res.length === 0) return null;
-          return normalizeBackendEntityToStep(res[0] as Record<string, unknown>, formDef, projectId);
-        }
-
-        let item: Record<string, unknown> | null = null;
-        if ('data' in res) {
-          const rawData = res['data'];
-          if (!rawData) return null;
-          if (Array.isArray(rawData)) {
-            if (rawData.length === 0) return null;
-            item = rawData[0] as Record<string, unknown>;
-          } else if (typeof rawData === 'object') {
-            item = rawData as Record<string, unknown>;
-          }
-        } else {
-          item = res as Record<string, unknown>;
-        }
-
-        if (!item || typeof item !== 'object') return null;
-
-        // Check if item contains actual data rather than an empty object or status envelope
-        const substantiveKeys = Object.keys(item).filter(
-          (k) => k !== 'message' && k !== 'success' && k !== 'status' && k !== 'count' && k !== 'data',
-        );
-        if (substantiveKeys.length === 0) return null;
-
-        const hasSubstance =
-          Boolean(item['id']) ||
-          substantiveKeys.some((k) => item[k] !== null && item[k] !== undefined && item[k] !== '');
-        if (!hasSubstance) return null;
-
+        const item = unwrapLatestApiRecord(res);
+        if (!item) return null;
         return normalizeBackendEntityToStep(item, formDef, projectId);
       }),
       catchError(() => of(null)),
@@ -475,9 +488,8 @@ export class FormApiService {
     const endpointUrl = `${this.apiBaseUrl}/api/v1/corrigendums/latest-tender?project_id=${projectId}`;
     return this.http.get<Record<string, unknown> | { data: Record<string, unknown> }>(endpointUrl).pipe(
       map((res) => {
-        if (!res || typeof res !== 'object') return null;
-        const item = ('data' in res ? (res as { data: Record<string, unknown> }).data : res) as Record<string, unknown>;
-        if (!item || typeof item !== 'object') return null;
+        const item = unwrapLatestApiRecord(res);
+        if (!item) return null;
 
         const fcode = String(item['form_code'] || 'FORM_04_LTE');
         const targetDef = getFormDefinition(fcode) || getFormDefinition('FORM_04_LTE');
@@ -496,11 +508,7 @@ export class FormApiService {
   getLatestCorrigendum(projectId: number): Observable<Record<string, unknown> | null> {
     const endpointUrl = `${this.apiBaseUrl}/api/v1/corrigendums/latest?project_id=${projectId}`;
     return this.http.get<Record<string, unknown> | { data: Record<string, unknown> }>(endpointUrl).pipe(
-      map((res) => {
-        if (!res || typeof res !== 'object') return null;
-        const item = ('data' in res ? (res as { data: Record<string, unknown> }).data : res) as Record<string, unknown>;
-        return item && typeof item === 'object' ? item : null;
-      }),
+      map((res) => unwrapLatestApiRecord(res)),
       catchError(() => of(null)),
     );
   }

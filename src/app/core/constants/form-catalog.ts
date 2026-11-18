@@ -69,6 +69,7 @@ export interface FormDefinition {
   icon: string;
   description: string;
   apiEndpoint?: string;
+  latestApiEndpoint?: string;
   fields: FormFieldDefinition[];
   tableConfig?: FormTableConfig;
   uploads: FormUploadConfig[];
@@ -85,6 +86,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-file-edit',
     description: 'Pre-qualification bid terms, submission schedule, Material supply locations, and requirements',
     apiEndpoint: '/api/v1/pre-qualification-bids',
+    latestApiEndpoint: '/api/v1/pre-qualification-bids/latest',
     fields: [
       { key: 'pqb_title', label: 'PQB Title', type: 'text', required: true, colSpan: 2 },
       { key: 'pqb_no', label: 'PQB No.', type: 'text', required: true, colSpan: 2 },
@@ -122,6 +124,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-book',
     description: 'Documentation for PQB submission, dates, and recorded corrigendum count',
     apiEndpoint: '/api/v1/pqb-bid-documents',
+    latestApiEndpoint: '/api/v1/pqb-bid-documents/latest',
     fields: [
       { key: 'pqb_title', label: 'PQB Title', type: 'text', required: true, colSpan: 2 },
       { key: 'pqb_no', label: 'PQB No.', type: 'text', required: true, colSpan: 2 },
@@ -152,6 +155,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     description:
       'Corrigendum amendment notices issued against ICB, Techno Commercial Tender, PAC Tender, EOI, PQB, LTE, or STE notices',
     apiEndpoint: '/api/v1/corrigendums',
+    latestApiEndpoint: '/api/v1/corrigendums/latest',
     fields: [
       { key: 'corrigendum_no', label: 'Corrigendum No.', type: 'text', required: true, colSpan: 2 },
       { key: 'against_ref_no', label: 'Against EOI / PQB / Tender No.', type: 'text', required: true, colSpan: 2 },
@@ -179,6 +183,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-briefcase',
     description: 'LTE invitation terms, tender fee, EMD amounts, deadlines, and item specifications',
     apiEndpoint: '/api/v1/limited-tender-enquiries',
+    latestApiEndpoint: '/api/v1/limited-tender-enquiries/latest',
     fields: [
       { key: 'pqb_no', label: 'PQB No.', type: 'text', colSpan: 2 },
       { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
@@ -265,6 +270,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-compass',
     description: 'Expression of interest publication details, submission mode, and items required',
     apiEndpoint: '/api/v1/expressions-of-interest',
+    latestApiEndpoint: '/api/v1/expressions-of-interest/latest',
     fields: [
       { key: 'eoi_title', label: 'EOI Title', type: 'text', required: true, colSpan: 2 },
       { key: 'eoi_no', label: 'EOI No.', type: 'text', required: true, colSpan: 2 },
@@ -302,6 +308,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-question-circle',
     description: 'Direct inquiry from customer detailing specific material requirements and quantities',
     apiEndpoint: '/api/v1/customer-queries',
+    latestApiEndpoint: '/api/v1/customer-queries/latest',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'query_date', label: 'Query Date', type: 'date', required: true, colSpan: 2 },
@@ -327,6 +334,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-send',
     description: 'Dispatch RFQ to prospective vendors and suppliers with requirements',
     apiEndpoint: '/api/v1/quotation-requests',
+    latestApiEndpoint: '/api/v1/quotation-requests/latest',
     fields: [
       { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true, colSpan: 2 },
       { key: 'request_date', label: 'Request Date', type: 'date', required: true, colSpan: 2 },
@@ -352,6 +360,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-calculator',
     description: 'Complete commercial cost matrix including duties, forex buffers, logistics, and margins',
     apiEndpoint: '/api/v1/cost-sheets',
+    latestApiEndpoint: '/api/cost-sheet/latest',
     fields: [
       { key: 'project_title', label: 'Project Title', type: 'text', required: true, colSpan: 4, sectionTitle: '1. Project & Foreign Currency Valuation (Forex)' },
       { key: 'total_amount_eur', label: 'Total Amount in EUR', type: 'currency', prefix: '€', colSpan: 2 },
@@ -403,6 +412,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-tags',
     description: 'Detailed quotation received from vendor with HSN/SAC codes, incoterms, and pricing',
     apiEndpoint: '/api/v1/supplier-quotations',
+    latestApiEndpoint: '/api/v1/supplier-quotations/latest',
     fields: [
       { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true, colSpan: 2 },
       { key: 'quotation_no', label: 'Quotation No.', type: 'text', required: true, colSpan: 1 },
@@ -442,6 +452,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-file-o',
     description: 'Final commercial offer sent to customer with itemized rates and validity',
     apiEndpoint: '/api/v1/customer-quotations',
+    latestApiEndpoint: '/api/v1/customer-quotations/latest',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'quotation_no', label: 'Quotation No.', type: 'text', required: true, colSpan: 1 },
@@ -477,6 +488,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-building',
     description: 'Proprietary Article Certificate (PAC) tender enquiry terms, dates, and specifications',
     apiEndpoint: '/api/v1/pac-tenders',
+    latestApiEndpoint: '/api/v1/pac-tenders/latest',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
@@ -513,6 +525,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-shopping-bag',
     description: 'Formal purchase order contractual commitment with delivery dates and items',
     apiEndpoint: '/api/v1/purchase-orders',
+    latestApiEndpoint: '/api/v1/purchase-orders/latest',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'po_title', label: 'PO Title', type: 'text', required: true, colSpan: 2 },
@@ -553,6 +566,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-folder-open',
     description: 'Bid submission submission data, corrigendum counts, and quoted tender pricing',
     apiEndpoint: '/api/v1/bid-submissions',
+    latestApiEndpoint: '/api/v1/bid-submissions/latest',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
@@ -595,6 +609,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-check-square',
     description: 'Acknowledgement and formal confirmation placed with supplier for production',
     apiEndpoint: '/api/v1/order-confirmations',
+    latestApiEndpoint: '/api/v1/order-confirmations/latest',
     fields: [
       { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true, colSpan: 2 },
       { key: 'order_confirmation_no', label: 'Order Confirmation No.', type: 'text', required: true, colSpan: 1 },
@@ -631,6 +646,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-receipt',
     description: 'Proforma invoice received from vendor prior to dispatch / foreign remittance',
     apiEndpoint: '/api/v1/proforma-invoices',
+    latestApiEndpoint: '/api/v1/proforma-invoices/latest',
     fields: [
       { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true, colSpan: 2 },
       { key: 'proforma_invoice_no', label: 'Proforma Invoice No.', type: 'text', required: true, colSpan: 1 },
@@ -705,6 +721,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-box',
     description: 'Inventory package list with tare/gross weights provided by the supplier',
     apiEndpoint: '/api/v1/supplier-packing-lists',
+    latestApiEndpoint: '/api/v1/supplier-packing-lists/latest',
     fields: [
       { key: 'packing_list_no', label: 'Packing List No.', type: 'text', required: true, colSpan: 2 },
       { key: 'packing_list_date', label: 'Packing List Date', type: 'date', colSpan: 2 },
@@ -894,6 +911,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-file',
     description: 'Final sales tax invoice billed to the customer for complete supply and service',
     apiEndpoint: '/api/v1/customer-tax-invoices',
+    latestApiEndpoint: '/api/v1/customer-tax-invoices/latest',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'invoice_no', label: 'Invoice No.', type: 'text', required: true, colSpan: 1 },
@@ -928,6 +946,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-globe',
     description: 'Port logistics, customs Bill of Entry (BOE), duties, IGST, and clearance tracking',
     apiEndpoint: '/api/v1/bill-of-entries',
+    latestApiEndpoint: '/api/v1/bills-of-entry/latest',
     fields: [
       {
         key: 'logistic_mode',
@@ -1001,6 +1020,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-file-check',
     description: 'Techno commercial tender bid submission, delivery terms, warranty, and material price schedule',
     apiEndpoint: '/api/v1/bid-document-techno-commercial',
+    latestApiEndpoint: '/api/v1/bid-document-techno-commercial/latest',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
@@ -1043,6 +1063,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-file-edit',
     description: 'Techno commercial tender enquiry terms, submission deadlines, EMD, fee, and requirements',
     apiEndpoint: '/api/v1/techno-commercial-tenders',
+    latestApiEndpoint: '/api/v1/techno-commercial-tenders/latest',
     fields: [
       { key: 'pqb_no', label: 'PQB No.', type: 'text', colSpan: 2 },
       { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
@@ -1076,6 +1097,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-book',
     description: 'Limited tender enquiry bid submission data, delivery terms, corrigendum, and material pricing',
     apiEndpoint: '/api/v1/bid-document-lte',
+    latestApiEndpoint: '/api/v1/bid-document-lte/latest',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
@@ -1145,6 +1167,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-file-edit',
     description: 'Single tender enquiry (STE) terms, submission deadlines, EMD, fee, and requirements',
     apiEndpoint: '/api/v1/single-tender-enquiries',
+    latestApiEndpoint: '/api/v1/single-tender-enquiries/latest',
     fields: [
       { key: 'pqb_no', label: 'PQB No.', type: 'text', colSpan: 2 },
       { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
@@ -1178,6 +1201,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-book',
     description: 'Single tender enquiry (STE) bid submission data, delivery terms, corrigendum, and material pricing',
     apiEndpoint: '/api/v1/bid-document-ste',
+    latestApiEndpoint: '/api/v1/bid-document-ste/latest',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
@@ -1220,6 +1244,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-file-edit',
     description: 'International competitive bidding (ICB) terms, submission deadlines, EMD, fee, and requirements',
     apiEndpoint: '/api/v1/international-competitive-biddings',
+    latestApiEndpoint: '/api/v1/international-competitive-biddings/latest',
     fields: [
       { key: 'pqb_no', label: 'PQB No.', type: 'text', colSpan: 2 },
       { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },
@@ -1253,6 +1278,7 @@ export const FORM_CATALOG: FormDefinition[] = [
     icon: 'pi pi-book',
     description: 'International competitive bidding (ICB) bid submission data, delivery terms, corrigendum, and material pricing',
     apiEndpoint: '/api/v1/bid-document-icb',
+    latestApiEndpoint: '/api/v1/bid-document-icb/latest',
     fields: [
       { key: 'customer_name', label: 'Customer / Organization Name', type: 'text', required: true, colSpan: 2 },
       { key: 'tender_title', label: 'Tender Title', type: 'text', required: true, colSpan: 2 },

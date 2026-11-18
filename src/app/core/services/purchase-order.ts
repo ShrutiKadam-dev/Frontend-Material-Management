@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
 
 import { API_BASE_URL } from '../tokens/api-base-url.token';
+import { unwrapLatestApiRecord } from '../utils/api-response.utils';
 import {
   LatestBidSubmission,
   PurchaseOrder,
@@ -36,9 +37,8 @@ export class PurchaseOrderService {
       )
       .pipe(
         map((res: unknown) => {
-          if (!res) return null;
-          const resObj = res as Record<string, unknown>;
-          const data = (resObj['data'] || resObj) as Record<string, unknown>;
+          const data = unwrapLatestApiRecord(res);
+          if (!data) return null;
           const rawItems = Array.isArray(data['items']) ? (data['items'] as Array<Record<string, unknown>>) : [];
           return {
             gst_rate: data['gst_rate'] as number | undefined,

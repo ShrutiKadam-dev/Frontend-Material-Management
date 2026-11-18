@@ -91,6 +91,33 @@ describe('PreQualificationBidService', () => {
     });
   });
 
+  it('should return null when /latest returns an error envelope or data: null', () => {
+    const mockHttp = {
+      get: vi.fn().mockReturnValue(
+        of({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Pre-qualification bid not found.',
+          },
+          success: false,
+        }),
+      ),
+    };
+
+    const service = Object.create(PreQualificationBidService.prototype);
+    (service as unknown as { http: typeof mockHttp }).http = mockHttp;
+    (service as unknown as { apiBaseUrl: string }).apiBaseUrl = 'http://localhost:3000';
+
+    service.getLatest(10).subscribe((res: unknown) => {
+      expect(res).toBeNull();
+    });
+
+    mockHttp.get.mockReturnValue(of({ success: true, data: null }));
+    service.getLatest(10).subscribe((res: unknown) => {
+      expect(res).toBeNull();
+    });
+  });
+
   it('should return empty array on getByProject error', () => {
     const mockHttp = {
       get: vi.fn().mockReturnValue(throwError(() => new Error('Network error'))),

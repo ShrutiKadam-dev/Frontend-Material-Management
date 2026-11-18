@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
 
 import { API_BASE_URL } from '../tokens/api-base-url.token';
+import { unwrapLatestApiRecord } from '../utils/api-response.utils';
 import {
   BillOfEntry,
   BillOfEntryCreateInput,
@@ -25,14 +26,12 @@ export class BillOfEntryService {
       )
       .pipe(
         map((res: Record<string, unknown>) => {
-          if (!res) return null;
-          let data = (res['data'] !== undefined ? res['data'] : res) as Record<string, unknown>;
-          if (Array.isArray(data)) {
-            data = (data as Array<Record<string, unknown>>)[0];
-          }
-          if (data && typeof data === 'object') {
-            if (data['bill_of_entry']) data = data['bill_of_entry'] as Record<string, unknown>;
-            else if (data['boe']) data = data['boe'] as Record<string, unknown>;
+          let data = unwrapLatestApiRecord(res);
+          if (!data) return null;
+          if (data['bill_of_entry'] && typeof data['bill_of_entry'] === 'object') {
+            data = data['bill_of_entry'] as Record<string, unknown>;
+          } else if (data['boe'] && typeof data['boe'] === 'object') {
+            data = data['boe'] as Record<string, unknown>;
           }
           if (!data || typeof data !== 'object') return null;
 

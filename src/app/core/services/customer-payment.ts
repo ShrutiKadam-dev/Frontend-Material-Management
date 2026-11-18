@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
 
 import { API_BASE_URL } from '../tokens/api-base-url.token';
+import { unwrapLatestApiRecord } from '../utils/api-response.utils';
 import {
   CustomerPayment,
   CustomerPaymentCreateInput,
@@ -30,8 +31,8 @@ export class CustomerPaymentService {
       )
       .pipe(
         map((res: unknown) => {
-          if (!res || typeof res !== 'object') return null;
-          const data = ((res as Record<string, unknown>)['data'] || res) as Record<string, unknown>;
+          const data = unwrapLatestApiRecord(res);
+          if (!data) return null;
           return {
             invoice_no: String(data['invoice_no'] ?? ''),
             invoice_date: String(data['invoice_date'] ?? ''),

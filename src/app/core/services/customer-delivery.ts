@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
 
 import { API_BASE_URL } from '../tokens/api-base-url.token';
+import { unwrapLatestApiRecord } from '../utils/api-response.utils';
 import {
   CustomerTaxInvoice,
   CustomerTaxInvoiceCreateInput,
@@ -39,8 +40,8 @@ export class CustomerDeliveryService {
       )
       .pipe(
         map((res: unknown) => {
-          if (!res || typeof res !== 'object') return null;
-          const data = ((res as Record<string, unknown>)['data'] || res) as Record<string, unknown>;
+          const data = unwrapLatestApiRecord(res);
+          if (!data) return null;
           const rawItems = (data['items'] as unknown[]) || [];
           const poNumber = String(data['po_number'] ?? data['po_no'] ?? data['purchase_order_no'] ?? '');
           return {
@@ -121,8 +122,8 @@ export class CustomerDeliveryService {
       )
       .pipe(
         map((res: unknown) => {
-          if (!res || typeof res !== 'object') return null;
-          const data = ((res as Record<string, unknown>)['data'] || res) as Record<string, unknown>;
+          const data = unwrapLatestApiRecord(res);
+          if (!data) return null;
           return {
             invoice_no: String(data['invoice_no'] ?? data['tax_invoice_no'] ?? ''),
             invoice_date: String(data['invoice_date'] ?? data['date'] ?? ''),
@@ -146,8 +147,8 @@ export class CustomerDeliveryService {
             )
             .pipe(
               map((res: unknown) => {
-                if (!res || typeof res !== 'object') return null;
-                const data = ((res as Record<string, unknown>)['data'] || res) as Record<string, unknown>;
+                const data = unwrapLatestApiRecord(res);
+                if (!data) return null;
                 return {
                   invoice_no: String(data['invoice_no'] ?? data['tax_invoice_no'] ?? ''),
                   invoice_date: String(data['invoice_date'] ?? data['date'] ?? ''),
@@ -175,15 +176,12 @@ export class CustomerDeliveryService {
       .get<Record<string, unknown>>(`${this.apiBaseUrl}/api/v1/supplier-packing-lists/latest?project_id=${projectId}`)
       .pipe(
         map((res: Record<string, unknown>) => {
-          if (!res) return null;
-          let data = (res['data'] !== undefined ? res['data'] : res) as Record<string, unknown>;
-          if (Array.isArray(data)) {
-            if (!(data as Array<Record<string, unknown>>).length) return null;
-            data = (data as Array<Record<string, unknown>>)[0];
-          }
-          if (data && typeof data === 'object') {
-            if (data['supplier_packing_list']) data = data['supplier_packing_list'] as Record<string, unknown>;
-            else if (data['packing_list']) data = data['packing_list'] as Record<string, unknown>;
+          let data = unwrapLatestApiRecord(res);
+          if (!data) return null;
+          if (data['supplier_packing_list'] && typeof data['supplier_packing_list'] === 'object') {
+            data = data['supplier_packing_list'] as Record<string, unknown>;
+          } else if (data['packing_list'] && typeof data['packing_list'] === 'object') {
+            data = data['packing_list'] as Record<string, unknown>;
           }
           if (!data || typeof data !== 'object') return null;
 

@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
 
 import { API_BASE_URL } from '../tokens/api-base-url.token';
+import { unwrapLatestApiRecord } from '../utils/api-response.utils';
 import {
   LatestProformaInvoice,
   ProformaInvoice,
@@ -36,15 +37,14 @@ export class ProformaInvoiceService {
       )
       .pipe(
         map((res: Record<string, unknown>) => {
-          if (!res) return null;
-          let data = (res['data'] !== undefined ? res['data'] : res) as Record<string, unknown>;
-          if (Array.isArray(data)) {
-            data = (data as Array<Record<string, unknown>>)[0];
-          }
-          if (data && typeof data === 'object') {
-            if (data['proforma_invoice']) data = data['proforma_invoice'] as Record<string, unknown>;
-            else if (data['proforma']) data = data['proforma'] as Record<string, unknown>;
-            else if (data['invoice']) data = data['invoice'] as Record<string, unknown>;
+          let data = unwrapLatestApiRecord(res);
+          if (!data) return null;
+          if (data['proforma_invoice'] && typeof data['proforma_invoice'] === 'object') {
+            data = data['proforma_invoice'] as Record<string, unknown>;
+          } else if (data['proforma'] && typeof data['proforma'] === 'object') {
+            data = data['proforma'] as Record<string, unknown>;
+          } else if (data['invoice'] && typeof data['invoice'] === 'object') {
+            data = data['invoice'] as Record<string, unknown>;
           }
           if (!data || typeof data !== 'object') return null;
 

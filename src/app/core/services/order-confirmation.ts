@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
 
 import { API_BASE_URL } from '../tokens/api-base-url.token';
+import { unwrapLatestApiRecord } from '../utils/api-response.utils';
 import { getCurrencySymbol } from '../constants/dropdown-options.constant';
 import {
   LatestOrderConfirmation,
@@ -38,14 +39,12 @@ export class OrderConfirmationService {
       )
       .pipe(
         map((res: Record<string, unknown>) => {
-          if (!res) return null;
-          let data = (res['data'] !== undefined ? res['data'] : res) as Record<string, unknown>;
-          if (Array.isArray(data)) {
-            data = (data as Array<Record<string, unknown>>)[0];
-          }
-          if (data && typeof data === 'object') {
-            if (data['supplier_quotation']) data = data['supplier_quotation'] as Record<string, unknown>;
-            else if (data['quotation']) data = data['quotation'] as Record<string, unknown>;
+          let data = unwrapLatestApiRecord(res);
+          if (!data) return null;
+          if (data['supplier_quotation'] && typeof data['supplier_quotation'] === 'object') {
+            data = data['supplier_quotation'] as Record<string, unknown>;
+          } else if (data['quotation'] && typeof data['quotation'] === 'object') {
+            data = data['quotation'] as Record<string, unknown>;
           }
           if (!data || typeof data !== 'object') return null;
 
@@ -89,14 +88,12 @@ export class OrderConfirmationService {
       )
       .pipe(
         map((res: Record<string, unknown>) => {
-          if (!res) return null;
-          let data = (res['data'] !== undefined ? res['data'] : res) as Record<string, unknown>;
-          if (Array.isArray(data)) {
-            data = (data as Array<Record<string, unknown>>)[0];
-          }
-          if (data && typeof data === 'object') {
-            if (data['order_confirmation']) data = data['order_confirmation'] as Record<string, unknown>;
-            else if (data['order']) data = data['order'] as Record<string, unknown>;
+          let data = unwrapLatestApiRecord(res);
+          if (!data) return null;
+          if (data['order_confirmation'] && typeof data['order_confirmation'] === 'object') {
+            data = data['order_confirmation'] as Record<string, unknown>;
+          } else if (data['order'] && typeof data['order'] === 'object') {
+            data = data['order'] as Record<string, unknown>;
           }
           if (!data || typeof data !== 'object') return null;
 

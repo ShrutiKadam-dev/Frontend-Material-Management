@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
 
 import { API_BASE_URL } from '../tokens/api-base-url.token';
+import { unwrapLatestApiRecord } from '../utils/api-response.utils';
 import {
   PreQualificationBid,
   PreQualificationBidCreateInput,
@@ -48,18 +49,8 @@ export class PreQualificationBidService {
       )
       .pipe(
         map((res: unknown) => {
-          if (!res || typeof res !== 'object') return null;
-          const resObj = res as Record<string, unknown>;
-          let data = resObj;
-          if (typeof resObj['data'] === 'string') {
-            try {
-              data = { ...resObj, ...(JSON.parse(resObj['data']) as Record<string, unknown>) };
-            } catch {
-              data = resObj;
-            }
-          } else if (resObj['data'] && typeof resObj['data'] === 'object') {
-            data = { ...resObj, ...(resObj['data'] as Record<string, unknown>) };
-          }
+          const data = unwrapLatestApiRecord(res);
+          if (!data) return null;
           return this.normalizePqb(data);
         }),
         catchError(() => of(null)),
@@ -153,7 +144,14 @@ export class PreQualificationBidService {
       unwrapped['pqb_opening_date_time'] ?? unwrapped['opening_date_time'] ?? '',
     ).trim();
 
-    const rawItems = unwrapped['items'] || unwrapped['table_items'] || unwrapped['requirements'];
+    const rawItems =
+      (Array.isArray(unwrapped['items']) && unwrapped['items'].length > 0 ? unwrapped['items'] : null) ||
+      (Array.isArray(unwrapped['table_items']) && unwrapped['table_items'].length > 0 ? unwrapped['table_items'] : null) ||
+      (Array.isArray(unwrapped['requirements']) && unwrapped['requirements'].length > 0 ? unwrapped['requirements'] : null) ||
+      (Array.isArray(unwrapped['materials']) && unwrapped['materials'].length > 0 ? unwrapped['materials'] : null) ||
+      unwrapped['items'] ||
+      unwrapped['table_items'] ||
+      unwrapped['requirements'];
     const items = Array.isArray(rawItems)
       ? rawItems.map((it: Record<string, unknown>, idx: number) => ({
           id: typeof it['id'] === 'number' ? it['id'] : undefined,

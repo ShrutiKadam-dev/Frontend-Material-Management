@@ -1,6 +1,6 @@
 import '@angular/compiler';
 import { describe, expect, it, vi } from 'vitest';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { FormArray, FormControl, FormGroup } from '@angular/forms';
 import { signal } from '@angular/core';
 import { StepFormDialog, CorrigendumQuantityItem } from './step-form-dialog';
@@ -5765,6 +5765,115 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(comp.isTechnoCommercialTenderStep({ form_code: 'FORM_29_BID_DOC_TECHNO_COMMERCIAL', step_name: 'Bid Document - Techno Commercial Tender' })).toBe(false);
       expect(comp.isTechnoCommercialTenderStep({ form_code: 'FORM_02_PQB_BID_DOCUMENT', step_name: 'Bid Document for PQB' })).toBe(false);
     });
+
+    it('should call ONLY Bid Document for PQB latest (never National PQB) when Bid Document for PQB is latest even if it returns null/empty', () => {
+      const { comp, tableArray, linkedPqbBidDocSignal } = setupBidDocTechnoComp();
+      const emptyPqbBidDoc: ProjectStep = {
+        ...mockPqbBidDocStep,
+        data: { pqb_title: 'PQB Empty', pqb_no: 'PQB-2026-10', items: [] },
+      };
+      comp.existingSteps = () => [mockNationalPqbStep, emptyPqbBidDoc, mockTechnoTenderStep];
+
+      const mockPqbService = {
+        getLatest: vi.fn(),
+      };
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER') return of(mockTechnoTenderStep);
+          if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT') return of(null);
+          return of(null);
+        }),
+      };
+      comp.preQualificationBidService = mockPqbService;
+      comp.formApiService = mockFormApi;
+
+      comp.loadForBidDocumentTechnoCommercial(false);
+
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_02_PQB_BID_DOCUMENT' }),
+        75,
+      );
+      expect(mockPqbService.getLatest).not.toHaveBeenCalled();
+      expect(tableArray().controls.length).toBe(0);
+      expect(linkedPqbBidDocSignal()).toBeNull();
+    });
+
+    it('should call ONLY National PQB latest (never Bid Document for PQB) when National PQB is latest even if it returns NOT_FOUND', () => {
+      const { comp, tableArray, linkedPqbBidDocSignal } = setupBidDocTechnoComp();
+      const emptyNewerNationalPqb: ProjectStep = {
+        ...mockNationalPqbStep,
+        step_order: 3,
+        updated_at: '2026-04-20T12:00:00Z',
+        data: { pqb_no: 'PQB-EMPTY', items: [] },
+      };
+      comp.existingSteps = () => [mockPqbBidDocStep, emptyNewerNationalPqb, mockTechnoTenderStep];
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(
+          of({
+            error: { code: 'NOT_FOUND', message: 'Pre-qualification bid not found.' },
+            success: false,
+          }),
+        ),
+      };
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER') return of(mockTechnoTenderStep);
+          return of(null);
+        }),
+      };
+      comp.preQualificationBidService = mockPqbService;
+      comp.formApiService = mockFormApi;
+
+      comp.loadForBidDocumentTechnoCommercial(false);
+
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(75);
+      expect(mockFormApi.getLatestEntry).not.toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_02_PQB_BID_DOCUMENT' }),
+        75,
+      );
+      expect(tableArray().controls.length).toBe(0);
+      expect(linkedPqbBidDocSignal()).toBeNull();
+    });
+
+    it('should call neither PQB latest API when pipeline steps have no PQB step, and resolve linked steps in edit mode via getSteps', () => {
+      const { comp, linkedTenderSignal, linkedPqbBidDocSignal } = setupBidDocTechnoComp();
+      comp.existingSteps = () => [];
+
+      const mockProjectStepService = {
+        getSteps: vi.fn().mockReturnValue(of([mockTechnoTenderStep])),
+      };
+      const mockPqbService = {
+        getLatest: vi.fn(),
+      };
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER') return of(mockTechnoTenderStep);
+          return of(null);
+        }),
+      };
+      comp.projectStepService = mockProjectStepService;
+      comp.preQualificationBidService = mockPqbService;
+      comp.formApiService = mockFormApi;
+
+      comp.loadForBidDocumentTechnoCommercial(false);
+
+      expect(mockFormApi.getLatestEntry).not.toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_02_PQB_BID_DOCUMENT' }),
+        75,
+      );
+      expect(mockPqbService.getLatest).not.toHaveBeenCalled();
+      expect(linkedTenderSignal()).toEqual(mockTechnoTenderStep);
+      expect(linkedPqbBidDocSignal()).toBeNull();
+
+      // Edit mode resolveLinkedStepsForBidDocTechnoCommercial via getSteps when existingSteps is empty
+      linkedTenderSignal.set(null);
+      linkedPqbBidDocSignal.set(null);
+      mockProjectStepService.getSteps.mockReturnValue(of([mockPqbBidDocStep, mockTechnoTenderStep]));
+      comp.resolveLinkedStepsForBidDocTechnoCommercial();
+      expect(linkedTenderSignal()).toEqual(mockTechnoTenderStep);
+      expect(linkedPqbBidDocSignal()).toEqual(mockPqbBidDocStep);
+    });
   });
 
   describe('Form 5: NAC Auto-Patching from Previous Bid Documents & GST Calculation', () => {
@@ -6060,6 +6169,127 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       );
       expect(comp.loadForNac).not.toHaveBeenCalled();
       expect(comp.resolveLinkedStepForNac).toHaveBeenCalled();
+    });
+  });
+
+  describe('Auto-Patch Banner Visibility on Latest API Error or Null Data', () => {
+    it('should keep pqbAutoPatched false and avoid dirtying form when PQB latest API returns NOT_FOUND error envelope or null', () => {
+      const pqbBidDocDef = getFormDefinition('FORM_02_PQB_BID_DOCUMENT')!;
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.projectId = signal(101);
+      comp.resolvedDef = signal(pqbBidDocDef);
+      comp.existingSteps = signal([]);
+      comp.fetchingNationalPqb = signal(false);
+      comp.pqbAutoPatched = signal(false);
+      comp.formVersion = signal(0);
+      comp.tableVersion = signal(0);
+      comp.tableFormArray = signal(new FormArray<FormGroup>([]));
+      comp.formGroup = signal(
+        new FormGroup({
+          pqb_title: new FormControl(''),
+          pqb_no: new FormControl(''),
+          total_no_corrigendum_issued: new FormControl(null),
+        }),
+      );
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+
+      // Case 1: Backend returns NOT_FOUND error envelope with success: false
+      comp.preQualificationBidService = {
+        getLatest: vi.fn().mockReturnValue(
+          of({
+            error: {
+              code: 'NOT_FOUND',
+              message: 'Pre-qualification bid not found.',
+            },
+            success: false,
+          }),
+        ),
+      };
+
+      comp.loadFromNationalPreQualificationBid(false);
+      expect(comp.pqbAutoPatched()).toBe(false);
+      expect(comp.formGroup().dirty).toBe(false);
+      expect(comp.formGroup().get('total_no_corrigendum_issued')?.value).toBeNull();
+      expect(comp.messageService.add).not.toHaveBeenCalled();
+
+      // Case 2: Backend returns { data: null }
+      comp.preQualificationBidService.getLatest.mockReturnValue(of({ data: null }));
+      comp.loadFromNationalPreQualificationBid(false);
+      expect(comp.pqbAutoPatched()).toBe(false);
+
+      // Case 3: Backend throws HTTP error
+      comp.preQualificationBidService.getLatest.mockReturnValue(throwError(() => new Error('404')));
+      comp.loadFromNationalPreQualificationBid(false);
+      expect(comp.pqbAutoPatched()).toBe(false);
+
+      // Case 4: Backend returns valid PQB data -> pqbAutoPatched becomes true
+      comp.preQualificationBidService.getLatest.mockReturnValue(
+        of({
+          id: 55,
+          pqb_title: 'Substation Expansion',
+          pqb_no: 'PQB-2026-55',
+          items: [],
+        }),
+      );
+      comp.loadFromNationalPreQualificationBid(false);
+      expect(comp.pqbAutoPatched()).toBe(true);
+      expect(comp.formGroup().get('pqb_title')?.value).toBe('Substation Expansion');
+      expect(comp.formGroup().get('pqb_no')?.value).toBe('PQB-2026-55');
+    });
+
+    it('should keep linked step signals null when latest API returns error envelope or null for Techno Commercial, NAC, Bid Doc LTE, and PO', () => {
+      const errorEnvelope = {
+        error: { code: 'NOT_FOUND', message: 'Pre-qualification bid not found.' },
+        success: false,
+      };
+
+      // Techno Commercial Tender
+      const technoComp = Object.create(StepFormDialog.prototype);
+      technoComp.projectId = signal(101);
+      technoComp.resolvedDef = signal(getFormDefinition('FORM_30_TECHNO_COMMERCIAL_TENDER')!);
+      technoComp.existingSteps = signal([]);
+      technoComp.fetchingTechnoCommercialPqb = signal(false);
+      technoComp.technoCommercialLinkedPqbStep = signal<ProjectStep | null>(null);
+      technoComp.formGroup = signal(new FormGroup({ pqb_no: new FormControl('') }));
+      technoComp.tableFormArray = signal(new FormArray<FormGroup>([]));
+      technoComp.cdr = { markForCheck: vi.fn() };
+      technoComp.messageService = { add: vi.fn() };
+      technoComp.preQualificationBidService = { getLatest: vi.fn().mockReturnValue(of(errorEnvelope)) };
+
+      technoComp.loadForTechnoCommercialTender(false);
+      expect(technoComp.technoCommercialLinkedPqbStep()).toBeNull();
+
+      // Bid Document LTE
+      const bidDocLteComp = Object.create(StepFormDialog.prototype);
+      bidDocLteComp.projectId = signal(101);
+      bidDocLteComp.resolvedDef = signal(getFormDefinition('FORM_31_BID_DOC_LTE')!);
+      bidDocLteComp.existingSteps = signal([]);
+      bidDocLteComp.fetchingBidDocLte = signal(false);
+      bidDocLteComp.bidDocLteLinkedStep = signal<ProjectStep | null>(null);
+      bidDocLteComp.formGroup = signal(new FormGroup({ tender_title: new FormControl('') }));
+      bidDocLteComp.cdr = { markForCheck: vi.fn() };
+      bidDocLteComp.messageService = { add: vi.fn() };
+      bidDocLteComp.formApiService = { getLatestEntry: vi.fn().mockReturnValue(of(null)) };
+
+      bidDocLteComp.loadForBidDocumentLte(false);
+      expect(bidDocLteComp.bidDocLteLinkedStep()).toBeNull();
+
+      // Purchase Order
+      const poComp = Object.create(StepFormDialog.prototype);
+      poComp.projectId = signal(101);
+      poComp.resolvedDef = signal(getFormDefinition('FORM_14_PURCHASE_ORDER')!);
+      poComp.existingSteps = signal([]);
+      poComp.fetchingPoData = signal(false);
+      poComp.poLinkedStep = signal<ProjectStep | null>(null);
+      poComp.formGroup = signal(new FormGroup({ delivery_terms: new FormControl('') }));
+      poComp.tableFormArray = signal(new FormArray<FormGroup>([]));
+      poComp.cdr = { markForCheck: vi.fn() };
+      poComp.messageService = { add: vi.fn() };
+      poComp.formApiService = { getLatestEntry: vi.fn().mockReturnValue(throwError(() => new Error('404'))) };
+
+      poComp.loadForPurchaseOrder(false);
+      expect(poComp.poLinkedStep()).toBeNull();
     });
   });
 });
