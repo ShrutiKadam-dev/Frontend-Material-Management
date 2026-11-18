@@ -198,6 +198,9 @@ export function normalizeBackendEntityToStep(
     if (n && !combinedData['against_ref_no']) {
       combinedData['against_ref_no'] = n;
     }
+    if (item['corrigendum_no'] !== undefined && !combinedData['corrigendum_no']) {
+      combinedData['corrigendum_no'] = String(item['corrigendum_no']);
+    }
   }
 
   // Bridge FORM_29_BID_DOC_TECHNO_COMMERCIAL title and number fallbacks

@@ -3074,6 +3074,185 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(matchedForNew?.id).toBe(104);
       expect(matchedForNew?.data?.['tender_no']).toBe('STE-003');
     });
+
+    it('should link to the latest preceding Corrigendum when adding another new Corrigendum', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.findPrecedingTenderStep = StepFormDialog.prototype['findPrecedingTenderStep'];
+      comp.isTenderOrPqbStep = StepFormDialog.prototype['isTenderOrPqbStep'];
+      comp.isCorrigendumStep = StepFormDialog.prototype['isCorrigendumStep'];
+      comp.hasTenderData = StepFormDialog.prototype['hasTenderData'];
+
+      const allSteps: ProjectStep[] = [
+        {
+          id: 201,
+          project_id: 60,
+          step_number: 1,
+          step_name: 'Limited Tender Enquiry (LTE)',
+          form_code: 'FORM_04_LTE',
+          status: 'completed',
+          description: '',
+          progress_percentage: 100,
+          completed_at: null,
+          data: { tender_title: 'Substation Transformer Package', tender_enquiry_no: 'LTE-SUB-2026' },
+        },
+        {
+          id: 202,
+          project_id: 60,
+          step_number: 2,
+          step_name: 'Corrigendum 1',
+          form_code: 'FORM_03_CORRIGENDUM',
+          status: 'completed',
+          description: '',
+          progress_percentage: 100,
+          completed_at: null,
+          data: {
+            ref_title: 'Substation Transformer Package',
+            against_ref_no: 'LTE-SUB-2026',
+            corrigendum_no: '1',
+            items: [{ sr_no: 1, as_per_corrigendum: '25-11-2026 15:00' }],
+          },
+        },
+        {
+          id: 203,
+          project_id: 60,
+          step_number: 3,
+          step_name: 'Corrigendum 2',
+          form_code: 'FORM_03_CORRIGENDUM',
+          status: 'completed',
+          description: '',
+          progress_percentage: 100,
+          completed_at: null,
+          data: {
+            ref_title: 'Substation Transformer Package',
+            against_ref_no: 'LTE-SUB-2026',
+            corrigendum_no: '2',
+            items: [{ sr_no: 1, as_per_corrigendum: '30-11-2026 15:00' }],
+          },
+        },
+      ];
+
+      // Adding Corrigendum 3 (null step) should fetch from Corrigendum 2 (the latest corrigendum, id 203)
+      const matched = comp.findPrecedingTenderStep(allSteps, null);
+      expect(matched).toBeDefined();
+      expect(matched?.id).toBe(203);
+      expect(matched?.step_name).toBe('Corrigendum 2');
+      expect(matched?.data?.['corrigendum_no']).toBe('2');
+
+      // Editing Corrigendum 2 (currentStep is id 203) should fetch from Corrigendum 1 (id 202)
+      const matchedForEdit = comp.findPrecedingTenderStep(allSteps, allSteps[2]);
+      expect(matchedForEdit).toBeDefined();
+      expect(matchedForEdit?.id).toBe(202);
+      expect(matchedForEdit?.step_name).toBe('Corrigendum 1');
+      expect(matchedForEdit?.data?.['corrigendum_no']).toBe('1');
+    });
+
+    it('should return Fetch from Latest Corrigendum in getCorrigendumFetchButtonLabel for FORM_03_CORRIGENDUM', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.getCorrigendumFetchButtonLabel = StepFormDialog.prototype['getCorrigendumFetchButtonLabel'];
+      comp.hasCorrigendumStep = () => true;
+
+      expect(comp.getCorrigendumFetchButtonLabel({ formCode: 'FORM_03_CORRIGENDUM', stepName: 'Corrigendum' })).toBe('Fetch from Latest Corrigendum');
+      expect(comp.getCorrigendumFetchButtonLabel(null)).toBe('Fetch from Latest Corrigendum');
+    });
+
+    it('should correctly parse stringified JSON in hasTenderData', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.hasTenderData = StepFormDialog.prototype['hasTenderData'];
+
+      const stepWithStringJson: ProjectStep = {
+        id: 301,
+        project_id: 70,
+        step_number: 1,
+        step_name: 'Corrigendum',
+        form_code: 'FORM_03_CORRIGENDUM',
+        status: 'completed',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        data: JSON.stringify({
+          corrigendum_no: '1',
+          against_ref_no: 'TENDER-XYZ',
+          ref_title: 'Grid Power Project',
+        }) as unknown as Record<string, unknown>,
+      };
+
+      expect(comp.hasTenderData(stepWithStringJson)).toBe(true);
+    });
+
+    it('should call getLatestEntry (/api/v1/corrigendums/latest) and NOT getEntryById (/api/v1/corrigendums/:id) when adding 2nd Corrigendum', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.projectId = () => 42;
+      comp.step = () => null;
+      comp.fetchingPreviousStep = { set: vi.fn() };
+      comp.formGroup = () =>
+        new FormGroup({
+          corrigendum_no: new FormControl(''),
+          against_ref_no: new FormControl(''),
+          ref_title: new FormControl(''),
+        });
+      comp.applyPreviousStepToCorrigendum = vi.fn();
+      comp.fetchLatestTenderFromBackend = vi.fn();
+
+      const firstCorrigendum: ProjectStep = {
+        id: 8,
+        project_id: 42,
+        step_number: 2,
+        step_name: 'Corrigendum',
+        form_code: 'FORM_03_CORRIGENDUM',
+        status: 'completed',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        data: {
+          corrigendum_no: '1',
+          against_ref_no: 'PQB-2026-01',
+          ref_title: 'Solar Plant Package',
+        },
+      };
+
+      const latestCorrigendumFromApi: ProjectStep = {
+        ...firstCorrigendum,
+        id: 15,
+        data: {
+          corrigendum_no: '1',
+          against_ref_no: 'PQB-2026-01',
+          ref_title: 'Solar Plant Package',
+          items: [
+            {
+              sr_no: 1,
+              as_per_tender_doc: 'CLOSING DATE & TIME: 20-11-2026 14:00',
+              as_per_corrigendum: 'CLOSING DATE & TIME: 25-11-2026 16:00',
+            },
+          ],
+        },
+      };
+
+      comp.existingSteps = () => [firstCorrigendum];
+      const mockFormApiService = {
+        getEntryById: vi.fn(),
+        getLatestEntry: vi.fn().mockReturnValue(of(latestCorrigendumFromApi)),
+      };
+      comp.formApiService = mockFormApiService;
+
+      comp.loadFromPreviousTenderStep(true);
+
+      expect(mockFormApiService.getEntryById).not.toHaveBeenCalled();
+      expect(mockFormApiService.getLatestEntry).toHaveBeenCalledTimes(1);
+      expect(mockFormApiService.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          formCode: 'FORM_03_CORRIGENDUM',
+          apiEndpoint: '/api/v1/corrigendums',
+        }),
+        42,
+      );
+      expect(comp.applyPreviousStepToCorrigendum).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 15,
+          form_code: 'FORM_03_CORRIGENDUM',
+        }),
+        true,
+      );
+    });
   });
 
   describe('Form 3: Corrigendum Quantity Table & Material Modification Logic', () => {

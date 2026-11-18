@@ -30,7 +30,7 @@ import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 
-import { Observable, catchError, finalize, forkJoin, map, of, Subscription } from 'rxjs';
+import { Observable, catchError, finalize, forkJoin, map, of, Subscription, timeout } from 'rxjs';
 
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../../../../../core/models/project-step.model';
 import { FormApiService } from '../../../../../core/services/form-api';
@@ -406,6 +406,9 @@ export class StepFormDialog {
     if (info?.stepName && !info.stepName.toLowerCase().includes('previous tender') && !info.stepName.toLowerCase().includes('preceding tender')) {
       return info.stepName;
     }
+    if (this.hasCorrigendumStep && this.hasCorrigendumStep()) {
+      return 'Latest Corrigendum';
+    }
     return 'Preceding Tender Step (ICB / Techno Commercial / PAC / EOI / PQB / LTE / STE)';
   }
 
@@ -415,6 +418,9 @@ export class StepFormDialog {
   getCorrigendumFetchButtonLabel(info: { formCode?: string; stepName?: string } | null): string {
     const fcode = info?.formCode || '';
     const sname = (info?.stepName || '').toLowerCase();
+    if (fcode === 'FORM_03_CORRIGENDUM' || sname.includes('corrigendum')) {
+      return 'Fetch from Latest Corrigendum';
+    }
     if (fcode === 'FORM_36_BID_DOC_ICB' || (sname.includes('bid doc') && (sname.includes('icb') || sname.includes('international')))) {
       return 'Fetch from Bid Doc ICB';
     }
@@ -447,6 +453,9 @@ export class StepFormDialog {
     }
     if (fcode === 'FORM_33_STE' || sname.includes('single tender') || sname.includes('ste')) {
       return 'Fetch from STE';
+    }
+    if (this.hasCorrigendumStep && this.hasCorrigendumStep()) {
+      return 'Fetch from Latest Corrigendum';
     }
     return 'Fetch from National PQB';
   }
@@ -2029,6 +2038,14 @@ export class StepFormDialog {
     );
   }
 
+  isCorrigendumStep(s: ProjectStep | null | undefined): boolean {
+    if (!s) return false;
+    const fcode = (s.form_code || '').toUpperCase().trim();
+    if (fcode === 'FORM_03_CORRIGENDUM') return true;
+    const name = (s.step_name || '').toLowerCase().trim();
+    return name.includes('corrigendum');
+  }
+
   findPrecedingTenderStep(
     allSteps: ProjectStep[],
     currentStep: ProjectStep | null,
@@ -2047,16 +2064,53 @@ export class StepFormDialog {
       return 0;
     };
 
-    const candidates = (allSteps || []).filter((s) => {
+    const currentNum = getStepNum(currentStep);
+    const currentIndex = currentStep ? (allSteps || []).findIndex((s) => s.id && s.id === currentStep.id) : -1;
+
+    // Filter out currentStep
+    const otherSteps = (allSteps || []).filter((s) => {
       if (currentStep && s.id && currentStep.id && s.id === currentStep.id) {
         return false;
       }
-      return this.isTenderOrPqbStep(s);
+      return true;
     });
 
-    if (candidates.length === 0) return undefined;
+    const checkIsCorr = (s: ProjectStep): boolean => {
+      if (typeof this.isCorrigendumStep === 'function') {
+        return this.isCorrigendumStep(s);
+      }
+      const fcode = (s.form_code || '').toUpperCase().trim();
+      const name = (s.step_name || '').toLowerCase().trim();
+      return fcode === 'FORM_03_CORRIGENDUM' || name.includes('corrigendum');
+    };
+    const corrCandidates = otherSteps.filter((s) => checkIsCorr(s));
+    const tenderCandidates = otherSteps.filter((s) => this.isTenderOrPqbStep(s));
 
-    // 1. If currentStep has an against_ref_no saved or in form, try to find an exact matching candidate
+    // Scope to steps strictly preceding currentStep
+    let scopedCorrCandidates = corrCandidates;
+    let scopedTenderCandidates = tenderCandidates;
+
+    if (currentNum > 0) {
+      const priorCorr = corrCandidates.filter((s) => getStepNum(s) > 0 && getStepNum(s) < currentNum);
+      if (priorCorr.length > 0) scopedCorrCandidates = priorCorr;
+
+      const priorTender = tenderCandidates.filter((s) => getStepNum(s) > 0 && getStepNum(s) < currentNum);
+      if (priorTender.length > 0) scopedTenderCandidates = priorTender;
+    } else if (currentIndex > 0) {
+      const priorCorr = corrCandidates.filter((s) => {
+        const idx = allSteps.indexOf(s);
+        return idx >= 0 && idx < currentIndex;
+      });
+      if (priorCorr.length > 0) scopedCorrCandidates = priorCorr;
+
+      const priorTender = tenderCandidates.filter((s) => {
+        const idx = allSteps.indexOf(s);
+        return idx >= 0 && idx < currentIndex;
+      });
+      if (priorTender.length > 0) scopedTenderCandidates = priorTender;
+    }
+
+    // Exact against_ref_no / tender_no match if specified
     const currentRef = currentStep
       ? String(
         (currentStep.data as Record<string, unknown>)?.['against_ref_no'] ||
@@ -2067,7 +2121,17 @@ export class StepFormDialog {
       : '';
 
     if (currentRef) {
-      const exactRefMatch = candidates.find((c) => {
+      const matchingCorrs = scopedCorrCandidates.filter((c) => {
+        const cd = (c.data as Record<string, unknown>) || {};
+        const cr = c as unknown as Record<string, unknown>;
+        const candRef = String(cd['against_ref_no'] || cd['against_tender_no'] || cr['against_ref_no'] || '').trim().toLowerCase();
+        return candRef === currentRef;
+      });
+      if (matchingCorrs.length > 0) {
+        scopedCorrCandidates = matchingCorrs;
+      }
+
+      const matchingTenders = scopedTenderCandidates.filter((c) => {
         const cd = (c.data as Record<string, unknown>) || {};
         const cr = c as unknown as Record<string, unknown>;
         const candRefs = [
@@ -2086,31 +2150,27 @@ export class StepFormDialog {
         ].filter(Boolean).map((r) => String(r).trim().toLowerCase());
         return candRefs.includes(currentRef);
       });
-      if (exactRefMatch) {
-        return exactRefMatch;
+      if (matchingTenders.length > 0) {
+        scopedTenderCandidates = matchingTenders;
       }
     }
 
-    // 2. Corrigendum comes after the steps in the sequence:
-    // If currentStep has a known step_number/order, prefer candidates that strictly precede it
-    let scopedCandidates = candidates;
-    const currentNum = getStepNum(currentStep);
-    const currentIndex = currentStep ? allSteps.findIndex((s) => s.id && s.id === currentStep.id) : -1;
+    const sortedCorrs = [...scopedCorrCandidates].sort((a, b) => {
+      const hasDataA = this.hasTenderData(a) ? 1 : 0;
+      const hasDataB = this.hasTenderData(b) ? 1 : 0;
+      if (hasDataA !== hasDataB) return hasDataB - hasDataA;
 
-    if (currentNum > 0) {
-      const prior = candidates.filter((s) => getStepNum(s) > 0 && getStepNum(s) < currentNum);
-      if (prior.length > 0) {
-        scopedCandidates = prior;
-      }
-    } else if (currentIndex > 0) {
-      const prior = candidates.filter((s) => {
-        const idx = allSteps.indexOf(s);
-        return idx >= 0 && idx < currentIndex;
-      });
-      if (prior.length > 0) {
-        scopedCandidates = prior;
-      }
-    }
+      const numDiff = getStepNum(b) - getStepNum(a);
+      if (numDiff !== 0) return numDiff;
+
+      const timeDiff = getStepTime(b) - getStepTime(a);
+      if (timeDiff !== 0) return timeDiff;
+
+      if (a.status === 'completed' && b.status !== 'completed') return -1;
+      if (b.status === 'completed' && a.status !== 'completed') return 1;
+
+      return (Number(b.id) || 0) - (Number(a.id) || 0);
+    });
 
     const getFormWeight = (s: ProjectStep): number => {
       const fcode = (s.form_code || '').toUpperCase();
@@ -2129,32 +2189,55 @@ export class StepFormDialog {
       return 1;
     };
 
-    const sorted = [...scopedCandidates].sort((a, b) => {
-      // 1. Prefer steps with actual tender data over completely empty shells
+    const sortedTenders = [...scopedTenderCandidates].sort((a, b) => {
       const hasDataA = this.hasTenderData(a) ? 1 : 0;
       const hasDataB = this.hasTenderData(b) ? 1 : 0;
       if (hasDataA !== hasDataB) return hasDataB - hasDataA;
 
-      // 2. Highest step order / number among candidates (closest preceding step)
       const numDiff = getStepNum(b) - getStepNum(a);
       if (numDiff !== 0) return numDiff;
 
-      // 3. Newest timestamp wins
       const timeDiff = getStepTime(b) - getStepTime(a);
       if (timeDiff !== 0) return timeDiff;
 
-      // 4. Completed steps preferred over pending
       if (a.status === 'completed' && b.status !== 'completed') return -1;
       if (b.status === 'completed' && a.status !== 'completed') return 1;
 
-      // 5. Form workflow weight
       const weightDiff = getFormWeight(b) - getFormWeight(a);
       if (weightDiff !== 0) return weightDiff;
 
       return (Number(b.id) || 0) - (Number(a.id) || 0);
     });
 
-    return sorted[0];
+    const bestCorr = sortedCorrs[0];
+    const bestTender = sortedTenders[0];
+
+    if (bestCorr && !bestTender) return bestCorr;
+    if (!bestCorr && bestTender) return bestTender;
+    if (!bestCorr && !bestTender) return undefined;
+
+    // Both exist: compare sequence position to select the latest preceding document!
+    const corrNum = getStepNum(bestCorr);
+    const tenderNum = getStepNum(bestTender);
+
+    if (corrNum > 0 && tenderNum > 0) {
+      return corrNum >= tenderNum ? bestCorr : bestTender;
+    }
+
+    const corrTime = getStepTime(bestCorr);
+    const tenderTime = getStepTime(bestTender);
+    if (corrTime > 0 && tenderTime > 0 && corrTime !== tenderTime) {
+      return corrTime >= tenderTime ? bestCorr : bestTender;
+    }
+
+    const corrIdx = allSteps.indexOf(bestCorr);
+    const tenderIdx = allSteps.indexOf(bestTender);
+    if (corrIdx >= 0 && tenderIdx >= 0 && corrIdx !== tenderIdx) {
+      return corrIdx >= tenderIdx ? bestCorr : bestTender;
+    }
+
+    // Default: Prefer latest Corrigendum over earlier Tender
+    return bestCorr;
   }
 
   loadFromPreviousTenderStep(showNotification = true): void {
@@ -2169,6 +2252,16 @@ export class StepFormDialog {
       : undefined;
 
     if (candidateInMemory) {
+      const fg = this.formGroup();
+      if (fg && fg.get('corrigendum_no') && !fg.get('corrigendum_no')?.value) {
+        const existingCorrs = (inMemory || []).filter(
+          (s) =>
+            s.form_code === 'FORM_03_CORRIGENDUM' ||
+            (s.step_name && s.step_name.toLowerCase().includes('corrigendum')),
+        );
+        const nextCorrNo = (existingCorrs.length + 1).toString();
+        fg.get('corrigendum_no')?.setValue(nextCorrNo);
+      }
       if (this.isNationalPqbStep(candidateInMemory)) {
         this.fetchAndApplyLatestPqbToCorrigendum(pId, candidateInMemory, showNotification);
         return;
@@ -2182,9 +2275,20 @@ export class StepFormDialog {
 
     if (this.projectStepService) {
       this.projectStepService.getSteps(pId).pipe(
+        timeout({ each: 4000, with: () => of([] as ProjectStep[]) }),
         catchError(() => of([] as ProjectStep[])),
       ).subscribe({
         next: (allSteps) => {
+          const fg = this.formGroup();
+          if (fg && fg.get('corrigendum_no') && !fg.get('corrigendum_no')?.value) {
+            const existingCorrs = (allSteps || []).filter(
+              (s) =>
+                s.form_code === 'FORM_03_CORRIGENDUM' ||
+                (s.step_name && s.step_name.toLowerCase().includes('corrigendum')),
+            );
+            const nextCorrNo = (existingCorrs.length + 1).toString();
+            fg.get('corrigendum_no')?.setValue(nextCorrNo);
+          }
           const candidateFromSteps = this.findPrecedingTenderStep(allSteps || [], currentStep);
           if (candidateFromSteps) {
             if (this.isNationalPqbStep(candidateFromSteps)) {
@@ -2354,7 +2458,6 @@ export class StepFormDialog {
     candidateStep: ProjectStep | undefined,
     showNotification: boolean,
   ): void {
-    if (typeof this.fetchingPreviousStep === 'function' && this.fetchingPreviousStep()) return;
     this.fetchingPreviousStep?.set?.(true);
 
     const pqbDef = getFormDefinition('FORM_01_PQB');
@@ -2367,6 +2470,7 @@ export class StepFormDialog {
 
     fetchLatestPqb$
       .pipe(
+        timeout({ each: 4000, with: () => of(null) }),
         catchError(() => of(null)),
         finalize(() => this.fetchingPreviousStep?.set?.(false)),
       )
@@ -2435,20 +2539,29 @@ export class StepFormDialog {
 
     this.fetchingPreviousStep?.set?.(true);
     const fetchTarget$: Observable<ProjectStep> = (targetDef?.apiEndpoint && this.formApiService)
-      ? (targetStep.id && typeof this.formApiService.getEntryById === 'function'
-        ? this.formApiService.getEntryById(targetDef, targetStep.id, pId).pipe(
-          catchError(() => this.formApiService.getLatestEntry(targetDef, pId)),
-        )
-        : this.formApiService.getLatestEntry(targetDef, pId)
-      ).pipe(
+      ? this.formApiService.getLatestEntry(targetDef, pId).pipe(
         map((latestStep: ProjectStep | null): ProjectStep => {
           if (latestStep) {
+            let selectedData: Record<string, unknown> = {};
+            if (typeof selectedStep.data === 'string') {
+              try {
+                selectedData = JSON.parse(selectedStep.data);
+              } catch {
+                selectedData = {};
+              }
+            } else if (selectedStep.data && typeof selectedStep.data === 'object') {
+              selectedData = selectedStep.data as Record<string, unknown>;
+            }
+            const latestData =
+              latestStep.data && typeof latestStep.data === 'object'
+                ? (latestStep.data as Record<string, unknown>)
+                : {};
             return {
               ...selectedStep,
               ...latestStep,
               data: {
-                ...((selectedStep.data as Record<string, unknown>) || {}),
-                ...((latestStep.data as Record<string, unknown>) || {}),
+                ...selectedData,
+                ...latestData,
               },
             };
           }
@@ -2459,6 +2572,7 @@ export class StepFormDialog {
       : of(selectedStep);
 
     fetchTarget$.pipe(
+      timeout({ each: 4000, with: () => of(selectedStep) }),
       finalize(() => this.fetchingPreviousStep?.set?.(false)),
     ).subscribe({
       next: (detailedStep: ProjectStep) => {
@@ -2482,7 +2596,16 @@ export class StepFormDialog {
 
   private hasTenderData(s: ProjectStep | null | undefined): boolean {
     if (!s) return false;
-    const d = (s.data as Record<string, unknown>) || {};
+    let d: Record<string, unknown> = {};
+    if (typeof s.data === 'string') {
+      try {
+        d = JSON.parse(s.data);
+      } catch {
+        d = {};
+      }
+    } else if (s.data && typeof s.data === 'object') {
+      d = s.data as Record<string, unknown>;
+    }
     const rec = s as unknown as Record<string, unknown>;
     return Boolean(
       d['tender_title'] ||
@@ -2496,6 +2619,7 @@ export class StepFormDialog {
       d['ref_title'] ||
       d['title'] ||
       d['bid_title'] ||
+      d['corrigendum_no'] ||
       d['tender_enquiry_no'] ||
       d['tender_no'] ||
       d['pqb_no'] ||
@@ -2505,15 +2629,22 @@ export class StepFormDialog {
       d['icb_no'] ||
       d['pac_no'] ||
       d['against_ref_no'] ||
+      d['against_tender_no'] ||
+      rec['corrigendum_no'] ||
       rec['tender_title'] ||
       rec['tender_enquiry_no'] ||
       rec['pqb_title'] ||
       rec['eoi_title'] ||
       rec['icb_title'] ||
       rec['pac_title'] ||
+      rec['ref_title'] ||
+      rec['against_ref_no'] ||
+      rec['against_tender_no'] ||
       (Array.isArray(d['items']) && d['items'].length > 0) ||
       (Array.isArray(d['requirements']) && d['requirements'].length > 0) ||
-      (Array.isArray(d['table_items']) && d['table_items'].length > 0)
+      (Array.isArray(d['table_items']) && d['table_items'].length > 0) ||
+      (Array.isArray(d['corrigendum_quantity_items']) && d['corrigendum_quantity_items'].length > 0) ||
+      (Array.isArray(d['quantity_items']) && d['quantity_items'].length > 0)
     );
   }
 
@@ -2526,17 +2657,44 @@ export class StepFormDialog {
       if (showNotification) {
         this.messageService?.add({
           severity: 'info',
-          summary: 'Preceding Tender Step Not Found',
+          summary: 'Preceding Step Not Found',
           detail:
-            'No preceding ICB, Techno Commercial Tender, PAC Tender, EOI, National Pre-Qualification Bid (PQB), LTE, or STE step found. Initialized default comparison rows.',
+            'No preceding Corrigendum or Tender step found. Initialized default comparison rows.',
         });
       }
       return;
     }
 
+    // 1. Check for latest Corrigendum on backend first!
+    const corrDef = getFormDefinition('FORM_03_CORRIGENDUM');
+    if (corrDef && typeof this.formApiService.getLatestEntry === 'function') {
+      this.formApiService.getLatestEntry(corrDef, pId).pipe(
+        timeout({ each: 3000, with: () => of(null) }),
+        catchError(() => of(null)),
+      ).subscribe({
+        next: (latestCorr) => {
+          if (latestCorr && this.hasTenderData(latestCorr)) {
+            this.fetchingPreviousStep?.set?.(false);
+            this.applyPreviousStepToCorrigendum(latestCorr, showNotification);
+            return;
+          }
+          this.fetchFallbackTenderFromBackend(pId, showNotification);
+        },
+        error: () => {
+          this.fetchFallbackTenderFromBackend(pId, showNotification);
+        },
+      });
+      return;
+    }
+
+    this.fetchFallbackTenderFromBackend(pId, showNotification);
+  }
+
+  private fetchFallbackTenderFromBackend(pId: number, showNotification: boolean): void {
     // Try dedicated /api/v1/corrigendums/latest-tender endpoint first
     if (typeof this.formApiService.getLatestTenderForCorrigendum === 'function') {
       this.formApiService.getLatestTenderForCorrigendum(pId).pipe(
+        timeout({ each: 3000, with: () => of(null) }),
         catchError(() => of(null)),
       ).subscribe({
         next: (directTender) => {
@@ -2572,24 +2730,33 @@ export class StepFormDialog {
     const steDef = getFormDefinition('FORM_33_STE');
     const corrDef = getFormDefinition('FORM_03_CORRIGENDUM');
 
+    const wrapReq = (obs: Observable<ProjectStep | null> | undefined) =>
+      obs ? obs.pipe(timeout({ each: 3000, with: () => of(null) }), catchError(() => of(null))) : of(null);
+
     forkJoin({
-      icbBidDoc: icbBidDocDef ? this.formApiService.getLatestEntry(icbBidDocDef, pId).pipe(catchError(() => of(null))) : of(null),
-      icb: icbDef ? this.formApiService.getLatestEntry(icbDef, pId).pipe(catchError(() => of(null))) : of(null),
-      technoBidDoc: technoBidDocDef ? this.formApiService.getLatestEntry(technoBidDocDef, pId).pipe(catchError(() => of(null))) : of(null),
-      techno: technoDef ? this.formApiService.getLatestEntry(technoDef, pId).pipe(catchError(() => of(null))) : of(null),
-      pac: pacDef ? this.formApiService.getLatestEntry(pacDef, pId).pipe(catchError(() => of(null))) : of(null),
-      eoi: eoiDef ? this.formApiService.getLatestEntry(eoiDef, pId).pipe(catchError(() => of(null))) : of(null),
-      pqbBidDoc: pqbBidDocDef ? this.formApiService.getLatestEntry(pqbBidDocDef, pId).pipe(catchError(() => of(null))) : of(null),
-      pqb: pqbDef ? this.formApiService.getLatestEntry(pqbDef, pId).pipe(catchError(() => of(null))) : of(null),
-      lteBidDoc: lteBidDocDef ? this.formApiService.getLatestEntry(lteBidDocDef, pId).pipe(catchError(() => of(null))) : of(null),
-      lte: lteDef ? this.formApiService.getLatestEntry(lteDef, pId).pipe(catchError(() => of(null))) : of(null),
-      steBidDoc: steBidDocDef ? this.formApiService.getLatestEntry(steBidDocDef, pId).pipe(catchError(() => of(null))) : of(null),
-      ste: steDef ? this.formApiService.getLatestEntry(steDef, pId).pipe(catchError(() => of(null))) : of(null),
-      corr: corrDef ? this.formApiService.getLatestEntry(corrDef, pId).pipe(catchError(() => of(null))) : of(null),
+      icbBidDoc: wrapReq(icbBidDocDef ? this.formApiService.getLatestEntry(icbBidDocDef, pId) : undefined),
+      icb: wrapReq(icbDef ? this.formApiService.getLatestEntry(icbDef, pId) : undefined),
+      technoBidDoc: wrapReq(technoBidDocDef ? this.formApiService.getLatestEntry(technoBidDocDef, pId) : undefined),
+      techno: wrapReq(technoDef ? this.formApiService.getLatestEntry(technoDef, pId) : undefined),
+      pac: wrapReq(pacDef ? this.formApiService.getLatestEntry(pacDef, pId) : undefined),
+      eoi: wrapReq(eoiDef ? this.formApiService.getLatestEntry(eoiDef, pId) : undefined),
+      pqbBidDoc: wrapReq(pqbBidDocDef ? this.formApiService.getLatestEntry(pqbBidDocDef, pId) : undefined),
+      pqb: wrapReq(pqbDef ? this.formApiService.getLatestEntry(pqbDef, pId) : undefined),
+      lteBidDoc: wrapReq(lteBidDocDef ? this.formApiService.getLatestEntry(lteBidDocDef, pId) : undefined),
+      lte: wrapReq(lteDef ? this.formApiService.getLatestEntry(lteDef, pId) : undefined),
+      steBidDoc: wrapReq(steBidDocDef ? this.formApiService.getLatestEntry(steBidDocDef, pId) : undefined),
+      ste: wrapReq(steDef ? this.formApiService.getLatestEntry(steDef, pId) : undefined),
+      corr: wrapReq(corrDef ? this.formApiService.getLatestEntry(corrDef, pId) : undefined),
     }).pipe(
       finalize(() => this.fetchingPreviousStep?.set?.(false)),
     ).subscribe({
       next: (results) => {
+        // If latest Corrigendum exists on backend and has data, prefer it over older tenders
+        if (results.corr && this.hasTenderData(results.corr)) {
+          this.applyPreviousStepToCorrigendum(results.corr, showNotification);
+          return;
+        }
+
         const candidates = [
           results.icbBidDoc,
           results.icb,
@@ -2639,6 +2806,7 @@ export class StepFormDialog {
         }
       },
       error: () => {
+        this.fetchingPreviousStep?.set?.(false);
         this.ensureCorrigendumDefaultRows();
         if (showNotification) {
           this.messageService?.add({
@@ -2652,6 +2820,8 @@ export class StepFormDialog {
   }
 
   private applyPreviousStepToCorrigendum(targetStep: ProjectStep, showNotification: boolean): void {
+    this.fetchingPreviousStep?.set?.(false);
+
     let stepData: Record<string, unknown> = {};
     if (typeof targetStep.data === 'string') {
       try {
@@ -2676,6 +2846,7 @@ export class StepFormDialog {
       stepData['eoi_title'] ||
       stepData['title'] ||
       stepData['bid_title'] ||
+      stepData['ref_title'] ||
       stepRec['tender_title'] ||
       stepRec['icb_title'] ||
       stepRec['techno_title'] ||
@@ -2685,6 +2856,7 @@ export class StepFormDialog {
       stepRec['pqb_title'] ||
       stepRec['eoi_title'] ||
       stepRec['title'] ||
+      stepRec['ref_title'] ||
       (typeof this.effectiveProjectTitle === 'function' ? this.effectiveProjectTitle() : '') ||
       '',
     ).trim();
@@ -2712,11 +2884,13 @@ export class StepFormDialog {
       stepRec['pac_no'] ||
       stepRec['eoi_no'] ||
       stepRec['pqb_no'] ||
+      stepRec['against_ref_no'] ||
+      stepRec['against_tender_no'] ||
       '',
     ).trim();
 
     // 3. Extract Closing Date & Time
-    const rawClosing =
+    let rawClosing =
       stepData['closing_date_time'] ||
       stepData['pqb_closing_date_time'] ||
       stepData['bid_submission_due_date_time'] ||
@@ -2728,16 +2902,28 @@ export class StepFormDialog {
       stepRec['eoi_closing_date_time'] ||
       stepRec['bid_submission_date'];
     let closingStr = '';
+    const getRowCorrVal = (srNo: number, headerPrefix: string): string => {
+      if (!Array.isArray(stepData['items'])) return '';
+      const r = (stepData['items'] as Array<Record<string, unknown>>).find((x) => Number(x['sr_no']) === srNo) || (stepData['items'] as Array<Record<string, unknown>>)[srNo - 1];
+      if (!r) return '';
+      const prefixRe = new RegExp(`^${headerPrefix}:?\\s*`, 'i');
+      const corrVal = String(r['as_per_corrigendum'] || '').replace(prefixRe, '').trim();
+      if (corrVal) return corrVal;
+      return String(r['as_per_tender_doc'] || '').replace(prefixRe, '').trim();
+    };
+
     if (rawClosing) {
       const dt = parseLocalDateTime(rawClosing as string | Date) || parseLocalDate(rawClosing as string | Date);
       const formattedD = dt ? formatDisplayDate(dt, 'dd-MM-yyyy') : '';
       const hasTime = rawClosing.toString().includes('T') || rawClosing.toString().includes(':');
       const timePart = dt && hasTime ? ` ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}` : '';
       closingStr = formattedD ? `${formattedD}${timePart}` : String(rawClosing);
+    } else {
+      closingStr = getRowCorrVal(1, 'CLOSING DATE & TIME');
     }
 
     // 4. Extract Opening Date & Time
-    const rawOpening =
+    let rawOpening =
       stepData['opening_date_time'] ||
       stepData['pqb_opening_date_time'] ||
       stepData['bid_opening_date_time'] ||
@@ -2753,24 +2939,32 @@ export class StepFormDialog {
       const hasTime = rawOpening.toString().includes('T') || rawOpening.toString().includes(':');
       const timePart = dt && hasTime ? ` ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}` : '';
       openingStr = formattedD ? `${formattedD}${timePart}` : String(rawOpening);
+    } else {
+      openingStr = getRowCorrVal(2, 'OPENING DATE & TIME');
     }
 
     // 5. Extract Quantity / Table
-    const rawItems = (stepData['items'] ||
+    const rawItems = (
+      stepData['corrigendum_quantity_items'] ||
+      stepData['quantity_items'] ||
+      stepData['items'] ||
       stepData['requirements'] ||
       stepData['table_items'] ||
       stepData['materials'] ||
+      stepRec['corrigendum_quantity_items'] ||
+      stepRec['quantity_items'] ||
       stepRec['items'] ||
       stepRec['requirements'] ||
-      []) as Array<Record<string, unknown>>;
+      []
+    ) as Array<Record<string, unknown>>;
 
     const mappedQuantityItems: CorrigendumQuantityItem[] = (Array.isArray(rawItems) ? rawItems : [])
-      .filter((it) => it && typeof it === 'object' && (it['description'] || it['material_name'] || it['item_name'] || it['name'] || it['quantity'] !== undefined))
+      .filter((it) => it && typeof it === 'object' && (it['description'] || it['original_description'] || it['corrigendum_description'] || it['material_name'] || it['item_name'] || it['name'] || it['quantity'] !== undefined || it['original_quantity'] !== undefined || it['corrigendum_quantity'] !== undefined))
       .map((it, idx) => {
-        const desc = String(it['description'] || it['material_name'] || it['item_name'] || it['name'] || `Item ${idx + 1}`).trim();
-        const rawQty = it['quantity'];
+        const desc = String(it['corrigendum_description'] || it['original_description'] || it['description'] || it['material_name'] || it['item_name'] || it['name'] || `Item ${idx + 1}`).trim();
+        const rawQty = it['corrigendum_quantity'] ?? it['original_quantity'] ?? it['quantity'];
         const qtyNum = rawQty !== undefined && rawQty !== null && rawQty !== '' && !isNaN(Number(rawQty)) ? Number(rawQty) : null;
-        const unit = String(it['unit'] || '').trim();
+        const unit = String(it['corrigendum_unit'] || it['original_unit'] || it['unit'] || '').trim();
         return {
           id: it['id'] ? `corr-item-${it['id']}` : `corr-item-${idx + 1}`,
           sr_no: idx + 1,
@@ -2783,6 +2977,29 @@ export class StepFormDialog {
           is_new: false,
         };
       });
+
+    if (mappedQuantityItems.length === 0 && Array.isArray(stepData['items'])) {
+      const row3 = (stepData['items'] as Array<Record<string, unknown>>).find((r) => Number(r['sr_no']) === 3);
+      if (row3 && typeof this.parseQuantityItemsFromRow === 'function') {
+        const parsed = this.parseQuantityItemsFromRow(row3);
+        parsed.forEach((p, idx) => {
+          const desc = p.corrigendum_description || p.original_description;
+          const qty = p.corrigendum_quantity !== null ? p.corrigendum_quantity : p.original_quantity;
+          const unit = p.corrigendum_unit || p.original_unit;
+          mappedQuantityItems.push({
+            id: `corr-item-${idx + 1}`,
+            sr_no: idx + 1,
+            original_description: desc,
+            original_quantity: qty,
+            original_unit: unit,
+            corrigendum_description: desc,
+            corrigendum_quantity: qty,
+            corrigendum_unit: unit,
+            is_new: false,
+          });
+        });
+      }
+    }
 
     if (!this.corrigendumQuantityItems || typeof this.corrigendumQuantityItems.set !== 'function') {
       (this as any).corrigendumQuantityItems = signal<CorrigendumQuantityItem[]>(mappedQuantityItems);
@@ -2802,13 +3019,14 @@ export class StepFormDialog {
     }
 
     // 6. Extract Payment Terms
-    const payTerms = String(
+    let payTerms = String(
       stepData['payment_terms'] ||
       stepData['payment_term'] ||
       stepRec['payment_terms'] ||
       stepRec['payment_term'] ||
       '',
     ).trim();
+    if (!payTerms) payTerms = getRowCorrVal(4, 'PAYMENT TERMS');
 
     // 7. Extract EMD
     const rawEmd =
@@ -2822,6 +3040,7 @@ export class StepFormDialog {
       const numEmd = Number(rawEmd);
       emdStr = !isNaN(numEmd) ? `₹ ${numEmd.toLocaleString('en-IN')}` : String(rawEmd);
     }
+    if (!emdStr) emdStr = getRowCorrVal(5, 'EMD');
 
     // 8. Extract Delivery Schedule
     const delScheduleRaw = String(stepData['delivery_schedule'] || stepRec['delivery_schedule'] || '').trim();
@@ -2835,6 +3054,7 @@ export class StepFormDialog {
         delSchedule = delPeriod || delTerms;
       }
     }
+    if (!delSchedule) delSchedule = getRowCorrVal(6, 'DELIVERY SCHEDULE');
 
     // 9. Extract Tender Fee
     const rawFee = stepData['tender_fee'] ?? stepRec['tender_fee'];
@@ -2843,9 +3063,10 @@ export class StepFormDialog {
       const numFee = Number(rawFee);
       feeStr = !isNaN(numFee) ? `₹ ${numFee.toLocaleString('en-IN')}` : String(rawFee);
     }
+    if (!feeStr) feeStr = getRowCorrVal(7, 'TENDER FEE');
 
     // 10. Extract Technical Specification
-    const techSpec = String(
+    let techSpec = String(
       stepData['technical_specifications'] ||
       stepData['technical_specification'] ||
       stepData['specification'] ||
@@ -2854,6 +3075,7 @@ export class StepFormDialog {
       stepRec['technical_specification'] ||
       '',
     ).trim();
+    if (!techSpec) techSpec = getRowCorrVal(8, 'TECHNICAL SPECIFICATION');
 
     // Patch form header controls
     const fg = this.formGroup();
@@ -3366,6 +3588,11 @@ export class StepFormDialog {
         lastInitializedKey = '';
         untracked(() => {
           this.deleteConfirmVisible.set(false);
+          this.fetchingPreviousStep?.set?.(false);
+          this.fetchingNationalPqb?.set?.(false);
+          this.fetchingSupplierQuotation?.set?.(false);
+          this.fetchingBidDocLte?.set?.(false);
+          this.fetchingPoData?.set?.(false);
         });
       }
     });
@@ -3409,6 +3636,11 @@ export class StepFormDialog {
   private initializeModal(step: ProjectStep | null, defInput: FormDefinition | null): void {
     this.activeTab.set('fields');
     this.newRemarkInput.set('');
+    this.fetchingPreviousStep?.set?.(false);
+    this.fetchingNationalPqb?.set?.(false);
+    this.fetchingSupplierQuotation?.set?.(false);
+    this.fetchingBidDocLte?.set?.(false);
+    this.fetchingPoData?.set?.(false);
 
     const pId = this.projectId();
     this.ensureProjectMetadata(pId);
@@ -3552,6 +3784,19 @@ export class StepFormDialog {
       }
       if (defInput.formCode === 'FORM_03_CORRIGENDUM') {
         this.ensureCorrigendumDefaultRows();
+        const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+        const existingCorrs = Array.isArray(inMemory)
+          ? inMemory.filter(
+              (s) =>
+                s.form_code === 'FORM_03_CORRIGENDUM' ||
+                (s.step_name && s.step_name.toLowerCase().includes('corrigendum')),
+            )
+          : [];
+        const nextCorrNo = (existingCorrs.length + 1).toString();
+        const fg = this.formGroup();
+        if (fg && fg.get('corrigendum_no') && !fg.get('corrigendum_no')?.value) {
+          fg.get('corrigendum_no')?.setValue(nextCorrNo);
+        }
         this.loadFromPreviousTenderStep(false);
       }
       if (
