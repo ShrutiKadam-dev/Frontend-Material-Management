@@ -4778,5 +4778,302 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(comp.getTechnoCommercialPqbFetchButtonLabel()).toBe('Fetch from National PQB');
     });
   });
+
+  describe('Form 29: Bid Document - Techno Commercial Tender Auto-Patching (Techno-Commercial Tender + Bid Document for PQB)', () => {
+    const bidDocTechnoDef = getFormDefinition('FORM_29_BID_DOC_TECHNO_COMMERCIAL')!;
+
+    const setupBidDocTechnoComp = () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.unwrapStepRecord = StepFormDialog.prototype['unwrapStepRecord'];
+      comp.isNationalPqbStep = StepFormDialog.prototype['isNationalPqbStep'];
+      comp.isPqbBidDocStep = StepFormDialog.prototype['isPqbBidDocStep'];
+      comp.extractPqbNoFromSource = StepFormDialog.prototype['extractPqbNoFromSource'];
+      comp.extractPqbItemsFromSource = StepFormDialog.prototype['extractPqbItemsFromSource'];
+      comp.hasPqbDataForTechnoCommercial = StepFormDialog.prototype['hasPqbDataForTechnoCommercial'];
+      comp.pickLatestPqbCandidate = StepFormDialog.prototype['pickLatestPqbCandidate'];
+      comp.isTechnoCommercialTenderStep = StepFormDialog.prototype['isTechnoCommercialTenderStep'];
+      comp.extractTechnoCommercialDetails = StepFormDialog.prototype['extractTechnoCommercialDetails'];
+      comp.hasTechnoCommercialTenderDetails = StepFormDialog.prototype['hasTechnoCommercialTenderDetails'];
+      comp.getAvailableTechnoCommercialTenderStep =
+        StepFormDialog.prototype['getAvailableTechnoCommercialTenderStep'];
+      comp.getAvailablePqbBidDocStep = StepFormDialog.prototype['getAvailablePqbBidDocStep'];
+      comp.populateBidDocTechnoCommercialItemsTable =
+        StepFormDialog.prototype['populateBidDocTechnoCommercialItemsTable'];
+      comp.loadForBidDocumentTechnoCommercial =
+        StepFormDialog.prototype['loadForBidDocumentTechnoCommercial'];
+      comp.loadPqbBidDocItemsForBidDocTechnoCommercial =
+        StepFormDialog.prototype['loadPqbBidDocItemsForBidDocTechnoCommercial'];
+      comp.applySourcesToBidDocTechnoCommercial =
+        StepFormDialog.prototype['applySourcesToBidDocTechnoCommercial'];
+      comp.resolveLinkedStepsForBidDocTechnoCommercial =
+        StepFormDialog.prototype['resolveLinkedStepsForBidDocTechnoCommercial'];
+
+      const fg = new FormGroup({
+        customer_name: new FormControl('NTPC'),
+        tender_title: new FormControl(''),
+        tender_no: new FormControl(''),
+        tender_issue_date: new FormControl<Date | null>(null),
+      });
+
+      const tableArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      const linkedTenderSignal = signal<ProjectStep | null>(null);
+      const linkedPqbBidDocSignal = signal<ProjectStep | null>(null);
+      const fetchingSignal = signal<boolean>(false);
+      const resolvedDefSignal = signal<FormDefinition | undefined>(bidDocTechnoDef);
+
+      comp.formGroup = () => fg;
+      comp.tableFormArray = tableArray;
+      comp.tableVersion = { update: vi.fn() };
+      comp.formVersion = { update: vi.fn() };
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+      comp.projectId = () => 75;
+      comp.existingSteps = () => [];
+      comp.bidDocTechnoLinkedTenderStep = linkedTenderSignal;
+      comp.bidDocTechnoLinkedPqbBidDocStep = linkedPqbBidDocSignal;
+      comp.fetchingBidDocTechnoCommercial = fetchingSignal;
+      comp.resolvedDef = resolvedDefSignal;
+
+      return { comp, fg, tableArray, linkedTenderSignal, linkedPqbBidDocSignal, fetchingSignal };
+    };
+
+    const mockTechnoTenderStep: ProjectStep = {
+      id: 301,
+      project_id: 75,
+      step_number: 3,
+      step_name: 'Techno Commercial Tender',
+      description: '',
+      progress_percentage: 100,
+      completed_at: null,
+      form_code: 'FORM_30_TECHNO_COMMERCIAL_TENDER',
+      status: 'completed',
+      updated_at: '2026-04-12T10:00:00Z',
+      data: {
+        pqb_no: 'PQB-2026-10',
+        tender_title: 'Boiler Feed Pump Assembly Tender',
+        tender_no: 'TCT-NTPC-2026-055',
+        tender_issue_date: '2026-04-10',
+        items: [
+          { description: 'Should NOT be used when PQB Bid Doc has requirements', quantity: 999 },
+        ],
+      },
+    };
+
+    const mockPqbBidDocStep: ProjectStep = {
+      id: 205,
+      project_id: 75,
+      step_number: 2,
+      step_name: 'Bid Document for PQB',
+      description: '',
+      progress_percentage: 100,
+      completed_at: null,
+      form_code: 'FORM_02_PQB_BID_DOCUMENT',
+      status: 'completed',
+      updated_at: '2026-04-05T10:00:00Z',
+      data: {
+        pqb_title: 'PQB Feed Pump',
+        pqb_no: 'PQB-2026-10',
+        items: [
+          { sr_no: 1, description: 'Boiler Feed Pump', quantity: 3 },
+          { sr_no: 2, description: 'Mechanical Seal Kit', quantity: 6 },
+        ],
+      },
+    };
+
+    it('should fetch Tender Title, Tender No., and Tender Issue Date from Techno Commercial Tender and Requirements from Bid Document for PQB', () => {
+      const { comp, fg, tableArray, linkedTenderSignal, linkedPqbBidDocSignal } = setupBidDocTechnoComp();
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER') return of(mockTechnoTenderStep);
+          if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT') return of(mockPqbBidDocStep);
+          return of(null);
+        }),
+      };
+      comp.formApiService = mockFormApi;
+
+      comp.loadForBidDocumentTechnoCommercial(true);
+
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_30_TECHNO_COMMERCIAL_TENDER' }),
+        75,
+      );
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_02_PQB_BID_DOCUMENT' }),
+        75,
+      );
+
+      expect(fg.get('tender_title')?.value).toBe('Boiler Feed Pump Assembly Tender');
+      expect(fg.get('tender_no')?.value).toBe('TCT-NTPC-2026-055');
+      const issueDate = fg.get('tender_issue_date')?.value as Date;
+      expect(issueDate).toBeInstanceOf(Date);
+      expect(issueDate.getFullYear()).toBe(2026);
+      expect(issueDate.getMonth()).toBe(3); // April (0-indexed)
+      expect(issueDate.getDate()).toBe(10);
+
+      const rows = tableArray().controls;
+      expect(rows.length).toBe(2);
+      expect(rows[0].get('description')?.value).toBe('Boiler Feed Pump');
+      expect(rows[0].get('quantity')?.value).toBe(3);
+      expect(rows[1].get('description')?.value).toBe('Mechanical Seal Kit');
+      expect(rows[1].get('quantity')?.value).toBe(6);
+
+      expect(linkedTenderSignal()).toEqual(mockTechnoTenderStep);
+      expect(linkedPqbBidDocSignal()).toEqual(mockPqbBidDocStep);
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: 'Bid Document Details Patched',
+        }),
+      );
+    });
+
+    it('should fall back to in-memory existingSteps when backend /latest returns null', () => {
+      const { comp, fg, tableArray } = setupBidDocTechnoComp();
+      comp.existingSteps = () => [mockTechnoTenderStep, mockPqbBidDocStep];
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockReturnValue(of(null)),
+      };
+      comp.formApiService = mockFormApi;
+
+      comp.loadForBidDocumentTechnoCommercial(false);
+
+      expect(fg.get('tender_title')?.value).toBe('Boiler Feed Pump Assembly Tender');
+      expect(fg.get('tender_no')?.value).toBe('TCT-NTPC-2026-055');
+      expect(fg.get('tender_issue_date')?.value).toBeInstanceOf(Date);
+      expect(tableArray().controls.length).toBe(2);
+      expect(tableArray().controls[0].get('description')?.value).toBe('Boiler Feed Pump');
+    });
+
+    it('should fetch ONLY Bid Document for PQB when loadPqbBidDocItemsForBidDocTechnoCommercial is triggered from table tab without modifying Form Inputs', () => {
+      const { comp, fg, tableArray } = setupBidDocTechnoComp();
+      fg.get('tender_title')?.setValue('Custom User Title');
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT') return of(mockPqbBidDocStep);
+          return of(null);
+        }),
+      };
+      comp.formApiService = mockFormApi;
+
+      comp.loadPqbBidDocItemsForBidDocTechnoCommercial(true);
+
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_02_PQB_BID_DOCUMENT' }),
+        75,
+      );
+      expect(fg.get('tender_title')?.value).toBe('Custom User Title');
+      expect(tableArray().controls.length).toBe(2);
+      expect(tableArray().controls[0].get('description')?.value).toBe('Boiler Feed Pump');
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: 'Requirements Loaded from Bid Document for PQB',
+        }),
+      );
+    });
+
+    it('should preserve existing values during auto-patch (showNotification=false) and overwrite on manual refresh (showNotification=true)', () => {
+      const { comp, fg, tableArray } = setupBidDocTechnoComp();
+      fg.get('tender_title')?.setValue('Saved Custom Tender Title');
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER') return of(mockTechnoTenderStep);
+          if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT') return of(mockPqbBidDocStep);
+          return of(null);
+        }),
+      };
+      comp.formApiService = mockFormApi;
+
+      // Auto-patch: keeps saved tender_title, fills missing tender_no, tender_issue_date, and items
+      comp.loadForBidDocumentTechnoCommercial(false);
+      expect(fg.get('tender_title')?.value).toBe('Saved Custom Tender Title');
+      expect(fg.get('tender_no')?.value).toBe('TCT-NTPC-2026-055');
+      expect(fg.get('tender_issue_date')?.value).toBeInstanceOf(Date);
+      expect(tableArray().controls.length).toBe(2);
+
+      // Manual refresh: overwrites tender_title too
+      comp.loadForBidDocumentTechnoCommercial(true);
+      expect(fg.get('tender_title')?.value).toBe('Boiler Feed Pump Assembly Tender');
+    });
+
+    it('should auto-trigger loadForBidDocumentTechnoCommercial in ADD mode and EDIT mode when required linked data is missing', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.activeTab = { set: vi.fn() };
+      comp.newRemarkInput = { set: vi.fn() };
+      comp.ensureProjectMetadata = vi.fn();
+      comp.projectId = () => 75;
+      comp.resolvedDef = { set: vi.fn() };
+      comp.loading = { set: vi.fn() };
+      comp.populateForm = vi.fn();
+      comp.loadForBidDocumentTechnoCommercial = vi.fn();
+      comp.resolveLinkedStepsForBidDocTechnoCommercial = vi.fn();
+
+      // ADD mode
+      comp.initializeModal(null, bidDocTechnoDef);
+      expect(comp.loadForBidDocumentTechnoCommercial).toHaveBeenCalledWith(false);
+
+      // EDIT mode missing tender_issue_date
+      comp.loadForBidDocumentTechnoCommercial.mockClear();
+      comp.initializeModal(
+        {
+          id: 901,
+          project_id: 75,
+          step_number: 4,
+          step_name: 'Bid Document - Techno Commercial Tender',
+          description: '',
+          status: 'in_progress',
+          progress_percentage: 50,
+          completed_at: null,
+          form_code: 'FORM_29_BID_DOC_TECHNO_COMMERCIAL',
+          data: {
+            tender_title: 'Existing',
+            tender_no: 'TCT-1',
+            items: [{ description: 'Pump', quantity: 2 }],
+          },
+        },
+        null,
+      );
+      expect(comp.loadForBidDocumentTechnoCommercial).toHaveBeenCalledWith(false);
+
+      // EDIT mode with all fields & items already populated
+      comp.loadForBidDocumentTechnoCommercial.mockClear();
+      comp.initializeModal(
+        {
+          id: 901,
+          project_id: 75,
+          step_number: 4,
+          step_name: 'Bid Document - Techno Commercial Tender',
+          description: '',
+          status: 'completed',
+          progress_percentage: 100,
+          completed_at: null,
+          form_code: 'FORM_29_BID_DOC_TECHNO_COMMERCIAL',
+          data: {
+            tender_title: 'Existing',
+            tender_no: 'TCT-1',
+            tender_issue_date: '2026-04-10',
+            items: [{ description: 'Pump', quantity: 2 }],
+          },
+        },
+        null,
+      );
+      expect(comp.loadForBidDocumentTechnoCommercial).not.toHaveBeenCalled();
+      expect(comp.resolveLinkedStepsForBidDocTechnoCommercial).toHaveBeenCalled();
+    });
+
+    it('should classify Techno Commercial Tender steps and exclude Bid Document Techno Commercial', () => {
+      const { comp } = setupBidDocTechnoComp();
+
+      expect(comp.isTechnoCommercialTenderStep({ form_code: 'FORM_30_TECHNO_COMMERCIAL_TENDER', step_name: 'Techno Commercial Tender' })).toBe(true);
+      expect(comp.isTechnoCommercialTenderStep({ form_code: 'FORM_29_BID_DOC_TECHNO_COMMERCIAL', step_name: 'Bid Document - Techno Commercial Tender' })).toBe(false);
+      expect(comp.isTechnoCommercialTenderStep({ form_code: 'FORM_02_PQB_BID_DOCUMENT', step_name: 'Bid Document for PQB' })).toBe(false);
+    });
+  });
 });
 

@@ -205,28 +205,36 @@ export function normalizeBackendEntityToStep(
     }
   }
 
-  // Bridge FORM_29_BID_DOC_TECHNO_COMMERCIAL title and number fallbacks
+  // Bridge FORM_29_BID_DOC_TECHNO_COMMERCIAL title, number, and issue date fallbacks
   if (formDef.formCode === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL') {
     const t = item['tender_title'] || item['title'] || '';
     const n = item['tender_no'] || item['number'] || '';
+    const d = item['tender_issue_date'] || item['issue_date'] || item['tender_date'] || '';
     if (t && !combinedData['tender_title']) {
       combinedData['tender_title'] = t;
     }
     if (n && !combinedData['tender_no']) {
       combinedData['tender_no'] = n;
     }
+    if (d && !combinedData['tender_issue_date']) {
+      combinedData['tender_issue_date'] = d;
+    }
   }
 
-  // Bridge FORM_30_TECHNO_COMMERCIAL_TENDER title, tender_no, and pqb_no fallbacks
+  // Bridge FORM_30_TECHNO_COMMERCIAL_TENDER title, tender_no, issue date, and pqb_no fallbacks
   if (formDef.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER') {
     const t = item['tender_title'] || item['title'] || '';
     const n = item['tender_no'] || item['number'] || '';
+    const d = item['tender_issue_date'] || item['issue_date'] || item['tender_date'] || '';
     const pqbNo = item['pqb_no'] || item['pqbNo'] || item['pqb_number'] || item['pqbNumber'] || '';
     if (t && !combinedData['tender_title']) {
       combinedData['tender_title'] = t;
     }
     if (n && !combinedData['tender_no']) {
       combinedData['tender_no'] = n;
+    }
+    if (d && !combinedData['tender_issue_date']) {
+      combinedData['tender_issue_date'] = d;
     }
     if (pqbNo && !combinedData['pqb_no']) {
       combinedData['pqb_no'] = pqbNo;

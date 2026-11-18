@@ -242,6 +242,18 @@ export class StepFormDialog {
   readonly technoCommercialPqbFetchButtonLabel = computed(() =>
     this.getTechnoCommercialPqbFetchButtonLabel(),
   );
+  readonly isBidDocumentTechnoCommercial = computed(() => {
+    const code = this.resolvedDef()?.formCode;
+    if (code === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL') return true;
+    const name = (this.resolvedDef()?.name || '').toLowerCase();
+    return (
+      (name.includes('bid doc') || name.includes('bid document')) &&
+      (name.includes('techno commercial') || name.includes('techno-commercial'))
+    );
+  });
+  readonly bidDocTechnoLinkedTenderStep = signal<ProjectStep | null>(null);
+  readonly bidDocTechnoLinkedPqbBidDocStep = signal<ProjectStep | null>(null);
+  readonly fetchingBidDocTechnoCommercial = signal<boolean>(false);
   readonly isBidDocumentLte = computed(() => {
     const code = this.resolvedDef()?.formCode;
     if (code === 'FORM_31_BID_DOC_LTE') return true;
@@ -1787,6 +1799,438 @@ export class StepFormDialog {
     const step = this.getAvailablePqbStepForTechnoCommercial();
     if (step) {
       this.technoCommercialLinkedPqbStep.set(step);
+    }
+  }
+
+  // ── Form 29: Bid Document - Techno Commercial Tender Auto-Patching ───
+  // Tender Title, Tender No., and Tender Issue Date <- Techno Commercial Tender (FORM_30_TECHNO_COMMERCIAL_TENDER)
+  // Requirements data <- Bid Document for PQB (FORM_02_PQB_BID_DOCUMENT)
+  isTechnoCommercialTenderStep(s: ProjectStep | null | undefined): boolean {
+    if (!s) return false;
+    const fcode = (s.form_code || '').toUpperCase().trim();
+    const name = (s.step_name || '').toLowerCase().trim();
+    if (
+      fcode === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL' ||
+      fcode.includes('BID_DOC') ||
+      name.includes('bid doc') ||
+      name.includes('bid document')
+    ) {
+      return false;
+    }
+    if (
+      fcode === 'FORM_30_TECHNO_COMMERCIAL_TENDER' ||
+      fcode === 'FORM_30' ||
+      fcode === 'TECHNO_COMMERCIAL_TENDER'
+    ) {
+      return true;
+    }
+    const resolved = s.form_code ? getFormDefinition(s.form_code) : undefined;
+    if (resolved?.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER') return true;
+    return name.includes('techno commercial') || name.includes('techno-commercial');
+  }
+
+  extractTechnoCommercialDetails(
+    source: ProjectStep | Record<string, unknown> | null | undefined,
+  ): { tender_title: string; tender_no: string; tender_issue_date: string } {
+    const { raw, inner, merged } = this.unwrapStepRecord(source);
+
+    const tender_title = String(
+      inner['tender_title'] ||
+      raw['tender_title'] ||
+      merged['techno_title'] ||
+      merged['title'] ||
+      '',
+    ).trim();
+
+    const tender_no = String(
+      inner['tender_no'] ||
+      raw['tender_no'] ||
+      merged['tender_number'] ||
+      merged['number'] ||
+      '',
+    ).trim();
+
+    const rawIssueDate =
+      inner['tender_issue_date'] ??
+      raw['tender_issue_date'] ??
+      merged['issue_date'] ??
+      merged['tender_date'] ??
+      null;
+
+    const tender_issue_date = rawIssueDate
+      ? formatLocalDate(rawIssueDate as string | Date) || String(rawIssueDate).trim()
+      : '';
+
+    return { tender_title, tender_no, tender_issue_date };
+  }
+
+  hasTechnoCommercialTenderDetails(
+    source: ProjectStep | Record<string, unknown> | null | undefined,
+  ): boolean {
+    if (!source) return false;
+    const details = this.extractTechnoCommercialDetails(source);
+    return Boolean(details.tender_title || details.tender_no || details.tender_issue_date);
+  }
+
+  getAvailableTechnoCommercialTenderStep(): ProjectStep | null {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    const steps: ProjectStep[] = Array.isArray(inMemory) ? inMemory : [];
+
+    const candidates = steps.filter((s) => this.isTechnoCommercialTenderStep(s));
+    if (candidates.length === 0) return null;
+
+    const validCandidates = candidates.filter((s) => this.hasTechnoCommercialTenderDetails(s));
+    const pool = validCandidates.length > 0 ? validCandidates : candidates;
+
+    const getStepTimestamp = (s: ProjectStep): number => {
+      const dtStr = s.updated_at || s.created_at || s.completed_at;
+      if (dtStr) {
+        const t = new Date(dtStr).getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+      return 0;
+    };
+
+    const sorted = [...pool].sort((a, b) => {
+      const hasA = this.hasTechnoCommercialTenderDetails(a) ? 1 : 0;
+      const hasB = this.hasTechnoCommercialTenderDetails(b) ? 1 : 0;
+      if (hasA !== hasB) return hasB - hasA;
+
+      const timeDiff = getStepTimestamp(b) - getStepTimestamp(a);
+      if (timeDiff !== 0) return timeDiff;
+
+      if (a.status === 'completed' && b.status !== 'completed') return -1;
+      if (b.status === 'completed' && a.status !== 'completed') return 1;
+
+      const orderDiff = (b.step_number ?? b.step_order ?? 0) - (a.step_number ?? a.step_order ?? 0);
+      if (orderDiff !== 0) return orderDiff;
+
+      return (Number(b.id) || 0) - (Number(a.id) || 0);
+    });
+
+    return sorted[0] || null;
+  }
+
+  getAvailablePqbBidDocStep(): ProjectStep | null {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    const steps: ProjectStep[] = Array.isArray(inMemory) ? inMemory : [];
+
+    const candidates = steps.filter((s) => this.isPqbBidDocStep(s));
+    if (candidates.length === 0) return null;
+
+    return this.pickLatestPqbCandidate(candidates) || candidates[0];
+  }
+
+  populateBidDocTechnoCommercialItemsTable(items: Array<Record<string, unknown>>): void {
+    const def = typeof this.resolvedDef === 'function' ? this.resolvedDef() : null;
+    if (!def || !def.tableConfig) return;
+
+    const rowsArray = new FormArray<FormGroup>([]);
+    items.forEach((item, idx) => {
+      const desc = String(
+        item['corrigendum_description'] ||
+        item['description'] ||
+        item['original_description'] ||
+        item['material_name'] ||
+        item['item_name'] ||
+        item['name'] ||
+        `Item ${idx + 1}`,
+      ).trim();
+
+      const hsn = String(item['hsn_sac'] || item['hsn_code'] || '').trim();
+
+      const qty =
+        item['corrigendum_quantity'] !== null && item['corrigendum_quantity'] !== undefined
+          ? Number(item['corrigendum_quantity'])
+          : item['quantity'] !== null && item['quantity'] !== undefined
+            ? Number(item['quantity'])
+            : item['original_quantity'] !== null && item['original_quantity'] !== undefined
+              ? Number(item['original_quantity'])
+              : null;
+
+      const unitPrice =
+        item['unit_price'] !== null && item['unit_price'] !== undefined && item['unit_price'] !== ''
+          ? Number(item['unit_price'])
+          : null;
+
+      const totalAmt =
+        qty !== null && unitPrice !== null ? Number((qty * unitPrice).toFixed(2)) : null;
+
+      rowsArray.push(
+        this.createTableRowGroup(def, {
+          sr_no: idx + 1,
+          description: desc,
+          hsn_sac: hsn,
+          quantity: qty,
+          unit_price: unitPrice,
+          total_amount: totalAmt,
+        }),
+      );
+    });
+
+    if (rowsArray.length > 0) {
+      this.tableFormArray.set(rowsArray);
+      this.tableVersion.update((v) => v + 1);
+      this.cdr?.markForCheck?.();
+    }
+  }
+
+  loadForBidDocumentTechnoCommercial(showNotification = true): void {
+    if (
+      typeof this.fetchingBidDocTechnoCommercial === 'function' &&
+      this.fetchingBidDocTechnoCommercial()
+    ) {
+      return;
+    }
+    const pId = typeof this.projectId === 'function' ? this.projectId() : (this.projectId as unknown as number);
+    if (!pId) return;
+
+    const availableTechnoStep = this.getAvailableTechnoCommercialTenderStep();
+    const availablePqbBidDocStep = this.getAvailablePqbBidDocStep();
+
+    const technoDef = getFormDefinition('FORM_30_TECHNO_COMMERCIAL_TENDER');
+    const pqbBidDocDef = getFormDefinition('FORM_02_PQB_BID_DOCUMENT');
+
+    const hasApi = Boolean(this.formApiService && typeof this.formApiService.getLatestEntry === 'function');
+    if (!hasApi) {
+      this.applySourcesToBidDocTechnoCommercial(
+        availableTechnoStep,
+        availablePqbBidDocStep,
+        showNotification,
+      );
+      return;
+    }
+
+    const techno$: Observable<ProjectStep | null> = technoDef
+      ? this.formApiService.getLatestEntry(technoDef, pId).pipe(catchError(() => of(null)))
+      : of(null);
+    const pqbBidDoc$: Observable<ProjectStep | null> = pqbBidDocDef
+      ? this.formApiService.getLatestEntry(pqbBidDocDef, pId).pipe(catchError(() => of(null)))
+      : of(null);
+
+    this.fetchingBidDocTechnoCommercial.set(true);
+
+    forkJoin({ techno: techno$, pqbBidDoc: pqbBidDoc$ })
+      .pipe(finalize(() => this.fetchingBidDocTechnoCommercial.set(false)))
+      .subscribe({
+        next: ({ techno, pqbBidDoc }) => {
+          const technoCandidate =
+            techno && this.hasTechnoCommercialTenderDetails(techno)
+              ? techno
+              : availableTechnoStep && this.hasTechnoCommercialTenderDetails(availableTechnoStep)
+                ? availableTechnoStep
+                : null;
+
+          const pqbBidDocCandidate =
+            pqbBidDoc && this.extractPqbItemsFromSource(pqbBidDoc).length > 0
+              ? pqbBidDoc
+              : availablePqbBidDocStep && this.extractPqbItemsFromSource(availablePqbBidDocStep).length > 0
+                ? availablePqbBidDocStep
+                : null;
+
+          this.applySourcesToBidDocTechnoCommercial(
+            technoCandidate,
+            pqbBidDocCandidate,
+            showNotification,
+          );
+        },
+        error: () => {
+          this.applySourcesToBidDocTechnoCommercial(
+            availableTechnoStep,
+            availablePqbBidDocStep,
+            showNotification,
+          );
+        },
+      });
+  }
+
+  loadPqbBidDocItemsForBidDocTechnoCommercial(showNotification = true): void {
+    if (
+      typeof this.fetchingBidDocTechnoCommercial === 'function' &&
+      this.fetchingBidDocTechnoCommercial()
+    ) {
+      return;
+    }
+    const pId = typeof this.projectId === 'function' ? this.projectId() : (this.projectId as unknown as number);
+    if (!pId) return;
+
+    const availablePqbBidDocStep = this.getAvailablePqbBidDocStep();
+    const pqbBidDocDef = getFormDefinition('FORM_02_PQB_BID_DOCUMENT');
+
+    if (!pqbBidDocDef || !this.formApiService || typeof this.formApiService.getLatestEntry !== 'function') {
+      const items = availablePqbBidDocStep ? this.extractPqbItemsFromSource(availablePqbBidDocStep) : [];
+      if (items.length > 0) {
+        this.bidDocTechnoLinkedPqbBidDocStep.set(availablePqbBidDocStep);
+        this.populateBidDocTechnoCommercialItemsTable(items);
+        if (showNotification) {
+          this.messageService?.add({
+            severity: 'success',
+            summary: 'Requirements Loaded from Bid Document for PQB',
+            detail: `Loaded ${items.length} requirement items from latest Bid Document for PQB.`,
+          });
+        }
+      } else if (showNotification) {
+        this.messageService?.add({
+          severity: 'warn',
+          summary: 'Bid Document for PQB Not Found',
+          detail: 'No Requirements data found in Bid Document for PQB for this project.',
+        });
+      }
+      return;
+    }
+
+    this.fetchingBidDocTechnoCommercial.set(true);
+
+    this.formApiService
+      .getLatestEntry(pqbBidDocDef, pId)
+      .pipe(
+        catchError(() => of(null)),
+        finalize(() => this.fetchingBidDocTechnoCommercial.set(false)),
+      )
+      .subscribe({
+        next: (latestPqbBidDoc) => {
+          const candidate =
+            latestPqbBidDoc && this.extractPqbItemsFromSource(latestPqbBidDoc).length > 0
+              ? latestPqbBidDoc
+              : availablePqbBidDocStep && this.extractPqbItemsFromSource(availablePqbBidDocStep).length > 0
+                ? availablePqbBidDocStep
+                : null;
+
+          if (candidate) {
+            const items = this.extractPqbItemsFromSource(candidate);
+            this.bidDocTechnoLinkedPqbBidDocStep.set(candidate);
+            this.populateBidDocTechnoCommercialItemsTable(items);
+            if (showNotification) {
+              this.messageService?.add({
+                severity: 'success',
+                summary: 'Requirements Loaded from Bid Document for PQB',
+                detail: `Loaded ${items.length} requirement items from latest Bid Document for PQB.`,
+              });
+            }
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'warn',
+              summary: 'Bid Document for PQB Not Found',
+              detail: 'No Requirements data found in Bid Document for PQB for this project.',
+            });
+          }
+        },
+        error: () => {
+          if (availablePqbBidDocStep && this.extractPqbItemsFromSource(availablePqbBidDocStep).length > 0) {
+            const items = this.extractPqbItemsFromSource(availablePqbBidDocStep);
+            this.bidDocTechnoLinkedPqbBidDocStep.set(availablePqbBidDocStep);
+            this.populateBidDocTechnoCommercialItemsTable(items);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'info',
+              summary: 'Bid Document for PQB Unavailable',
+              detail: 'Could not fetch latest Bid Document for PQB for this project.',
+            });
+          }
+        },
+      });
+  }
+
+  private applySourcesToBidDocTechnoCommercial(
+    technoStep: ProjectStep | null,
+    pqbBidDocStep: ProjectStep | null,
+    showNotification: boolean,
+  ): void {
+    let patchedTenderFields = false;
+    let patchedItemsCount = 0;
+
+    if (technoStep) {
+      this.bidDocTechnoLinkedTenderStep.set(technoStep);
+      const details = this.extractTechnoCommercialDetails(technoStep);
+      const fg = this.formGroup();
+      if (fg) {
+        const patchPayload: Record<string, unknown> = {};
+
+        if (details.tender_title && fg.get('tender_title')) {
+          const cur = String(fg.get('tender_title')?.value || '').trim();
+          if (showNotification || !cur) {
+            patchPayload['tender_title'] = details.tender_title;
+          }
+        }
+        if (details.tender_no && fg.get('tender_no')) {
+          const cur = String(fg.get('tender_no')?.value || '').trim();
+          if (showNotification || !cur) {
+            patchPayload['tender_no'] = details.tender_no;
+          }
+        }
+        if (details.tender_issue_date && fg.get('tender_issue_date')) {
+          const cur = fg.get('tender_issue_date')?.value;
+          const parsedDate = parseLocalDate(details.tender_issue_date);
+          if (parsedDate && (showNotification || !cur)) {
+            patchPayload['tender_issue_date'] = parsedDate;
+          }
+        }
+
+        if (Object.keys(patchPayload).length > 0) {
+          fg.patchValue(patchPayload);
+          Object.keys(patchPayload).forEach((k) => fg.get(k)?.markAsDirty());
+          const def = typeof this.resolvedDef === 'function' ? this.resolvedDef() : null;
+          if (def) {
+            validateDateSequence(fg, def.fields);
+          }
+          this.formVersion.update((v) => v + 1);
+          this.cdr?.markForCheck?.();
+          patchedTenderFields = true;
+        }
+      }
+    }
+
+    if (pqbBidDocStep) {
+      this.bidDocTechnoLinkedPqbBidDocStep.set(pqbBidDocStep);
+      const pqbItems = this.extractPqbItemsFromSource(pqbBidDocStep);
+      const currentRowsCount = typeof this.tableFormArray === 'function' ? this.tableFormArray().length : 0;
+      if (pqbItems.length > 0 && (showNotification || currentRowsCount === 0)) {
+        this.populateBidDocTechnoCommercialItemsTable(pqbItems);
+        patchedItemsCount = pqbItems.length;
+      }
+    }
+
+    if (showNotification) {
+      if (patchedTenderFields && patchedItemsCount > 0) {
+        this.messageService?.add({
+          severity: 'success',
+          summary: 'Bid Document Details Patched',
+          detail: `Loaded Tender details from Techno Commercial Tender and ${patchedItemsCount} requirement items from Bid Document for PQB.`,
+        });
+      } else if (patchedTenderFields) {
+        this.messageService?.add({
+          severity: 'success',
+          summary: 'Tender Details Patched',
+          detail: 'Loaded Tender Title, Tender No., and Tender Issue Date from latest Techno Commercial Tender.',
+        });
+      } else if (patchedItemsCount > 0) {
+        this.messageService?.add({
+          severity: 'success',
+          summary: 'Requirements Loaded from Bid Document for PQB',
+          detail: `Loaded ${patchedItemsCount} requirement items from latest Bid Document for PQB.`,
+        });
+      } else {
+        this.messageService?.add({
+          severity: 'warn',
+          summary: 'Linked Steps Not Found',
+          detail: 'No Techno Commercial Tender or Bid Document for PQB data found for this project to patch.',
+        });
+      }
+    }
+  }
+
+  resolveLinkedStepsForBidDocTechnoCommercial(): void {
+    if (!this.bidDocTechnoLinkedTenderStep()) {
+      const techno = this.getAvailableTechnoCommercialTenderStep();
+      if (techno) {
+        this.bidDocTechnoLinkedTenderStep.set(techno);
+      }
+    }
+    if (!this.bidDocTechnoLinkedPqbBidDocStep()) {
+      const pqbBidDoc = this.getAvailablePqbBidDocStep();
+      if (pqbBidDoc) {
+        this.bidDocTechnoLinkedPqbBidDocStep.set(pqbBidDoc);
+      }
     }
   }
 
@@ -4177,6 +4621,7 @@ export class StepFormDialog {
           this.fetchingPreviousStep?.set?.(false);
           this.fetchingNationalPqb?.set?.(false);
           this.fetchingTechnoCommercialPqb?.set?.(false);
+          this.fetchingBidDocTechnoCommercial?.set?.(false);
           this.fetchingSupplierQuotation?.set?.(false);
           this.fetchingBidDocLte?.set?.(false);
           this.fetchingPoData?.set?.(false);
@@ -4227,6 +4672,9 @@ export class StepFormDialog {
     this.fetchingNationalPqb?.set?.(false);
     this.fetchingTechnoCommercialPqb?.set?.(false);
     this.technoCommercialLinkedPqbStep?.set?.(null);
+    this.fetchingBidDocTechnoCommercial?.set?.(false);
+    this.bidDocTechnoLinkedTenderStep?.set?.(null);
+    this.bidDocTechnoLinkedPqbBidDocStep?.set?.(null);
     this.fetchingSupplierQuotation?.set?.(false);
     this.fetchingBidDocLte?.set?.(false);
     this.fetchingPoData?.set?.(false);
@@ -4330,6 +4778,23 @@ export class StepFormDialog {
         }
       }
 
+      if (
+        def!.formCode === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL' ||
+        ((def!.name.toLowerCase().includes('bid doc') || def!.name.toLowerCase().includes('bid document')) &&
+          (def!.name.toLowerCase().includes('techno commercial') ||
+            def!.name.toLowerCase().includes('techno-commercial')))
+      ) {
+        const hasTenderTitle = Boolean(savedData['tender_title'] && String(savedData['tender_title']).trim());
+        const hasTenderNo = Boolean(savedData['tender_no'] && String(savedData['tender_no']).trim());
+        const hasTenderIssueDate = Boolean(savedData['tender_issue_date']);
+        const hasItems = Array.isArray(savedData['items']) && savedData['items'].length > 0;
+        if (!hasTenderTitle || !hasTenderNo || !hasTenderIssueDate || !hasItems) {
+          this.loadForBidDocumentTechnoCommercial(false);
+        } else {
+          this.resolveLinkedStepsForBidDocTechnoCommercial();
+        }
+      }
+
       if (def!.formCode === 'FORM_03_CORRIGENDUM') {
         if (!savedData['items'] || (Array.isArray(savedData['items']) && savedData['items'].length === 0) || !savedData['against_ref_no'] || !savedData['ref_title']) {
           this.loadFromPreviousTenderStep(false);
@@ -4395,6 +4860,14 @@ export class StepFormDialog {
             defInput.name.toLowerCase().includes('techno-commercial')))
       ) {
         this.loadForTechnoCommercialTender(false);
+      }
+      if (
+        defInput.formCode === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL' ||
+        ((defInput.name.toLowerCase().includes('bid doc') || defInput.name.toLowerCase().includes('bid document')) &&
+          (defInput.name.toLowerCase().includes('techno commercial') ||
+            defInput.name.toLowerCase().includes('techno-commercial')))
+      ) {
+        this.loadForBidDocumentTechnoCommercial(false);
       }
       if (defInput.formCode === 'FORM_03_CORRIGENDUM') {
         this.ensureCorrigendumDefaultRows();

@@ -100,6 +100,21 @@
       </div>
       }
 
+      @if (isBidDocumentTechnoCommercial()) {
+      <div class="pqb-banner-action-bar" role="region" aria-label="Bid Document Techno Commercial Auto-Patch Info">
+        <div class="pqb-banner-info">
+          <i class="pi pi-link" aria-hidden="true"></i>
+          <span>Tender Title, Tender No., and Tender Issue Date are automatically linked from Techno Commercial Tender; Requirements are linked from Bid Document for PQB.</span>
+        </div>
+        <button pButton type="button" icon="pi pi-sync" label="Fetch from Tender & PQB"
+          class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn" [loading]="fetchingBidDocTechnoCommercial()"
+          (click)="loadForBidDocumentTechnoCommercial(true)"
+          pTooltip="Refresh Tender Title, Tender No., and Tender Issue Date from Techno Commercial Tender, and Requirements from Bid Document for PQB"
+          tooltipPosition="top">
+        </button>
+      </div>
+      }
+
       @if (isBidDocumentLte()) {
       <div class="pqb-banner-action-bar" role="region" aria-label="Bid Document LTE Auto-Patch Info">
         <div class="pqb-banner-info">
@@ -166,6 +181,11 @@
             }
             @if (isTechnoCommercialTender() && field.key === 'pqb_no') {
             <span class="field-sync-pill" [title]="'Patched from ' + technoCommercialPqbSourceStepName()">
+              <i class="pi pi-link" aria-hidden="true"></i> Linked
+            </span>
+            }
+            @if (isBidDocumentTechnoCommercial() && (field.key === 'tender_title' || field.key === 'tender_no' || field.key === 'tender_issue_date')) {
+            <span class="field-sync-pill" title="Patched from latest Techno Commercial Tender">
               <i class="pi pi-link" aria-hidden="true"></i> Linked
             </span>
             }
@@ -608,6 +628,14 @@
               tooltipPosition="top">
             </button>
             }
+            @if (isBidDocumentTechnoCommercial()) {
+            <button pButton type="button" icon="pi pi-sync" label="Fetch from Bid Doc PQB"
+              class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
+              [loading]="fetchingBidDocTechnoCommercial()" (click)="loadPqbBidDocItemsForBidDocTechnoCommercial(true)"
+              pTooltip="Import Requirements from latest Bid Document for PQB"
+              tooltipPosition="top">
+            </button>
+            }
             @if (def.formCode === 'FORM_10_COST_SHEET') {
             <button pButton type="button" icon="pi pi-sync" label="Fetch from Supplier Quotation"
               class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
@@ -700,6 +728,12 @@
                     <button pButton type="button" icon="pi pi-sync" [label]="technoCommercialPqbFetchButtonLabel()"
                       class="empty-add-row-btn p-button-outlined p-button-secondary"
                       [loading]="fetchingTechnoCommercialPqb()" (click)="loadForTechnoCommercialTender(true)">
+                    </button>
+                    }
+                    @if (isBidDocumentTechnoCommercial()) {
+                    <button pButton type="button" icon="pi pi-sync" label="Fetch from Bid Doc PQB"
+                      class="empty-add-row-btn p-button-outlined p-button-secondary"
+                      [loading]="fetchingBidDocTechnoCommercial()" (click)="loadPqbBidDocItemsForBidDocTechnoCommercial(true)">
                     </button>
                     }
                     @if (def.formCode === 'FORM_10_COST_SHEET') {
