@@ -254,6 +254,16 @@ export class StepFormDialog {
   readonly bidDocTechnoLinkedTenderStep = signal<ProjectStep | null>(null);
   readonly bidDocTechnoLinkedPqbBidDocStep = signal<ProjectStep | null>(null);
   readonly fetchingBidDocTechnoCommercial = signal<boolean>(false);
+  readonly isNac = computed(() => {
+    const code = this.resolvedDef()?.formCode;
+    if (code === 'FORM_05_NAC') return true;
+    const name = (this.resolvedDef()?.name || '').toLowerCase();
+    return name.includes('notification of award') || name.includes('(nac)') || name === 'nac';
+  });
+  readonly nacLinkedStep = signal<ProjectStep | null>(null);
+  readonly fetchingNacData = signal<boolean>(false);
+  readonly nacSourceStepName = computed(() => this.getNacSourceStepName());
+  readonly nacFetchButtonLabel = computed(() => this.getNacFetchButtonLabel());
   readonly isBidDocumentLte = computed(() => {
     const code = this.resolvedDef()?.formCode;
     if (code === 'FORM_31_BID_DOC_LTE') return true;
@@ -304,39 +314,8 @@ export class StepFormDialog {
   });
   readonly poLinkedStep = signal<ProjectStep | null>(null);
   readonly fetchingPoData = signal<boolean>(false);
-  readonly poSourceStepName = computed(() => {
-    const linked = this.poLinkedStep();
-    if (linked) {
-      return (
-        linked.step_name ||
-        (linked.form_code ? getFormDefinition(linked.form_code)?.name : null) ||
-        'latest Bid Document'
-      );
-    }
-    const isSte =
-      this.isBidDocSteAvailable() ||
-      (!this.isBidDocLteAvailable() && this.isSingleTenderEnquiryAvailable());
-    if (isSte) {
-      return 'latest Bid Document - Single Tender Enquiry (STE)';
-    }
-    return 'latest Bid Document - Limited Tender Enquiry (LTE)';
-  });
-  readonly poFetchButtonLabel = computed(() => {
-    const linked = this.poLinkedStep();
-    if (linked) {
-      if (this.isBidDocSteStep(linked)) {
-        return 'Fetch from Bid Doc STE';
-      }
-      return 'Fetch from Bid Doc LTE';
-    }
-    const isSte =
-      this.isBidDocSteAvailable() ||
-      (!this.isBidDocLteAvailable() && this.isSingleTenderEnquiryAvailable());
-    if (isSte) {
-      return 'Fetch from Bid Doc STE';
-    }
-    return 'Fetch from Bid Doc LTE';
-  });
+  readonly poSourceStepName = computed(() => this.getPoSourceStepName());
+  readonly poFetchButtonLabel = computed(() => this.getPoFetchButtonLabel());
   readonly isCorrigendum = computed(() => this.resolvedDef()?.formCode === 'FORM_03_CORRIGENDUM');
   readonly linkedTenderStep = signal<ProjectStep | null>(null);
   readonly corrigendumQuantityItems = signal<CorrigendumQuantityItem[]>([]);
@@ -2234,6 +2213,493 @@ export class StepFormDialog {
     }
   }
 
+  // ── Form 5: Notification of Award of Contract (NAC) Auto-Patching ────
+  // Awarded Materials + GST (%) <- Bid Document - STE / Bid Document - LTE /
+  // Techno-Commercial Bid / Bid Document - ICB / Bid Document
+  isBidDocTechnoCommercialStep(s: ProjectStep | null | undefined): boolean {
+    if (!s) return false;
+    const fcode = (s.form_code || '').toUpperCase().trim();
+    if (
+      fcode === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL' ||
+      fcode === 'FORM_29' ||
+      fcode === 'BID_DOC_TECHNO_COMMERCIAL' ||
+      fcode === 'BID_DOCUMENT_TECHNO_COMMERCIAL'
+    ) {
+      return true;
+    }
+    const resolved = s.form_code ? getFormDefinition(s.form_code) : undefined;
+    if (resolved?.formCode === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL') return true;
+    const name = (s.step_name || '').toLowerCase().trim();
+    return (
+      (name.includes('bid doc') || name.includes('bid document') || name.includes('bid')) &&
+      (name.includes('techno commercial') || name.includes('techno-commercial'))
+    );
+  }
+
+  isBidDocIcbStep(s: ProjectStep | null | undefined): boolean {
+    if (!s) return false;
+    const fcode = (s.form_code || '').toUpperCase().trim();
+    if (
+      fcode === 'FORM_36_BID_DOC_ICB' ||
+      fcode === 'FORM_36' ||
+      fcode === 'FORM_BID_DOC_ICB' ||
+      fcode === 'FORM_36_BID_DOCUMENT_ICB' ||
+      fcode === 'FORM_BID_DOCUMENT_ICB' ||
+      fcode === 'BID_DOCUMENT_ICB' ||
+      fcode === 'BID_DOC_ICB'
+    ) {
+      return true;
+    }
+    const resolved = s.form_code ? getFormDefinition(s.form_code) : undefined;
+    if (resolved?.formCode === 'FORM_36_BID_DOC_ICB') return true;
+    const name = (s.step_name || '').toLowerCase().trim();
+    return (
+      (name.includes('bid doc') || name.includes('bid document')) &&
+      (name.includes('icb') || name.includes('international'))
+    );
+  }
+
+  isGenericBidDocumentStep(s: ProjectStep | null | undefined): boolean {
+    if (!s) return false;
+    const fcode = (s.form_code || '').toUpperCase().trim();
+    if (
+      fcode === 'FORM_15_BID_DOCUMENT' ||
+      fcode === 'FORM_15' ||
+      fcode === 'BID_DOCUMENT'
+    ) {
+      return true;
+    }
+    const resolved = s.form_code ? getFormDefinition(s.form_code) : undefined;
+    if (resolved?.formCode === 'FORM_15_BID_DOCUMENT') return true;
+    const name = (s.step_name || '').toLowerCase().trim();
+    if (
+      name.includes('pqb') ||
+      name.includes('lte') ||
+      name.includes('limited') ||
+      name.includes('ste') ||
+      name.includes('single') ||
+      name.includes('icb') ||
+      name.includes('international') ||
+      name.includes('techno')
+    ) {
+      return false;
+    }
+    return name === 'bid document' || name === 'bid doc' || name === 'bid submission';
+  }
+
+  isNacSourceBidDocStep(s: ProjectStep | null | undefined): boolean {
+    if (!s) return false;
+    if (this.isPqbBidDocStep(s)) return false;
+    return (
+      this.isBidDocSteStep(s) ||
+      this.isBidDocLteStep(s) ||
+      this.isBidDocTechnoCommercialStep(s) ||
+      this.isBidDocIcbStep(s) ||
+      this.isGenericBidDocumentStep(s)
+    );
+  }
+
+  private resolveNacSourceFormCode(s: ProjectStep | null | undefined): string | null {
+    if (!s) return null;
+    if (this.isBidDocSteStep(s)) return 'FORM_34_BID_DOC_STE';
+    if (this.isBidDocLteStep(s)) return 'FORM_31_BID_DOC_LTE';
+    if (this.isBidDocTechnoCommercialStep(s)) return 'FORM_29_BID_DOC_TECHNO_COMMERCIAL';
+    if (this.isBidDocIcbStep(s)) return 'FORM_36_BID_DOC_ICB';
+    if (this.isGenericBidDocumentStep(s)) return 'FORM_15_BID_DOCUMENT';
+    return null;
+  }
+
+  hasNacSourceData(s: ProjectStep | Record<string, unknown> | null | undefined): boolean {
+    if (!s) return false;
+    if (this.extractPqbItemsFromSource(s).length > 0) return true;
+    const { merged } = this.unwrapStepRecord(s);
+    return extractGstRate(merged) !== null;
+  }
+
+  pickLatestNacBidDocCandidate(candidates: ProjectStep[]): ProjectStep | undefined {
+    if (!candidates || candidates.length === 0) return undefined;
+
+    const validCandidates = candidates.filter((s) => this.hasNacSourceData(s));
+    const pool = validCandidates.length > 0 ? validCandidates : candidates;
+
+    const getTimestamp = (dtStr: string | null | undefined): number => {
+      if (dtStr) {
+        const t = new Date(dtStr).getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+      return 0;
+    };
+
+    const sorted = [...pool].sort((a, b) => {
+      const hasItemsA = this.extractPqbItemsFromSource(a).length > 0 ? 1 : 0;
+      const hasItemsB = this.extractPqbItemsFromSource(b).length > 0 ? 1 : 0;
+      if (hasItemsA !== hasItemsB) return hasItemsB - hasItemsA;
+
+      const hasDataA = this.hasNacSourceData(a) ? 1 : 0;
+      const hasDataB = this.hasNacSourceData(b) ? 1 : 0;
+      if (hasDataA !== hasDataB) return hasDataB - hasDataA;
+
+      // Prefer explicit pipeline step_order when present on both steps
+      const stepOrderA = Number(a.step_order) || 0;
+      const stepOrderB = Number(b.step_order) || 0;
+      if (stepOrderA > 0 && stepOrderB > 0 && stepOrderA !== stepOrderB) {
+        return stepOrderB - stepOrderA;
+      }
+
+      // Next, prefer explicit updated_at / created_at timestamps
+      const editTimeA = getTimestamp(a.updated_at || a.created_at);
+      const editTimeB = getTimestamp(b.updated_at || b.created_at);
+      if (editTimeA !== editTimeB) return editTimeB - editTimeA;
+
+      // Next, prefer step_number sequence over completed_at (which may have backend timezone skew)
+      const stepNumA = Number(a.step_number) || 0;
+      const stepNumB = Number(b.step_number) || 0;
+      if (stepNumA !== stepNumB) return stepNumB - stepNumA;
+
+      const completedTimeA = getTimestamp(a.completed_at);
+      const completedTimeB = getTimestamp(b.completed_at);
+      if (completedTimeA !== completedTimeB) return completedTimeB - completedTimeA;
+
+      if (a.status === 'completed' && b.status !== 'completed') return -1;
+      if (b.status === 'completed' && a.status !== 'completed') return 1;
+
+      return (Number(b.id) || 0) - (Number(a.id) || 0);
+    });
+
+    return sorted[0];
+  }
+
+  getAvailableBidDocStepForNac(): ProjectStep | null {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    const steps: ProjectStep[] = Array.isArray(inMemory) ? inMemory : [];
+
+    const candidates = steps.filter((s) => this.isNacSourceBidDocStep(s));
+    if (candidates.length === 0) return null;
+
+    return this.pickLatestNacBidDocCandidate(candidates) || candidates[0];
+  }
+
+  private formatBidDocDisplayName(step: ProjectStep): string {
+    const canonical = this.resolveNacSourceFormCode(step);
+    const canonicalName = canonical ? getFormDefinition(canonical)?.name : null;
+    const rawName = (step.step_name || '').trim();
+    const lowerRaw = rawName.toLowerCase();
+
+    const isGenericRawName =
+      !rawName ||
+      lowerRaw === 'bid document' ||
+      lowerRaw === 'bid doc' ||
+      lowerRaw === 'bid submission';
+
+    if (canonical && canonical !== 'FORM_15_BID_DOCUMENT' && isGenericRawName && canonicalName) {
+      return canonicalName;
+    }
+
+    return (
+      rawName ||
+      canonicalName ||
+      (step.form_code ? getFormDefinition(step.form_code)?.name : null) ||
+      'latest Bid Document'
+    );
+  }
+
+  private getEffectiveNacSourceStep(): ProjectStep | null {
+    const available = this.getAvailableBidDocStepForNac();
+    const linked = typeof this.nacLinkedStep === 'function' ? this.nacLinkedStep() : null;
+    if (linked) {
+      if (available) {
+        const linkedCode = this.resolveNacSourceFormCode(linked);
+        const availableCode = this.resolveNacSourceFormCode(available);
+        if (availableCode && linkedCode && availableCode !== linkedCode) {
+          return available;
+        }
+      }
+      return linked;
+    }
+    return available;
+  }
+
+  getNacSourceStepName(): string {
+    const target = this.getEffectiveNacSourceStep();
+    if (target) {
+      return this.formatBidDocDisplayName(target);
+    }
+    return 'latest Bid Document (STE / LTE / Techno-Commercial / ICB / Bid Document)';
+  }
+
+  getNacFetchButtonLabel(): string {
+    const target = this.getEffectiveNacSourceStep();
+    const canonical = this.resolveNacSourceFormCode(target);
+    switch (canonical) {
+      case 'FORM_34_BID_DOC_STE':
+        return 'Fetch from Bid Doc STE';
+      case 'FORM_31_BID_DOC_LTE':
+        return 'Fetch from Bid Doc LTE';
+      case 'FORM_29_BID_DOC_TECHNO_COMMERCIAL':
+        return 'Fetch from Techno-Commercial Bid';
+      case 'FORM_36_BID_DOC_ICB':
+        return 'Fetch from Bid Doc ICB';
+      case 'FORM_15_BID_DOCUMENT':
+      default:
+        return 'Fetch from Bid Document';
+    }
+  }
+
+  populateNacAwardedMaterialsTable(items: Array<Record<string, unknown>>): void {
+    const def = typeof this.resolvedDef === 'function' ? this.resolvedDef() : null;
+    if (!def || !def.tableConfig) return;
+
+    const rowsArray = new FormArray<FormGroup>([]);
+    items.forEach((item, idx) => {
+      const desc = String(
+        item['corrigendum_description'] ||
+        item['description'] ||
+        item['original_description'] ||
+        item['material_name'] ||
+        item['item_name'] ||
+        item['name'] ||
+        `Item ${idx + 1}`,
+      ).trim();
+
+      const qty =
+        item['quantity'] !== null && item['quantity'] !== undefined && item['quantity'] !== ''
+          ? Number(item['quantity'])
+          : item['corrigendum_quantity'] !== null &&
+              item['corrigendum_quantity'] !== undefined &&
+              item['corrigendum_quantity'] !== ''
+            ? Number(item['corrigendum_quantity'])
+            : null;
+
+      const rawUnitPrice =
+        item['per_unit_price'] ?? item['unit_price'] ?? item['price_per_unit'] ?? null;
+      const perUnitPrice =
+        rawUnitPrice !== null && rawUnitPrice !== undefined && rawUnitPrice !== ''
+          ? Number(rawUnitPrice)
+          : null;
+
+      const computedTotal =
+        qty !== null && perUnitPrice !== null ? Number((qty * perUnitPrice).toFixed(2)) : null;
+
+      const rawTotal = item['total_amount'] ?? item['total_price'] ?? null;
+      const totalAmount =
+        computedTotal !== null
+          ? computedTotal
+          : rawTotal !== null && rawTotal !== undefined && rawTotal !== ''
+            ? Number(rawTotal)
+            : null;
+
+      rowsArray.push(
+        this.createTableRowGroup(def, {
+          sr_no: idx + 1,
+          description: desc,
+          quantity: qty,
+          per_unit_price: perUnitPrice,
+          total_amount: totalAmount,
+        }),
+      );
+    });
+
+    if (rowsArray.length > 0) {
+      this.tableFormArray.set(rowsArray);
+      this.tableVersion.update((v) => v + 1);
+      this.cdr?.markForCheck?.();
+    }
+  }
+
+  loadForNac(showNotification = true): void {
+    if (typeof this.fetchingNacData === 'function' && this.fetchingNacData()) return;
+    const pId = typeof this.projectId === 'function' ? this.projectId() : (this.projectId as unknown as number);
+    if (!pId) return;
+
+    const availableStep = this.getAvailableBidDocStepForNac();
+    const canonicalCode = this.resolveNacSourceFormCode(availableStep);
+
+    if (availableStep && canonicalCode) {
+      this.fetchSingleBidDocForNac(pId, canonicalCode, availableStep, showNotification);
+      return;
+    }
+
+    this.fetchLatestBidDocFallbackForNac(pId, showNotification);
+  }
+
+  private fetchSingleBidDocForNac(
+    pId: number,
+    formCode: string,
+    availableStep: ProjectStep,
+    showNotification: boolean,
+  ): void {
+    const sourceDef = getFormDefinition(formCode);
+    if (!sourceDef || !this.formApiService || typeof this.formApiService.getLatestEntry !== 'function') {
+      if (this.hasNacSourceData(availableStep)) {
+        this.applyBidDocStepToNac(availableStep, showNotification);
+      }
+      this.fetchingNacData.set(false);
+      return;
+    }
+
+    this.fetchingNacData.set(true);
+
+    this.formApiService
+      .getLatestEntry(sourceDef, pId)
+      .pipe(
+        catchError(() => of(null)),
+        finalize(() => this.fetchingNacData.set(false)),
+      )
+      .subscribe({
+        next: (latestStep) => {
+          const candidate =
+            latestStep && this.hasNacSourceData(latestStep)
+              ? latestStep
+              : this.hasNacSourceData(availableStep)
+                ? availableStep
+                : latestStep;
+
+          if (candidate && this.hasNacSourceData(candidate)) {
+            this.applyBidDocStepToNac(candidate, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'warn',
+              summary: 'Bid Document Not Found',
+              detail: `No latest ${sourceDef.name} data found for this project to patch NAC.`,
+            });
+          }
+        },
+        error: () => {
+          if (this.hasNacSourceData(availableStep)) {
+            this.applyBidDocStepToNac(availableStep, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'info',
+              summary: 'Bid Document Unavailable',
+              detail: `Could not fetch latest ${sourceDef.name} for this project.`,
+            });
+          }
+        },
+      });
+  }
+
+  private fetchLatestBidDocFallbackForNac(pId: number, showNotification: boolean): void {
+    if (!this.formApiService || typeof this.formApiService.getLatestEntry !== 'function') {
+      if (showNotification) {
+        this.messageService?.add({
+          severity: 'warn',
+          summary: 'Bid Document Not Found',
+          detail: 'No preceding Bid Document found for this project to patch NAC.',
+        });
+      }
+      return;
+    }
+
+    const sourceCodes = [
+      'FORM_34_BID_DOC_STE',
+      'FORM_31_BID_DOC_LTE',
+      'FORM_29_BID_DOC_TECHNO_COMMERCIAL',
+      'FORM_36_BID_DOC_ICB',
+      'FORM_15_BID_DOCUMENT',
+    ] as const;
+
+    const requests: Record<string, Observable<ProjectStep | null>> = {};
+    for (const code of sourceCodes) {
+      const def = getFormDefinition(code);
+      requests[code] = def
+        ? this.formApiService.getLatestEntry(def, pId).pipe(catchError(() => of(null)))
+        : of(null);
+    }
+
+    this.fetchingNacData.set(true);
+
+    forkJoin(requests)
+      .pipe(finalize(() => this.fetchingNacData.set(false)))
+      .subscribe({
+        next: (results) => {
+          const candidates = Object.values(results).filter(
+            (s): s is ProjectStep => Boolean(s && this.hasNacSourceData(s)),
+          );
+          const latestCandidate = this.pickLatestNacBidDocCandidate(candidates);
+          if (latestCandidate) {
+            this.applyBidDocStepToNac(latestCandidate, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'warn',
+              summary: 'Bid Document Not Found',
+              detail:
+                'No preceding Bid Document (STE, LTE, Techno-Commercial, ICB, or Bid Document) found for this project.',
+            });
+          }
+        },
+        error: () => {
+          if (showNotification) {
+            this.messageService?.add({
+              severity: 'info',
+              summary: 'Bid Document Unavailable',
+              detail: 'Could not fetch latest Bid Document for this project.',
+            });
+          }
+        },
+      });
+  }
+
+  private applyBidDocStepToNac(step: ProjectStep, showNotification: boolean): void {
+    this.nacLinkedStep.set(step);
+
+    const { merged } = this.unwrapStepRecord(step);
+    const gstRate = extractGstRate(merged);
+    const fg = this.formGroup();
+    let patchedGst = false;
+
+    if (fg && gstRate !== null && fg.get('gst_pct')) {
+      const curGst = fg.get('gst_pct')?.value;
+      const isEmptyGst = curGst === null || curGst === undefined || curGst === '';
+      if (showNotification || isEmptyGst) {
+        fg.patchValue({ gst_pct: gstRate });
+        fg.get('gst_pct')?.markAsDirty();
+        this.formVersion.update((v) => v + 1);
+        this.cdr?.markForCheck?.();
+        patchedGst = true;
+      }
+    }
+
+    const items = this.extractPqbItemsFromSource(step);
+    const currentRowsCount = typeof this.tableFormArray === 'function' ? this.tableFormArray().length : 0;
+    let patchedItemsCount = 0;
+
+    if (items.length > 0 && (showNotification || currentRowsCount === 0)) {
+      this.populateNacAwardedMaterialsTable(items);
+      patchedItemsCount = items.length;
+    }
+
+    if (showNotification) {
+      const sourceName = this.formatBidDocDisplayName(step);
+
+      if (patchedItemsCount > 0 && patchedGst) {
+        this.messageService?.add({
+          severity: 'success',
+          summary: 'Awarded Materials Loaded',
+          detail: `Loaded ${patchedItemsCount} awarded materials and GST (${gstRate}%) from ${sourceName}.`,
+        });
+      } else if (patchedItemsCount > 0) {
+        this.messageService?.add({
+          severity: 'success',
+          summary: 'Awarded Materials Loaded',
+          detail: `Loaded ${patchedItemsCount} awarded materials from ${sourceName}.`,
+        });
+      } else if (patchedGst) {
+        this.messageService?.add({
+          severity: 'success',
+          summary: 'GST Rate Patched',
+          detail: `Patched GST (${gstRate}%) from ${sourceName}.`,
+        });
+      }
+    }
+  }
+
+  resolveLinkedStepForNac(): void {
+    const step = this.getAvailableBidDocStepForNac();
+    if (step) {
+      this.nacLinkedStep.set(step);
+    }
+  }
+
   // ── Form 31: Bid Document - Limited Tender Enquiry (LTE) ─────────────
   isLteStep(s: ProjectStep | null | undefined): boolean {
     if (!s) return false;
@@ -2588,11 +3054,144 @@ export class StepFormDialog {
     return false;
   }
 
+  isBidDocTechnoCommercialAvailable(): boolean {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    if (Array.isArray(inMemory) && inMemory.length > 0) {
+      return inMemory.some((s) => this.isBidDocTechnoCommercialStep(s));
+    }
+    return false;
+  }
+
+  isBidDocIcbAvailable(): boolean {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    if (Array.isArray(inMemory) && inMemory.length > 0) {
+      return inMemory.some((s) => this.isBidDocIcbStep(s));
+    }
+    return false;
+  }
+
+  isGenericBidDocumentAvailable(): boolean {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    if (Array.isArray(inMemory) && inMemory.length > 0) {
+      return inMemory.some((s) => this.isGenericBidDocumentStep(s));
+    }
+    return false;
+  }
+
+  isTechnoCommercialTenderAvailable(): boolean {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    if (Array.isArray(inMemory) && inMemory.length > 0) {
+      return inMemory.some((s) => this.isTechnoCommercialTenderStep(s));
+    }
+    return false;
+  }
+
+  isIcbTenderAvailable(): boolean {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    if (Array.isArray(inMemory) && inMemory.length > 0) {
+      return inMemory.some((s) => {
+        const fcode = (s.form_code || '').toUpperCase().trim();
+        const name = (s.step_name || '').toLowerCase().trim();
+        if (name.includes('bid doc') || name.includes('bid document') || fcode.includes('BID_DOC')) return false;
+        if (fcode === 'FORM_35_ICB' || fcode === 'FORM_ICB' || fcode === 'FORM_35') return true;
+        return name.includes('international competitive') || name === 'icb' || name.includes('(icb)');
+      });
+    }
+    return false;
+  }
+
+  isPacTenderAvailable(): boolean {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    if (Array.isArray(inMemory) && inMemory.length > 0) {
+      return inMemory.some((s) => {
+        const fcode = (s.form_code || '').toUpperCase().trim();
+        const name = (s.step_name || '').toLowerCase().trim();
+        if (fcode === 'FORM_13_PAC_TENDER' || fcode === 'FORM_13' || fcode === 'FORM_PAC_TENDER') return true;
+        return name.includes('pac tender') || name === 'pac';
+      });
+    }
+    return false;
+  }
+
+  private getEffectivePoSourceStep(): ProjectStep | null {
+    const available = this.getAvailableBidDocStep();
+    const linked = typeof this.poLinkedStep === 'function' ? this.poLinkedStep() : null;
+    if (linked) {
+      if (available) {
+        const linkedCode = this.resolveNacSourceFormCode(linked);
+        const availableCode = this.resolveNacSourceFormCode(available);
+        if (availableCode && linkedCode && availableCode !== linkedCode) {
+          return available;
+        }
+      }
+      return linked;
+    }
+    return available;
+  }
+
+  getPoSourceStepName(): string {
+    const target = this.getEffectivePoSourceStep();
+    if (target) {
+      return this.formatBidDocDisplayName(target);
+    }
+    if (this.isBidDocTechnoCommercialAvailable() || this.isTechnoCommercialTenderAvailable()) {
+      return 'latest Bid Document - Techno Commercial Tender';
+    }
+    if (this.isBidDocIcbAvailable() || this.isIcbTenderAvailable()) {
+      return 'latest Bid Document - International Competitive Bidding (ICB)';
+    }
+    if (this.isGenericBidDocumentAvailable() || this.isPacTenderAvailable()) {
+      return 'latest Bid Document';
+    }
+    const isSte =
+      this.isBidDocSteAvailable() ||
+      (!this.isBidDocLteAvailable() && this.isSingleTenderEnquiryAvailable());
+    if (isSte) {
+      return 'latest Bid Document - Single Tender Enquiry (STE)';
+    }
+    return 'latest Bid Document - Limited Tender Enquiry (LTE)';
+  }
+
+  getPoFetchButtonLabel(): string {
+    const target = this.getEffectivePoSourceStep();
+    if (target) {
+      const canonical = this.resolveNacSourceFormCode(target);
+      switch (canonical) {
+        case 'FORM_34_BID_DOC_STE':
+          return 'Fetch from Bid Doc STE';
+        case 'FORM_31_BID_DOC_LTE':
+          return 'Fetch from Bid Doc LTE';
+        case 'FORM_29_BID_DOC_TECHNO_COMMERCIAL':
+          return 'Fetch from Techno-Commercial Bid';
+        case 'FORM_36_BID_DOC_ICB':
+          return 'Fetch from Bid Doc ICB';
+        case 'FORM_15_BID_DOCUMENT':
+          return 'Fetch from Bid Document';
+      }
+    }
+    if (this.isBidDocTechnoCommercialAvailable() || this.isTechnoCommercialTenderAvailable()) {
+      return 'Fetch from Techno-Commercial Bid';
+    }
+    if (this.isBidDocIcbAvailable() || this.isIcbTenderAvailable()) {
+      return 'Fetch from Bid Doc ICB';
+    }
+    if (this.isGenericBidDocumentAvailable() || this.isPacTenderAvailable()) {
+      return 'Fetch from Bid Document';
+    }
+    const isSte =
+      this.isBidDocSteAvailable() ||
+      (!this.isBidDocLteAvailable() && this.isSingleTenderEnquiryAvailable());
+    if (isSte) {
+      return 'Fetch from Bid Doc STE';
+    }
+    return 'Fetch from Bid Doc LTE';
+  }
+
   getAvailableBidDocStep(): ProjectStep | null {
     const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
     const steps: ProjectStep[] = Array.isArray(inMemory) ? inMemory : [];
 
-    const candidates = steps.filter((s) => this.isBidDocSteStep(s) || this.isBidDocLteStep(s));
+    const candidates = steps.filter((s) => this.isNacSourceBidDocStep(s));
     if (candidates.length === 0) return null;
 
     return this.pickLatestBidDocCandidate(candidates) || candidates[0];
@@ -2604,8 +3203,7 @@ export class StepFormDialog {
     const validCandidates = candidates.filter((s) => this.hasBidDocData(s));
     const pool = validCandidates.length > 0 ? validCandidates : candidates;
 
-    const getStepTimestamp = (s: ProjectStep): number => {
-      const dtStr = s.updated_at || s.created_at || s.completed_at;
+    const getTimestamp = (dtStr: string | null | undefined): number => {
       if (dtStr) {
         const t = new Date(dtStr).getTime();
         if (!isNaN(t) && t > 0) return t;
@@ -2613,25 +3211,36 @@ export class StepFormDialog {
       return 0;
     };
 
-    const getStepOrderNum = (s: ProjectStep): number => {
-      return s.step_number ?? s.step_order ?? 0;
-    };
-
     const sorted = [...pool].sort((a, b) => {
       const hasDataA = this.hasBidDocData(a) ? 1 : 0;
       const hasDataB = this.hasBidDocData(b) ? 1 : 0;
       if (hasDataA !== hasDataB) return hasDataB - hasDataA;
 
-      const timeDiff = getStepTimestamp(b) - getStepTimestamp(a);
-      if (timeDiff !== 0) return timeDiff;
+      // Prefer explicit pipeline step_order when present on both steps
+      const stepOrderA = Number(a.step_order) || 0;
+      const stepOrderB = Number(b.step_order) || 0;
+      if (stepOrderA > 0 && stepOrderB > 0 && stepOrderA !== stepOrderB) {
+        return stepOrderB - stepOrderA;
+      }
+
+      // Next, prefer explicit updated_at / created_at timestamps
+      const editTimeA = getTimestamp(a.updated_at || a.created_at);
+      const editTimeB = getTimestamp(b.updated_at || b.created_at);
+      if (editTimeA !== editTimeB) return editTimeB - editTimeA;
+
+      // Next, prefer step_number sequence over completed_at (which may have backend timezone skew)
+      const stepNumA = Number(a.step_number) || 0;
+      const stepNumB = Number(b.step_number) || 0;
+      if (stepNumA !== stepNumB) return stepNumB - stepNumA;
+
+      const completedTimeA = getTimestamp(a.completed_at);
+      const completedTimeB = getTimestamp(b.completed_at);
+      if (completedTimeA !== completedTimeB) return completedTimeB - completedTimeA;
 
       if (a.status === 'completed' && b.status !== 'completed') return -1;
       if (b.status === 'completed' && a.status !== 'completed') return 1;
 
-      const idDiff = (Number(b.id) || 0) - (Number(a.id) || 0);
-      if (idDiff !== 0) return idDiff;
-
-      return getStepOrderNum(b) - getStepOrderNum(a);
+      return (Number(b.id) || 0) - (Number(a.id) || 0);
     });
 
     return sorted[0];
@@ -2639,7 +3248,7 @@ export class StepFormDialog {
 
   hasBidDocData(s: ProjectStep | null | undefined): boolean {
     if (!s) return false;
-    const d = ((s.data as Record<string, unknown>) || s || {}) as Record<string, unknown>;
+    const { merged: d } = this.unwrapStepRecord(s);
     const hasTerms = Boolean(
       d['delivery_terms'] ||
       d['incoterms'] ||
@@ -2647,7 +3256,8 @@ export class StepFormDialog {
       d['warranty_period'] ||
       (d['gst_pct'] !== undefined && d['gst_pct'] !== null && d['gst_pct'] !== '') ||
       (d['gst_rate_pct'] !== undefined && d['gst_rate_pct'] !== null && d['gst_rate_pct'] !== '') ||
-      d['tender_title']
+      d['tender_title'] ||
+      d['customer_name']
     );
     const items = (d['items'] || d['table_items'] || d['table_data'] || (s as unknown as Record<string, unknown>)['items']) as unknown[];
     const hasItems = Array.isArray(items) && items.length > 0;
@@ -2733,18 +3343,122 @@ export class StepFormDialog {
     const pId = typeof this.projectId === 'function' ? this.projectId() : (this.projectId as unknown as number);
     if (!pId) return;
 
-    // Determine the available Bid Document step in the project.
-    // Call ONLY the available one (Bid Doc STE or Bid Doc LTE) - never call both!
+    // Determine the available Bid Document step in the project across all 5 supported Bid Document forms:
+    // Bid Document - STE, Bid Document - LTE, Bid Document - Techno-Commercial, Bid Document - ICB, Bid Document.
+    // Call ONLY the available/inferred one.
     const availableBidDoc = this.getAvailableBidDocStep();
-    const isSte = availableBidDoc
-      ? this.isBidDocSteStep(availableBidDoc)
-      : this.isBidDocSteAvailable() || (!this.isBidDocLteAvailable() && this.isSingleTenderEnquiryAvailable());
+    const canonicalCode = availableBidDoc ? this.resolveNacSourceFormCode(availableBidDoc) : null;
+
+    if (canonicalCode === 'FORM_34_BID_DOC_STE') {
+      this.fetchFromBidDocSte(pId, availableBidDoc, showNotification);
+      return;
+    }
+    if (canonicalCode === 'FORM_31_BID_DOC_LTE') {
+      this.fetchFromBidDocLte(pId, availableBidDoc, showNotification);
+      return;
+    }
+    if (
+      canonicalCode === 'FORM_29_BID_DOC_TECHNO_COMMERCIAL' ||
+      canonicalCode === 'FORM_36_BID_DOC_ICB' ||
+      canonicalCode === 'FORM_15_BID_DOCUMENT'
+    ) {
+      this.fetchFromBidDocForPurchaseOrder(pId, canonicalCode, availableBidDoc, showNotification);
+      return;
+    }
+
+    if (this.isBidDocTechnoCommercialAvailable() || this.isTechnoCommercialTenderAvailable()) {
+      this.fetchFromBidDocForPurchaseOrder(
+        pId,
+        'FORM_29_BID_DOC_TECHNO_COMMERCIAL',
+        availableBidDoc,
+        showNotification,
+      );
+      return;
+    }
+    if (this.isBidDocIcbAvailable() || this.isIcbTenderAvailable()) {
+      this.fetchFromBidDocForPurchaseOrder(
+        pId,
+        'FORM_36_BID_DOC_ICB',
+        availableBidDoc,
+        showNotification,
+      );
+      return;
+    }
+    if (this.isGenericBidDocumentAvailable() || this.isPacTenderAvailable()) {
+      this.fetchFromBidDocForPurchaseOrder(
+        pId,
+        'FORM_15_BID_DOCUMENT',
+        availableBidDoc,
+        showNotification,
+      );
+      return;
+    }
+
+    const isSte =
+      this.isBidDocSteAvailable() ||
+      (!this.isBidDocLteAvailable() && this.isSingleTenderEnquiryAvailable());
 
     if (isSte) {
       this.fetchFromBidDocSte(pId, availableBidDoc, showNotification);
     } else {
       this.fetchFromBidDocLte(pId, availableBidDoc, showNotification);
     }
+  }
+
+  private fetchFromBidDocForPurchaseOrder(
+    pId: number,
+    formCode: string,
+    availableStep: ProjectStep | null,
+    showNotification: boolean,
+  ): void {
+    const sourceDef = getFormDefinition(formCode);
+    if (!sourceDef || !this.formApiService || typeof this.formApiService.getLatestEntry !== 'function') {
+      if (availableStep && this.hasBidDocData(availableStep)) {
+        this.applyBidDocStepToPurchaseOrder(availableStep, showNotification);
+      }
+      this.fetchingPoData.set(false);
+      return;
+    }
+
+    this.fetchingPoData.set(true);
+
+    this.formApiService
+      .getLatestEntry(sourceDef, pId)
+      .pipe(
+        catchError(() => of(null)),
+        finalize(() => this.fetchingPoData.set(false)),
+      )
+      .subscribe({
+        next: (latestDoc) => {
+          const candidate =
+            latestDoc && this.hasBidDocData(latestDoc)
+              ? latestDoc
+              : availableStep && this.hasBidDocData(availableStep)
+                ? availableStep
+                : latestDoc;
+
+          if (candidate && this.hasBidDocData(candidate)) {
+            this.applyBidDocStepToPurchaseOrder(candidate, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'warn',
+              summary: `${sourceDef.name} Not Found`,
+              detail: `No latest ${sourceDef.name} found for this project to patch Purchase Order.`,
+            });
+          }
+        },
+        error: () => {
+          if (availableStep && this.hasBidDocData(availableStep)) {
+            this.applyBidDocStepToPurchaseOrder(availableStep, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'info',
+              summary: `${sourceDef.name} Unavailable`,
+              detail: `Could not fetch latest ${sourceDef.name} for this project.`,
+            });
+          }
+        },
+      });
   }
 
   private fetchFromBidDocSte(
@@ -2862,7 +3576,7 @@ export class StepFormDialog {
     showNotification: boolean,
   ): void {
     this.poLinkedStep.set(step);
-    const data = ((step.data as Record<string, unknown>) || step || {}) as Record<string, unknown>;
+    const { merged: data } = this.unwrapStepRecord(step);
 
     const fg = this.formGroup();
     if (fg) {
@@ -2937,10 +3651,7 @@ export class StepFormDialog {
     }
 
     if (showNotification) {
-      const sourceName =
-        step.step_name ||
-        (step.form_code ? getFormDefinition(step.form_code)?.name : null) ||
-        'latest Bid Document';
+      const sourceName = this.formatBidDocDisplayName(step);
       const detail =
         rawItems.length > 0
           ? `Incoterms, GST, Payment Terms, Warranty, and ${rawItems.length} line items loaded from ${sourceName}.`
@@ -2954,7 +3665,6 @@ export class StepFormDialog {
   }
 
   resolveLinkedStepForPurchaseOrder(): void {
-    if (this.poLinkedStep()) return;
     const step = this.getAvailableBidDocStep();
     if (step) {
       this.poLinkedStep.set(step);
@@ -4621,10 +5331,17 @@ export class StepFormDialog {
           this.fetchingPreviousStep?.set?.(false);
           this.fetchingNationalPqb?.set?.(false);
           this.fetchingTechnoCommercialPqb?.set?.(false);
+          this.technoCommercialLinkedPqbStep?.set?.(null);
           this.fetchingBidDocTechnoCommercial?.set?.(false);
+          this.bidDocTechnoLinkedTenderStep?.set?.(null);
+          this.bidDocTechnoLinkedPqbBidDocStep?.set?.(null);
+          this.fetchingNacData?.set?.(false);
+          this.nacLinkedStep?.set?.(null);
           this.fetchingSupplierQuotation?.set?.(false);
           this.fetchingBidDocLte?.set?.(false);
+          this.bidDocLteLinkedStep?.set?.(null);
           this.fetchingPoData?.set?.(false);
+          this.poLinkedStep?.set?.(null);
         });
       }
     });
@@ -4675,9 +5392,13 @@ export class StepFormDialog {
     this.fetchingBidDocTechnoCommercial?.set?.(false);
     this.bidDocTechnoLinkedTenderStep?.set?.(null);
     this.bidDocTechnoLinkedPqbBidDocStep?.set?.(null);
+    this.fetchingNacData?.set?.(false);
+    this.nacLinkedStep?.set?.(null);
     this.fetchingSupplierQuotation?.set?.(false);
     this.fetchingBidDocLte?.set?.(false);
+    this.bidDocLteLinkedStep?.set?.(null);
     this.fetchingPoData?.set?.(false);
+    this.poLinkedStep?.set?.(null);
 
     const pId = this.projectId();
     this.ensureProjectMetadata(pId);
@@ -4795,6 +5516,22 @@ export class StepFormDialog {
         }
       }
 
+      if (
+        def!.formCode === 'FORM_05_NAC' ||
+        def!.name.toLowerCase().includes('notification of award')
+      ) {
+        const hasItems = Array.isArray(savedData['items']) && savedData['items'].length > 0;
+        const hasGst =
+          savedData['gst_pct'] !== undefined &&
+          savedData['gst_pct'] !== null &&
+          savedData['gst_pct'] !== '';
+        if (!hasItems || !hasGst) {
+          this.loadForNac(false);
+        } else {
+          this.resolveLinkedStepForNac();
+        }
+      }
+
       if (def!.formCode === 'FORM_03_CORRIGENDUM') {
         if (!savedData['items'] || (Array.isArray(savedData['items']) && savedData['items'].length === 0) || !savedData['against_ref_no'] || !savedData['ref_title']) {
           this.loadFromPreviousTenderStep(false);
@@ -4868,6 +5605,12 @@ export class StepFormDialog {
             defInput.name.toLowerCase().includes('techno-commercial')))
       ) {
         this.loadForBidDocumentTechnoCommercial(false);
+      }
+      if (
+        defInput.formCode === 'FORM_05_NAC' ||
+        defInput.name.toLowerCase().includes('notification of award')
+      ) {
+        this.loadForNac(false);
       }
       if (defInput.formCode === 'FORM_03_CORRIGENDUM') {
         this.ensureCorrigendumDefaultRows();

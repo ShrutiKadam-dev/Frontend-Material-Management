@@ -150,8 +150,8 @@ export function normalizeBackendEntityToStep(
     }
   }
 
-  // Bridge FORM_26_TAX_INVOICE_CUSTOMER gst_pct and gst_rate_pct
-  if (formDef.formCode === 'FORM_26_TAX_INVOICE_CUSTOMER') {
+  // Bridge FORM_26_TAX_INVOICE_CUSTOMER and FORM_05_NAC gst_pct and gst_rate_pct
+  if (formDef.formCode === 'FORM_26_TAX_INVOICE_CUSTOMER' || formDef.formCode === 'FORM_05_NAC') {
     const rate = extractGstRate(item, formDef.fields);
     if (rate !== null && rate !== undefined) {
       combinedData['gst_pct'] = rate;

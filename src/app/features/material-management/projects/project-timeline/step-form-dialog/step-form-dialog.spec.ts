@@ -4348,6 +4348,295 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(comp.isBidDocSteStep({ form_code: 'FORM_31_BID_DOC_LTE', step_name: 'Bid Document - Limited Tender Enquiry (LTE)' })).toBe(false);
       expect(comp.isBidDocSteStep({ form_code: 'FORM_33_STE', step_name: 'Single Tender Enquiry (STE)' })).toBe(false);
     });
+
+    it('should fetch common PO values from Bid Document - Techno-Commercial, Bid Document - ICB, and Bid Document (FORM_15)', () => {
+      const cases = [
+        {
+          code: 'FORM_29_BID_DOC_TECHNO_COMMERCIAL',
+          name: 'Bid Document - Techno Commercial Tender',
+          btnLabel: 'Fetch from Techno-Commercial Bid',
+          data: {
+            customer_name: 'BHEL',
+            tender_title: 'Techno Commercial Turbine Supply',
+            delivery_terms: 'DDP',
+            payment_terms: 'Net 45',
+            warranty_period: '18 Months',
+            gst_pct: 18,
+            items: [{ description: 'Steam Valve', hsn_sac: '8481', quantity: 4, unit_price: 25000, total_amount: 100000 }],
+          },
+        },
+        {
+          code: 'FORM_36_BID_DOC_ICB',
+          name: 'Bid Document - International Competitive Bidding (ICB)',
+          btnLabel: 'Fetch from Bid Doc ICB',
+          data: {
+            customer_name: 'PowerGrid Corp',
+            tender_title: 'ICB GIS Switchgear Package',
+            delivery_terms: 'CIF',
+            payment_terms: 'LC 60 Days',
+            warranty_period: '36 Months',
+            gst_pct: 5,
+            items: [{ description: 'GIS Bay', hsn_sac: '8537', quantity: 2, unit_price: 500000, total_amount: 1000000 }],
+          },
+        },
+        {
+          code: 'FORM_15_BID_DOCUMENT',
+          name: 'Bid Document',
+          btnLabel: 'Fetch from Bid Document',
+          data: {
+            customer_name: 'ONGC',
+            tender_title: 'PAC Spares Procurement',
+            delivery_terms: 'EXW',
+            payment_terms: 'Net 30',
+            warranty_period: '12 Months',
+            gst_pct: 12,
+            items: [{ description: 'OEM Seal', hsn_sac: '8484', quantity: 10, unit_price: 3000, total_amount: 30000 }],
+          },
+        },
+      ];
+
+      for (const c of cases) {
+        const { comp, fg, tableArraySignal } = setupPoComp();
+        const bidStep: ProjectStep = {
+          id: 400,
+          project_id: 10,
+          step_number: 4,
+          step_name: c.name,
+          description: '',
+          progress_percentage: 100,
+          completed_at: null,
+          form_code: c.code,
+          status: 'completed',
+          updated_at: '2026-04-15T10:00:00Z',
+          data: c.data,
+        };
+
+        comp.existingSteps = () => [bidStep];
+        const mockFormApi = {
+          getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+            if (def.formCode === c.code) return of(bidStep);
+            return of(null);
+          }),
+        };
+        comp.formApiService = mockFormApi;
+
+        expect(comp.getPoFetchButtonLabel()).toBe(c.btnLabel);
+        expect(comp.getPoSourceStepName()).toBe(c.name);
+
+        comp.loadForPurchaseOrder(true);
+
+        expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+        expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+          expect.objectContaining({ formCode: c.code }),
+          10,
+        );
+        expect(fg.get('customer_name')?.value).toBe(c.data.customer_name);
+        expect(fg.get('po_title')?.value).toBe(c.data.tender_title);
+        expect(fg.get('delivery_terms')?.value).toBe(c.data.delivery_terms);
+        expect(fg.get('payment_terms')?.value).toBe(c.data.payment_terms);
+        expect(fg.get('warranty_period')?.value).toBe(c.data.warranty_period);
+        expect(fg.get('gst_rate_pct')?.value).toBe(c.data.gst_pct);
+        expect(tableArraySignal().length).toBe(1);
+        expect(tableArraySignal().at(0).get('description')?.value).toBe(c.data.items[0].description);
+        expect(tableArraySignal().at(0).get('unit_price')?.value).toBe(c.data.items[0].unit_price);
+      }
+    });
+
+    it('should infer Bid Doc Techno-Commercial, ICB, or Bid Document from preceding tender steps when Bid Doc step is not in existingSteps yet', () => {
+      const inferCases = [
+        { tenderCode: 'FORM_30_TECHNO_COMMERCIAL_TENDER', tenderName: 'Techno Commercial Tender', expectedBidCode: 'FORM_29_BID_DOC_TECHNO_COMMERCIAL' },
+        { tenderCode: 'FORM_35_ICB', tenderName: 'International Competitive Bidding (ICB)', expectedBidCode: 'FORM_36_BID_DOC_ICB' },
+        { tenderCode: 'FORM_13_PAC_TENDER', tenderName: 'PAC Tender', expectedBidCode: 'FORM_15_BID_DOCUMENT' },
+      ];
+
+      for (const tc of inferCases) {
+        const { comp } = setupPoComp();
+        comp.existingSteps = () => [
+          {
+            id: 50,
+            project_id: 10,
+            step_number: 2,
+            step_name: tc.tenderName,
+            description: '',
+            progress_percentage: 100,
+            completed_at: null,
+            form_code: tc.tenderCode,
+            status: 'completed',
+            data: { tender_title: tc.tenderName },
+          },
+        ];
+
+        const mockFormApi = {
+          getLatestEntry: vi.fn().mockReturnValue(of(null)),
+        };
+        comp.formApiService = mockFormApi;
+
+        comp.loadForPurchaseOrder(false);
+
+        expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+        expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+          expect.objectContaining({ formCode: tc.expectedBidCode }),
+          10,
+        );
+      }
+    });
+
+    it('should pick the highest step_order Bid Document (FORM_15_BID_DOCUMENT) even when its completed_at timestamp is earlier due to timezone skew', () => {
+      const { comp, fg } = setupPoComp();
+      comp.projectId = () => 26;
+
+      const projectSteps: ProjectStep[] = [
+        {
+          id: 1073,
+          project_id: 26,
+          form_code: 'FORM_31_BID_DOC_LTE',
+          step_name: 'Bid Document for LTE',
+          description: '',
+          step_number: 1,
+          step_order: 1,
+          status: 'completed',
+          progress_percentage: 100,
+          completed_at: '2026-11-18T11:50:34.274673+05:30',
+          data: null,
+        },
+        {
+          id: 1076,
+          project_id: 26,
+          form_code: 'FORM_29_BID_DOC_TECHNO_COMMERCIAL',
+          step_name: 'Bid Document (Techno-Commercial)',
+          description: '',
+          step_number: 2,
+          step_order: 2,
+          status: 'completed',
+          progress_percentage: 100,
+          completed_at: '2026-11-18T11:52:27.955787+05:30',
+          data: null,
+        },
+        {
+          id: 1077,
+          project_id: 26,
+          form_code: 'FORM_36_BID_DOC_ICB',
+          step_name: 'Bid Document for ICB',
+          description: '',
+          step_number: 3,
+          step_order: 3,
+          status: 'completed',
+          progress_percentage: 100,
+          completed_at: '2026-11-18T11:53:06.401463+05:30',
+          data: null,
+        },
+        {
+          id: 1078,
+          project_id: 26,
+          form_code: 'FORM_15_BID_DOCUMENT',
+          step_name: 'Bid Submission',
+          description: '',
+          step_number: 4,
+          step_order: 4,
+          status: 'completed',
+          progress_percentage: 100,
+          completed_at: '2026-11-18T03:54:42.748943+05:30',
+          data: null,
+        },
+      ];
+
+      comp.existingSteps = () => projectSteps;
+
+      const latestBidSubmission: ProjectStep = {
+        ...projectSteps[3],
+        data: {
+          customer_name: 'Latest Bid Doc Customer',
+          tender_title: 'Latest Bid Submission Title',
+          delivery_terms: 'DDP',
+          payment_terms: 'Net 30',
+          warranty_period: '12 Months',
+          gst_pct: 18,
+          items: [{ description: 'Submitted Valve', quantity: 5, unit_price: 2000, total_amount: 10000 }],
+        },
+      };
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_15_BID_DOCUMENT') return of(latestBidSubmission);
+          return of(null);
+        }),
+      };
+      comp.formApiService = mockFormApi;
+
+      expect(comp.getPoFetchButtonLabel()).toBe('Fetch from Bid Document');
+      comp.loadForPurchaseOrder(true);
+
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          formCode: 'FORM_15_BID_DOCUMENT',
+          apiEndpoint: '/api/v1/bid-submissions',
+        }),
+        26,
+      );
+      expect(fg.get('delivery_terms')?.value).toBe('DDP');
+      expect(fg.get('gst_rate_pct')?.value).toBe(18);
+    });
+
+    it('should dynamically update fetch message and button label to Bid Doc ICB even when a stale Bid Document was previously linked or backend returns generic step_name', () => {
+      const { comp, poLinkedStepSignal } = setupPoComp();
+
+      // Simulate stale FORM_15_BID_DOCUMENT previously linked
+      poLinkedStepSignal.set({
+        id: 1078,
+        project_id: 26,
+        form_code: 'FORM_15_BID_DOCUMENT',
+        step_name: 'Bid Document',
+        description: '',
+        step_number: 4,
+        step_order: 4,
+        status: 'completed',
+        progress_percentage: 100,
+        completed_at: null,
+        data: null,
+      });
+
+      // Now latest available step in existingSteps is FORM_36_BID_DOC_ICB (even with generic step_name "Bid Document")
+      const icbStepWithGenericName: ProjectStep = {
+        id: 1077,
+        project_id: 26,
+        form_code: 'FORM_36_BID_DOC_ICB',
+        step_name: 'Bid Document',
+        description: '',
+        step_number: 3,
+        step_order: 3,
+        status: 'completed',
+        progress_percentage: 100,
+        completed_at: '2026-11-18T11:53:06+05:30',
+        data: {
+          delivery_terms: 'CIF',
+          gst_pct: 18,
+          payment_terms: 'LC',
+          warranty_period: '24 Months',
+          items: [{ description: 'ICB Switchgear', quantity: 1, unit_price: 50000, total_amount: 50000 }],
+        },
+      };
+
+      comp.existingSteps = () => [icbStepWithGenericName];
+
+      expect(comp.getPoFetchButtonLabel()).toBe('Fetch from Bid Doc ICB');
+      expect(comp.getPoSourceStepName()).toBe(
+        'Bid Document - International Competitive Bidding (ICB)',
+      );
+
+      comp.formApiService = {
+        getLatestEntry: vi.fn().mockReturnValue(of(icbStepWithGenericName)),
+      };
+      comp.loadForPurchaseOrder(true);
+
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: 'Purchase Order Details Patched',
+          detail: expect.stringContaining('Bid Document - International Competitive Bidding (ICB)'),
+        }),
+      );
+    });
   });
 
   describe('Form 30: Techno Commercial Tender Auto-Patching from Latest PQB (National PQB / PQB Bid Document)', () => {
@@ -5073,6 +5362,302 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(comp.isTechnoCommercialTenderStep({ form_code: 'FORM_30_TECHNO_COMMERCIAL_TENDER', step_name: 'Techno Commercial Tender' })).toBe(true);
       expect(comp.isTechnoCommercialTenderStep({ form_code: 'FORM_29_BID_DOC_TECHNO_COMMERCIAL', step_name: 'Bid Document - Techno Commercial Tender' })).toBe(false);
       expect(comp.isTechnoCommercialTenderStep({ form_code: 'FORM_02_PQB_BID_DOCUMENT', step_name: 'Bid Document for PQB' })).toBe(false);
+    });
+  });
+
+  describe('Form 5: NAC Auto-Patching from Previous Bid Documents & GST Calculation', () => {
+    const nacDef = getFormDefinition('FORM_05_NAC')!;
+
+    const setupNacComp = () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.unwrapStepRecord = StepFormDialog.prototype['unwrapStepRecord'];
+      comp.isNationalPqbStep = StepFormDialog.prototype['isNationalPqbStep'];
+      comp.isPqbBidDocStep = StepFormDialog.prototype['isPqbBidDocStep'];
+      comp.extractPqbNoFromSource = StepFormDialog.prototype['extractPqbNoFromSource'];
+      comp.extractPqbItemsFromSource = StepFormDialog.prototype['extractPqbItemsFromSource'];
+      comp.isBidDocSteStep = StepFormDialog.prototype['isBidDocSteStep'];
+      comp.isBidDocLteStep = StepFormDialog.prototype['isBidDocLteStep'];
+      comp.isBidDocTechnoCommercialStep = StepFormDialog.prototype['isBidDocTechnoCommercialStep'];
+      comp.isBidDocIcbStep = StepFormDialog.prototype['isBidDocIcbStep'];
+      comp.isGenericBidDocumentStep = StepFormDialog.prototype['isGenericBidDocumentStep'];
+      comp.isNacSourceBidDocStep = StepFormDialog.prototype['isNacSourceBidDocStep'];
+      comp.resolveNacSourceFormCode = StepFormDialog.prototype['resolveNacSourceFormCode'];
+      comp.hasNacSourceData = StepFormDialog.prototype['hasNacSourceData'];
+      comp.pickLatestNacBidDocCandidate = StepFormDialog.prototype['pickLatestNacBidDocCandidate'];
+      comp.getAvailableBidDocStepForNac = StepFormDialog.prototype['getAvailableBidDocStepForNac'];
+      comp.getNacSourceStepName = StepFormDialog.prototype['getNacSourceStepName'];
+      comp.getNacFetchButtonLabel = StepFormDialog.prototype['getNacFetchButtonLabel'];
+      comp.populateNacAwardedMaterialsTable = StepFormDialog.prototype['populateNacAwardedMaterialsTable'];
+      comp.loadForNac = StepFormDialog.prototype['loadForNac'];
+      comp.fetchSingleBidDocForNac = StepFormDialog.prototype['fetchSingleBidDocForNac'];
+      comp.fetchLatestBidDocFallbackForNac = StepFormDialog.prototype['fetchLatestBidDocFallbackForNac'];
+      comp.applyBidDocStepToNac = StepFormDialog.prototype['applyBidDocStepToNac'];
+      comp.resolveLinkedStepForNac = StepFormDialog.prototype['resolveLinkedStepForNac'];
+
+      const fg = new FormGroup({
+        nac_no: new FormControl('NAC-2026-01'),
+        nac_date: new FormControl<Date | null>(null),
+        nac_title: new FormControl('Award Notice'),
+        gst_pct: new FormControl<number | null>(null),
+      });
+
+      const tableArray = signal<FormArray<FormGroup>>(new FormArray<FormGroup>([]));
+      const linkedStepSignal = signal<ProjectStep | null>(null);
+      const fetchingSignal = signal<boolean>(false);
+      const resolvedDefSignal = signal<FormDefinition | undefined>(nacDef);
+
+      comp.formGroup = () => fg;
+      comp.tableFormArray = tableArray;
+      comp.tableVersion = signal<number>(0);
+      comp.formVersion = signal<number>(0);
+      comp.cdr = { markForCheck: vi.fn() };
+      comp.messageService = { add: vi.fn() };
+      comp.projectId = () => 90;
+      comp.existingSteps = () => [];
+      comp.nacLinkedStep = linkedStepSignal;
+      comp.fetchingNacData = fetchingSignal;
+      comp.resolvedDef = resolvedDefSignal;
+
+      return { comp, fg, tableArray, linkedStepSignal, fetchingSignal };
+    };
+
+    const makeBidDocStep = (
+      id: number,
+      formCode: string,
+      stepName: string,
+      updatedAt: string,
+      gstPct: number,
+      items: Array<Record<string, unknown>>,
+    ): ProjectStep => ({
+      id,
+      project_id: 90,
+      step_number: id,
+      step_name: stepName,
+      description: '',
+      progress_percentage: 100,
+      completed_at: null,
+      form_code: formCode,
+      status: 'completed',
+      updated_at: updatedAt,
+      data: {
+        gst_pct: gstPct,
+        items,
+      },
+    });
+
+    it('should fetch Awarded Materials (mapping unit_price -> per_unit_price) and GST (%) from each of the 5 supported Bid Document forms', () => {
+      const cases = [
+        {
+          code: 'FORM_34_BID_DOC_STE',
+          name: 'Bid Document - Single Tender Enquiry (STE)',
+          btnLabel: 'Fetch from Bid Doc STE',
+          gst: 18,
+          items: [{ description: 'STE Rotor', quantity: 2, unit_price: 10000, total_amount: 20000 }],
+        },
+        {
+          code: 'FORM_31_BID_DOC_LTE',
+          name: 'Bid Document - Limited Tender Enquiry (LTE)',
+          btnLabel: 'Fetch from Bid Doc LTE',
+          gst: 12,
+          items: [{ description: 'LTE Valve', quantity: 5, unit_price: 4000, total_amount: 20000 }],
+        },
+        {
+          code: 'FORM_29_BID_DOC_TECHNO_COMMERCIAL',
+          name: 'Bid Document - Techno Commercial Tender',
+          btnLabel: 'Fetch from Techno-Commercial Bid',
+          gst: 18,
+          items: [{ description: 'Techno Pump', quantity: 3, unit_price: 15000, total_amount: 45000 }],
+        },
+        {
+          code: 'FORM_36_BID_DOC_ICB',
+          name: 'Bid Document - International Competitive Bidding (ICB)',
+          btnLabel: 'Fetch from Bid Doc ICB',
+          gst: 5,
+          items: [{ description: 'ICB Transformer', quantity: 1, unit_price: 100000, total_amount: 100000 }],
+        },
+        {
+          code: 'FORM_15_BID_DOCUMENT',
+          name: 'Bid Document',
+          btnLabel: 'Fetch from Bid Document',
+          gst: 18,
+          items: [{ description: 'Standard Spares', quantity: 10, unit_price: 500, total_amount: 5000 }],
+        },
+      ];
+
+      for (const c of cases) {
+        const { comp, fg, tableArray } = setupNacComp();
+        const bidStep = makeBidDocStep(10, c.code, c.name, '2026-04-10T10:00:00Z', c.gst, c.items);
+        comp.existingSteps = () => [bidStep];
+
+        const mockFormApi = {
+          getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+            if (def.formCode === c.code) return of(bidStep);
+            return of(null);
+          }),
+        };
+        comp.formApiService = mockFormApi;
+
+        expect(comp.getNacFetchButtonLabel()).toBe(c.btnLabel);
+        comp.loadForNac(true);
+
+        expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+        expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+          expect.objectContaining({ formCode: c.code }),
+          90,
+        );
+
+        expect(fg.get('gst_pct')?.value).toBe(c.gst);
+        const rows = tableArray().controls;
+        expect(rows.length).toBe(1);
+        expect(rows[0].get('description')?.value).toBe(c.items[0]['description']);
+        expect(rows[0].get('quantity')?.value).toBe(c.items[0]['quantity']);
+        expect(rows[0].get('per_unit_price')?.value).toBe(c.items[0]['unit_price']);
+        expect(rows[0].get('total_amount')?.value).toBe(c.items[0]['total_amount']);
+      }
+    });
+
+    it('should exclude FORM_02_PQB_BID_DOCUMENT and select the latest eligible Bid Document step', () => {
+      const { comp, fg, tableArray } = setupNacComp();
+      const pqbBidDoc = makeBidDocStep(
+        1,
+        'FORM_02_PQB_BID_DOCUMENT',
+        'Bid Document for PQB',
+        '2026-05-01T10:00:00Z',
+        18,
+        [{ description: 'PQB Item', quantity: 99, unit_price: 10 }],
+      );
+      const olderLte = makeBidDocStep(
+        2,
+        'FORM_31_BID_DOC_LTE',
+        'Bid Document - Limited Tender Enquiry (LTE)',
+        '2026-04-01T10:00:00Z',
+        12,
+        [{ description: 'Older LTE Item', quantity: 2, unit_price: 500 }],
+      );
+      const newerTechno = makeBidDocStep(
+        3,
+        'FORM_29_BID_DOC_TECHNO_COMMERCIAL',
+        'Bid Document - Techno Commercial Tender',
+        '2026-04-15T10:00:00Z',
+        18,
+        [{ description: 'Newer Techno Item', quantity: 4, unit_price: 2500, total_amount: 10000 }],
+      );
+
+      comp.existingSteps = () => [pqbBidDoc, olderLte, newerTechno];
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockReturnValue(of(newerTechno)),
+      };
+      comp.formApiService = mockFormApi;
+
+      expect(comp.isNacSourceBidDocStep(pqbBidDoc)).toBe(false);
+      comp.loadForNac(false);
+
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_29_BID_DOC_TECHNO_COMMERCIAL' }),
+        90,
+      );
+      expect(fg.get('gst_pct')?.value).toBe(18);
+      expect(tableArray().controls[0].get('description')?.value).toBe('Newer Techno Item');
+      expect(tableArray().controls[0].get('per_unit_price')?.value).toBe(2500);
+      expect(tableArray().controls[0].get('total_amount')?.value).toBe(10000);
+    });
+
+    it('should probe all 5 Bid Document endpoints when existingSteps is empty and pick the latest with data', () => {
+      const { comp, fg, tableArray } = setupNacComp();
+      comp.existingSteps = () => [];
+
+      const icbBidDoc = makeBidDocStep(
+        36,
+        'FORM_36_BID_DOC_ICB',
+        'Bid Document - International Competitive Bidding (ICB)',
+        '2026-04-20T12:00:00Z',
+        18,
+        [{ description: 'ICB Generator', quantity: 2, unit_price: 50000, total_amount: 100000 }],
+      );
+
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_36_BID_DOC_ICB') return of(icbBidDoc);
+          return of(null);
+        }),
+      };
+      comp.formApiService = mockFormApi;
+
+      comp.loadForNac(true);
+
+      expect(mockFormApi.getLatestEntry).toHaveBeenCalledTimes(5);
+      expect(fg.get('gst_pct')?.value).toBe(18);
+      expect(tableArray().controls.length).toBe(1);
+      expect(tableArray().controls[0].get('description')?.value).toBe('ICB Generator');
+      expect(tableArray().controls[0].get('per_unit_price')?.value).toBe(50000);
+    });
+
+    it('should auto-trigger loadForNac in ADD mode and EDIT mode when items or gst_pct are missing', () => {
+      const comp = Object.create(StepFormDialog.prototype);
+      comp.activeTab = { set: vi.fn() };
+      comp.newRemarkInput = { set: vi.fn() };
+      comp.ensureProjectMetadata = vi.fn();
+      comp.projectId = () => 90;
+      comp.resolvedDef = { set: vi.fn() };
+      comp.loading = { set: vi.fn() };
+      comp.populateForm = vi.fn();
+      comp.loadForNac = vi.fn();
+      comp.resolveLinkedStepForNac = vi.fn();
+
+      // ADD mode
+      comp.initializeModal(null, nacDef);
+      expect(comp.loadForNac).toHaveBeenCalledWith(false);
+
+      // EDIT mode missing gst_pct
+      comp.loadForNac.mockClear();
+      comp.initializeModal(
+        {
+          id: 505,
+          project_id: 90,
+          step_number: 5,
+          step_name: 'Notification of Award of Contract (NAC)',
+          description: '',
+          status: 'in_progress',
+          progress_percentage: 50,
+          completed_at: null,
+          form_code: 'FORM_05_NAC',
+          data: {
+            nac_no: 'NAC-1',
+            nac_title: 'Test',
+            items: [{ description: 'Item', quantity: 2, per_unit_price: 100, total_amount: 200 }],
+          },
+        },
+        null,
+      );
+      expect(comp.loadForNac).toHaveBeenCalledWith(false);
+
+      // EDIT mode with both items and gst_pct present
+      comp.loadForNac.mockClear();
+      comp.initializeModal(
+        {
+          id: 505,
+          project_id: 90,
+          step_number: 5,
+          step_name: 'Notification of Award of Contract (NAC)',
+          description: '',
+          status: 'completed',
+          progress_percentage: 100,
+          completed_at: null,
+          form_code: 'FORM_05_NAC',
+          data: {
+            nac_no: 'NAC-1',
+            nac_title: 'Test',
+            gst_pct: 18,
+            items: [{ description: 'Item', quantity: 2, per_unit_price: 100, total_amount: 200 }],
+          },
+        },
+        null,
+      );
+      expect(comp.loadForNac).not.toHaveBeenCalled();
+      expect(comp.resolveLinkedStepForNac).toHaveBeenCalled();
     });
   });
 });

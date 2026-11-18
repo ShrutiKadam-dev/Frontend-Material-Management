@@ -29,6 +29,19 @@ describe('FORM_CATALOG Extended Forms (26, 29, 30, 31, 32, 33, 34, 35, 36)', () 
     });
   });
 
+  describe('Form 5: NOTIFICATION OF AWARD OF CONTRACT (NAC)', () => {
+    it('should include GST (%) field and Awarded Materials table with autoCalculateTotal', () => {
+      const def = getFormDefinition('FORM_05_NAC')!;
+      expect(def).toBeDefined();
+      expect(def.id).toBe(5);
+      expect(def.fields.map((f) => f.key)).toContain('gst_pct');
+      expect(def.tableConfig?.title).toBe('Awarded Materials');
+      expect(def.tableConfig?.autoCalculateTotal).toBe(true);
+      expect(def.tableConfig?.unitPriceKey).toBe('per_unit_price');
+      expect(def.tableConfig?.totalKey).toBe('total_amount');
+    });
+  });
+
   describe('Form 3: CORRIGENDUM', () => {
     it('should be registered with code FORM_03_CORRIGENDUM and id 3', () => {
       const def = getFormDefinition('FORM_03_CORRIGENDUM');
