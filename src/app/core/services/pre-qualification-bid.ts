@@ -177,6 +177,8 @@ export class PreQualificationBidService {
         ? String(unwrapped['mode_of_bid_submission'])
         : undefined,
       items,
+      created_at: unwrapped['created_at'] ? String(unwrapped['created_at']) : undefined,
+      updated_at: unwrapped['updated_at'] ? String(unwrapped['updated_at']) : undefined,
     };
   }
 }

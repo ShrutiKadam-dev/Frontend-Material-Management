@@ -30,7 +30,7 @@ import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 
-import { Observable, catchError, finalize, forkJoin, map, of, Subscription, timeout } from 'rxjs';
+import { Observable, catchError, finalize, forkJoin, map, of, Subscription, switchMap, timeout } from 'rxjs';
 
 import { ProjectStep, ProjectStepRemark, StepStatus } from '../../../../../core/models/project-step.model';
 import { FormApiService } from '../../../../../core/services/form-api';
@@ -254,6 +254,12 @@ export class StepFormDialog {
   readonly bidDocTechnoLinkedTenderStep = signal<ProjectStep | null>(null);
   readonly bidDocTechnoLinkedPqbBidDocStep = signal<ProjectStep | null>(null);
   readonly fetchingBidDocTechnoCommercial = signal<boolean>(false);
+  readonly bidDocTechnoPqbSourceStepName = computed(() =>
+    this.getBidDocTechnoPqbSourceStepName(),
+  );
+  readonly bidDocTechnoPqbFetchButtonLabel = computed(() =>
+    this.getBidDocTechnoPqbFetchButtonLabel(),
+  );
   readonly isNac = computed(() => {
     const code = this.resolvedDef()?.formCode;
     if (code === 'FORM_05_NAC') return true;
@@ -1384,11 +1390,7 @@ export class StepFormDialog {
   pickLatestPqbCandidate(candidates: ProjectStep[]): ProjectStep | undefined {
     if (!candidates || candidates.length === 0) return undefined;
 
-    const validCandidates = candidates.filter((s) => this.hasPqbDataForTechnoCommercial(s));
-    const pool = validCandidates.length > 0 ? validCandidates : candidates;
-
-    const getStepTimestamp = (s: ProjectStep): number => {
-      const dtStr = s.updated_at || s.created_at || s.completed_at;
+    const getTimestamp = (dtStr?: string | null): number => {
       if (dtStr) {
         const t = new Date(dtStr).getTime();
         if (!isNaN(t) && t > 0) return t;
@@ -1396,25 +1398,45 @@ export class StepFormDialog {
       return 0;
     };
 
-    const getStepOrderNum = (s: ProjectStep): number => {
-      return s.step_number ?? s.step_order ?? 0;
-    };
+    const sorted = [...candidates].sort((a, b) => {
+      // 1. Prefer explicit pipeline step_order when present on both steps (authoritative latest step in pipeline)
+      const stepOrderA = Number(a.step_order) || 0;
+      const stepOrderB = Number(b.step_order) || 0;
+      if (stepOrderA > 0 && stepOrderB > 0 && stepOrderA !== stepOrderB) {
+        return stepOrderB - stepOrderA;
+      }
 
-    const sorted = [...pool].sort((a, b) => {
+      // 2. Prefer explicit updated_at / created_at timestamps when present on both steps
+      const editTimeA = getTimestamp(a.updated_at || a.created_at);
+      const editTimeB = getTimestamp(b.updated_at || b.created_at);
+      if (editTimeA > 0 && editTimeB > 0 && editTimeA !== editTimeB) {
+        return editTimeB - editTimeA;
+      }
+
+      // 3. Prefer explicit step_number sequence over completed_at (avoids backend timezone skew)
+      const stepNumA = Number(a.step_number) || 0;
+      const stepNumB = Number(b.step_number) || 0;
+      if (stepNumA > 0 && stepNumB > 0 && stepNumA !== stepNumB) {
+        return stepNumB - stepNumA;
+      }
+
+      // 4. Compare completed_at only when present on both steps
+      const completedA = getTimestamp(a.completed_at);
+      const completedB = getTimestamp(b.completed_at);
+      if (completedA > 0 && completedB > 0 && completedA !== completedB) {
+        return completedB - completedA;
+      }
+
+      // 5. Completed steps take precedence over incomplete drafts when timestamps/order tie
+      if (a.status === 'completed' && b.status !== 'completed') return -1;
+      if (b.status === 'completed' && a.status !== 'completed') return 1;
+
+      // 6. Prefer candidate with inline PQB data as tiebreaker
       const hasDataA = this.hasPqbDataForTechnoCommercial(a) ? 1 : 0;
       const hasDataB = this.hasPqbDataForTechnoCommercial(b) ? 1 : 0;
       if (hasDataA !== hasDataB) return hasDataB - hasDataA;
 
-      const timeDiff = getStepTimestamp(b) - getStepTimestamp(a);
-      if (timeDiff !== 0) return timeDiff;
-
-      if (a.status === 'completed' && b.status !== 'completed') return -1;
-      if (b.status === 'completed' && a.status !== 'completed') return 1;
-
-      const orderDiff = getStepOrderNum(b) - getStepOrderNum(a);
-      if (orderDiff !== 0) return orderDiff;
-
-      // When timestamps & step order are equal, Bid Document for PQB is downstream of National PQB
+      // 7. When timestamps & step order are equal, Bid Document for PQB is downstream of National PQB
       const stageA = this.isPqbBidDocStep(a) ? 2 : 1;
       const stageB = this.isPqbBidDocStep(b) ? 2 : 1;
       if (stageA !== stageB) return stageB - stageA;
@@ -1425,14 +1447,38 @@ export class StepFormDialog {
     return sorted[0];
   }
 
+  resolveLatestPqbStepFromList(steps: ProjectStep[]): ProjectStep | null {
+    if (!Array.isArray(steps) || steps.length === 0) return null;
+
+    const currentStep = typeof this.step === 'function' ? this.step() : null;
+    const candidates = steps.filter((s) => {
+      if (currentStep && s.id && currentStep.id && s.id === currentStep.id) {
+        return false;
+      }
+      return this.isPqbOrPqbBidDocStep(s);
+    });
+    if (candidates.length === 0) return null;
+
+    // When editing an existing step, prefer PQB steps strictly preceding it in the pipeline
+    const currentOrder = currentStep ? Number(currentStep.step_order ?? currentStep.step_number ?? 0) : 0;
+    let scoped = candidates;
+    if (currentOrder > 0) {
+      const prior = candidates.filter((s) => {
+        const ord = Number(s.step_order ?? s.step_number ?? 0);
+        return ord > 0 && ord < currentOrder;
+      });
+      if (prior.length > 0) {
+        scoped = prior;
+      }
+    }
+
+    return this.pickLatestPqbCandidate(scoped) || scoped[0];
+  }
+
   getAvailablePqbStepForTechnoCommercial(): ProjectStep | null {
     const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
     const steps: ProjectStep[] = Array.isArray(inMemory) ? inMemory : [];
-
-    const candidates = steps.filter((s) => this.isPqbOrPqbBidDocStep(s));
-    if (candidates.length === 0) return null;
-
-    return this.pickLatestPqbCandidate(candidates) || candidates[0];
+    return this.resolveLatestPqbStepFromList(steps);
   }
 
   private lookupUnitFromInMemoryNationalPqb(description: string): string {
@@ -1532,7 +1578,56 @@ export class StepFormDialog {
       return;
     }
 
-    this.fetchLatestPqbFallbackForTechnoCommercial(pId, showNotification);
+    // When existingSteps has no PQB / PQB Bid Doc step (e.g. opened from Form Entries view),
+    // inspect project pipeline steps first so we ONLY call the single latest PQB step's API.
+    if (this.projectStepService && typeof this.projectStepService.getSteps === 'function') {
+      this.fetchingTechnoCommercialPqb.set(true);
+      this.projectStepService
+        .getSteps(pId)
+        .pipe(
+          timeout({ each: 4000, with: () => of([] as ProjectStep[]) }),
+          catchError(() => of([] as ProjectStep[])),
+        )
+        .subscribe({
+          next: (allSteps) => {
+            this.fetchingTechnoCommercialPqb.set(false);
+            const resolvedStep = this.resolveLatestPqbStepFromList(allSteps || []);
+            if (resolvedStep) {
+              if (this.isPqbBidDocStep(resolvedStep)) {
+                this.fetchLatestPqbBidDocForTechnoCommercial(pId, resolvedStep, showNotification);
+              } else {
+                this.fetchLatestNationalPqbForTechnoCommercial(pId, resolvedStep, showNotification);
+              }
+              return;
+            }
+            if (Array.isArray(allSteps) && allSteps.length > 0) {
+              if (showNotification) {
+                this.messageService?.add({
+                  severity: 'warn',
+                  summary: 'PQB Not Found',
+                  detail:
+                    'No National Pre-Qualification Bid (PQB) or Bid Document for PQB step found in this project.',
+                });
+              }
+              return;
+            }
+            // Fallback: call ONLY ONE endpoint (National PQB) — never both at once
+            this.fetchLatestNationalPqbForTechnoCommercial(pId, null, showNotification);
+          },
+          error: () => {
+            this.fetchingTechnoCommercialPqb.set(false);
+            this.fetchLatestNationalPqbForTechnoCommercial(pId, null, showNotification);
+          },
+        });
+      return;
+    }
+
+    // No pipeline steps available: call ONLY ONE endpoint (Bid Doc PQB if known, else National PQB)
+    if (this.isPqbBidDocAvailable()) {
+      this.fetchLatestPqbBidDocForTechnoCommercial(pId, null, showNotification);
+    } else {
+      this.fetchLatestNationalPqbForTechnoCommercial(pId, null, showNotification);
+    }
   }
 
   private fetchLatestPqbBidDocForTechnoCommercial(
@@ -1663,64 +1758,12 @@ export class StepFormDialog {
     pId: number,
     showNotification: boolean,
   ): void {
-    const pqbBidDocDef = getFormDefinition('FORM_02_PQB_BID_DOCUMENT');
-    const pqbDef = getFormDefinition('FORM_01_PQB');
-
-    const pqbBidDoc$: Observable<ProjectStep | null> =
-      pqbBidDocDef && this.formApiService && typeof this.formApiService.getLatestEntry === 'function'
-        ? this.formApiService.getLatestEntry(pqbBidDocDef, pId).pipe(catchError(() => of(null)))
-        : of(null);
-
-    const nationalPqb$: Observable<PreQualificationBid | ProjectStep | null> =
-      this.preQualificationBidService && typeof this.preQualificationBidService.getLatest === 'function'
-        ? this.preQualificationBidService.getLatest(pId).pipe(catchError(() => of(null)))
-        : pqbDef && this.formApiService && typeof this.formApiService.getLatestEntry === 'function'
-          ? this.formApiService.getLatestEntry(pqbDef, pId).pipe(catchError(() => of(null)))
-          : of(null);
-
-    this.fetchingTechnoCommercialPqb.set(true);
-
-    forkJoin({ pqbBidDoc: pqbBidDoc$, nationalPqb: nationalPqb$ })
-      .pipe(finalize(() => this.fetchingTechnoCommercialPqb.set(false)))
-      .subscribe({
-        next: ({ pqbBidDoc, nationalPqb }) => {
-          const candidates: ProjectStep[] = [];
-          if (pqbBidDoc && this.hasPqbDataForTechnoCommercial(pqbBidDoc)) {
-            candidates.push(pqbBidDoc);
-          }
-          if (nationalPqb) {
-            const convertedPqb = this.convertPqbToProjectStep(
-              nationalPqb as PreQualificationBid | Record<string, unknown>,
-              undefined,
-              pId,
-            );
-            if (this.hasPqbDataForTechnoCommercial(convertedPqb)) {
-              candidates.push(convertedPqb);
-            }
-          }
-
-          const latestCandidate = this.pickLatestPqbCandidate(candidates);
-          if (latestCandidate) {
-            this.applyPqbStepToTechnoCommercial(latestCandidate, showNotification);
-          } else if (showNotification) {
-            this.messageService?.add({
-              severity: 'warn',
-              summary: 'PQB Not Found',
-              detail:
-                'No latest National Pre-Qualification Bid (PQB) or Bid Document for PQB found for this project to patch.',
-            });
-          }
-        },
-        error: () => {
-          if (showNotification) {
-            this.messageService?.add({
-              severity: 'info',
-              summary: 'PQB Unavailable',
-              detail: 'Could not fetch latest PQB details for this project.',
-            });
-          }
-        },
-      });
+    // Call ONLY ONE endpoint (never call both PQB endpoints at the same time)
+    if (this.isPqbBidDocAvailable()) {
+      this.fetchLatestPqbBidDocForTechnoCommercial(pId, null, showNotification);
+    } else {
+      this.fetchLatestNationalPqbForTechnoCommercial(pId, null, showNotification);
+    }
   }
 
   private applyPqbStepToTechnoCommercial(
@@ -1783,7 +1826,71 @@ export class StepFormDialog {
 
   // ── Form 29: Bid Document - Techno Commercial Tender Auto-Patching ───
   // Tender Title, Tender No., and Tender Issue Date <- Techno Commercial Tender (FORM_30_TECHNO_COMMERCIAL_TENDER)
-  // Requirements data <- Bid Document for PQB (FORM_02_PQB_BID_DOCUMENT)
+  // Requirements data <- Latest of Bid Document for PQB (FORM_02_PQB_BID_DOCUMENT) / National Pre-Qualification Bid (FORM_01_PQB)
+  getBidDocTechnoPqbSourceStepName(): string {
+    const linked =
+      typeof this.bidDocTechnoLinkedPqbBidDocStep === 'function'
+        ? this.bidDocTechnoLinkedPqbBidDocStep()
+        : null;
+    if (linked) {
+      return (
+        linked.step_name ||
+        (linked.form_code ? getFormDefinition(linked.form_code)?.name : null) ||
+        (this.isPqbBidDocStep(linked)
+          ? 'latest Bid Document for PQB'
+          : 'latest National Pre-Qualification Bid (PQB)')
+      );
+    }
+    const available = this.getAvailablePqbStepForBidDocTechnoCommercial();
+    if (available) {
+      return (
+        available.step_name ||
+        (available.form_code ? getFormDefinition(available.form_code)?.name : null) ||
+        (this.isPqbBidDocStep(available)
+          ? 'latest Bid Document for PQB'
+          : 'latest National Pre-Qualification Bid (PQB)')
+      );
+    }
+    if (this.isPqbBidDocAvailable()) {
+      return 'latest Bid Document for PQB';
+    }
+    if (this.isNationalPqbAvailable()) {
+      return 'latest National Pre-Qualification Bid (PQB)';
+    }
+    return 'latest Bid Document for PQB / National Pre-Qualification Bid (PQB)';
+  }
+
+  getBidDocTechnoPqbFetchButtonLabel(): string {
+    const linked =
+      typeof this.bidDocTechnoLinkedPqbBidDocStep === 'function'
+        ? this.bidDocTechnoLinkedPqbBidDocStep()
+        : null;
+    if (linked) {
+      return this.isPqbBidDocStep(linked) ? 'Fetch from Bid Doc PQB' : 'Fetch from National PQB';
+    }
+    const available = this.getAvailablePqbStepForBidDocTechnoCommercial();
+    if (available) {
+      return this.isPqbBidDocStep(available) ? 'Fetch from Bid Doc PQB' : 'Fetch from National PQB';
+    }
+    if (this.isPqbBidDocAvailable()) {
+      return 'Fetch from Bid Doc PQB';
+    }
+    if (this.isNationalPqbAvailable()) {
+      return 'Fetch from National PQB';
+    }
+    return 'Fetch from Bid Doc PQB / PQB';
+  }
+
+  private getPqbSourceDisplayName(step: ProjectStep): string {
+    return (
+      step.step_name ||
+      (step.form_code ? getFormDefinition(step.form_code)?.name : null) ||
+      (this.isPqbBidDocStep(step)
+        ? 'Bid Document for PQB'
+        : 'National Pre-Qualification Bid (PQB)')
+    );
+  }
+
   isTechnoCommercialTenderStep(s: ProjectStep | null | undefined): boolean {
     if (!s) return false;
     const fcode = (s.form_code || '').toUpperCase().trim();
@@ -1900,6 +2007,139 @@ export class StepFormDialog {
     return this.pickLatestPqbCandidate(candidates) || candidates[0];
   }
 
+  getAvailablePqbStepForBidDocTechnoCommercial(): ProjectStep | null {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    const steps: ProjectStep[] = Array.isArray(inMemory) ? inMemory : [];
+    return this.resolveLatestPqbStepFromList(steps);
+  }
+
+  private fetchLatestPqbBidDocCandidate$(
+    pId: number,
+    fallbackStep: ProjectStep | null,
+  ): Observable<ProjectStep | null> {
+    const pqbBidDocDef = getFormDefinition('FORM_02_PQB_BID_DOCUMENT');
+    const hasFormApi = Boolean(
+      this.formApiService && typeof this.formApiService.getLatestEntry === 'function',
+    );
+    if (!pqbBidDocDef || !hasFormApi) {
+      return of(
+        fallbackStep && this.extractPqbItemsFromSource(fallbackStep).length > 0
+          ? fallbackStep
+          : null,
+      );
+    }
+
+    return this.formApiService.getLatestEntry(pqbBidDocDef, pId).pipe(
+      catchError(() => of(null)),
+      map((latestBidDoc) => {
+        if (latestBidDoc && this.extractPqbItemsFromSource(latestBidDoc).length > 0) {
+          return latestBidDoc;
+        }
+        return fallbackStep && this.extractPqbItemsFromSource(fallbackStep).length > 0
+          ? fallbackStep
+          : null;
+      }),
+    );
+  }
+
+  private fetchLatestNationalPqbCandidate$(
+    pId: number,
+    fallbackStep: ProjectStep | null,
+  ): Observable<ProjectStep | null> {
+    const pqbDef = getFormDefinition('FORM_01_PQB');
+    const hasPqbService = Boolean(
+      this.preQualificationBidService && typeof this.preQualificationBidService.getLatest === 'function',
+    );
+    const hasFormApi = Boolean(
+      this.formApiService && typeof this.formApiService.getLatestEntry === 'function',
+    );
+
+    const fetch$: Observable<PreQualificationBid | ProjectStep | null> | null = hasPqbService
+      ? this.preQualificationBidService!.getLatest(pId)
+      : pqbDef && hasFormApi
+        ? this.formApiService.getLatestEntry(pqbDef, pId)
+        : null;
+
+    if (!fetch$) {
+      return of(
+        fallbackStep && this.extractPqbItemsFromSource(fallbackStep).length > 0
+          ? fallbackStep
+          : null,
+      );
+    }
+
+    return fetch$.pipe(
+      catchError(() => of(null)),
+      map((latestPqb) => {
+        const converted = latestPqb
+          ? this.convertPqbToProjectStep(
+              latestPqb as PreQualificationBid | Record<string, unknown>,
+              fallbackStep || undefined,
+              pId,
+            )
+          : null;
+        if (converted && this.extractPqbItemsFromSource(converted).length > 0) {
+          return converted;
+        }
+        return fallbackStep && this.extractPqbItemsFromSource(fallbackStep).length > 0
+          ? fallbackStep
+          : null;
+      }),
+    );
+  }
+
+  private fetchLatestPqbSourceFromResolvedStep$(
+    pId: number,
+    resolvedStep: ProjectStep,
+  ): Observable<ProjectStep | null> {
+    // Call ONLY the single latest step's endpoint (never call both PQB endpoints at the same time)
+    if (this.isPqbBidDocStep(resolvedStep)) {
+      return this.fetchLatestPqbBidDocCandidate$(pId, resolvedStep);
+    }
+    return this.fetchLatestNationalPqbCandidate$(pId, resolvedStep);
+  }
+
+  private fetchSingleDefaultPqbSourceForBidDocTechnoCommercial$(
+    pId: number,
+  ): Observable<ProjectStep | null> {
+    // Never fire two PQB calls at once: pick the single applicable endpoint
+    if (this.isPqbBidDocAvailable()) {
+      return this.fetchLatestPqbBidDocCandidate$(pId, null);
+    }
+    if (this.isNationalPqbAvailable()) {
+      return this.fetchLatestNationalPqbCandidate$(pId, null);
+    }
+    return this.fetchLatestNationalPqbCandidate$(pId, null);
+  }
+
+  private fetchLatestPqbSourceForBidDocTechnoCommercial$(
+    pId: number,
+    availablePqbStep: ProjectStep | null,
+  ): Observable<ProjectStep | null> {
+    if (availablePqbStep) {
+      return this.fetchLatestPqbSourceFromResolvedStep$(pId, availablePqbStep);
+    }
+
+    if (this.projectStepService && typeof this.projectStepService.getSteps === 'function') {
+      return this.projectStepService.getSteps(pId).pipe(
+        timeout({ each: 4000, with: () => of([] as ProjectStep[]) }),
+        catchError(() => of([] as ProjectStep[])),
+        switchMap((allSteps) => {
+          const resolvedStep = this.resolveLatestPqbStepFromList(allSteps || []);
+          if (resolvedStep) {
+            return this.fetchLatestPqbSourceFromResolvedStep$(pId, resolvedStep);
+          }
+          if (Array.isArray(allSteps) && allSteps.length > 0) {
+            return of(null);
+          }
+          return this.fetchSingleDefaultPqbSourceForBidDocTechnoCommercial$(pId);
+        }),
+      );
+    }
+
+    return this.fetchSingleDefaultPqbSourceForBidDocTechnoCommercial$(pId);
+  }
+
   populateBidDocTechnoCommercialItemsTable(items: Array<Record<string, unknown>>): void {
     const def = typeof this.resolvedDef === 'function' ? this.resolvedDef() : null;
     if (!def || !def.tableConfig) return;
@@ -1965,34 +2205,39 @@ export class StepFormDialog {
     if (!pId) return;
 
     const availableTechnoStep = this.getAvailableTechnoCommercialTenderStep();
-    const availablePqbBidDocStep = this.getAvailablePqbBidDocStep();
+    const availablePqbStep = this.getAvailablePqbStepForBidDocTechnoCommercial();
 
     const technoDef = getFormDefinition('FORM_30_TECHNO_COMMERCIAL_TENDER');
-    const pqbBidDocDef = getFormDefinition('FORM_02_PQB_BID_DOCUMENT');
 
-    const hasApi = Boolean(this.formApiService && typeof this.formApiService.getLatestEntry === 'function');
-    if (!hasApi) {
+    const hasFormApi = Boolean(
+      this.formApiService && typeof this.formApiService.getLatestEntry === 'function',
+    );
+    const hasPqbService = Boolean(
+      this.preQualificationBidService && typeof this.preQualificationBidService.getLatest === 'function',
+    );
+    if (!hasFormApi && !hasPqbService) {
       this.applySourcesToBidDocTechnoCommercial(
         availableTechnoStep,
-        availablePqbBidDocStep,
+        availablePqbStep && this.extractPqbItemsFromSource(availablePqbStep).length > 0
+          ? availablePqbStep
+          : null,
         showNotification,
       );
       return;
     }
 
-    const techno$: Observable<ProjectStep | null> = technoDef
-      ? this.formApiService.getLatestEntry(technoDef, pId).pipe(catchError(() => of(null)))
-      : of(null);
-    const pqbBidDoc$: Observable<ProjectStep | null> = pqbBidDocDef
-      ? this.formApiService.getLatestEntry(pqbBidDocDef, pId).pipe(catchError(() => of(null)))
-      : of(null);
+    const techno$: Observable<ProjectStep | null> =
+      technoDef && hasFormApi
+        ? this.formApiService.getLatestEntry(technoDef, pId).pipe(catchError(() => of(null)))
+        : of(null);
+    const pqbSource$ = this.fetchLatestPqbSourceForBidDocTechnoCommercial$(pId, availablePqbStep);
 
     this.fetchingBidDocTechnoCommercial.set(true);
 
-    forkJoin({ techno: techno$, pqbBidDoc: pqbBidDoc$ })
+    forkJoin({ techno: techno$, pqbSource: pqbSource$ })
       .pipe(finalize(() => this.fetchingBidDocTechnoCommercial.set(false)))
       .subscribe({
-        next: ({ techno, pqbBidDoc }) => {
+        next: ({ techno, pqbSource }) => {
           const technoCandidate =
             techno && this.hasTechnoCommercialTenderDetails(techno)
               ? techno
@@ -2000,23 +2245,18 @@ export class StepFormDialog {
                 ? availableTechnoStep
                 : null;
 
-          const pqbBidDocCandidate =
-            pqbBidDoc && this.extractPqbItemsFromSource(pqbBidDoc).length > 0
-              ? pqbBidDoc
-              : availablePqbBidDocStep && this.extractPqbItemsFromSource(availablePqbBidDocStep).length > 0
-                ? availablePqbBidDocStep
-                : null;
-
           this.applySourcesToBidDocTechnoCommercial(
             technoCandidate,
-            pqbBidDocCandidate,
+            pqbSource,
             showNotification,
           );
         },
         error: () => {
           this.applySourcesToBidDocTechnoCommercial(
             availableTechnoStep,
-            availablePqbBidDocStep,
+            availablePqbStep && this.extractPqbItemsFromSource(availablePqbStep).length > 0
+              ? availablePqbStep
+              : null,
             showNotification,
           );
         },
@@ -2033,26 +2273,33 @@ export class StepFormDialog {
     const pId = typeof this.projectId === 'function' ? this.projectId() : (this.projectId as unknown as number);
     if (!pId) return;
 
-    const availablePqbBidDocStep = this.getAvailablePqbBidDocStep();
-    const pqbBidDocDef = getFormDefinition('FORM_02_PQB_BID_DOCUMENT');
+    const availablePqbStep = this.getAvailablePqbStepForBidDocTechnoCommercial();
+    const hasFormApi = Boolean(
+      this.formApiService && typeof this.formApiService.getLatestEntry === 'function',
+    );
+    const hasPqbService = Boolean(
+      this.preQualificationBidService && typeof this.preQualificationBidService.getLatest === 'function',
+    );
 
-    if (!pqbBidDocDef || !this.formApiService || typeof this.formApiService.getLatestEntry !== 'function') {
-      const items = availablePqbBidDocStep ? this.extractPqbItemsFromSource(availablePqbBidDocStep) : [];
-      if (items.length > 0) {
-        this.bidDocTechnoLinkedPqbBidDocStep.set(availablePqbBidDocStep);
+    if (!hasFormApi && !hasPqbService) {
+      const items = availablePqbStep ? this.extractPqbItemsFromSource(availablePqbStep) : [];
+      if (availablePqbStep && items.length > 0) {
+        this.bidDocTechnoLinkedPqbBidDocStep.set(availablePqbStep);
         this.populateBidDocTechnoCommercialItemsTable(items);
         if (showNotification) {
+          const sourceName = this.getPqbSourceDisplayName(availablePqbStep);
           this.messageService?.add({
             severity: 'success',
-            summary: 'Requirements Loaded from Bid Document for PQB',
-            detail: `Loaded ${items.length} requirement items from latest Bid Document for PQB.`,
+            summary: `Requirements Loaded from ${sourceName}`,
+            detail: `Loaded ${items.length} requirement items from latest ${sourceName}.`,
           });
         }
       } else if (showNotification) {
         this.messageService?.add({
           severity: 'warn',
-          summary: 'Bid Document for PQB Not Found',
-          detail: 'No Requirements data found in Bid Document for PQB for this project.',
+          summary: 'PQB Requirements Not Found',
+          detail:
+            'No Requirements data found in Bid Document for PQB or National Pre-Qualification Bid (PQB) for this project.',
         });
       }
       return;
@@ -2060,50 +2307,42 @@ export class StepFormDialog {
 
     this.fetchingBidDocTechnoCommercial.set(true);
 
-    this.formApiService
-      .getLatestEntry(pqbBidDocDef, pId)
-      .pipe(
-        catchError(() => of(null)),
-        finalize(() => this.fetchingBidDocTechnoCommercial.set(false)),
-      )
+    this.fetchLatestPqbSourceForBidDocTechnoCommercial$(pId, availablePqbStep)
+      .pipe(finalize(() => this.fetchingBidDocTechnoCommercial.set(false)))
       .subscribe({
-        next: (latestPqbBidDoc) => {
-          const candidate =
-            latestPqbBidDoc && this.extractPqbItemsFromSource(latestPqbBidDoc).length > 0
-              ? latestPqbBidDoc
-              : availablePqbBidDocStep && this.extractPqbItemsFromSource(availablePqbBidDocStep).length > 0
-                ? availablePqbBidDocStep
-                : null;
-
-          if (candidate) {
+        next: (candidate) => {
+          if (candidate && this.extractPqbItemsFromSource(candidate).length > 0) {
             const items = this.extractPqbItemsFromSource(candidate);
             this.bidDocTechnoLinkedPqbBidDocStep.set(candidate);
             this.populateBidDocTechnoCommercialItemsTable(items);
             if (showNotification) {
+              const sourceName = this.getPqbSourceDisplayName(candidate);
               this.messageService?.add({
                 severity: 'success',
-                summary: 'Requirements Loaded from Bid Document for PQB',
-                detail: `Loaded ${items.length} requirement items from latest Bid Document for PQB.`,
+                summary: `Requirements Loaded from ${sourceName}`,
+                detail: `Loaded ${items.length} requirement items from latest ${sourceName}.`,
               });
             }
           } else if (showNotification) {
             this.messageService?.add({
               severity: 'warn',
-              summary: 'Bid Document for PQB Not Found',
-              detail: 'No Requirements data found in Bid Document for PQB for this project.',
+              summary: 'PQB Requirements Not Found',
+              detail:
+                'No Requirements data found in Bid Document for PQB or National Pre-Qualification Bid (PQB) for this project.',
             });
           }
         },
         error: () => {
-          if (availablePqbBidDocStep && this.extractPqbItemsFromSource(availablePqbBidDocStep).length > 0) {
-            const items = this.extractPqbItemsFromSource(availablePqbBidDocStep);
-            this.bidDocTechnoLinkedPqbBidDocStep.set(availablePqbBidDocStep);
+          if (availablePqbStep && this.extractPqbItemsFromSource(availablePqbStep).length > 0) {
+            const items = this.extractPqbItemsFromSource(availablePqbStep);
+            this.bidDocTechnoLinkedPqbBidDocStep.set(availablePqbStep);
             this.populateBidDocTechnoCommercialItemsTable(items);
           } else if (showNotification) {
             this.messageService?.add({
               severity: 'info',
-              summary: 'Bid Document for PQB Unavailable',
-              detail: 'Could not fetch latest Bid Document for PQB for this project.',
+              summary: 'PQB Requirements Unavailable',
+              detail:
+                'Could not fetch latest Requirements data from Bid Document for PQB or National Pre-Qualification Bid (PQB) for this project.',
             });
           }
         },
@@ -2112,7 +2351,7 @@ export class StepFormDialog {
 
   private applySourcesToBidDocTechnoCommercial(
     technoStep: ProjectStep | null,
-    pqbBidDocStep: ProjectStep | null,
+    pqbSourceStep: ProjectStep | null,
     showNotification: boolean,
   ): void {
     let patchedTenderFields = false;
@@ -2159,9 +2398,9 @@ export class StepFormDialog {
       }
     }
 
-    if (pqbBidDocStep) {
-      this.bidDocTechnoLinkedPqbBidDocStep.set(pqbBidDocStep);
-      const pqbItems = this.extractPqbItemsFromSource(pqbBidDocStep);
+    if (pqbSourceStep) {
+      this.bidDocTechnoLinkedPqbBidDocStep.set(pqbSourceStep);
+      const pqbItems = this.extractPqbItemsFromSource(pqbSourceStep);
       const currentRowsCount = typeof this.tableFormArray === 'function' ? this.tableFormArray().length : 0;
       if (pqbItems.length > 0 && (showNotification || currentRowsCount === 0)) {
         this.populateBidDocTechnoCommercialItemsTable(pqbItems);
@@ -2170,11 +2409,15 @@ export class StepFormDialog {
     }
 
     if (showNotification) {
+      const pqbSourceName = pqbSourceStep
+        ? this.getPqbSourceDisplayName(pqbSourceStep)
+        : 'Bid Document for PQB / National Pre-Qualification Bid (PQB)';
+
       if (patchedTenderFields && patchedItemsCount > 0) {
         this.messageService?.add({
           severity: 'success',
           summary: 'Bid Document Details Patched',
-          detail: `Loaded Tender details from Techno Commercial Tender and ${patchedItemsCount} requirement items from Bid Document for PQB.`,
+          detail: `Loaded Tender details from Techno Commercial Tender and ${patchedItemsCount} requirement items from ${pqbSourceName}.`,
         });
       } else if (patchedTenderFields) {
         this.messageService?.add({
@@ -2185,14 +2428,15 @@ export class StepFormDialog {
       } else if (patchedItemsCount > 0) {
         this.messageService?.add({
           severity: 'success',
-          summary: 'Requirements Loaded from Bid Document for PQB',
-          detail: `Loaded ${patchedItemsCount} requirement items from latest Bid Document for PQB.`,
+          summary: `Requirements Loaded from ${pqbSourceName}`,
+          detail: `Loaded ${patchedItemsCount} requirement items from latest ${pqbSourceName}.`,
         });
       } else {
         this.messageService?.add({
           severity: 'warn',
           summary: 'Linked Steps Not Found',
-          detail: 'No Techno Commercial Tender or Bid Document for PQB data found for this project to patch.',
+          detail:
+            'No Techno Commercial Tender, Bid Document for PQB, or National Pre-Qualification Bid (PQB) data found for this project to patch.',
         });
       }
     }
@@ -2206,9 +2450,9 @@ export class StepFormDialog {
       }
     }
     if (!this.bidDocTechnoLinkedPqbBidDocStep()) {
-      const pqbBidDoc = this.getAvailablePqbBidDocStep();
-      if (pqbBidDoc) {
-        this.bidDocTechnoLinkedPqbBidDocStep.set(pqbBidDoc);
+      const pqbStep = this.getAvailablePqbStepForBidDocTechnoCommercial();
+      if (pqbStep) {
+        this.bidDocTechnoLinkedPqbBidDocStep.set(pqbStep);
       }
     }
   }
@@ -4052,7 +4296,17 @@ export class StepFormDialog {
   isNationalPqbStep(s: ProjectStep | null | undefined): boolean {
     if (!s) return false;
     const fcode = (s.form_code || '').toUpperCase().trim();
-    if (fcode === 'FORM_01_PQB') return true;
+    if (
+      fcode === 'FORM_01_PQB' ||
+      fcode === 'FORM_01' ||
+      fcode === 'PQB' ||
+      fcode === 'NATIONAL_PQB' ||
+      fcode === 'FORM_PQB' ||
+      fcode === 'PRE_QUALIFICATION_BID' ||
+      fcode === 'PRE-QUALIFICATION-BID'
+    ) {
+      return true;
+    }
     if (fcode === 'FORM_02_PQB_BID_DOCUMENT') return false;
 
     const resolved = s.form_code

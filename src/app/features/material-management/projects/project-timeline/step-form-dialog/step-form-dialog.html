@@ -104,12 +104,12 @@
       <div class="pqb-banner-action-bar" role="region" aria-label="Bid Document Techno Commercial Auto-Patch Info">
         <div class="pqb-banner-info">
           <i class="pi pi-link" aria-hidden="true"></i>
-          <span>Tender Title, Tender No., and Tender Issue Date are automatically linked from Techno Commercial Tender; Requirements are linked from Bid Document for PQB.</span>
+          <span>Tender Title, Tender No., and Tender Issue Date are automatically linked from Techno Commercial Tender; Requirements are linked from {{ bidDocTechnoPqbSourceStepName() }}.</span>
         </div>
         <button pButton type="button" icon="pi pi-sync" label="Fetch from Tender & PQB"
           class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn" [loading]="fetchingBidDocTechnoCommercial()"
           (click)="loadForBidDocumentTechnoCommercial(true)"
-          pTooltip="Refresh Tender Title, Tender No., and Tender Issue Date from Techno Commercial Tender, and Requirements from Bid Document for PQB"
+          [pTooltip]="'Refresh Tender Title, Tender No., and Tender Issue Date from Techno Commercial Tender, and Requirements from ' + bidDocTechnoPqbSourceStepName()"
           tooltipPosition="top">
         </button>
       </div>
@@ -649,10 +649,10 @@
             </button>
             }
             @if (isBidDocumentTechnoCommercial()) {
-            <button pButton type="button" icon="pi pi-sync" label="Fetch from Bid Doc PQB"
+            <button pButton type="button" icon="pi pi-sync" [label]="bidDocTechnoPqbFetchButtonLabel()"
               class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
               [loading]="fetchingBidDocTechnoCommercial()" (click)="loadPqbBidDocItemsForBidDocTechnoCommercial(true)"
-              pTooltip="Import Requirements from latest Bid Document for PQB"
+              [pTooltip]="'Import Requirements from ' + bidDocTechnoPqbSourceStepName()"
               tooltipPosition="top">
             </button>
             }
@@ -759,7 +759,7 @@
                     </button>
                     }
                     @if (isBidDocumentTechnoCommercial()) {
-                    <button pButton type="button" icon="pi pi-sync" label="Fetch from Bid Doc PQB"
+                    <button pButton type="button" icon="pi pi-sync" [label]="bidDocTechnoPqbFetchButtonLabel()"
                       class="empty-add-row-btn p-button-outlined p-button-secondary"
                       [loading]="fetchingBidDocTechnoCommercial()" (click)="loadPqbBidDocItemsForBidDocTechnoCommercial(true)">
                     </button>

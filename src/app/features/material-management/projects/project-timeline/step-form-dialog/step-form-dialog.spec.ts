@@ -4656,6 +4656,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       comp.extractPqbItemsFromSource = StepFormDialog.prototype['extractPqbItemsFromSource'];
       comp.hasPqbDataForTechnoCommercial = StepFormDialog.prototype['hasPqbDataForTechnoCommercial'];
       comp.pickLatestPqbCandidate = StepFormDialog.prototype['pickLatestPqbCandidate'];
+      comp.resolveLatestPqbStepFromList = StepFormDialog.prototype['resolveLatestPqbStepFromList'];
       comp.getAvailablePqbStepForTechnoCommercial =
         StepFormDialog.prototype['getAvailablePqbStepForTechnoCommercial'];
       comp.lookupUnitFromInMemoryNationalPqb =
@@ -4907,7 +4908,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(tableArray().controls[0].get('description')?.value).toBe('Revised Turbine Blade');
     });
 
-    it('should probe both latest endpoints and select the latest when existingSteps is empty', () => {
+    it('should call ONLY ONE endpoint (National PQB) and never call both PQB endpoints when existingSteps is empty and projectStepService is absent', () => {
       const { comp, fg, tableArray } = setupTechnoComp();
       comp.existingSteps = () => [];
 
@@ -4918,28 +4919,23 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
             project_id: 60,
             pqb_no: 'PQB-NAT-2026-01',
             updated_at: '2026-03-01T10:00:00Z',
-            items: [{ description: 'Old Item', unit: 'Nos', quantity: 1 }],
+            items: [{ description: 'National PQB Item', unit: 'Nos', quantity: 5 }],
           }),
         ),
       };
       const mockFormApi = {
-        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
-          if (def.formCode === 'FORM_02_PQB_BID_DOCUMENT') return of(mockPqbBidDocStep);
-          return of(null);
-        }),
+        getLatestEntry: vi.fn(),
       };
       comp.preQualificationBidService = mockPqbService;
       comp.formApiService = mockFormApi;
 
       comp.loadForTechnoCommercialTender(true);
 
-      expect(mockFormApi.getLatestEntry).toHaveBeenCalledWith(
-        expect.objectContaining({ formCode: 'FORM_02_PQB_BID_DOCUMENT' }),
-        60,
-      );
+      expect(mockPqbService.getLatest).toHaveBeenCalledTimes(1);
       expect(mockPqbService.getLatest).toHaveBeenCalledWith(60);
-      expect(fg.get('pqb_no')?.value).toBe('PQB-BIDDOC-2026-02');
-      expect(tableArray().controls.length).toBe(2);
+      expect(mockFormApi.getLatestEntry).not.toHaveBeenCalled();
+      expect(fg.get('pqb_no')?.value).toBe('PQB-NAT-2026-01');
+      expect(tableArray().controls.length).toBe(1);
     });
 
     it('should fall back to in-memory step if backend /latest call returns null', () => {
@@ -5066,27 +5062,145 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(comp.getTechnoCommercialPqbSourceStepName()).toBe('National Pre-Qualification Bid (PQB)');
       expect(comp.getTechnoCommercialPqbFetchButtonLabel()).toBe('Fetch from National PQB');
     });
+
+    it('should query projectStepService.getSteps when existingSteps is empty and call ONLY National PQB (never Bid Document for PQB) when previous step is National PQB', () => {
+      const { comp, fg, tableArray } = setupTechnoComp();
+      comp.existingSteps = () => [];
+
+      const summaryNationalPqb: ProjectStep = {
+        id: 101,
+        project_id: 60,
+        step_number: 1,
+        step_order: 1,
+        step_name: 'National Pre-Qualification Bid (PQB)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_01_PQB',
+        status: 'completed',
+        data: null,
+      };
+
+      const mockProjectStepService = {
+        getSteps: vi.fn().mockReturnValue(of([summaryNationalPqb])),
+      };
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(
+          of({
+            id: 101,
+            project_id: 60,
+            pqb_no: 'PQB-NAT-ONLY-01',
+            items: [{ description: 'Boiler Valve', unit: 'Nos', quantity: 4 }],
+          }),
+        ),
+      };
+      const mockFormApi = {
+        getLatestEntry: vi.fn(),
+      };
+      comp.projectStepService = mockProjectStepService;
+      comp.preQualificationBidService = mockPqbService;
+      comp.formApiService = mockFormApi;
+
+      comp.loadForTechnoCommercialTender(false);
+
+      expect(mockProjectStepService.getSteps).toHaveBeenCalledWith(60);
+      expect(mockPqbService.getLatest).toHaveBeenCalledTimes(1);
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(60);
+      expect(mockFormApi.getLatestEntry).not.toHaveBeenCalled();
+      expect(fg.get('pqb_no')?.value).toBe('PQB-NAT-ONLY-01');
+      expect(tableArray().controls.length).toBe(1);
+      expect(tableArray().controls[0].get('description')?.value).toBe('Boiler Valve');
+    });
+
+    it('should pick National PQB over Bid Document for PQB when National PQB has higher step_order even if summary row has data: null', () => {
+      const { comp, fg } = setupTechnoComp();
+      const earlierBidDoc: ProjectStep = {
+        ...mockPqbBidDocStep,
+        step_number: 1,
+        step_order: 1,
+        updated_at: undefined,
+        created_at: undefined,
+      };
+      const laterNationalPqbSummary: ProjectStep = {
+        id: 109,
+        project_id: 60,
+        step_number: 2,
+        step_order: 2,
+        step_name: 'National Pre-Qualification Bid (PQB)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_01_PQB',
+        status: 'completed',
+        data: null,
+      };
+      comp.existingSteps = () => [earlierBidDoc, laterNationalPqbSummary];
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(
+          of({
+            id: 109,
+            project_id: 60,
+            pqb_no: 'PQB-STEP2-LATEST',
+            items: [{ description: 'Latest Step 2 Item', unit: 'Nos', quantity: 7 }],
+          }),
+        ),
+      };
+      const mockFormApi = {
+        getLatestEntry: vi.fn(),
+      };
+      comp.preQualificationBidService = mockPqbService;
+      comp.formApiService = mockFormApi;
+
+      comp.loadForTechnoCommercialTender(false);
+
+      expect(mockPqbService.getLatest).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).not.toHaveBeenCalled();
+      expect(fg.get('pqb_no')?.value).toBe('PQB-STEP2-LATEST');
+    });
   });
 
-  describe('Form 29: Bid Document - Techno Commercial Tender Auto-Patching (Techno-Commercial Tender + Bid Document for PQB)', () => {
+  describe('Form 29: Bid Document - Techno Commercial Tender Auto-Patching (Techno-Commercial Tender + Latest of Bid Document for PQB / National PQB)', () => {
     const bidDocTechnoDef = getFormDefinition('FORM_29_BID_DOC_TECHNO_COMMERCIAL')!;
 
     const setupBidDocTechnoComp = () => {
       const comp = Object.create(StepFormDialog.prototype);
       comp.createTableRowGroup = StepFormDialog.prototype['createTableRowGroup'];
+      comp.convertPqbToProjectStep = StepFormDialog.prototype['convertPqbToProjectStep'];
       comp.unwrapStepRecord = StepFormDialog.prototype['unwrapStepRecord'];
       comp.isNationalPqbStep = StepFormDialog.prototype['isNationalPqbStep'];
       comp.isPqbBidDocStep = StepFormDialog.prototype['isPqbBidDocStep'];
+      comp.isPqbOrPqbBidDocStep = StepFormDialog.prototype['isPqbOrPqbBidDocStep'];
+      comp.isPqbBidDocAvailable = StepFormDialog.prototype['isPqbBidDocAvailable'];
+      comp.isNationalPqbAvailable = StepFormDialog.prototype['isNationalPqbAvailable'];
       comp.extractPqbNoFromSource = StepFormDialog.prototype['extractPqbNoFromSource'];
       comp.extractPqbItemsFromSource = StepFormDialog.prototype['extractPqbItemsFromSource'];
       comp.hasPqbDataForTechnoCommercial = StepFormDialog.prototype['hasPqbDataForTechnoCommercial'];
       comp.pickLatestPqbCandidate = StepFormDialog.prototype['pickLatestPqbCandidate'];
+      comp.resolveLatestPqbStepFromList = StepFormDialog.prototype['resolveLatestPqbStepFromList'];
       comp.isTechnoCommercialTenderStep = StepFormDialog.prototype['isTechnoCommercialTenderStep'];
       comp.extractTechnoCommercialDetails = StepFormDialog.prototype['extractTechnoCommercialDetails'];
       comp.hasTechnoCommercialTenderDetails = StepFormDialog.prototype['hasTechnoCommercialTenderDetails'];
       comp.getAvailableTechnoCommercialTenderStep =
         StepFormDialog.prototype['getAvailableTechnoCommercialTenderStep'];
       comp.getAvailablePqbBidDocStep = StepFormDialog.prototype['getAvailablePqbBidDocStep'];
+      comp.getAvailablePqbStepForBidDocTechnoCommercial =
+        StepFormDialog.prototype['getAvailablePqbStepForBidDocTechnoCommercial'];
+      comp.getBidDocTechnoPqbSourceStepName =
+        StepFormDialog.prototype['getBidDocTechnoPqbSourceStepName'];
+      comp.getBidDocTechnoPqbFetchButtonLabel =
+        StepFormDialog.prototype['getBidDocTechnoPqbFetchButtonLabel'];
+      comp.getPqbSourceDisplayName = StepFormDialog.prototype['getPqbSourceDisplayName'];
+      comp.fetchLatestPqbBidDocCandidate$ =
+        StepFormDialog.prototype['fetchLatestPqbBidDocCandidate$'];
+      comp.fetchLatestNationalPqbCandidate$ =
+        StepFormDialog.prototype['fetchLatestNationalPqbCandidate$'];
+      comp.fetchLatestPqbSourceFromResolvedStep$ =
+        StepFormDialog.prototype['fetchLatestPqbSourceFromResolvedStep$'];
+      comp.fetchSingleDefaultPqbSourceForBidDocTechnoCommercial$ =
+        StepFormDialog.prototype['fetchSingleDefaultPqbSourceForBidDocTechnoCommercial$'];
+      comp.fetchLatestPqbSourceForBidDocTechnoCommercial$ =
+        StepFormDialog.prototype['fetchLatestPqbSourceForBidDocTechnoCommercial$'];
       comp.populateBidDocTechnoCommercialItemsTable =
         StepFormDialog.prototype['populateBidDocTechnoCommercialItemsTable'];
       comp.loadForBidDocumentTechnoCommercial =
@@ -5149,6 +5263,27 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       },
     };
 
+    const mockNationalPqbStep: ProjectStep = {
+      id: 105,
+      project_id: 75,
+      step_number: 1,
+      step_name: 'National Pre-Qualification Bid (PQB)',
+      description: '',
+      progress_percentage: 100,
+      completed_at: null,
+      form_code: 'FORM_01_PQB',
+      status: 'completed',
+      updated_at: '2026-04-01T10:00:00Z',
+      data: {
+        pqb_title: 'National PQB Feed Pump',
+        pqb_no: 'PQB-NAT-2026-01',
+        items: [
+          { sr_no: 1, description: 'National PQB Pump Unit', unit: 'Nos', quantity: 2 },
+          { sr_no: 2, description: 'Base Skid Frame', unit: 'Sets', quantity: 1 },
+        ],
+      },
+    };
+
     const mockPqbBidDocStep: ProjectStep = {
       id: 205,
       project_id: 75,
@@ -5170,9 +5305,13 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       },
     };
 
-    it('should fetch Tender Title, Tender No., and Tender Issue Date from Techno Commercial Tender and Requirements from Bid Document for PQB', () => {
+    it('should fetch Tender Title, Tender No., and Tender Issue Date from Techno Commercial Tender and ONLY Bid Document for PQB when Bid Document for PQB is the latest step', () => {
       const { comp, fg, tableArray, linkedTenderSignal, linkedPqbBidDocSignal } = setupBidDocTechnoComp();
+      comp.existingSteps = () => [mockNationalPqbStep, mockPqbBidDocStep, mockTechnoTenderStep];
 
+      const mockPqbService = {
+        getLatest: vi.fn(),
+      };
       const mockFormApi = {
         getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
           if (def.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER') return of(mockTechnoTenderStep);
@@ -5180,6 +5319,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
           return of(null);
         }),
       };
+      comp.preQualificationBidService = mockPqbService;
       comp.formApiService = mockFormApi;
 
       comp.loadForBidDocumentTechnoCommercial(true);
@@ -5192,6 +5332,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
         expect.objectContaining({ formCode: 'FORM_02_PQB_BID_DOCUMENT' }),
         75,
       );
+      expect(mockPqbService.getLatest).not.toHaveBeenCalled();
 
       expect(fg.get('tender_title')?.value).toBe('Boiler Feed Pump Assembly Tender');
       expect(fg.get('tender_no')?.value).toBe('TCT-NTPC-2026-055');
@@ -5218,6 +5359,143 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       );
     });
 
+    it('should fetch Requirements from National Pre-Qualification Bid (PQB) when National PQB is newer than Bid Document for PQB', () => {
+      const { comp, fg, tableArray, linkedPqbBidDocSignal } = setupBidDocTechnoComp();
+      const newerNationalPqb: ProjectStep = {
+        ...mockNationalPqbStep,
+        updated_at: '2026-04-20T12:00:00Z',
+        data: {
+          pqb_title: 'Revised National PQB',
+          pqb_no: 'PQB-NAT-REV-02',
+          items: [
+            { sr_no: 1, description: 'Revised High Pressure Pump', unit: 'Nos', quantity: 5 },
+          ],
+        },
+      };
+      comp.existingSteps = () => [mockTechnoTenderStep, mockPqbBidDocStep, newerNationalPqb];
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(
+          of({
+            id: 105,
+            project_id: 75,
+            pqb_title: 'Revised National PQB',
+            pqb_no: 'PQB-NAT-REV-02',
+            updated_at: '2026-04-20T12:00:00Z',
+            items: [{ sr_no: 1, description: 'Revised High Pressure Pump', unit: 'Nos', quantity: 5 }],
+          }),
+        ),
+      };
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER') return of(mockTechnoTenderStep);
+          return of(null);
+        }),
+      };
+      comp.preQualificationBidService = mockPqbService;
+      comp.formApiService = mockFormApi;
+
+      comp.loadForBidDocumentTechnoCommercial(true);
+
+      expect(mockPqbService.getLatest).toHaveBeenCalledTimes(1);
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(75);
+      // Should NOT call FORM_02_PQB_BID_DOCUMENT because National PQB is newer in existingSteps
+      expect(mockFormApi.getLatestEntry).not.toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_02_PQB_BID_DOCUMENT' }),
+        75,
+      );
+
+      expect(fg.get('tender_title')?.value).toBe('Boiler Feed Pump Assembly Tender');
+      const rows = tableArray().controls;
+      expect(rows.length).toBe(1);
+      expect(rows[0].get('description')?.value).toBe('Revised High Pressure Pump');
+      expect(rows[0].get('quantity')?.value).toBe(5);
+      expect(linkedPqbBidDocSignal()?.form_code).toBe('FORM_01_PQB');
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: 'Bid Document Details Patched',
+          detail: expect.stringContaining('National Pre-Qualification Bid (PQB)'),
+        }),
+      );
+    });
+
+    it('should fetch Requirements from National PQB when only FORM_01_PQB exists (no Bid Document for PQB)', () => {
+      const { comp, tableArray, linkedPqbBidDocSignal } = setupBidDocTechnoComp();
+      comp.existingSteps = () => [mockTechnoTenderStep, mockNationalPqbStep];
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(
+          of({
+            id: 105,
+            project_id: 75,
+            pqb_title: 'National PQB Feed Pump',
+            pqb_no: 'PQB-NAT-2026-01',
+            updated_at: '2026-04-01T10:00:00Z',
+            items: [
+              { sr_no: 1, description: 'National PQB Pump Unit', unit: 'Nos', quantity: 2 },
+              { sr_no: 2, description: 'Base Skid Frame', unit: 'Sets', quantity: 1 },
+            ],
+          }),
+        ),
+      };
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER') return of(mockTechnoTenderStep);
+          return of(null);
+        }),
+      };
+      comp.preQualificationBidService = mockPqbService;
+      comp.formApiService = mockFormApi;
+
+      comp.loadForBidDocumentTechnoCommercial(false);
+
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(75);
+      expect(tableArray().controls.length).toBe(2);
+      expect(tableArray().controls[0].get('description')?.value).toBe('National PQB Pump Unit');
+      expect(tableArray().controls[0].get('quantity')?.value).toBe(2);
+      expect(linkedPqbBidDocSignal()?.form_code).toBe('FORM_01_PQB');
+    });
+
+    it('should call ONLY ONE PQB endpoint (National PQB) when existingSteps is empty and projectStepService is absent, never calling both PQB endpoints', () => {
+      const { comp, tableArray, linkedPqbBidDocSignal } = setupBidDocTechnoComp();
+      comp.existingSteps = () => [];
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(
+          of({
+            id: 109,
+            project_id: 75,
+            pqb_title: 'Newer National PQB',
+            pqb_no: 'PQB-NAT-NEW',
+            updated_at: '2026-04-18T15:00:00Z',
+            items: [{ sr_no: 1, description: 'Latest National PQB Valve', unit: 'Nos', quantity: 12 }],
+          }),
+        ),
+      };
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER') return of(mockTechnoTenderStep);
+          return of(null);
+        }),
+      };
+      comp.preQualificationBidService = mockPqbService;
+      comp.formApiService = mockFormApi;
+
+      comp.loadForBidDocumentTechnoCommercial(true);
+
+      expect(mockFormApi.getLatestEntry).not.toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_02_PQB_BID_DOCUMENT' }),
+        75,
+      );
+      expect(mockPqbService.getLatest).toHaveBeenCalledTimes(1);
+      expect(mockPqbService.getLatest).toHaveBeenCalledWith(75);
+      expect(tableArray().controls.length).toBe(1);
+      expect(tableArray().controls[0].get('description')?.value).toBe('Latest National PQB Valve');
+      expect(tableArray().controls[0].get('quantity')?.value).toBe(12);
+      expect(linkedPqbBidDocSignal()?.form_code).toBe('FORM_01_PQB');
+    });
+
     it('should fall back to in-memory existingSteps when backend /latest returns null', () => {
       const { comp, fg, tableArray } = setupBidDocTechnoComp();
       comp.existingSteps = () => [mockTechnoTenderStep, mockPqbBidDocStep];
@@ -5236,9 +5514,10 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       expect(tableArray().controls[0].get('description')?.value).toBe('Boiler Feed Pump');
     });
 
-    it('should fetch ONLY Bid Document for PQB when loadPqbBidDocItemsForBidDocTechnoCommercial is triggered from table tab without modifying Form Inputs', () => {
+    it('should fetch ONLY latest PQB source (without Techno Commercial Tender) when loadPqbBidDocItemsForBidDocTechnoCommercial is triggered from table tab', () => {
       const { comp, fg, tableArray } = setupBidDocTechnoComp();
       fg.get('tender_title')?.setValue('Custom User Title');
+      comp.existingSteps = () => [mockNationalPqbStep, mockPqbBidDocStep];
 
       const mockFormApi = {
         getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
@@ -5246,7 +5525,11 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
           return of(null);
         }),
       };
+      const mockPqbService = {
+        getLatest: vi.fn(),
+      };
       comp.formApiService = mockFormApi;
+      comp.preQualificationBidService = mockPqbService;
 
       comp.loadPqbBidDocItemsForBidDocTechnoCommercial(true);
 
@@ -5255,6 +5538,7 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
         expect.objectContaining({ formCode: 'FORM_02_PQB_BID_DOCUMENT' }),
         75,
       );
+      expect(mockPqbService.getLatest).not.toHaveBeenCalled();
       expect(fg.get('tender_title')?.value).toBe('Custom User Title');
       expect(tableArray().controls.length).toBe(2);
       expect(tableArray().controls[0].get('description')?.value).toBe('Boiler Feed Pump');
@@ -5266,8 +5550,126 @@ describe('StepFormDialog Unit & CRUD Logic', () => {
       );
     });
 
+    it('should fetch from National PQB on table-tab refresh when National PQB is latest, without modifying Form Inputs', () => {
+      const { comp, fg, tableArray } = setupBidDocTechnoComp();
+      fg.get('tender_title')?.setValue('Custom User Title');
+      const newerNationalPqb: ProjectStep = {
+        ...mockNationalPqbStep,
+        updated_at: '2026-04-22T09:00:00Z',
+      };
+      comp.existingSteps = () => [mockPqbBidDocStep, newerNationalPqb];
+
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(
+          of({
+            id: 105,
+            project_id: 75,
+            pqb_title: 'National PQB Feed Pump',
+            pqb_no: 'PQB-NAT-2026-01',
+            updated_at: '2026-04-22T09:00:00Z',
+            items: [{ sr_no: 1, description: 'National PQB Pump Unit', unit: 'Nos', quantity: 2 }],
+          }),
+        ),
+      };
+      const mockFormApi = {
+        getLatestEntry: vi.fn(),
+      };
+      comp.preQualificationBidService = mockPqbService;
+      comp.formApiService = mockFormApi;
+
+      comp.loadPqbBidDocItemsForBidDocTechnoCommercial(true);
+
+      expect(mockPqbService.getLatest).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).not.toHaveBeenCalled();
+      expect(fg.get('tender_title')?.value).toBe('Custom User Title');
+      expect(tableArray().controls.length).toBe(1);
+      expect(tableArray().controls[0].get('description')?.value).toBe('National PQB Pump Unit');
+      expect(comp.messageService.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'success',
+          summary: 'Requirements Loaded from National Pre-Qualification Bid (PQB)',
+        }),
+      );
+    });
+
+    it('should compute dynamic source step name and fetch button label based on latest PQB source', () => {
+      const { comp, linkedPqbBidDocSignal } = setupBidDocTechnoComp();
+
+      expect(comp.getBidDocTechnoPqbSourceStepName()).toBe(
+        'latest Bid Document for PQB / National Pre-Qualification Bid (PQB)',
+      );
+      expect(comp.getBidDocTechnoPqbFetchButtonLabel()).toBe('Fetch from Bid Doc PQB / PQB');
+
+      comp.existingSteps = () => [mockNationalPqbStep];
+      expect(comp.getBidDocTechnoPqbSourceStepName()).toBe('National Pre-Qualification Bid (PQB)');
+      expect(comp.getBidDocTechnoPqbFetchButtonLabel()).toBe('Fetch from National PQB');
+
+      comp.existingSteps = () => [mockNationalPqbStep, mockPqbBidDocStep];
+      expect(comp.getBidDocTechnoPqbSourceStepName()).toBe('Bid Document for PQB');
+      expect(comp.getBidDocTechnoPqbFetchButtonLabel()).toBe('Fetch from Bid Doc PQB');
+
+      linkedPqbBidDocSignal.set(mockNationalPqbStep);
+      expect(comp.getBidDocTechnoPqbSourceStepName()).toBe('National Pre-Qualification Bid (PQB)');
+      expect(comp.getBidDocTechnoPqbFetchButtonLabel()).toBe('Fetch from National PQB');
+    });
+
+    it('should query projectStepService.getSteps when existingSteps is empty and call ONLY National PQB (never Bid Document for PQB) when pipeline has only National PQB', () => {
+      const { comp, tableArray, linkedPqbBidDocSignal } = setupBidDocTechnoComp();
+      comp.existingSteps = () => [];
+
+      const summaryNationalPqb: ProjectStep = {
+        id: 105,
+        project_id: 75,
+        step_number: 1,
+        step_order: 1,
+        step_name: 'National Pre-Qualification Bid (PQB)',
+        description: '',
+        progress_percentage: 100,
+        completed_at: null,
+        form_code: 'FORM_01_PQB',
+        status: 'completed',
+        data: null,
+      };
+      const mockProjectStepService = {
+        getSteps: vi.fn().mockReturnValue(of([summaryNationalPqb, mockTechnoTenderStep])),
+      };
+      const mockPqbService = {
+        getLatest: vi.fn().mockReturnValue(
+          of({
+            id: 105,
+            project_id: 75,
+            pqb_title: 'National PQB Feed Pump',
+            pqb_no: 'PQB-NAT-2026-01',
+            items: [{ sr_no: 1, description: 'National PQB Only Item', unit: 'Nos', quantity: 9 }],
+          }),
+        ),
+      };
+      const mockFormApi = {
+        getLatestEntry: vi.fn().mockImplementation((def: FormDefinition) => {
+          if (def.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER') return of(mockTechnoTenderStep);
+          return of(null);
+        }),
+      };
+      comp.projectStepService = mockProjectStepService;
+      comp.preQualificationBidService = mockPqbService;
+      comp.formApiService = mockFormApi;
+
+      comp.loadForBidDocumentTechnoCommercial(false);
+
+      expect(mockProjectStepService.getSteps).toHaveBeenCalledWith(75);
+      expect(mockPqbService.getLatest).toHaveBeenCalledTimes(1);
+      expect(mockFormApi.getLatestEntry).not.toHaveBeenCalledWith(
+        expect.objectContaining({ formCode: 'FORM_02_PQB_BID_DOCUMENT' }),
+        75,
+      );
+      expect(tableArray().controls.length).toBe(1);
+      expect(tableArray().controls[0].get('description')?.value).toBe('National PQB Only Item');
+      expect(linkedPqbBidDocSignal()?.form_code).toBe('FORM_01_PQB');
+    });
+
     it('should preserve existing values during auto-patch (showNotification=false) and overwrite on manual refresh (showNotification=true)', () => {
       const { comp, fg, tableArray } = setupBidDocTechnoComp();
+      comp.existingSteps = () => [mockTechnoTenderStep, mockPqbBidDocStep];
       fg.get('tender_title')?.setValue('Saved Custom Tender Title');
 
       const mockFormApi = {

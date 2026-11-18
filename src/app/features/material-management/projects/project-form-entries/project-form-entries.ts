@@ -203,6 +203,11 @@ export class ProjectFormEntries implements OnInit {
   readonly customer = signal<Customer | null>(null);
   readonly supplier = signal<Supplier | null>(null);
   readonly allSteps = signal<ProjectStep[]>([]);
+  readonly pipelineSteps = signal<ProjectStep[]>([]);
+  readonly dialogExistingSteps = computed<ProjectStep[]>(() => {
+    const pipeline = this.pipelineSteps();
+    return pipeline.length > 0 ? pipeline : this.allSteps();
+  });
   readonly loading = signal<boolean>(true);
   readonly error = signal<string | null>(null);
 
@@ -418,27 +423,31 @@ export class ProjectFormEntries implements OnInit {
     const entries$ = this.formApiService.getEntries(def, projectId).pipe(
       catchError(() => of([])),
     );
+    const pipelineSteps$ =
+      this.projectStepService && typeof this.projectStepService.getSteps === 'function'
+        ? this.projectStepService.getSteps(projectId).pipe(catchError(() => of([] as ProjectStep[])))
+        : of([] as ProjectStep[]);
 
-    // Load project metadata and form entries in parallel without waterfalls
+    // Load project metadata, form entries, and project pipeline steps in parallel without waterfalls
     forkJoin({
       project: this.projectService.getProjectById(projectId).pipe(catchError(() => of(null))),
       steps: entries$,
+      pipelineSteps: pipelineSteps$,
     })
       .pipe(
         this.safeUntilDestroyed(),
         finalize(() => this.loading.set(false)),
       )
       .subscribe({
-        next: ({ project, steps }) => {
+        next: ({ project, steps, pipelineSteps }) => {
           if (project) {
             this.project.set(project);
             this.loadCustomerAndSupplier(project);
-
-
           } else {
             this.error.set('Could not load project context.');
           }
           this.allSteps.set(steps || []);
+          this.pipelineSteps?.set?.(pipelineSteps || []);
         },
         error: () => {
           this.error.set('Could not load form entries for this project.');
@@ -520,6 +529,20 @@ export class ProjectFormEntries implements OnInit {
       }
       return [...current, stepWithMeta];
     });
+
+    if (pId && this.projectStepService && typeof this.projectStepService.getSteps === 'function') {
+      this.projectStepService
+        .getSteps(pId)
+        .pipe(
+          this.safeUntilDestroyed(),
+          catchError(() => of(null)),
+        )
+        .subscribe((steps) => {
+          if (steps) {
+            this.pipelineSteps?.set?.(steps);
+          }
+        });
+    }
 
     this.messageService.add({
       severity: 'success',

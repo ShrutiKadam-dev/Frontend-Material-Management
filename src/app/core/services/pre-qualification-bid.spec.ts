@@ -16,6 +16,8 @@ describe('PreQualificationBidService', () => {
             pqb_issuing_date: '2026-03-01',
             pqb_closing_date_time: '2026-03-20T17:00',
             pqb_opening_date_time: '2026-03-21T11:00',
+            created_at: '2026-03-01T09:00:00Z',
+            updated_at: '2026-03-02T12:00:00Z',
             items: [
               { id: 1, sr_no: 1, description: 'Power Cable', unit: 'Mtr', quantity: 500 },
             ],
@@ -34,6 +36,8 @@ describe('PreQualificationBidService', () => {
       expect(pqb['pqb_title']).toBe('National Thermal Power Grid Expansion');
       expect(pqb['pqb_no']).toBe('NTPC-PQB-2026-09');
       expect(pqb['pqb_issue_date']).toBe('2026-03-01');
+      expect(pqb['created_at']).toBe('2026-03-01T09:00:00Z');
+      expect(pqb['updated_at']).toBe('2026-03-02T12:00:00Z');
       expect(pqb['items']).toBeDefined();
       expect((pqb['items'] as Array<unknown>).length).toBe(1);
     });
