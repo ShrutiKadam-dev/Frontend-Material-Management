@@ -72,14 +72,29 @@
             } @else if (def.formCode === 'FORM_04_LTE') {
             PQB No. and Requirements table are automatically linked and patched from {{ pqbSourceStepName() }}.
             } @else {
-            PQB Details &amp; Pricing table are automatically linked and patched from {{ pqbSourceStepName() }}.
+            PQB Details &amp; Requirements table are automatically linked and patched from {{ pqbSourceStepName() }}.
             }
           </span>
         </div>
         <button pButton type="button" icon="pi pi-sync" [label]="pqbFetchButtonLabel()"
           class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn" [loading]="fetchingNationalPqb()"
           (click)="loadFromNationalPreQualificationBid(true)"
-          [pTooltip]="(def.formCode === 'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') ? 'Refresh PQB No., Title, and Requirements table from ' + pqbSourceStepName() : def.formCode === 'FORM_04_LTE' ? 'Refresh PQB No. and Requirements table from ' + pqbSourceStepName() : 'Refresh PQB details and Pricing table from ' + pqbSourceStepName()"
+          [pTooltip]="(def.formCode === 'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') ? 'Refresh PQB No., Title, and Requirements table from ' + pqbSourceStepName() : def.formCode === 'FORM_04_LTE' ? 'Refresh PQB No. and Requirements table from ' + pqbSourceStepName() : 'Refresh PQB details and Requirements table from ' + pqbSourceStepName()"
+          tooltipPosition="top">
+        </button>
+      </div>
+      }
+
+      @if (isTechnoCommercialTender()) {
+      <div class="pqb-banner-action-bar" role="region" aria-label="Techno Commercial Tender PQB Auto-Patch Info">
+        <div class="pqb-banner-info">
+          <i class="pi pi-link" aria-hidden="true"></i>
+          <span>PQB No. and Requirements table are automatically linked and patched from {{ technoCommercialPqbSourceStepName() }}.</span>
+        </div>
+        <button pButton type="button" icon="pi pi-sync" [label]="technoCommercialPqbFetchButtonLabel()"
+          class="p-button-outlined p-button-secondary p-button-sm fetch-pqb-btn" [loading]="fetchingTechnoCommercialPqb()"
+          (click)="loadForTechnoCommercialTender(true)"
+          [pTooltip]="'Refresh PQB No. and Requirements table from ' + technoCommercialPqbSourceStepName()"
           tooltipPosition="top">
         </button>
       </div>
@@ -146,6 +161,11 @@
             def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') && (field.key === 'pqb_no' || field.key ===
             'tender_title'))) {
             <span class="field-sync-pill" title="Patched from latest National Pre-Qualification Bid">
+              <i class="pi pi-link" aria-hidden="true"></i> Linked
+            </span>
+            }
+            @if (isTechnoCommercialTender() && field.key === 'pqb_no') {
+            <span class="field-sync-pill" [title]="'Patched from ' + technoCommercialPqbSourceStepName()">
               <i class="pi pi-link" aria-hidden="true"></i> Linked
             </span>
             }
@@ -576,7 +596,15 @@
             <button pButton type="button" icon="pi pi-sync" [label]="pqbFetchButtonLabel()"
               class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
               [loading]="fetchingNationalPqb()" (click)="loadFromNationalPreQualificationBid(true)"
-              [pTooltip]="(def.formCode === 'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') ? 'Import PQB No., Title, and Requirements from ' + pqbSourceStepName() : def.formCode === 'FORM_04_LTE' ? 'Import PQB No. and Requirements from ' + pqbSourceStepName() : 'Import pricing items from ' + pqbSourceStepName()"
+              [pTooltip]="(def.formCode === 'FORM_33_STE' || def.formCode === 'FORM_30_STE' || def.formCode === 'FORM_STE') ? 'Import PQB No., Title, and Requirements from ' + pqbSourceStepName() : def.formCode === 'FORM_04_LTE' ? 'Import PQB No. and Requirements from ' + pqbSourceStepName() : 'Import requirement items from ' + pqbSourceStepName()"
+              tooltipPosition="top">
+            </button>
+            }
+            @if (isTechnoCommercialTender()) {
+            <button pButton type="button" icon="pi pi-sync" [label]="technoCommercialPqbFetchButtonLabel()"
+              class="p-button-outlined p-button-secondary p-button-sm fetch-quotation-btn"
+              [loading]="fetchingTechnoCommercialPqb()" (click)="loadForTechnoCommercialTender(true)"
+              [pTooltip]="'Import PQB No. and Requirements from ' + technoCommercialPqbSourceStepName()"
               tooltipPosition="top">
             </button>
             }
@@ -666,6 +694,12 @@
                     <button pButton type="button" icon="pi pi-sync" [label]="pqbFetchButtonLabel()"
                       class="empty-add-row-btn p-button-outlined p-button-secondary"
                       [loading]="fetchingNationalPqb()" (click)="loadFromNationalPreQualificationBid(true)">
+                    </button>
+                    }
+                    @if (isTechnoCommercialTender()) {
+                    <button pButton type="button" icon="pi pi-sync" [label]="technoCommercialPqbFetchButtonLabel()"
+                      class="empty-add-row-btn p-button-outlined p-button-secondary"
+                      [loading]="fetchingTechnoCommercialPqb()" (click)="loadForTechnoCommercialTender(true)">
                     </button>
                     }
                     @if (def.formCode === 'FORM_10_COST_SHEET') {

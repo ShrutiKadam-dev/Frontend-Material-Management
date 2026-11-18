@@ -131,18 +131,11 @@ export const FORM_CATALOG: FormDefinition[] = [
       { key: 'total_no_corrigendum_issued', label: 'Total No. Corrigendum Issued', type: 'number', colSpan: 1 },
     ],
     tableConfig: {
-      title: 'Pricing',
-      autoCalculateTotal: true,
-      quantityKey: 'quantity',
-      unitPriceKey: 'unit_price',
-      totalKey: 'total_amount',
+      title: 'Requirements',
       columns: [
         { key: 'sr_no', label: 'Sr. No.', type: 'number', width: '80px' },
         { key: 'description', label: 'Description', type: 'text' },
-        { key: 'hsn_sac', label: 'HSN / SAC', type: 'text', width: '130px' },
         { key: 'quantity', label: 'Quantity', type: 'number', width: '110px' },
-        { key: 'unit_price', label: 'Unit Price', type: 'currency', width: '130px' },
-        { key: 'total_amount', label: 'Total Amount', type: 'currency', width: '150px' },
       ],
     },
     uploads: [{ key: 'upload_bid_document_pqb', label: 'Bid Document for PQB Upload', multiple: true }],
@@ -1294,6 +1287,12 @@ export const FORM_CATALOG: FormDefinition[] = [
 
 /** Aliases for form codes that may have been renamed or referenced alternatively */
 export const FORM_CODE_ALIASES: Record<string, string> = {
+  PQB_BID_DOCUMENT: 'FORM_02_PQB_BID_DOCUMENT',
+  FORM_PQB_BID_DOCUMENT: 'FORM_02_PQB_BID_DOCUMENT',
+  BID_DOCUMENT_PQB: 'FORM_02_PQB_BID_DOCUMENT',
+  BID_DOC_PQB: 'FORM_02_PQB_BID_DOCUMENT',
+  'pqb-bid-document': 'FORM_02_PQB_BID_DOCUMENT',
+  'pqb_bid_document': 'FORM_02_PQB_BID_DOCUMENT',
   FORM_30_STE: 'FORM_33_STE',
   FORM_STE: 'FORM_33_STE',
   FORM_33: 'FORM_33_STE',

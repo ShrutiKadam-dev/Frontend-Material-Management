@@ -224,6 +224,24 @@ export class StepFormDialog {
     const code = this.resolvedDef()?.formCode;
     return code === 'FORM_33_STE' || code === 'FORM_30_STE' || code === 'FORM_STE';
   });
+  readonly isTechnoCommercialTender = computed(() => {
+    const code = this.resolvedDef()?.formCode;
+    if (code === 'FORM_30_TECHNO_COMMERCIAL_TENDER') return true;
+    const name = (this.resolvedDef()?.name || '').toLowerCase();
+    return (
+      !name.includes('bid doc') &&
+      !name.includes('bid document') &&
+      (name.includes('techno commercial') || name.includes('techno-commercial'))
+    );
+  });
+  readonly technoCommercialLinkedPqbStep = signal<ProjectStep | null>(null);
+  readonly fetchingTechnoCommercialPqb = signal<boolean>(false);
+  readonly technoCommercialPqbSourceStepName = computed(() =>
+    this.getTechnoCommercialPqbSourceStepName(),
+  );
+  readonly technoCommercialPqbFetchButtonLabel = computed(() =>
+    this.getTechnoCommercialPqbFetchButtonLabel(),
+  );
   readonly isBidDocumentLte = computed(() => {
     const code = this.resolvedDef()?.formCode;
     if (code === 'FORM_31_BID_DOC_LTE') return true;
@@ -1005,7 +1023,7 @@ export class StepFormDialog {
             if (showNotification) {
               this.messageService.add({
                 severity: 'success',
-                summary: 'Pricing Loaded from Corrigendum',
+                summary: 'Requirements Loaded from Corrigendum',
                 detail: `Loaded ${corrItems.length} line items from latest Corrigendum.`,
               });
             }
@@ -1164,7 +1182,7 @@ export class StepFormDialog {
                   : false);
               this.messageService.add({
                 severity: 'success',
-                summary: (isLte || isSte) ? 'Requirements Loaded from National PQB' : 'Pricing Loaded from National PQB',
+                summary: 'Requirements Loaded from National PQB',
                 detail: isSte
                   ? `Loaded PQB No. "${no}", Title "${title}", and ${pqbItems.length} requirement items from latest National Pre-Qualification Bid.`
                   : isLte
@@ -1202,6 +1220,574 @@ export class StepFormDialog {
           }
         },
       });
+  }
+
+  // ── Form 30: Techno Commercial Tender Auto-Patching (National PQB / PQB Bid Document) ─
+  getTechnoCommercialPqbSourceStepName(): string {
+    const linked =
+      typeof this.technoCommercialLinkedPqbStep === 'function'
+        ? this.technoCommercialLinkedPqbStep()
+        : null;
+    if (linked) {
+      return (
+        linked.step_name ||
+        (linked.form_code ? getFormDefinition(linked.form_code)?.name : null) ||
+        (this.isPqbBidDocStep(linked)
+          ? 'latest Bid Document for PQB'
+          : 'latest National Pre-Qualification Bid (PQB)')
+      );
+    }
+    const available = this.getAvailablePqbStepForTechnoCommercial();
+    if (available) {
+      return (
+        available.step_name ||
+        (available.form_code ? getFormDefinition(available.form_code)?.name : null) ||
+        (this.isPqbBidDocStep(available)
+          ? 'latest Bid Document for PQB'
+          : 'latest National Pre-Qualification Bid (PQB)')
+      );
+    }
+    if (this.isPqbBidDocAvailable()) {
+      return 'latest Bid Document for PQB';
+    }
+    return 'latest National Pre-Qualification Bid (PQB)';
+  }
+
+  getTechnoCommercialPqbFetchButtonLabel(): string {
+    const linked =
+      typeof this.technoCommercialLinkedPqbStep === 'function'
+        ? this.technoCommercialLinkedPqbStep()
+        : null;
+    if (linked) {
+      return this.isPqbBidDocStep(linked) ? 'Fetch from Bid Doc PQB' : 'Fetch from National PQB';
+    }
+    const available = this.getAvailablePqbStepForTechnoCommercial();
+    if (available) {
+      return this.isPqbBidDocStep(available) ? 'Fetch from Bid Doc PQB' : 'Fetch from National PQB';
+    }
+    if (this.isPqbBidDocAvailable()) {
+      return 'Fetch from Bid Doc PQB';
+    }
+    return 'Fetch from National PQB';
+  }
+
+  isPqbBidDocStep(s: ProjectStep | null | undefined): boolean {
+    if (!s) return false;
+    const fcode = (s.form_code || '').toUpperCase().trim();
+    if (
+      fcode === 'FORM_02_PQB_BID_DOCUMENT' ||
+      fcode === 'PQB_BID_DOCUMENT' ||
+      fcode === 'FORM_02' ||
+      fcode === 'FORM_PQB_BID_DOCUMENT' ||
+      fcode === 'BID_DOCUMENT_PQB' ||
+      fcode === 'BID_DOC_PQB'
+    ) {
+      return true;
+    }
+    const resolved = s.form_code ? getFormDefinition(s.form_code) : undefined;
+    if (resolved?.formCode === 'FORM_02_PQB_BID_DOCUMENT') return true;
+    const name = (s.step_name || '').toLowerCase().trim();
+    return (name.includes('bid doc') || name.includes('bid document')) && name.includes('pqb');
+  }
+
+  isPqbOrPqbBidDocStep(s: ProjectStep | null | undefined): boolean {
+    return this.isNationalPqbStep(s) || this.isPqbBidDocStep(s);
+  }
+
+  isPqbBidDocAvailable(): boolean {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    if (Array.isArray(inMemory) && inMemory.length > 0) {
+      return inMemory.some((s) => this.isPqbBidDocStep(s));
+    }
+    return false;
+  }
+
+  isNationalPqbAvailable(): boolean {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    if (Array.isArray(inMemory) && inMemory.length > 0) {
+      return inMemory.some((s) => this.isNationalPqbStep(s));
+    }
+    return false;
+  }
+
+  private unwrapStepRecord(
+    source: ProjectStep | PreQualificationBid | Record<string, unknown> | null | undefined,
+  ): { raw: Record<string, unknown>; inner: Record<string, unknown>; merged: Record<string, unknown> } {
+    if (!source || typeof source !== 'object') {
+      return { raw: {}, inner: {}, merged: {} };
+    }
+    const raw = source as unknown as Record<string, unknown>;
+    let inner: Record<string, unknown> = {};
+    if (typeof raw['data'] === 'string') {
+      try {
+        const parsed = JSON.parse(raw['data']);
+        if (parsed && typeof parsed === 'object') {
+          inner = parsed as Record<string, unknown>;
+        }
+      } catch {
+        inner = {};
+      }
+    } else if (raw['data'] && typeof raw['data'] === 'object') {
+      inner = { ...(raw['data'] as Record<string, unknown>) };
+    }
+    return { raw, inner, merged: { ...inner, ...raw } };
+  }
+
+  extractPqbNoFromSource(
+    source: ProjectStep | PreQualificationBid | Record<string, unknown> | null | undefined,
+  ): string {
+    const { raw, inner, merged } = this.unwrapStepRecord(source);
+    return String(
+      inner['pqb_no'] ||
+      raw['pqb_no'] ||
+      merged['pqbNo'] ||
+      merged['pqb_number'] ||
+      merged['pqbNumber'] ||
+      merged['bid_no'] ||
+      merged['bid_number'] ||
+      merged['number'] ||
+      '',
+    ).trim();
+  }
+
+  extractPqbItemsFromSource(
+    source: ProjectStep | PreQualificationBid | Record<string, unknown> | null | undefined,
+  ): Array<Record<string, unknown>> {
+    const { raw, inner } = this.unwrapStepRecord(source);
+    const candidateArrays: unknown[] = [
+      inner['items'],
+      inner['requirements'],
+      inner['table_items'],
+      inner['materials'],
+      inner['pricing_items'],
+      inner['pricing'],
+      raw['items'],
+      raw['requirements'],
+      raw['table_items'],
+      raw['materials'],
+      raw['pricing_items'],
+      raw['pricing'],
+    ];
+
+    for (const candidate of candidateArrays) {
+      if (Array.isArray(candidate) && candidate.length > 0) {
+        const nonEmpty = (candidate as Array<Record<string, unknown>>).filter(
+          (row) => row && typeof row === 'object' && !isTableRowEmpty(row),
+        );
+        if (nonEmpty.length > 0) {
+          return nonEmpty;
+        }
+      }
+    }
+
+    return [];
+  }
+
+  hasPqbDataForTechnoCommercial(
+    source: ProjectStep | PreQualificationBid | Record<string, unknown> | null | undefined,
+  ): boolean {
+    if (!source) return false;
+    return Boolean(this.extractPqbNoFromSource(source)) || this.extractPqbItemsFromSource(source).length > 0;
+  }
+
+  pickLatestPqbCandidate(candidates: ProjectStep[]): ProjectStep | undefined {
+    if (!candidates || candidates.length === 0) return undefined;
+
+    const validCandidates = candidates.filter((s) => this.hasPqbDataForTechnoCommercial(s));
+    const pool = validCandidates.length > 0 ? validCandidates : candidates;
+
+    const getStepTimestamp = (s: ProjectStep): number => {
+      const dtStr = s.updated_at || s.created_at || s.completed_at;
+      if (dtStr) {
+        const t = new Date(dtStr).getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+      return 0;
+    };
+
+    const getStepOrderNum = (s: ProjectStep): number => {
+      return s.step_number ?? s.step_order ?? 0;
+    };
+
+    const sorted = [...pool].sort((a, b) => {
+      const hasDataA = this.hasPqbDataForTechnoCommercial(a) ? 1 : 0;
+      const hasDataB = this.hasPqbDataForTechnoCommercial(b) ? 1 : 0;
+      if (hasDataA !== hasDataB) return hasDataB - hasDataA;
+
+      const timeDiff = getStepTimestamp(b) - getStepTimestamp(a);
+      if (timeDiff !== 0) return timeDiff;
+
+      if (a.status === 'completed' && b.status !== 'completed') return -1;
+      if (b.status === 'completed' && a.status !== 'completed') return 1;
+
+      const orderDiff = getStepOrderNum(b) - getStepOrderNum(a);
+      if (orderDiff !== 0) return orderDiff;
+
+      // When timestamps & step order are equal, Bid Document for PQB is downstream of National PQB
+      const stageA = this.isPqbBidDocStep(a) ? 2 : 1;
+      const stageB = this.isPqbBidDocStep(b) ? 2 : 1;
+      if (stageA !== stageB) return stageB - stageA;
+
+      return (Number(b.id) || 0) - (Number(a.id) || 0);
+    });
+
+    return sorted[0];
+  }
+
+  getAvailablePqbStepForTechnoCommercial(): ProjectStep | null {
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    const steps: ProjectStep[] = Array.isArray(inMemory) ? inMemory : [];
+
+    const candidates = steps.filter((s) => this.isPqbOrPqbBidDocStep(s));
+    if (candidates.length === 0) return null;
+
+    return this.pickLatestPqbCandidate(candidates) || candidates[0];
+  }
+
+  private lookupUnitFromInMemoryNationalPqb(description: string): string {
+    const needle = description.trim().toLowerCase();
+    if (!needle) return '';
+
+    const inMemory = typeof this.existingSteps === 'function' ? this.existingSteps() : this.existingSteps;
+    if (!Array.isArray(inMemory) || inMemory.length === 0) return '';
+
+    const pqbSteps = inMemory.filter((s) => this.isNationalPqbStep(s));
+    const latestPqb = this.pickLatestPqbCandidate(pqbSteps);
+    if (!latestPqb) return '';
+
+    const pqbItems = this.extractPqbItemsFromSource(latestPqb);
+    const match = pqbItems.find((it) => {
+      const itDesc = String(
+        it['description'] || it['material_name'] || it['item_name'] || it['name'] || '',
+      )
+        .trim()
+        .toLowerCase();
+      return itDesc === needle;
+    });
+    if (!match) return '';
+
+    return String(
+      match['unit'] || match['uom'] || match['unit_of_measurement'] || match['original_unit'] || '',
+    ).trim();
+  }
+
+  populateTechnoCommercialRequirementsTable(items: Array<Record<string, unknown>>): void {
+    const def = typeof this.resolvedDef === 'function' ? this.resolvedDef() : null;
+    if (!def || !def.tableConfig) return;
+
+    const rowsArray = new FormArray<FormGroup>([]);
+    items.forEach((item, idx) => {
+      const desc = String(
+        item['corrigendum_description'] ||
+        item['description'] ||
+        item['original_description'] ||
+        item['material_name'] ||
+        item['item_name'] ||
+        item['name'] ||
+        `Item ${idx + 1}`,
+      ).trim();
+
+      const qty =
+        item['corrigendum_quantity'] !== null && item['corrigendum_quantity'] !== undefined
+          ? Number(item['corrigendum_quantity'])
+          : item['quantity'] !== null && item['quantity'] !== undefined
+            ? Number(item['quantity'])
+            : item['original_quantity'] !== null && item['original_quantity'] !== undefined
+              ? Number(item['original_quantity'])
+              : null;
+
+      let unit = String(
+        item['corrigendum_unit'] ||
+        item['unit'] ||
+        item['uom'] ||
+        item['unit_of_measurement'] ||
+        item['original_unit'] ||
+        '',
+      ).trim();
+
+      if (!unit && desc) {
+        unit = this.lookupUnitFromInMemoryNationalPqb(desc);
+      }
+
+      rowsArray.push(
+        this.createTableRowGroup(def, {
+          sr_no: idx + 1,
+          description: desc,
+          unit,
+          quantity: qty,
+        }),
+      );
+    });
+
+    if (rowsArray.length > 0) {
+      this.tableFormArray.set(rowsArray);
+      this.tableVersion.update((v) => v + 1);
+      this.cdr?.markForCheck?.();
+    }
+  }
+
+  loadForTechnoCommercialTender(showNotification = true): void {
+    if (typeof this.fetchingTechnoCommercialPqb === 'function' && this.fetchingTechnoCommercialPqb()) return;
+    const pId = typeof this.projectId === 'function' ? this.projectId() : (this.projectId as unknown as number);
+    if (!pId) return;
+
+    const availableStep = this.getAvailablePqbStepForTechnoCommercial();
+    if (availableStep) {
+      if (this.isPqbBidDocStep(availableStep)) {
+        this.fetchLatestPqbBidDocForTechnoCommercial(pId, availableStep, showNotification);
+      } else {
+        this.fetchLatestNationalPqbForTechnoCommercial(pId, availableStep, showNotification);
+      }
+      return;
+    }
+
+    this.fetchLatestPqbFallbackForTechnoCommercial(pId, showNotification);
+  }
+
+  private fetchLatestPqbBidDocForTechnoCommercial(
+    pId: number,
+    availableStep: ProjectStep | null,
+    showNotification: boolean,
+  ): void {
+    const pqbBidDocDef = getFormDefinition('FORM_02_PQB_BID_DOCUMENT');
+    if (!pqbBidDocDef || !this.formApiService || typeof this.formApiService.getLatestEntry !== 'function') {
+      if (availableStep && this.hasPqbDataForTechnoCommercial(availableStep)) {
+        this.applyPqbStepToTechnoCommercial(availableStep, showNotification);
+      }
+      this.fetchingTechnoCommercialPqb.set(false);
+      return;
+    }
+
+    this.fetchingTechnoCommercialPqb.set(true);
+
+    this.formApiService
+      .getLatestEntry(pqbBidDocDef, pId)
+      .pipe(
+        catchError(() => of(null)),
+        finalize(() => this.fetchingTechnoCommercialPqb.set(false)),
+      )
+      .subscribe({
+        next: (latestBidDoc) => {
+          const candidate =
+            latestBidDoc && this.hasPqbDataForTechnoCommercial(latestBidDoc)
+              ? latestBidDoc
+              : availableStep && this.hasPqbDataForTechnoCommercial(availableStep)
+                ? availableStep
+                : latestBidDoc;
+
+          if (candidate && this.hasPqbDataForTechnoCommercial(candidate)) {
+            this.applyPqbStepToTechnoCommercial(candidate, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'warn',
+              summary: 'Bid Document for PQB Not Found',
+              detail: 'No latest Bid Document for PQB found for this project to patch.',
+            });
+          }
+        },
+        error: () => {
+          if (availableStep && this.hasPqbDataForTechnoCommercial(availableStep)) {
+            this.applyPqbStepToTechnoCommercial(availableStep, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'info',
+              summary: 'Bid Document for PQB Unavailable',
+              detail: 'Could not fetch latest Bid Document for PQB for this project.',
+            });
+          }
+        },
+      });
+  }
+
+  private fetchLatestNationalPqbForTechnoCommercial(
+    pId: number,
+    availableStep: ProjectStep | null,
+    showNotification: boolean,
+  ): void {
+    const pqbDef = getFormDefinition('FORM_01_PQB');
+    const fetchLatestPqb$: Observable<PreQualificationBid | ProjectStep | null> | null =
+      this.preQualificationBidService && typeof this.preQualificationBidService.getLatest === 'function'
+        ? this.preQualificationBidService.getLatest(pId)
+        : pqbDef && this.formApiService && typeof this.formApiService.getLatestEntry === 'function'
+          ? this.formApiService.getLatestEntry(pqbDef, pId)
+          : null;
+
+    if (!fetchLatestPqb$) {
+      if (availableStep && this.hasPqbDataForTechnoCommercial(availableStep)) {
+        this.applyPqbStepToTechnoCommercial(availableStep, showNotification);
+      }
+      this.fetchingTechnoCommercialPqb.set(false);
+      return;
+    }
+
+    this.fetchingTechnoCommercialPqb.set(true);
+
+    fetchLatestPqb$
+      .pipe(
+        catchError(() => of(null)),
+        finalize(() => this.fetchingTechnoCommercialPqb.set(false)),
+      )
+      .subscribe({
+        next: (latestPqb) => {
+          const convertedLatest = latestPqb
+            ? this.convertPqbToProjectStep(
+                latestPqb as PreQualificationBid | Record<string, unknown>,
+                availableStep || undefined,
+                pId,
+              )
+            : null;
+
+          const candidate =
+            convertedLatest && this.hasPqbDataForTechnoCommercial(convertedLatest)
+              ? convertedLatest
+              : availableStep && this.hasPqbDataForTechnoCommercial(availableStep)
+                ? availableStep
+                : convertedLatest;
+
+          if (candidate && this.hasPqbDataForTechnoCommercial(candidate)) {
+            this.applyPqbStepToTechnoCommercial(candidate, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'warn',
+              summary: 'National PQB Not Found',
+              detail: 'No latest National Pre-Qualification Bid found for this project to patch.',
+            });
+          }
+        },
+        error: () => {
+          if (availableStep && this.hasPqbDataForTechnoCommercial(availableStep)) {
+            this.applyPqbStepToTechnoCommercial(availableStep, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'info',
+              summary: 'National PQB Unavailable',
+              detail: 'Could not fetch latest National Pre-Qualification Bid for this project.',
+            });
+          }
+        },
+      });
+  }
+
+  private fetchLatestPqbFallbackForTechnoCommercial(
+    pId: number,
+    showNotification: boolean,
+  ): void {
+    const pqbBidDocDef = getFormDefinition('FORM_02_PQB_BID_DOCUMENT');
+    const pqbDef = getFormDefinition('FORM_01_PQB');
+
+    const pqbBidDoc$: Observable<ProjectStep | null> =
+      pqbBidDocDef && this.formApiService && typeof this.formApiService.getLatestEntry === 'function'
+        ? this.formApiService.getLatestEntry(pqbBidDocDef, pId).pipe(catchError(() => of(null)))
+        : of(null);
+
+    const nationalPqb$: Observable<PreQualificationBid | ProjectStep | null> =
+      this.preQualificationBidService && typeof this.preQualificationBidService.getLatest === 'function'
+        ? this.preQualificationBidService.getLatest(pId).pipe(catchError(() => of(null)))
+        : pqbDef && this.formApiService && typeof this.formApiService.getLatestEntry === 'function'
+          ? this.formApiService.getLatestEntry(pqbDef, pId).pipe(catchError(() => of(null)))
+          : of(null);
+
+    this.fetchingTechnoCommercialPqb.set(true);
+
+    forkJoin({ pqbBidDoc: pqbBidDoc$, nationalPqb: nationalPqb$ })
+      .pipe(finalize(() => this.fetchingTechnoCommercialPqb.set(false)))
+      .subscribe({
+        next: ({ pqbBidDoc, nationalPqb }) => {
+          const candidates: ProjectStep[] = [];
+          if (pqbBidDoc && this.hasPqbDataForTechnoCommercial(pqbBidDoc)) {
+            candidates.push(pqbBidDoc);
+          }
+          if (nationalPqb) {
+            const convertedPqb = this.convertPqbToProjectStep(
+              nationalPqb as PreQualificationBid | Record<string, unknown>,
+              undefined,
+              pId,
+            );
+            if (this.hasPqbDataForTechnoCommercial(convertedPqb)) {
+              candidates.push(convertedPqb);
+            }
+          }
+
+          const latestCandidate = this.pickLatestPqbCandidate(candidates);
+          if (latestCandidate) {
+            this.applyPqbStepToTechnoCommercial(latestCandidate, showNotification);
+          } else if (showNotification) {
+            this.messageService?.add({
+              severity: 'warn',
+              summary: 'PQB Not Found',
+              detail:
+                'No latest National Pre-Qualification Bid (PQB) or Bid Document for PQB found for this project to patch.',
+            });
+          }
+        },
+        error: () => {
+          if (showNotification) {
+            this.messageService?.add({
+              severity: 'info',
+              summary: 'PQB Unavailable',
+              detail: 'Could not fetch latest PQB details for this project.',
+            });
+          }
+        },
+      });
+  }
+
+  private applyPqbStepToTechnoCommercial(
+    step: ProjectStep,
+    showNotification: boolean,
+  ): void {
+    this.technoCommercialLinkedPqbStep.set(step);
+    const pqbNo = this.extractPqbNoFromSource(step);
+
+    const fg = this.formGroup();
+    if (fg && pqbNo && fg.get('pqb_no')) {
+      const currentPqbNo = String(fg.get('pqb_no')?.value || '').trim();
+      if (showNotification || !currentPqbNo) {
+        fg.patchValue({ pqb_no: pqbNo });
+        fg.get('pqb_no')?.markAsDirty();
+        this.formVersion.update((v) => v + 1);
+        this.cdr?.markForCheck?.();
+      }
+    }
+
+    const pqbItems = this.extractPqbItemsFromSource(step);
+    const currentRowsCount = typeof this.tableFormArray === 'function' ? this.tableFormArray().length : 0;
+    if (pqbItems.length > 0 && (showNotification || currentRowsCount === 0)) {
+      this.populateTechnoCommercialRequirementsTable(pqbItems);
+    }
+
+    if (showNotification) {
+      const sourceName =
+        step.step_name ||
+        (step.form_code ? getFormDefinition(step.form_code)?.name : null) ||
+        (this.isPqbBidDocStep(step)
+          ? 'Bid Document for PQB'
+          : 'National Pre-Qualification Bid (PQB)');
+
+      if (pqbItems.length > 0) {
+        this.messageService?.add({
+          severity: 'success',
+          summary: 'Requirements Loaded from PQB',
+          detail: pqbNo
+            ? `Loaded PQB No. "${pqbNo}" and ${pqbItems.length} requirement items from latest ${sourceName}.`
+            : `Loaded ${pqbItems.length} requirement items from latest ${sourceName}.`,
+        });
+      } else if (pqbNo) {
+        this.messageService?.add({
+          severity: 'success',
+          summary: 'PQB No. Patched',
+          detail: `Patched PQB No. "${pqbNo}" from latest ${sourceName}.`,
+        });
+      }
+    }
+  }
+
+  resolveLinkedPqbStepForTechnoCommercial(): void {
+    if (this.technoCommercialLinkedPqbStep()) return;
+    const step = this.getAvailablePqbStepForTechnoCommercial();
+    if (step) {
+      this.technoCommercialLinkedPqbStep.set(step);
+    }
   }
 
   // ── Form 31: Bid Document - Limited Tender Enquiry (LTE) ─────────────
@@ -3590,6 +4176,7 @@ export class StepFormDialog {
           this.deleteConfirmVisible.set(false);
           this.fetchingPreviousStep?.set?.(false);
           this.fetchingNationalPqb?.set?.(false);
+          this.fetchingTechnoCommercialPqb?.set?.(false);
           this.fetchingSupplierQuotation?.set?.(false);
           this.fetchingBidDocLte?.set?.(false);
           this.fetchingPoData?.set?.(false);
@@ -3638,6 +4225,8 @@ export class StepFormDialog {
     this.newRemarkInput.set('');
     this.fetchingPreviousStep?.set?.(false);
     this.fetchingNationalPqb?.set?.(false);
+    this.fetchingTechnoCommercialPqb?.set?.(false);
+    this.technoCommercialLinkedPqbStep?.set?.(null);
     this.fetchingSupplierQuotation?.set?.(false);
     this.fetchingBidDocLte?.set?.(false);
     this.fetchingPoData?.set?.(false);
@@ -3725,6 +4314,22 @@ export class StepFormDialog {
         this.loadFromNationalPreQualificationBid(false);
       }
 
+      if (
+        def!.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER' ||
+        (!def!.name.toLowerCase().includes('bid doc') &&
+          !def!.name.toLowerCase().includes('bid document') &&
+          (def!.name.toLowerCase().includes('techno commercial') ||
+            def!.name.toLowerCase().includes('techno-commercial')))
+      ) {
+        const hasPqbNo = Boolean(savedData['pqb_no'] && String(savedData['pqb_no']).trim());
+        const hasItems = Array.isArray(savedData['items']) && savedData['items'].length > 0;
+        if (!hasPqbNo || !hasItems) {
+          this.loadForTechnoCommercialTender(false);
+        } else {
+          this.resolveLinkedPqbStepForTechnoCommercial();
+        }
+      }
+
       if (def!.formCode === 'FORM_03_CORRIGENDUM') {
         if (!savedData['items'] || (Array.isArray(savedData['items']) && savedData['items'].length === 0) || !savedData['against_ref_no'] || !savedData['ref_title']) {
           this.loadFromPreviousTenderStep(false);
@@ -3781,6 +4386,15 @@ export class StepFormDialog {
         defInput.formCode === 'FORM_STE'
       ) {
         this.loadFromNationalPreQualificationBid(false);
+      }
+      if (
+        defInput.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER' ||
+        (!defInput.name.toLowerCase().includes('bid doc') &&
+          !defInput.name.toLowerCase().includes('bid document') &&
+          (defInput.name.toLowerCase().includes('techno commercial') ||
+            defInput.name.toLowerCase().includes('techno-commercial')))
+      ) {
+        this.loadForTechnoCommercialTender(false);
       }
       if (defInput.formCode === 'FORM_03_CORRIGENDUM') {
         this.ensureCorrigendumDefaultRows();

@@ -13,27 +13,19 @@ describe('FORM_CATALOG Extended Forms (26, 29, 30, 31, 32, 33, 34, 35, 36)', () 
   });
 
   describe('Form 2: BID DOCUMENT FOR PQB', () => {
-    it('should have Pricing table tab with Sr. No., Description, HSN/SAC, Quantity, Unit Price, Total Amount', () => {
+    it('should have Requirements table tab with Sr. No., Description, Quantity (without HSN/SAC, Unit Price, Total Amount)', () => {
       const def = getFormDefinition('FORM_02_PQB_BID_DOCUMENT')!;
       expect(def).toBeDefined();
       expect(def.id).toBe(2);
       expect(def.name).toBe('Bid Document for PQB');
       expect(def.tableConfig).toBeDefined();
-      expect(def.tableConfig?.title).toBe('Pricing');
-      expect(def.tableConfig?.autoCalculateTotal).toBe(true);
-      expect(def.tableConfig?.quantityKey).toBe('quantity');
-      expect(def.tableConfig?.unitPriceKey).toBe('unit_price');
-      expect(def.tableConfig?.totalKey).toBe('total_amount');
+      expect(def.tableConfig?.title).toBe('Requirements');
+      expect(def.tableConfig?.autoCalculateTotal).toBeUndefined();
+      expect(def.tableConfig?.unitPriceKey).toBeUndefined();
+      expect(def.tableConfig?.totalKey).toBeUndefined();
 
       const colKeys = def.tableConfig?.columns.map((c) => c.key);
-      expect(colKeys).toEqual([
-        'sr_no',
-        'description',
-        'hsn_sac',
-        'quantity',
-        'unit_price',
-        'total_amount',
-      ]);
+      expect(colKeys).toEqual(['sr_no', 'description', 'quantity']);
     });
   });
 

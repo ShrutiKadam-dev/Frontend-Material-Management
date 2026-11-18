@@ -77,6 +77,8 @@ export function normalizeBackendEntityToStep(
     rawTableItems = (item['output'] as Record<string, unknown>)['items'] as unknown[];
   } else if (Array.isArray(item['table_items'])) {
     rawTableItems = item['table_items'] as unknown[];
+  } else if (Array.isArray(item['requirements'])) {
+    rawTableItems = item['requirements'] as unknown[];
   } else if (Array.isArray(item['materials'])) {
     rawTableItems = item['materials'] as unknown[];
   }
@@ -212,6 +214,22 @@ export function normalizeBackendEntityToStep(
     }
     if (n && !combinedData['tender_no']) {
       combinedData['tender_no'] = n;
+    }
+  }
+
+  // Bridge FORM_30_TECHNO_COMMERCIAL_TENDER title, tender_no, and pqb_no fallbacks
+  if (formDef.formCode === 'FORM_30_TECHNO_COMMERCIAL_TENDER') {
+    const t = item['tender_title'] || item['title'] || '';
+    const n = item['tender_no'] || item['number'] || '';
+    const pqbNo = item['pqb_no'] || item['pqbNo'] || item['pqb_number'] || item['pqbNumber'] || '';
+    if (t && !combinedData['tender_title']) {
+      combinedData['tender_title'] = t;
+    }
+    if (n && !combinedData['tender_no']) {
+      combinedData['tender_no'] = n;
+    }
+    if (pqbNo && !combinedData['pqb_no']) {
+      combinedData['pqb_no'] = pqbNo;
     }
   }
 
